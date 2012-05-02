@@ -15,9 +15,9 @@
  */
 package io.netty.channel.socket;
 
-import java.net.InetSocketAddress;
-
 import io.netty.channel.Channel;
+
+import java.net.InetSocketAddress;
 
 /**
  * A TCP/IP socket {@link Channel} which was either accepted by
@@ -27,9 +27,9 @@ import io.netty.channel.Channel;
  */
 public interface SocketChannel extends Channel {
     @Override
-    SocketChannelConfig getConfig();
+    SocketChannelConfig config();
     @Override
-    InetSocketAddress getLocalAddress();
+    InetSocketAddress localAddress();
     @Override
-    InetSocketAddress getRemoteAddress();
+    InetSocketAddress remoteAddress();
 }

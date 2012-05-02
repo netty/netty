@@ -15,6 +15,10 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.ConversionUtil;
+
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -22,25 +26,13 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 
-import io.netty.channel.ChannelException;
-import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.FixedReceiveBufferSizePredictorFactory;
-import io.netty.channel.ReceiveBufferSizePredictor;
-import io.netty.channel.ReceiveBufferSizePredictorFactory;
-import io.netty.util.internal.ConversionUtil;
-
 /**
  * The default {@link DatagramChannelConfig} implementation.
  */
 public class DefaultDatagramChannelConfig extends DefaultChannelConfig
                                         implements DatagramChannelConfig {
 
-    private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
-        new FixedReceiveBufferSizePredictorFactory(768);
-
     private final DatagramSocket socket;
-    private volatile ReceiveBufferSizePredictor predictor;
-    private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
 
     /**
      * Creates a new instance.
@@ -64,10 +56,6 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
             setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sendBufferSize")) {
             setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("receiveBufferSizePredictorFactory")) {
-            setReceiveBufferSizePredictorFactory((ReceiveBufferSizePredictorFactory) value);
-        } else if (key.equals("receiveBufferSizePredictor")) {
-            setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else if (key.equals("reuseAddress")) {
             setReuseAddress(ConversionUtil.toBoolean(value));
         } else if (key.equals("loopbackModeDisabled")) {
@@ -278,43 +266,5 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
-    }
-
-    @Override
-    public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
-        ReceiveBufferSizePredictor predictor = this.predictor;
-        if (predictor == null) {
-            try {
-                this.predictor = predictor = getReceiveBufferSizePredictorFactory().getPredictor();
-            } catch (Exception e) {
-                throw new ChannelException(
-                        "Failed to create a new " +
-                        ReceiveBufferSizePredictor.class.getSimpleName() + '.',
-                        e);
-            }
-        }
-        return predictor;
-    }
-
-    @Override
-    public void setReceiveBufferSizePredictor(
-            ReceiveBufferSizePredictor predictor) {
-        if (predictor == null) {
-            throw new NullPointerException("predictor");
-        }
-        this.predictor = predictor;
-    }
-
-    @Override
-    public ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory() {
-        return predictorFactory;
-    }
-
-    @Override
-    public void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory) {
-        if (predictorFactory == null) {
-            throw new NullPointerException("predictorFactory");
-        }
-        this.predictorFactory = predictorFactory;
     }
 }

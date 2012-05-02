@@ -15,17 +15,17 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.ConversionUtil;
+
 import java.net.ServerSocket;
 import java.net.SocketException;
-
-import io.netty.channel.ChannelException;
-import io.netty.channel.DefaultServerChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
  */
-public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
+public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
     private final ServerSocket socket;

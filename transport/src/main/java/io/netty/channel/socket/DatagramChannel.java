@@ -15,12 +15,12 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 
 /**
  * A UDP/IP {@link Channel} which is created by {@link DatagramChannelFactory}.
@@ -29,29 +29,29 @@ import io.netty.channel.ChannelFuture;
  */
 public interface DatagramChannel extends Channel {
     @Override
-    DatagramChannelConfig getConfig();
+    DatagramChannelConfig config();
     @Override
-    InetSocketAddress getLocalAddress();
+    InetSocketAddress localAddress();
     @Override
-    InetSocketAddress getRemoteAddress();
+    InetSocketAddress remoteAddress();
 
     /**
      * Joins a multicast group.
      */
-    ChannelFuture joinGroup(InetAddress multicastAddress);
+    void joinGroup(InetAddress multicastAddress, ChannelFuture future);
 
     /**
      * Joins the specified multicast group at the specified interface.
      */
-    ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    void joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
 
     /**
      * Leaves a multicast group.
      */
-    ChannelFuture leaveGroup(InetAddress multicastAddress);
+    void leaveGroup(InetAddress multicastAddress, ChannelFuture future);
 
     /**
      * Leaves a multicast group on a specified local interface.
      */
-    ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    void leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
 }

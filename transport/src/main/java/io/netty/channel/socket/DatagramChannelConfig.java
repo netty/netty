@@ -15,15 +15,11 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.channel.ChannelConfig;
+
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.FixedReceiveBufferSizePredictor;
-import io.netty.channel.FixedReceiveBufferSizePredictorFactory;
-import io.netty.channel.ReceiveBufferSizePredictor;
-import io.netty.channel.ReceiveBufferSizePredictorFactory;
 
 /**
  * A {@link ChannelConfig} for a {@link DatagramChannel}.
@@ -48,10 +44,6 @@ import io.netty.channel.ReceiveBufferSizePredictorFactory;
  * <td>{@code "reuseAddress"}</td><td>{@link #setReuseAddress(boolean)}</td>
  * </tr><tr>
  * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
- * </tr><tr>
- * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
- * </tr><tr>
- * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
@@ -161,38 +153,4 @@ public interface DatagramChannelConfig extends ChannelConfig {
      * the {@link DatagramChannel}.
      */
     void setNetworkInterface(NetworkInterface networkInterface);
-
-    /**
-     * Returns the {@link ReceiveBufferSizePredictor} which predicts the
-     * number of readable bytes in the socket receive buffer.  The default
-     * predictor is <tt>{@link FixedReceiveBufferSizePredictor}(768)</tt>.
-     */
-    ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
-
-    /**
-     * Sets the {@link ReceiveBufferSizePredictor} which predicts the
-     * number of readable bytes in the socket receive buffer.  The default
-     * predictor is <tt>{@link FixedReceiveBufferSizePredictor}(768)</tt>.
-     */
-    void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
-
-    /**
-     * Returns the {@link ReceiveBufferSizePredictorFactory} which creates a new
-     * {@link ReceiveBufferSizePredictor} when a new channel is created and
-     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
-     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
-     * will be called with the new predictor.  The default factory is
-     * <tt>{@link FixedReceiveBufferSizePredictorFactory}(768)</tt>.
-     */
-    ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory();
-
-    /**
-     * Sets the {@link ReceiveBufferSizePredictor} which creates a new
-     * {@link ReceiveBufferSizePredictor} when a new channel is created and
-     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
-     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
-     * will be called with the new predictor.  The default factory is
-     * <tt>{@link FixedReceiveBufferSizePredictorFactory}(768)</tt>.
-     */
-    void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory);
 }
