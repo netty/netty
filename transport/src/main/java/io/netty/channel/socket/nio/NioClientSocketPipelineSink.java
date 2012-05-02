@@ -27,9 +27,7 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.SocketUtil;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
@@ -101,7 +99,6 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            remoteAddress = SocketUtil.stripZoneId((InetSocketAddress) remoteAddress);
             channel.getJdkChannel().connect(remoteAddress);
             channel.getCloseFuture().addListener(new ChannelFutureListener() {
                 @Override

@@ -18,7 +18,6 @@ package io.netty.channel.socket.oio;
 import static io.netty.channel.Channels.*;
 
 import java.io.PushbackInputStream;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
@@ -30,7 +29,6 @@ import io.netty.channel.ChannelState;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.util.internal.DeadLockProofWorker;
-import io.netty.util.internal.SocketUtil;
 
 class OioClientSocketPipelineSink extends AbstractOioChannelSink {
 
@@ -104,8 +102,6 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
         future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         try {
-            remoteAddress = SocketUtil.stripZoneId((InetSocketAddress) remoteAddress);
-
             channel.socket.connect(
                     remoteAddress, channel.getConfig().getConnectTimeoutMillis());
             connected = true;
