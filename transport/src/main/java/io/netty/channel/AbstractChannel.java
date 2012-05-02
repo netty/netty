@@ -360,6 +360,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
+        public SocketAddress localAddress() {
+            return localAddress0();
+        }
+
+        @Override
+        public SocketAddress remoteAddress() {
+            // TODO Auto-generated method stub
+            return remoteAddress0();
+        }
+
+        @Override
         public void register(EventLoop eventLoop, ChannelFuture future) {
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
@@ -475,6 +486,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract java.nio.channels.Channel javaChannel();
     protected abstract ChannelBufferHolder<Object> firstOut();
+
+    protected abstract SocketAddress localAddress0();
+    protected abstract SocketAddress remoteAddress0();
 
     protected abstract void doRegister(ChannelFuture future);
     protected abstract void doBind(SocketAddress localAddress, ChannelFuture future);

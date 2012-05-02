@@ -19,7 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
+import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
 import io.netty.logging.InternalLogger;
@@ -47,8 +47,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static io.netty.channel.Channels.*;
-
 abstract class SelectorEventLoop extends SingleThreadEventLoop {
     /**
      * Internal Netty logger.
@@ -60,7 +58,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
-    
+
     /**
      * The NIO {@link Selector}.
      */
@@ -117,7 +115,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    public void register(final Channel channel, final ChannelFuture future) {
+    public EventLoop register(final Channel channel, final ChannelFuture future) {
         try {
             if (channel instanceof NioServerSocketChannel) {
                 final NioServerSocketChannel ch = (NioServerSocketChannel) channel;
@@ -134,7 +132,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 });
             } else if (channel instanceof NioClientSocketChannel) {
                 final NioClientSocketChannel clientChannel = (NioClientSocketChannel) channel;
-                
+
                 execute(new Runnable() {
                     @Override
                     public void run() {
@@ -164,7 +162,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                             future.setFailure(t);
                             fireExceptionCaught(channel, t);
                         }
-                        
+
                     }
                 });
             } else {
@@ -229,7 +227,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 if (wakenUp.get()) {
                     selector.wakeup();
                 }
-                
+
                 cancelledKeys = 0;
                 processTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
@@ -279,7 +277,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                     "Failed to close a selector.", e);
         }
     }
-    
+
     private void processTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = pollTask();
@@ -308,7 +306,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     writeFromSelectorLoop(k);
                 }
-                
+
                 if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
                     removeKey = accept(k);
                 }
@@ -323,7 +321,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                     i.remove();
                 }
             }
-            
+
 
 
             if (cleanUpCancelledKeys()) {
@@ -336,7 +334,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
         NioServerSocketChannel channel = (NioServerSocketChannel) key.attachment();
         try {
             boolean handled = false;
-            
+
             // accept all sockets that are waiting atm
             for (;;) {
                 SocketChannel acceptedSocket = channel.socket.accept();
@@ -347,7 +345,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 ChannelPipeline pipeline =
                         channel.getConfig().getPipelineFactory().getPipeline();
                 NioWorker worker = channel.workers.nextWorker();
-                
+
                 worker.registerWithWorker(NioAcceptedSocketChannel.create(channel.getFactory(), pipeline, channel,
                         channel.getPipeline().getSink(), acceptedSocket, worker), null);
                 handled = true;
@@ -370,8 +368,8 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
         }
         return true;
     }
-    
-    
+
+
     protected void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
         ConnectException cause = null;
         for (SelectionKey k: keys) {
@@ -385,7 +383,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 //close(k);
                 continue;
             }
-            
+
             // Something is ready so skip it
             if (k.readyOps() != 0) {
                 continue;
@@ -405,9 +403,9 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                     ch.getWorker().close(ch, succeededFuture(ch));
                 }
             }
-            
-            
-            
+
+
+
         }
     }
 
@@ -425,7 +423,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
             ch.getWorker().close(ch, succeededFuture(ch));
         }
     }
-    
+
     private boolean cleanUpCancelledKeys() throws IOException {
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
@@ -434,9 +432,9 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
         }
         return false;
     }
-    
 
-    
+
+
     protected void close(SelectionKey k) {
         Object attachment = k.attachment();
         if (attachment instanceof AbstractNioChannel) {
@@ -458,7 +456,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
         }
         if (scheduleWriteIfNecessary(channel)) {
             return;
-        }       
+        }
 
         // From here, we are sure Thread.currentThread() == workerThread.
 
@@ -478,14 +476,14 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
             write0(ch);
         }
     }
-    
+
     void writeFromSelectorLoop(final SelectionKey k) {
         AbstractNioChannel ch = (AbstractNioChannel) k.attachment();
         ch.writeSuspended = false;
         write0(ch);
     }
 
-    
+
     protected boolean scheduleWriteIfNecessary(final AbstractNioChannel channel) {
         if (!inEventLoop()) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
@@ -498,12 +496,12 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                     workerSelector.wakeup();
                 }
             }
-           
+
             return true;
         }
 
         return false;
-    }       
+    }
 
     protected void write0(AbstractNioChannel channel) {
         boolean open = true;
@@ -514,7 +512,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
         long writtenBytes = 0;
 
         final SendBufferPool sendBufferPool = this.sendBufferPool;
-        
+
         final WritableByteChannel ch = channel.getJdkChannel();
         final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
@@ -660,11 +658,11 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
             }
         }
     }
-    
+
 
     public void close(NioServerSocketChannel channel, ChannelFuture future) {
         boolean inEventLoop = inEventLoop();
-        
+
         boolean bound = channel.isBound();
         try {
             if (channel.socket.isOpen()) {
@@ -705,16 +703,16 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 fireExceptionCaught(channel, t);
             } else {
                 fireExceptionCaughtLater(channel, t);
-                
+
             }
         }
     }
-    
+
     public void close(AbstractNioChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         boolean inEventLoop = inEventLoop();
-        
+
         try {
             channel.getJdkChannel().close();
             cancelledKeys ++;
@@ -825,16 +823,16 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 // Override OP_WRITE flag - a user cannot change this flag.
                 interestOps &= ~Channel.OP_WRITE;
                 interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
-                
+
                 if (key == null || selector == null) {
                     if (channel.getRawInterestOps() != interestOps) {
                         changed = true;
                     }
-                    
+
                     // Not registered to the worker yet.
                     // Set the rawInterestOps immediately; RegisterTask will pick it up.
                     channel.setRawInterestOpsNow(interestOps);
-                    
+
                     future.setSuccess();
                     if (changed) {
                         if (inEventLoop) {
@@ -843,10 +841,10 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                             fireChannelInterestChangedLater(channel);
                         }
                     }
-                    
+
                     return;
                 }
-                
+
                 switch (CONSTRAINT_LEVEL) {
                 case 0:
                     if (channel.getRawInterestOps() != interestOps) {
@@ -913,7 +911,7 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
             }
         }
     }
-    
+
     /**
      * Read is called when a Selector has been notified that the underlying channel
      * was something to be read. The channel would previously have registered its interest
@@ -924,5 +922,5 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
     protected abstract boolean read(SelectionKey k);
 
     protected abstract void registerTask(AbstractNioChannel channel, ChannelFuture future);
-    
+
 }

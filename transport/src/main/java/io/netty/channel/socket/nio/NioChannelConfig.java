@@ -15,50 +15,16 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.channel.ChannelConfig;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
 
 /**
  * Special {@link ChannelConfig} sub-type which offers extra methods which are useful for NIO.
  *
  */
 public interface NioChannelConfig extends ChannelConfig {
-
-    /**
-     * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code true}.
-     */
-    int getWriteBufferHighWaterMark();
-
-    /**
-     * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code true}.
-     */
-    void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    /**
-     * Returns the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will return
-     * {@code false} again.
-     */
-    int getWriteBufferLowWaterMark();
-
-    /**
-     * Sets the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will return
-     * {@code false} again.
-     */
-    void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
     /**
      * Returns the maximum loop count for a write operation until
      * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.

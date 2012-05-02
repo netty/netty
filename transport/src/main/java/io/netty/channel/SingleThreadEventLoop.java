@@ -57,8 +57,17 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     }
 
     @Override
-    public EventLoop register(Channel channel, ChannelFuture future) {
-        execute(newRegistrationTask(channel, future));
+    public EventLoop register(final Channel channel, final ChannelFuture future) {
+        if (inEventLoop()) {
+            channel.unsafe().register(this, future);
+        } else {
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    channel.unsafe().register(SingleThreadEventLoop.this, future);
+                }
+            });
+        }
         return this;
     }
 
@@ -110,8 +119,6 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     }
 
     protected abstract void wakeup(boolean inEventLoop);
-
-    protected abstract Runnable newRegistrationTask(Channel channel, ChannelFuture future);
 
     @Override
     public boolean inEventLoop() {

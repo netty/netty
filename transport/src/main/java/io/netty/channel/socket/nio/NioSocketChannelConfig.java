@@ -15,11 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.AdaptiveReceiveBufferSizePredictor;
-import io.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ReceiveBufferSizePredictor;
-import io.netty.channel.ReceiveBufferSizePredictorFactory;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 
@@ -36,53 +32,11 @@ import io.netty.channel.socket.SocketChannelConfig;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "writeBufferHighWaterMark"}</td><td>{@link #setWriteBufferHighWaterMark(int)}</td>
- * </tr><tr>
- * <td>{@code "writeBufferLowWaterMark"}</td><td>{@link #setWriteBufferLowWaterMark(int)}</td>
- * </tr><tr>
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
- * </tr><tr>
- * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
- * </tr><tr>
- * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
  * </tr>
  * </table>
  */
 public interface NioSocketChannelConfig extends SocketChannelConfig, NioChannelConfig {
-
-
-    /**
-     * Returns the {@link ReceiveBufferSizePredictor} which predicts the
-     * number of readable bytes in the socket receive buffer.  The default
-     * predictor is <tt>{@link AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
-     */
-    ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
-
-    /**
-     * Sets the {@link ReceiveBufferSizePredictor} which predicts the
-     * number of readable bytes in the socket receive buffer.  The default
-     * predictor is <tt>{@link AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
-     */
-    void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
-
-    /**
-     * Returns the {@link ReceiveBufferSizePredictorFactory} which creates a new
-     * {@link ReceiveBufferSizePredictor} when a new channel is created and
-     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
-     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
-     * will be called with the new predictor.  The default factory is
-     * <tt>{@link AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
-     */
-    ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory();
-
-    /**
-     * Sets the {@link ReceiveBufferSizePredictor} which creates a new
-     * {@link ReceiveBufferSizePredictor} when a new channel is created and
-     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
-     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
-     * will be called with the new predictor.  The default factory is
-     * <tt>{@link AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
-     */
-    void setReceiveBufferSizePredictorFactory(
-            ReceiveBufferSizePredictorFactory predictorFactory);
+    // This method does not provide a configuration property by itself.
+    // It just combined SocketChannelConfig and NioChannelConfig for user's sake.
 }

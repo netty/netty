@@ -184,6 +184,9 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
         java.nio.channels.Channel ch();
         ChannelBufferHolder<Object> out();
 
+        SocketAddress localAddress();
+        SocketAddress remoteAddress();
+
         void register(EventLoop eventLoop, ChannelFuture future);
         void bind(SocketAddress localAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);

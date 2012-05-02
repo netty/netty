@@ -17,16 +17,12 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.ConversionUtil;
 import io.netty.util.internal.DetectionUtil;
 
-import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.NetworkInterface;
-import java.net.StandardSocketOptions;
 import java.nio.channels.DatagramChannel;
-import java.util.Map;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
@@ -34,35 +30,52 @@ import java.util.Map;
 class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         implements NioDatagramChannelConfig {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory
-                    .getInstance(DefaultNioDatagramChannelConfig.class);
+    private static final Object IP_MULTICAST_IF;
+    private static final Method GET_OPTION;
+    private static final Method SET_OPTION;
 
-    private volatile int writeBufferHighWaterMark = 64 * 1024;
-    private volatile int writeBufferLowWaterMark = 32 * 1024;
-    private volatile int writeSpinCount = 16;
+    static {
+        ClassLoader classLoader = DatagramChannel.class.getClassLoader();
+        Class<?> socketOptionType = null;
+        try {
+            socketOptionType = Class.forName("java.net.SocketOption", true, classLoader);
+        } catch (Exception e) {
+            // Not Java 7+
+        }
+
+        Object ipMulticastIf = null;
+        if (socketOptionType != null) {
+            try {
+                ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_IF").get(null);
+            } catch (Exception e) {
+                throw new Error("cannot locate the IP_MULTICAST_IF field", e);
+            }
+        }
+        IP_MULTICAST_IF = ipMulticastIf;
+
+        Method getOption;
+        try {
+            getOption = DatagramChannel.class.getDeclaredMethod("getOption", socketOptionType);
+        } catch (Exception e) {
+            throw new Error("cannot locate the getOption() method", e);
+        }
+        GET_OPTION = getOption;
+
+        Method setOption;
+        try {
+            setOption = DatagramChannel.class.getDeclaredMethod("setOption", socketOptionType, Object.class);
+        } catch (Exception e) {
+            throw new Error("cannot locate the setOption() method", e);
+        }
+        SET_OPTION = setOption;
+    }
 
     private final DatagramChannel channel;
+    private volatile int writeSpinCount = 16;
 
     DefaultNioDatagramChannelConfig(DatagramChannel channel) {
         super(channel.socket());
         this.channel = channel;
-    }
-
-    @Override
-    public void setOptions(Map<String, Object> options) {
-        super.setOptions(options);
-        if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
-            // Recover the integrity of the configuration with a sensible value.
-            setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
-            if (logger.isWarnEnabled()) {
-                // Notify the user about misconfiguration.
-                logger.warn("writeBufferLowWaterMark cannot be greater than "
-                        + "writeBufferHighWaterMark; setting to the half of the "
-                        + "writeBufferHighWaterMark.");
-            }
-
-        }
     }
 
     @Override
@@ -71,66 +84,12 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             return true;
         }
 
-        if (key.equals("writeBufferHighWaterMark")) {
-            setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
-        } else if (key.equals("writeBufferLowWaterMark")) {
-            setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
-        } else if (key.equals("writeSpinCount")) {
+        if (key.equals("writeSpinCount")) {
             setWriteSpinCount(ConversionUtil.toInt(value));
         } else {
             return false;
         }
         return true;
-    }
-
-    @Override
-    public int getWriteBufferHighWaterMark() {
-        return writeBufferHighWaterMark;
-    }
-
-    @Override
-    public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
-            throw new IllegalArgumentException(
-                    "writeBufferHighWaterMark cannot be less than " +
-                            "writeBufferLowWaterMark (" +
-                            getWriteBufferLowWaterMark() + "): " +
-                            writeBufferHighWaterMark);
-        }
-        setWriteBufferHighWaterMark0(writeBufferHighWaterMark);
-    }
-
-    private void setWriteBufferHighWaterMark0(int writeBufferHighWaterMark) {
-        if (writeBufferHighWaterMark < 0) {
-            throw new IllegalArgumentException("writeBufferHighWaterMark: " +
-                    writeBufferHighWaterMark);
-        }
-        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
-    }
-
-    @Override
-    public int getWriteBufferLowWaterMark() {
-        return writeBufferLowWaterMark;
-    }
-
-    @Override
-    public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
-            throw new IllegalArgumentException(
-                    "writeBufferLowWaterMark cannot be greater than " +
-                            "writeBufferHighWaterMark (" +
-                            getWriteBufferHighWaterMark() + "): " +
-                            writeBufferLowWaterMark);
-        }
-        setWriteBufferLowWaterMark0(writeBufferLowWaterMark);
-    }
-
-    private void setWriteBufferLowWaterMark0(int writeBufferLowWaterMark) {
-        if (writeBufferLowWaterMark < 0) {
-            throw new IllegalArgumentException("writeBufferLowWaterMark: " +
-                    writeBufferLowWaterMark);
-        }
-        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
     }
 
     @Override
@@ -146,15 +105,15 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         }
         this.writeSpinCount = writeSpinCount;
     }
-    
+
     @Override
     public void setNetworkInterface(NetworkInterface networkInterface) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
             try {
-                channel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
-            } catch (IOException e) {
+                SET_OPTION.invoke(channel, IP_MULTICAST_IF, networkInterface);
+            } catch (Exception e) {
                 throw new ChannelException(e);
             }
         }
@@ -166,11 +125,10 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             throw new UnsupportedOperationException();
         } else {
             try {
-                return (NetworkInterface) channel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
-            } catch (IOException e) {
+                return (NetworkInterface) GET_OPTION.invoke(channel, IP_MULTICAST_IF);
+            } catch (Exception e) {
                 throw new ChannelException(e);
             }
         }
     }
-
 }
