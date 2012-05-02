@@ -116,18 +116,59 @@ final class HttpPostBodyUtil {
     private HttpPostBodyUtil() {
     }
 
-    //Some commons methods between HttpPostRequestDecoder and HttpMessageDecoder
+
     /**
-     * Skip control Characters
-     * @param buffer
-     */
-    static void skipControlCharacters(ChannelBuffer buffer) {
-        for (;;) {
-            char c = (char) buffer.readUnsignedByte();
-            if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
-                buffer.readerIndex(buffer.readerIndex() - 1);
-                break;
+    * Exception when NO Backend Array is found
+    */
+    static class SeekAheadNoBackArrayException extends Exception {
+        private static final long serialVersionUID = -630418804938699495L;
+    }
+
+    /**
+    * This class intends to decrease the CPU in seeking ahead some bytes in
+    * HttpPostRequestDecoder
+    */
+    static class SeekAheadOptimize {
+        byte[] bytes;
+
+        int readerIndex;
+
+        int pos;
+
+        int limit;
+
+        ChannelBuffer buffer;
+
+        /**
+        * @param buffer
+        */
+        SeekAheadOptimize(ChannelBuffer buffer) throws SeekAheadNoBackArrayException {
+            if (!buffer.hasArray()) {
+                throw new SeekAheadNoBackArrayException();
             }
+            this.buffer = buffer;
+            this.bytes = buffer.array();
+            this.pos = this.readerIndex = buffer.readerIndex();
+            this.limit = buffer.writerIndex();
+        }
+
+        /**
+        *
+        * @param minus this value will be used as (currentPos - minus) to set
+        * the current readerIndex in the buffer.
+        */
+        void setReadPosition(int minus) {
+            pos -= minus;
+            readerIndex = pos;
+            buffer.readerIndex(readerIndex);
+        }
+
+        void clear() {
+            this.buffer = null;
+            this.bytes = null;
+            this.limit = 0;
+            this.pos = 0;
+            this.readerIndex = 0;
         }
     }
 
