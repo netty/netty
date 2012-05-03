@@ -43,6 +43,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.Channels;
+import io.netty.channel.DefaultChannelFuture;
 import io.netty.channel.DownstreamMessageEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.LifeCycleAwareChannelHandler;
@@ -206,6 +207,8 @@ public class SslHandler extends FrameDecoder
         }
         
     };
+    
+    private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
     
     /**
      * Creates a new instance.
@@ -426,6 +429,18 @@ public class SslHandler extends FrameDecoder
         return issueHandshake;
     }
     
+    /**
+     * Return the {@link ChannelFuture} that will get notified if the inbound of the {@link SSLEngine} will get closed.
+     * 
+     * This method will return the same {@link ChannelFuture} all the time.
+     * 
+     * For more informations see the apidocs of {@link SSLEngine}
+     * 
+     */
+    public ChannelFuture getSSLEngineInboundCloseFuture() {
+        return sslEngineCloseFuture;
+    }
+
     @Override
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
@@ -924,7 +939,12 @@ public class SslHandler extends FrameDecoder
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
                 }
-
+                
+                // notify about the CLOSED state of the SSLEngine. See #137
+                if (result.getStatus() == Status.CLOSED) {
+                    sslEngineCloseFuture.setClosed();
+                }
+                
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 handleRenegotiation(handshakeStatus);
                 switch (handshakeStatus) {
@@ -1209,4 +1229,34 @@ public class SslHandler extends FrameDecoder
         }
         super.channelConnected(ctx, e);     
     } 
+    
+    private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
+        public SSLEngineInboundCloseFuture() {
+            super(null, true);
+        }
+        
+        void setClosed() {
+            super.setSuccess();            
+        }
+        
+        @Override
+        public Channel getChannel() {
+            if (ctx == null) {
+                // Maybe we should better throw an IllegalStateException() ?
+                return null;
+            } else {
+                return ctx.getChannel();
+            }
+        }
+        
+        @Override
+        public boolean setSuccess() {
+            return false;
+        }
+        
+        @Override
+        public boolean setFailure(Throwable cause) {
+            return false;
+        }
+    }
 }
