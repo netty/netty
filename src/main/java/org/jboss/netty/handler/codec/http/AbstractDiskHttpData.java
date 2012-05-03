@@ -194,7 +194,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             read = inputStream.read(bytes);
         }
         localfileChannel.force(false);
-        localfileChannel.close());
+        localfileChannel.close();
         size = written;
         if (definedSize > 0 && definedSize < size) {
             file.delete();

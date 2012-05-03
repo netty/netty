@@ -26,8 +26,8 @@ import java.util.TreeMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http2.HttpPostBodyUtil.SeekAheadNoBackArrayException;
-import org.jboss.netty.handler.codec.http2.HttpPostBodyUtil.SeekAheadOptimize;
+import org.jboss.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadNoBackArrayException;
+import org.jboss.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadOptimize;
 import org.jboss.netty.handler.codec.http.HttpPostBodyUtil.TransferEncodingMechanism;
 
 /**
@@ -882,7 +882,7 @@ public class HttpPostRequestDecoder {
             throws ErrorDataDecoderException {
         // --AaB03x or --AaB03x--
         int readerIndex = undecodedChunk.readerIndex();
-        skipControlCharacters(undecodedChunk);
+        skipControlCharacters();
         skipOneLine();
         String newline;
         try {
@@ -923,7 +923,7 @@ public class HttpPostRequestDecoder {
         }
         // read many lines until empty line with newline found! Store all data
         while (!skipOneLine()) {
-            skipControlCharacters(undecodedChunk);
+            skipControlCharacters();
             String newline;
             try {
                 newline = readLine();
