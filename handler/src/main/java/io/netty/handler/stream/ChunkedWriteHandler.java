@@ -204,7 +204,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 final MessageEvent currentEvent = this.currentEvent;
                 Object m = currentEvent.getMessage();
                 if (m instanceof ChunkedInput) {
-                    ChunkedInput chunks = (ChunkedInput) m;
+                    final ChunkedInput chunks = (ChunkedInput) m;
                     Object chunk;
                     boolean endOfInput;
                     boolean suspend;
@@ -241,8 +241,18 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         ChannelFuture writeFuture;
                         if (endOfInput) {
                             this.currentEvent = null;
-                            closeInput(chunks);
                             writeFuture = currentEvent.getFuture();
+                            
+                            // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have 
+                            // some resource bound that can not be closed before its not written
+                            //
+                            // See https://github.com/netty/netty/issues/303
+                            writeFuture.addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) throws Exception {
+                                    closeInput(chunks);
+                                }
+                            });
                         } else {
                             writeFuture = future(channel);
                             writeFuture.addListener(new ChannelFutureListener() {
