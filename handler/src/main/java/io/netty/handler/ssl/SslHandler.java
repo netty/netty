@@ -1211,9 +1211,41 @@ public class SslHandler extends FrameDecoder
         // Unused
     }
 
+    /**
+     * Fail all pending writes which we were not able to flush out
+     */
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
+        
+        // there is no need for synchronization here as we do not receive downstream events anymore
+        Throwable cause = null;
+        for (;;) {
+            PendingWrite pw = pendingUnencryptedWrites.poll();
+            if (pw == null) {
+                break;
+            }
+            if (cause == null) {
+                cause = new IOException("Unable to write data");
+            }
+            pw.future.setFailure(cause);
+
+        }
+
+        for (;;) {
+            MessageEvent ev = pendingEncryptedWrites.poll();
+            if (ev == null) {
+                break;
+            }
+            if (cause == null) {
+                cause = new IOException("Unable to write data");
+            }
+            ev.getFuture().setFailure(cause);
+
+        }
+
+        if (cause != null) {
+            fireExceptionCaught(ctx, cause);
+        }
     }
     
 
