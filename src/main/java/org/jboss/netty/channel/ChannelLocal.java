@@ -33,7 +33,7 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * property, which performs better.
  * @apiviz.stereotype utility
  */
-public class ChannelLocal<T> implements Iterable<Entry<Channel, T>>{
+public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
 
     private final ConcurrentMap<Channel, T> map =
         new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
