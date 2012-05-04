@@ -1254,7 +1254,7 @@ public class SslHandler extends FrameDecoder
         }
 
         if (cause != null) {
-            fireExceptionCaught(ctx, cause);
+            fireExceptionCaughtLater(ctx, cause);
         }
     }
     
