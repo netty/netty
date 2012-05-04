@@ -250,7 +250,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                                     //
                                     // See https://github.com/netty/netty/issues/303
                                     writeFuture.addListener(new ChannelFutureListener() {
-
                                         @Override
                                         public void operationComplete(ChannelFuture future) throws Exception {
                                             closeInput(chunks);
@@ -288,7 +287,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 // mark the flush as done
                 flush.set(false);
             }
-
         }
 
         if (acquired && !channel.isConnected() || channel.isWritable() && !queue.isEmpty()) {
