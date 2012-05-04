@@ -24,10 +24,8 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
-import org.jboss.netty.util.internal.DetectionUtil;
 
 final class SocketSendBufferPool {
 
@@ -68,11 +66,11 @@ final class SocketSendBufferPool {
             return EMPTY_BUFFER;
         }
 
-
+        // Disable till 3.5.0.Final
+        /*
         if (src instanceof CompositeChannelBuffer && DetectionUtil.javaVersion() >= 7) {
             return new GatheringSendBuffer(src.toByteBuffers());
-        }
-        
+        }*/
         if (src.isDirect()) {
             return new UnpooledSendBuffer(src.toByteBuffer());
         }
