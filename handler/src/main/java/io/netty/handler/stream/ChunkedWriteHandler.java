@@ -287,16 +287,19 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     }
     
 
+    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // nothing to do
         
     }
 
+    @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // nothing to do
         
     }
 
+    @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // try to flush again a last time.
         //
@@ -305,6 +308,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     }
 
     // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
+    @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // Fail all MessageEvent's that are left. This is needed because otherwise we would never notify the
         // ChannelFuture and the registered FutureListener. See #304
