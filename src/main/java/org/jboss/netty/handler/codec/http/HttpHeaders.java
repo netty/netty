@@ -307,10 +307,13 @@ public class HttpHeaders {
      */
     public static final class Values {
         /**
+<<<<<<< HEAD
          * {@code "application/x-www-form-urlencoded"}
          */
         public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
         /**
+=======
+>>>>>>> parent of 802e536... Backport post request body and file upload to 3.x branch
          * {@code "base64"}
          */
         public static final String BASE64 = "base64";
@@ -319,10 +322,13 @@ public class HttpHeaders {
          */
         public static final String BINARY = "binary";
         /**
+<<<<<<< HEAD
          * {@code "boundary"}
          */
         static final String BOUNDARY = "boundary";        
         /**
+=======
+>>>>>>> parent of 802e536... Backport post request body and file upload to 3.x branch
          * {@code "bytes"}
          */
         public static final String BYTES = "bytes";
@@ -375,10 +381,13 @@ public class HttpHeaders {
          */
         public static final String MIN_FRESH = "min-fresh";
         /**
+<<<<<<< HEAD
          * {@code "multipart/form-data"}
          */
         static final String MULTIPART_FORM_DATA = "multipart/form-data";        
         /**
+=======
+>>>>>>> parent of 802e536... Backport post request body and file upload to 3.x branch
          * {@code "must-revalidate"}
          */
         public static final String MUST_REVALIDATE = "must-revalidate";
