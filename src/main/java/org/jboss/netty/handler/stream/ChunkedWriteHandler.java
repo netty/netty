@@ -192,6 +192,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         
                 if (!channel.isConnected()) {
                     discard(ctx, fireNow);
+                    return;
                 }
 
                 while (channel.isWritable()) {
@@ -284,7 +285,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
                     if (!channel.isConnected()) {
                         discard(ctx, fireNow);
-                        break;
+                        return;
                     }
                 }
             } finally {
@@ -294,7 +295,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             
         }
         
-        if (acquired && !channel.isConnected() || (channel.isWritable() && !queue.isEmpty())) {
+        if (acquired && (!channel.isConnected() || (channel.isWritable() && !queue.isEmpty()))) {
             flush(ctx, fireNow);
         }
     }
