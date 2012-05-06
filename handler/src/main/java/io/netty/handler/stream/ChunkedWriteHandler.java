@@ -114,12 +114,11 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         assert offered;
 
         final Channel channel = ctx.getChannel();
-        if (channel.isWritable()) {
+        // call flush if the channel is writable or not connected. flush(..) will take care of the rest
+
+        if (channel.isWritable() || !channel.isConnected()) {
             this.ctx = ctx;
             flush(ctx, false);
-        } else if (!channel.isConnected()) {
-            this.ctx = ctx;
-            discard(ctx, false);
         }
     }
 
@@ -146,7 +145,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     private void discard(ChannelHandlerContext ctx, boolean fireNow) {
         ClosedChannelException cause = null;
-        boolean fireExceptionCaught = false;
            
         for (;;) {
             MessageEvent currentEvent = this.currentEvent;
@@ -172,15 +170,16 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 cause = new ClosedChannelException();
             }
             currentEvent.getFuture().setFailure(cause);
-            fireExceptionCaught = true;
+
+            currentEvent = null;
         }
         
 
-        if (fireExceptionCaught) {
+        if (cause != null) {
             if (fireNow) {
-                fireExceptionCaught(ctx, cause);
+                Channels.fireExceptionCaught(ctx.getChannel(), cause);
             } else {
-                fireExceptionCaughtLater(ctx, cause);
+                Channels.fireExceptionCaughtLater(ctx.getChannel(), cause);
             }
         }
     }
@@ -195,6 +194,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         
                 if (!channel.isConnected()) {
                     discard(ctx, fireNow);
+                    return;
                 }
 
                 while (channel.isWritable()) {
@@ -244,8 +244,8 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
                             if (suspend) {
                                 // ChunkedInput.nextChunk() returned null and it has
-                                // not reached at the end of input. Let's wait until
-                                // more chunks arrive. Nothing to write or notify.
+                                // not reached at the end of input.  Let's wait until
+                                // more chunks arrive.  Nothing to write or notify.
                                 break;
                             } else {
                                 ChannelFuture writeFuture;
@@ -253,7 +253,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                                     this.currentEvent = null;
                                     writeFuture = currentEvent.getFuture();
 
-                                    // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have
+                                    // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have 
                                     // some resource bound that can not be closed before its not written
                                     //
                                     // See https://github.com/netty/netty/issues/303
@@ -287,7 +287,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
                     if (!channel.isConnected()) {
                         discard(ctx, fireNow);
-                        break;
+                        return;
                     }
                 }
             } finally {
@@ -297,10 +297,11 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             
         }
         
-        if (acquired && !channel.isConnected() || (channel.isWritable() && !queue.isEmpty())) {
+        if (acquired && (!channel.isConnected() || (channel.isWritable() && !queue.isEmpty()))) {
             flush(ctx, fireNow);
         }
     }
+
 
     static void closeInput(ChunkedInput chunks) {
         try {
