@@ -117,7 +117,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
         if (channel.isWritable() || !channel.isConnected()) {
             this.ctx = ctx;
-            discard(ctx, false);
+            flush(ctx, false);
         }
     }
 
