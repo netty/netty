@@ -81,22 +81,23 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
             if (readBytes < 0) {
                 // check if the input was closed in the meantime if so we need to continue 
                 // with the event loop
-                if (!channel.isInputOpen()) {
-                    return true;
-                } else {
+                if (channel.isInputOpen()) {
                     return false;
                 }
+                
+                return true;
+                
             }
         } else {
             int b = in.read();
             if (b < 0) {
                 // check if the input was closed in the meantime if so we need to continue 
                 // with the event loop
-                if (!channel.isInputOpen()) {
-                    return true;
-                } else {
+                if (channel.isInputOpen()) {
                     return false;
                 }
+                return true;
+                
             }
             in.unread(b);
             return true;
