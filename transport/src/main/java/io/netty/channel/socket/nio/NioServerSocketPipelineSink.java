@@ -88,6 +88,16 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
                     channel.getWorker().close(channel, future);
                 }
                 break;
+            case OPEN_INPUT:
+                if (Boolean.FALSE.equals(value)) {
+                    channel.getWorker().closeInput(channel, future);
+                }
+                break;
+            case OPEN_OUTPUT:
+                if (Boolean.FALSE.equals(value)) {
+                    channel.getWorker().closeOutput(channel, future);
+                }
+                break;
             case BOUND:
             case CONNECTED:
                 if (value == null) {

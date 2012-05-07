@@ -53,6 +53,16 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
                     OioWorker.close(channel, future);
                 }
                 break;
+            case OPEN_INPUT:
+                if (Boolean.FALSE.equals(value)) {
+                    OioWorker.closeInput(channel, future);
+                }
+                break;
+            case OPEN_OUTPUT:
+                if (Boolean.FALSE.equals(value)) {
+                    OioWorker.closeOutput(channel, future);
+                }
+                break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (SocketAddress) value);

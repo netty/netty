@@ -47,7 +47,7 @@ import io.netty.util.internal.ConversionUtil;
  * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} by yourself.
  * @apiviz.landmark
  */
-public final class Channels {
+public class Channels {
 
     // pipeline factory methods
 
@@ -490,6 +490,9 @@ public final class Channels {
             fireChildChannelStateChanged(channel.getParent(), channel);
         }
     }
+    
+ 
+
 
     /**
      * Sends a {@code "channelClosed"} event to the
@@ -851,6 +854,8 @@ public final class Channels {
                 ctx.getChannel(), future, ChannelState.OPEN, Boolean.FALSE));
     }
 
+
+    
     private static void validateInterestOps(int interestOps) {
         switch (interestOps) {
         case Channel.OP_NONE:
@@ -868,7 +873,7 @@ public final class Channels {
         return interestOps & ~Channel.OP_WRITE;
     }
 
-    private Channels() {
+    protected Channels() {
         // Unused
     }
 }

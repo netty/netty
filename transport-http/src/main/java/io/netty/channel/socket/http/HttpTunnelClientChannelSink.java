@@ -71,6 +71,17 @@ class HttpTunnelClientChannelSink extends AbstractChannelSink {
                 channel.onCloseRequest(e.getFuture());
             }
             break;
+        case OPEN_INPUT:
+            if (Boolean.FALSE.equals(e.getValue())) {
+                channel.onCloseInputRequest(e.getFuture());
+            }
+            break;
+        case OPEN_OUTPUT:
+            if (Boolean.FALSE.equals(e.getValue())) {
+                channel.onCloseOutputRequest(e.getFuture());
+            }
+            break;
         }
+        
     }
 }

@@ -105,4 +105,34 @@ public class FakeSocketChannel extends AbstractChannel implements SocketChannel 
         }
     }
 
+    @Override
+    public ChannelFuture getCloseInputFuture() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ChannelFuture closeInput() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ChannelFuture getCloseOutputFuture() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ChannelFuture closeOutput() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isInputOpen() {
+        return isOpen();
+    }
+
+    @Override
+    public boolean isOutputOpen() {
+        return isOpen();
+    }
+
 }

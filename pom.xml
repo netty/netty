@@ -252,11 +252,15 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>java.util.zip.Deflater</ignore>
+            
             <!-- Used for NIO UDP multicast -->
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
+            
+            <!-- Used for support of half closed sockets -->
+            <ignore>java.nio.channels.SocketChannel</ignore>
           </ignores>
         </configuration>
         <executions>

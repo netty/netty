@@ -18,6 +18,7 @@ package io.netty.channel.socket.nio;
 import static io.netty.channel.Channels.fireChannelBound;
 import static io.netty.channel.Channels.fireChannelConnected;
 import static io.netty.channel.Channels.fireExceptionCaught;
+import static io.netty.channel.Channels.fireExceptionCaughtLater;
 import static io.netty.channel.Channels.fireMessageReceived;
 import static io.netty.channel.Channels.succeededFuture;
 import io.netty.buffer.ChannelBuffer;
@@ -25,6 +26,8 @@ import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.socket.SocketChannels;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -51,7 +54,7 @@ public class NioWorker extends AbstractNioWorker {
     protected boolean read(SelectionKey k) {
         final SocketChannel ch = (SocketChannel) k.channel();
         final NioSocketChannel channel = (NioSocketChannel) k.attachment();
-
+        
         final ReceiveBufferSizePredictor predictor =
             channel.getConfig().getReceiveBufferSizePredictor();
         final int predictedRecvBufSize = predictor.nextReceiveBufferSize();
@@ -155,5 +158,98 @@ public class NioWorker extends AbstractNioWorker {
             }
         }
     }
+    
+    void closeInput(NioSocketChannel channel, ChannelFuture future) {
+        boolean isIoThread = isIoThread();
+        
+        boolean bound = channel.isBound();
+        try {
+            
+            // Only supported on java7+ so throw an exception here if we detect a lower version
+            if (DetectionUtil.javaVersion() < 7) {
+                throw new UnsupportedOperationException("Not supported in java version < 7");
+            }
+            
+            if (channel.getJdkChannel().isOpen()) {
+                channel.getJdkChannel().getChannel().socket().shutdownInput();
+                
+                // remove the read OP
+                int ops = channel.getRawInterestOps();
+                ops &= ~SelectionKey.OP_READ;
+                
+                setInterestOps(channel, succeededFuture(channel), ops);
+                
+                if (selector != null) {
+                    selector.wakeup();
+                }
+            }
+
+            if (channel.setClosedInput()) {
+                future.setSuccess();
+                if (bound) {
+                    if (isIoThread) {
+                        SocketChannels.fireChannelInputClosed(channel);
+                    } else {
+                        SocketChannels.fireChannelInputClosedLater(channel);
+                    }
+                }
+            } else {
+                future.setSuccess();
+            }
+            
+        } catch (Throwable t) {
+            future.setFailure(t);
+            if (isIoThread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+                
+            }
+        }
+    }
+    
+    void closeOutput(NioSocketChannel channel, ChannelFuture future) {
+        boolean isIoThread = isIoThread();
+        
+        boolean bound = channel.isBound();
+        try {
+
+            if (channel.getJdkChannel().isOpen()) {
+                channel.getJdkChannel().getChannel().socket().shutdownOutput();
+                
+                // remove the read OP
+                int ops = channel.getRawInterestOps();
+                ops &= ~SelectionKey.OP_READ;
+                setInterestOps(channel, future, ops);
+                
+                if (selector != null) {
+                    selector.wakeup();
+                }
+            }
+
+            if (channel.setClosedOutput()) {
+                future.setSuccess();
+                if (bound) {
+                    if (isIoThread) {
+                        SocketChannels.fireChannelOutputClosed(channel);
+                    } else {
+                        SocketChannels.fireChannelOutputClosedLater(channel);
+                    }
+                }
+            } else {
+                future.setSuccess();
+            }
+            
+        } catch (Throwable t) {
+            future.setFailure(t);
+            if (isIoThread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+                
+            }
+        }
+    }
+    
 
 }

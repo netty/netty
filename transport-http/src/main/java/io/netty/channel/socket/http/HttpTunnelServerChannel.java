@@ -31,7 +31,7 @@ import io.netty.channel.socket.ServerSocketChannelConfig;
 final class HttpTunnelServerChannel extends AbstractServerChannel implements
         ServerSocketChannel {
 
-    private final ServerSocketChannel realChannel;
+    final ServerSocketChannel realChannel;
 
     final HttpTunnelServerChannelConfig config;
 
