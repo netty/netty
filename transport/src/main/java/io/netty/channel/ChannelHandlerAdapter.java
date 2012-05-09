@@ -114,9 +114,9 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
 
     @Override
     public void flush(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        if (ctx.out().hasMessageBuffer()) {
-            Queue<O> out = ctx.out().messageBuffer();
-            Queue<Object> nextOut = ctx.nextOut().messageBuffer();
+        if (ctx.prevOut().hasMessageBuffer()) {
+            Queue<O> out = ctx.prevOut().messageBuffer();
+            Queue<Object> nextOut = ctx.out().messageBuffer();
             for (;;) {
                 O msg = out.poll();
                 if (msg == null) {
@@ -125,8 +125,8 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
                 nextOut.add(msg);
             }
         } else {
-            ChannelBuffer out = ctx.out().byteBuffer();
-            ChannelBuffer nextOut = ctx.nextOut().byteBuffer();
+            ChannelBuffer out = ctx.prevOut().byteBuffer();
+            ChannelBuffer nextOut = ctx.out().byteBuffer();
             nextOut.writeBytes(out);
         }
         ctx.flush(future);

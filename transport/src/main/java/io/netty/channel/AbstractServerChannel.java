@@ -37,8 +37,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel() {
-        super(null);
+    protected AbstractServerChannel(Integer id) {
+        super(null, id);
     }
 
     @Override
@@ -62,24 +62,23 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        future.setFailure(new UnsupportedOperationException());
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void doFinishConnect(ChannelFuture future) {
-        future.setFailure(new UnsupportedOperationException());
+    protected void doFinishConnect() throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void doDisconnect(ChannelFuture future) {
-        future.setFailure(new UnsupportedOperationException());
+    protected void doDisconnect() throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    protected int doFlush(ChannelFuture future) {
-        future.setFailure(new UnsupportedOperationException());
-        return 0;
+    protected int doFlush() throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     private static class NoopQueue extends AbstractQueue<Object> {

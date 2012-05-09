@@ -18,7 +18,6 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
@@ -33,13 +32,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private volatile SelectionKey selectionKey;
 
-    protected AbstractNioChannel(Integer id, Channel parent, SelectableChannel ch) {
-        super(id, parent);
-        this.ch = ch;
-    }
-
-    protected AbstractNioChannel(Channel parent, SelectableChannel ch)  {
-        super(parent);
+    protected AbstractNioChannel(Channel parent, Integer id, SelectableChannel ch) {
+        super(parent, id);
         this.ch = ch;
     }
 
@@ -87,16 +81,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     public abstract NioChannelConfig config();
 
     @Override
-    protected void doRegister(ChannelFuture future) {
+    protected void doRegister() throws Exception {
         if (!(eventLoop() instanceof SelectorEventLoop)) {
             throw new ChannelException("unsupported event loop: " + eventLoop().getClass().getName());
         }
 
         SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
-        try {
-            selectionKey = javaChannel().register(loop.selector, javaChannel().validOps() & ~SelectionKey.OP_WRITE, this);
-        } catch (Exception e) {
-            throw new ChannelException("failed to register a channel", e);
-        }
+        selectionKey = javaChannel().register(loop.selector, javaChannel().validOps() & ~SelectionKey.OP_WRITE, this);
     }
 }

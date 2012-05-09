@@ -21,14 +21,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
@@ -40,43 +38,35 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
 
     private static SocketChannel newSocket() {
-        SocketChannel socket;
         try {
-            socket = SocketChannel.open();
+            return SocketChannel.open();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
+    }
 
-        boolean success = false;
+    public NioSocketChannel() {
+        this(null, null, newSocket());
+    }
+
+    public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
+        super(parent, id, socket);
         try {
             socket.configureBlocking(false);
-            success = true;
         } catch (IOException e) {
-            throw new ChannelException("Failed to enter non-blocking mode.", e);
-        } finally {
-            if (!success) {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(
-                                "Failed to close a partially initialized socket.",
-                                e);
-                    }
-
+            try {
+                socket.close();
+            } catch (IOException e2) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Failed to close a partially initialized socket.", e2);
                 }
+
             }
+
+            throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        return socket;
-    }
-
-    public NioSocketChannel(Channel parent) {
-        this(parent, newSocket());
-    }
-
-    public NioSocketChannel(Channel parent, SocketChannel socket) {
-        super(parent, socket);
         config = new DefaultNioSocketChannelConfig(socket.socket());
     }
 
@@ -113,120 +103,58 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelFuture future) {
-        try {
-            javaChannel().socket().bind(localAddress);
-            future.setSuccess();
-        } catch (Exception e) {
-            future.setFailure(e);
-        }
+    protected void doBind(SocketAddress localAddress) throws Exception {
+        javaChannel().socket().bind(localAddress);
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelFuture future) {
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            try {
-                javaChannel().socket().bind(localAddress);
-            } catch (Exception e) {
-                future.setFailure(e);
+            javaChannel().socket().bind(localAddress);
+        }
+
+        boolean success = false;
+        try {
+            boolean connected = javaChannel().connect(remoteAddress);
+            success = true;
+            return connected;
+        } finally {
+            if (!success) {
+                doClose();
             }
         }
+    }
 
-        try {
-            if (javaChannel().connect(remoteAddress)) {
-                future.setSuccess();
-                pipeline().fireChannelActive();
-            }
-        } catch (Exception e) {
-            future.setFailure(e);
-            close(null);
+    @Override
+    protected void doFinishConnect() throws Exception {
+        if (!javaChannel().finishConnect()) {
+            throw new Error();
         }
     }
 
     @Override
-    protected void doFinishConnect(ChannelFuture future) {
-        try {
-            if (javaChannel().finishConnect()) {
-                future.setSuccess();
-                pipeline().fireChannelActive();
-            }
-        } catch (Exception e) {
-            future.setFailure(e);
-            close(null);
-        }
+    protected void doDisconnect() throws Exception {
+        doClose();
     }
 
     @Override
-    protected void doDisconnect(ChannelFuture future) {
-        doClose(future);
+    protected void doClose() throws Exception {
+        javaChannel().close();
     }
 
     @Override
-    protected void doClose(ChannelFuture future) {
-        try {
-            javaChannel().close();
-        } catch (Exception e) {
-            logger.warn("Failed to close a channel.", e);
-        }
-
-        future.setSuccess();
-        pipeline().fireChannelInactive();
-
-        if (isRegistered()) {
-            deregister(null);
-        }
+    protected void doDeregister() throws Exception {
+        selectionKey().cancel();
     }
 
     @Override
-    protected void doDeregister(ChannelFuture future) {
-        try {
-            selectionKey().cancel();
-            future.setSuccess();
-            pipeline().fireChannelUnregistered();
-        } catch (Exception e) {
-            future.setFailure(e);
-        }
-    }
-
-    @Override
-    protected int doRead() {
-        final SocketChannel ch = javaChannel();
-
-        int ret = 0;
-        int readBytes = 0;
-        boolean failure = true;
-
+    protected int doRead() throws Exception {
         ChannelBuffer buf = pipeline().nextIn().byteBuffer();
-        try {
-            while ((ret = buf.writeBytes(ch, buf.writableBytes())) > 0) {
-                readBytes += ret;
-                if (!buf.writable()) {
-                    break;
-                }
-            }
-            failure = false;
-        } catch (ClosedChannelException e) {
-            // Can happen, and does not need a user attention.
-        } catch (Throwable t) {
-            pipeline().fireExceptionCaught(t);
-        }
-
-        if (readBytes > 0) {
-            pipeline().fireInboundBufferUpdated();
-        }
-
-        if (ret < 0 || failure) {
-            selectionKey().cancel(); // Some JDK implementations run into an infinite loop without this.
-            close(null);
-            return -1;
-        }
-
-        return readBytes;
+        return buf.writeBytes(javaChannel(), buf.writableBytes());
     }
 
     @Override
-    protected int doFlush(ChannelFuture future) {
+    protected int doFlush() throws Exception {
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
@@ -236,26 +164,22 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
         final ChannelBuffer buf = unsafe().out().byteBuffer();
         int bytesLeft = buf.readableBytes();
         if (bytesLeft == 0) {
-            future.setSuccess();
             return 0;
         }
 
-        int readerIndex = buf.readerIndex();
         int localWrittenBytes = 0;
         int writtenBytes = 0;
 
         try {
             for (int i = writeSpinCount; i > 0; i --) {
-                localWrittenBytes = buf.getBytes(readerIndex, ch, bytesLeft);
+                localWrittenBytes = buf.readBytes(ch, bytesLeft);
                 if (localWrittenBytes > 0) {
                     bytesLeft -= localWrittenBytes;
                     if (bytesLeft <= 0) {
                         removeOpWrite = true;
-                        future.setSuccess();
                         break;
                     }
 
-                    readerIndex += localWrittenBytes;
                     writtenBytes += localWrittenBytes;
                 } else {
                     addOpWrite = true;
@@ -265,11 +189,10 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
         } catch (AsynchronousCloseException e) {
             // Doesn't need a user attention - ignore.
         } catch (Throwable t) {
-            future.setFailure(t);
-            pipeline().fireExceptionCaught(t);
             if (t instanceof IOException) {
                 open = false;
-                close(null);
+                selectionKey().cancel();
+                ch.close();
             }
         }
 

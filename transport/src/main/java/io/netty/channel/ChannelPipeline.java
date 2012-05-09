@@ -19,6 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -202,7 +203,7 @@ import java.util.NoSuchElementException;
  * @apiviz.owns       io.netty.channel.ChannelHandler
  * @apiviz.uses       io.netty.channel.ChannelSink - - sends events downstream
  */
-public interface ChannelPipeline extends ChannelHandlerInvoker {
+public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.

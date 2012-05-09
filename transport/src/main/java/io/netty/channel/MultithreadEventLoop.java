@@ -17,6 +17,9 @@ public class MultithreadEventLoop implements EventLoop {
     private final EventLoop[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
+    public MultithreadEventLoop(Class<? extends SingleThreadEventLoop> loopType) {
+        this(loopType, Runtime.getRuntime().availableProcessors() * 2);
+    }
 
     public MultithreadEventLoop(Class<? extends SingleThreadEventLoop> loopType, int nThreads) {
         this(loopType, nThreads, Executors.defaultThreadFactory());
@@ -35,13 +38,17 @@ public class MultithreadEventLoop implements EventLoop {
 
         children = new EventLoop[nThreads];
         for (int i = 0; i < nThreads; i ++) {
+            boolean success = false;
             try {
                 children[i] = loopType.getConstructor(ThreadFactory.class).newInstance(threadFactory);
+                success = true;
             } catch (Exception e) {
                 throw new EventLoopException("failed to create a child event loop: " + loopType.getName(), e);
             } finally {
-                for (int j = 0; j < i; j ++) {
-                    children[j].shutdown();
+                if (!success) {
+                    for (int j = 0; j < i; j ++) {
+                        children[j].shutdown();
+                    }
                 }
             }
         }
@@ -152,7 +159,7 @@ public class MultithreadEventLoop implements EventLoop {
     }
 
     @Override
-    public EventLoop register(Channel channel, ChannelFuture future) {
+    public ChannelFuture register(Channel channel, ChannelFuture future) {
         return nextEventLoop().register(channel, future);
     }
 

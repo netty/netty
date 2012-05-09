@@ -51,13 +51,13 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
 
     @Override
     public ChannelFuture register(Channel channel) {
-        ChannelFuture future = new DefaultChannelFuture(channel, false);
+        ChannelFuture future = channel.newFuture();
         register(channel, future);
         return future;
     }
 
     @Override
-    public EventLoop register(final Channel channel, final ChannelFuture future) {
+    public ChannelFuture register(final Channel channel, final ChannelFuture future) {
         if (inEventLoop()) {
             channel.unsafe().register(this, future);
         } else {
@@ -68,7 +68,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
                 }
             });
         }
-        return this;
+        return future;
     }
 
     protected void interruptThread() {

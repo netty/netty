@@ -33,7 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-abstract class SelectorEventLoop extends SingleThreadEventLoop {
+public class SelectorEventLoop extends SingleThreadEventLoop {
     /**
      * Internal Netty logger.
      */
@@ -57,19 +57,19 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    protected SelectorEventLoop() {
+    public SelectorEventLoop() {
         this(Executors.defaultThreadFactory());
     }
 
-    protected SelectorEventLoop(ThreadFactory threadFactory) {
+    public SelectorEventLoop(ThreadFactory threadFactory) {
         this(threadFactory, SelectorProvider.provider());
     }
 
-    protected SelectorEventLoop(SelectorProvider selectorProvider) {
+    public SelectorEventLoop(SelectorProvider selectorProvider) {
         this(Executors.defaultThreadFactory(), selectorProvider);
     }
 
-    protected SelectorEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+    public SelectorEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
         super(threadFactory);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
@@ -190,7 +190,8 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
 
                 int readyOps = k.readyOps();
                 if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
-                    if (ch.unsafe().read() < 0) {
+                    ch.unsafe().read();
+                    if (!ch.isOpen()) {
                         // Connection already closed - no need to handle write.
                         continue;
                     }
@@ -264,5 +265,12 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
             return true;
         }
         return false;
+    }
+
+    @Override
+    protected void wakeup(boolean inEventLoop) {
+        if (wakenUp.compareAndSet(false, true)) {
+            selector.wakeup();
+        }
     }
 }

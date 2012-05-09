@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -29,7 +28,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 
-final class NioServerSocketChannel extends AbstractServerChannel
+public class NioServerSocketChannel extends AbstractServerChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final InternalLogger logger =
@@ -41,6 +40,8 @@ final class NioServerSocketChannel extends AbstractServerChannel
     private volatile SelectionKey selectionKey;
 
     public NioServerSocketChannel() {
+        super(null);
+
         try {
             socket = ServerSocketChannel.open();
         } catch (IOException e) {
@@ -109,73 +110,37 @@ final class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    protected void doRegister(ChannelFuture future) {
+    protected void doRegister() throws Exception {
         if (!(eventLoop() instanceof SelectorEventLoop)) {
             throw new ChannelException("unsupported event loop: " + eventLoop().getClass().getName());
         }
 
         SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
-        try {
-            selectionKey = javaChannel().register(loop.selector, javaChannel().validOps(), this);
-        } catch (Exception e) {
-            throw new ChannelException("failed to register a channel", e);
-        }
+        selectionKey = javaChannel().register(loop.selector, javaChannel().validOps(), this);
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelFuture future) {
-        try {
-            javaChannel().socket().bind(localAddress);
-            future.setSuccess();
-            pipeline().fireChannelActive();
-        } catch (Exception e) {
-            future.setFailure(e);
-        }
+    protected void doBind(SocketAddress localAddress) throws Exception {
+        javaChannel().socket().bind(localAddress);
     }
 
     @Override
-    protected void doClose(ChannelFuture future) {
-        try {
-            javaChannel().close();
-        } catch (Exception e) {
-            logger.warn("Failed to close a channel.", e);
-        }
-
-        future.setSuccess();
-        pipeline().fireChannelInactive();
-
-        if (isRegistered()) {
-            deregister(null);
-        }
+    protected void doClose() throws Exception {
+        javaChannel().close();
     }
 
     @Override
-    protected void doDeregister(ChannelFuture future) {
-        try {
-            selectionKey.cancel();
-            future.setSuccess();
-            pipeline().fireChannelUnregistered();
-        } catch (Exception e) {
-            future.setFailure(e);
-        }
+    protected void doDeregister() throws Exception {
+        selectionKey.cancel();
     }
 
     @Override
-    protected int doRead() {
-        int acceptedConns = 0;
-        for (;;) {
-            try {
-                java.nio.channels.SocketChannel ch = javaChannel().accept();
-                if (ch == null) {
-                    break;
-                }
-                pipeline().nextIn().messageBuffer().add(new NioSocketChannel(this, ch));
-            } catch (ChannelException e) {
-                pipeline().fireExceptionCaught(e);
-            } catch (Exception e) {
-                pipeline().fireExceptionCaught(new ChannelException("failed to accept a connection", e));
-            }
+    protected int doRead() throws Exception {
+        java.nio.channels.SocketChannel ch = javaChannel().accept();
+        if (ch == null) {
+            return 0;
         }
-        return acceptedConns;
+        pipeline().nextIn().messageBuffer().add(new NioSocketChannel(this, null, ch));
+        return 1;
     }
 }

@@ -20,8 +20,8 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.ConcurrentHashMap;
 
-import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -35,9 +35,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
 
+    /**
+     * Generates a negative unique integer ID.  This method generates only
+     * negative integers to avoid conflicts with user-specified IDs where only
+     * non-negative integers are allowed.
+     */
     private static Integer allocateId(Channel channel) {
-        Integer id = Integer.valueOf(System.identityHashCode(channel));
+        int idVal = -Math.abs(System.identityHashCode(channel));
+        if (idVal >= 0) {
+            idVal = -1;
+        }
+        Integer id;
         for (;;) {
+            id = Integer.valueOf(idVal);
             // Loop until a unique ID is acquired.
             // It should be found in one loop practically.
             if (allChannels.putIfAbsent(id, channel) == null) {
@@ -45,22 +55,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return id;
             } else {
                 // Taken by other channel at almost the same moment.
-                id = Integer.valueOf(id.intValue() + 1);
+                idVal --;
+                if (idVal >= 0) {
+                    idVal = -1;
+                }
             }
         }
     }
 
-    private final Integer id;
     private final Channel parent;
+    private final Integer id;
     private final Unsafe unsafe;
     private final ChannelPipeline pipeline = new DefaultChannelPipeline(this);
     private final List<ChannelFutureListener> closureListeners = new ArrayList<ChannelFutureListener>(4);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
+    private final ChannelFuture voidFuture = new VoidChannelFuture(this);
 
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
     private volatile boolean notifiedClosureListeners;
+
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
     private ChannelFuture connectFuture;
+    private long writtenAmount;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -69,12 +89,27 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Creates a new instance.
      *
+     * @param id
+     *        the unique non-negative integer ID of this channel.
+     *        Specify {@code null} to auto-generate a unique negative integer
+     *        ID.
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent) {
-        id = allocateId(this);
+    protected AbstractChannel(Channel parent, Integer id) {
+        if (id == null) {
+            id = allocateId(this);
+        } else {
+            if (id.intValue() < 0) {
+                throw new IllegalArgumentException("id: " + id + " (expected: >= 0)");
+            }
+            if (allChannels.putIfAbsent(id, this) != null) {
+                throw new IllegalArgumentException("duplicate ID: " + id);
+            }
+        }
+
         this.parent = parent;
+        this.id = id;
         unsafe = new DefaultUnsafe();
 
         closureListeners.add(new ChannelFutureListener() {
@@ -83,19 +118,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 allChannels.remove(id());
             }
         });
-    }
-
-    /**
-     * (Internal use only) Creates a new temporary instance with the specified
-     * ID.
-     *
-     * @param parent
-     *        the parent of this channel. {@code null} if there's no parent.
-     */
-    protected AbstractChannel(Integer id, Channel parent) {
-        this.id = id;
-        this.parent = parent;
-        unsafe = new DefaultUnsafe();
     }
 
     @Override
@@ -115,7 +137,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop eventLoop() {
+        if (eventLoop == null) {
+            throw new IllegalStateException("channel not registered to an event loop");
+        }
         return eventLoop;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return unsafe().ch().isOpen();
     }
 
     @Override
@@ -124,51 +154,105 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public void bind(SocketAddress localAddress, ChannelFuture future) {
-        pipeline().bind(localAddress, future);
+    public ChannelFuture bind(SocketAddress localAddress) {
+        ChannelFuture f = newFuture();
+        pipeline().bind(localAddress, f);
+        return f;
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, ChannelFuture future) {
-        pipeline().connect(remoteAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        ChannelFuture f = newFuture();
+        pipeline().connect(remoteAddress, f);
+        return f;
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        pipeline().connect(remoteAddress, localAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        ChannelFuture f = newFuture();
+        pipeline().connect(remoteAddress, localAddress, f);
+        return f;
     }
 
     @Override
-    public void disconnect(ChannelFuture future) {
-        pipeline().disconnect(future);
+    public ChannelFuture disconnect() {
+        ChannelFuture f = newFuture();
+        pipeline().disconnect(f);
+        return f;
     }
 
     @Override
-    public void close(ChannelFuture future) {
-        pipeline().close(future);
+    public ChannelFuture close() {
+        ChannelFuture f = newFuture();
+        pipeline().close(f);
+        return f;
     }
 
     @Override
-    public void deregister(ChannelFuture future) {
-        pipeline().deregister(future);
+    public ChannelFuture deregister() {
+        ChannelFuture f = newFuture();
+        pipeline().deregister(f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture flush() {
+        ChannelFuture f = newFuture();
+        pipeline().flush(f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture write(Object message) {
+        ChannelFuture f = newFuture();
+        pipeline().write(message, f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
+        return pipeline().bind(localAddress, future);
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
+        return pipeline().connect(remoteAddress, future);
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+        return pipeline().connect(remoteAddress, localAddress, future);
+    }
+
+    @Override
+    public ChannelFuture disconnect(ChannelFuture future) {
+        return pipeline().disconnect(future);
+    }
+
+    @Override
+    public ChannelFuture close(ChannelFuture future) {
+        return pipeline().close(future);
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelFuture future) {
+        return pipeline().deregister(future);
     }
 
     @Override
     public ChannelBufferHolder<Object> out() {
-        return pipeline().nextOut();
+        return pipeline().out();
     }
 
     @Override
-    public void flush(ChannelFuture future) {
-        pipeline().flush(future);
+    public ChannelFuture flush(ChannelFuture future) {
+        return pipeline().flush(future);
     }
 
     @Override
-    public void write(Object message, ChannelFuture future) {
-        pipeline.write(message, future);
+    public ChannelFuture write(Object message, ChannelFuture future) {
+        return pipeline.write(message, future);
     }
-
-
 
     @Override
     public ChannelFuture newFuture() {
@@ -185,6 +269,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return new FailedChannelFuture(this, cause);
     }
 
+    @Override
+    public ChannelFuture newVoidFuture() {
+        return voidFuture;
+    }
 
     @Override
     public void addClosureListener(final ChannelFutureListener listener) {
@@ -370,7 +458,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public SocketAddress remoteAddress() {
-            // TODO Auto-generated method stub
             return remoteAddress0();
         }
 
@@ -385,22 +472,53 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             AbstractChannel.this.eventLoop = eventLoop;
 
             assert eventLoop().inEventLoop();
-            doRegister(future);
-            assert future.isDone();
-            if (registered = future.isSuccess()) {
+
+            if (!ensureOpen(future)) {
+                return;
+            }
+
+            try {
+                doRegister();
+                registered = true;
+                future.setSuccess();
                 pipeline().fireChannelRegistered();
+            } catch (Throwable t) {
+                // Close the channel directly to avoid FD leak.
+                try {
+                    doClose();
+                } catch (Throwable t2) {
+                    logger.warn("Failed to close a channel", t2);
+                }
+
+                future.setFailure(t);
+                pipeline().fireExceptionCaught(t);
             }
         }
 
         @Override
         public void bind(final SocketAddress localAddress, final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
-                doBind(localAddress, future);
+                if (!ensureOpen(future)) {
+                    return;
+                }
+
+                try {
+                    boolean wasActive = isActive();
+                    doBind(localAddress);
+                    future.setSuccess();
+                    if (!wasActive && isActive()) {
+                        pipeline().fireChannelActive();
+                    }
+                } catch (Throwable t) {
+                    future.setFailure(t);
+                    pipeline().fireExceptionCaught(t);
+                    closeIfClosed();
+                }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        doBind(localAddress, future);
+                        bind(localAddress, future);
                     }
                 });
             }
@@ -408,20 +526,35 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
-            // XXX: What if a user makes a connection attempt twice?
             if (eventLoop().inEventLoop()) {
-                doConnect(remoteAddress, localAddress, future);
-                if (!future.isDone()) {
-                    connectFuture = future;
+                if (!ensureOpen(future)) {
+                    return;
+                }
+
+                try {
+                    if (connectFuture != null) {
+                        throw new IllegalStateException("connection attempt already made");
+                    }
+
+                    boolean wasActive = isActive();
+                    if (doConnect(remoteAddress, localAddress)) {
+                        future.setSuccess();
+                        if (!wasActive && isActive()) {
+                            pipeline().fireChannelActive();
+                        }
+                    } else {
+                        connectFuture = future;
+                    }
+                } catch (Throwable t) {
+                    future.setFailure(t);
+                    pipeline().fireExceptionCaught(t);
+                    closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        doConnect(remoteAddress, localAddress, future);
-                        if (!future.isDone()) {
-                            connectFuture = future;
-                        }
+                        connect(remoteAddress, localAddress, future);
                     }
                 });
             }
@@ -431,18 +564,37 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void finishConnect() {
             assert eventLoop().inEventLoop();
             assert connectFuture != null;
-            doFinishConnect(connectFuture);
+            try {
+                doFinishConnect();
+                connectFuture.setSuccess();
+            } catch (Throwable t) {
+                connectFuture.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+                closeIfClosed();
+            } finally {
+                connectFuture = null;
+            }
         }
 
         @Override
         public void disconnect(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
-                doDisconnect(future);
+                try {
+                    boolean wasActive = isActive();
+                    doDisconnect();
+                    future.setSuccess();
+                    if (wasActive && !isActive()) {
+                        pipeline().fireChannelInactive();
+                    }
+                } catch (Throwable t) {
+                    future.setFailure(t);
+                    closeIfClosed();
+                }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        doDisconnect(future);
+                        disconnect(future);
                     }
                 });
             }
@@ -451,14 +603,27 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void close(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
-                doClose(future);
-                notifyClosureListeners();
+                if (isOpen()) {
+                    boolean wasActive = isActive();
+                    try {
+                        doClose();
+                        future.setSuccess();
+                    } catch (Throwable t) {
+                        future.setFailure(t);
+                    }
+                    if (wasActive && !isActive()) {
+                        pipeline().fireChannelInactive();
+                    }
+                    notifyClosureListeners();
+                } else {
+                    // Closed already.
+                    future.setSuccess();
+                }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        doClose(future);
-                        notifyClosureListeners();
+                        close(future);
                     }
                 });
             }
@@ -468,8 +633,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void deregister(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 try {
-                    doDeregister(future);
+                    doDeregister();
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception occurred while deregistering a channel.", t);
                 } finally {
+                    future.setSuccess();
                     registered = false;
                     pipeline().fireChannelUnregistered();
                     eventLoop = null;
@@ -478,37 +646,86 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
+                        deregister(future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void read() {
+            assert eventLoop().inEventLoop();
+            // FIXME: Wrap with a loop
+            long readAmount = 0;
+            try {
+                boolean closeIfClosed = false;
+                for (;;) {
+                    int localReadAmount = doRead();
+                    if (localReadAmount > 0) {
+                        readAmount += localReadAmount;
+                        continue;
+                    }
+                    if (localReadAmount == 0) {
+                        break;
+                    }
+                    if (localReadAmount < 0) {
+                        closeIfClosed = true;
+                        break;
+                    }
+                }
+
+                if (readAmount > 0) {
+                    pipeline.fireInboundBufferUpdated();
+                }
+
+                if (closeIfClosed) {
+                    closeIfClosed();
+                }
+            } catch (Throwable t) {
+                pipeline().fireExceptionCaught(t);
+                closeIfClosed();
+            }
+        }
+
+        @Override
+        public void flush(final ChannelFuture future) {
+            // FIXME: Notify future properly using writtenAmount.
+            if (eventLoop().inEventLoop()) {
+                try {
+                    writtenAmount += doFlush();
+                } catch (Exception e) {
+                    future.setFailure(e);
+                }
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
                         try {
-                            doDeregister(future);
-                        } finally {
-                            registered = false;
-                            pipeline().fireChannelUnregistered();
-                            eventLoop = null;
+                            writtenAmount += doFlush();
+                        } catch (Exception e) {
+                            future.setFailure(e);
                         }
                     }
                 });
             }
         }
 
-        @Override
-        public int read() throws IOException {
-            assert eventLoop().inEventLoop();
-            return doRead();
+        private boolean ensureOpen(ChannelFuture future) {
+            if (isOpen()) {
+                return true;
+            }
+
+            Exception e = new ClosedChannelException();
+            future.setFailure(e);
+            pipeline().fireExceptionCaught(e);
+            return false;
         }
 
-        @Override
-        public int flush(final ChannelFuture future) {
-            if (eventLoop().inEventLoop()) {
-                return doFlush(future);
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        doFlush(future);
-                    }
-                });
-                return -1; // Unknown
+        private void closeIfClosed() {
+            if (isOpen()) {
+                return;
             }
+            close(newFuture());
         }
     }
 
@@ -518,14 +735,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract SocketAddress localAddress0();
     protected abstract SocketAddress remoteAddress0();
 
-    protected abstract void doRegister(ChannelFuture future);
-    protected abstract void doBind(SocketAddress localAddress, ChannelFuture future);
-    protected abstract void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
-    protected abstract void doFinishConnect(ChannelFuture future);
-    protected abstract void doDisconnect(ChannelFuture future);
-    protected abstract void doClose(ChannelFuture future);
-    protected abstract void doDeregister(ChannelFuture future);
+    protected abstract void doRegister() throws Exception;
+    protected abstract void doBind(SocketAddress localAddress) throws Exception;
+    protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+    protected abstract void doFinishConnect() throws Exception;
+    protected abstract void doDisconnect() throws Exception;
+    protected abstract void doClose() throws Exception;
+    protected abstract void doDeregister() throws Exception;
 
-    protected abstract int doRead();
-    protected abstract int doFlush(ChannelFuture future);
+    protected abstract int doRead() throws Exception;
+    protected abstract int doFlush() throws Exception;
 }

@@ -521,7 +521,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelBufferHolder<Object> nextOut() {
+    public ChannelBufferHolder<Object> out() {
         return channel().unsafe().out();
     }
 
@@ -657,12 +657,68 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void bind(SocketAddress localAddress, ChannelFuture future) {
-        bind(firstOutboundContext(), localAddress, future);
+    public ChannelFuture bind(SocketAddress localAddress) {
+        ChannelFuture f = channel().newFuture();
+        bind(localAddress, f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        ChannelFuture f = channel().newFuture();
+        connect(remoteAddress, f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        ChannelFuture f = channel().newFuture();
+        connect(remoteAddress, localAddress, f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture disconnect() {
+        ChannelFuture f = channel().newFuture();
+        disconnect(f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture close() {
+        ChannelFuture f = channel().newFuture();
+        close(f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture deregister() {
+        ChannelFuture f = channel().newFuture();
+        deregister(f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture flush() {
+        ChannelFuture f = channel().newFuture();
+        flush(f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture write(Object message) {
+        ChannelFuture f = channel().newFuture();
+        write(message, f);
+        return f;
+    }
+
+    @Override
+    public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
+        return bind(firstOutboundContext(), localAddress, future);
     }
 
     @SuppressWarnings("unchecked")
-    private void bind(DefaultChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) {
+    private ChannelFuture bind(DefaultChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
@@ -675,20 +731,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             channel().unsafe().bind(localAddress, future);
         }
+        return future;
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, ChannelFuture future) {
-        connect(remoteAddress, null, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
+        return connect(remoteAddress, null, future);
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        connect(firstOutboundContext(), remoteAddress, localAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+        return connect(firstOutboundContext(), remoteAddress, localAddress, future);
     }
 
     @SuppressWarnings("unchecked")
-    private void connect(DefaultChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+    private ChannelFuture connect(DefaultChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
@@ -702,15 +759,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             channel().unsafe().connect(remoteAddress,  localAddress, future);
         }
+
+        return future;
     }
 
     @Override
-    public void disconnect(ChannelFuture future) {
-        disconnect(firstOutboundContext(), future);
+    public ChannelFuture disconnect(ChannelFuture future) {
+        return disconnect(firstOutboundContext(), future);
     }
 
     @SuppressWarnings("unchecked")
-    private void disconnect(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture disconnect(DefaultChannelHandlerContext ctx, ChannelFuture future) {
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).disconnect(ctx, future);
@@ -720,15 +779,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             channel().unsafe().disconnect(future);
         }
+
+        return future;
     }
 
     @Override
-    public void close(ChannelFuture future) {
-        close(firstOutboundContext(), future);
+    public ChannelFuture close(ChannelFuture future) {
+        return close(firstOutboundContext(), future);
     }
 
     @SuppressWarnings("unchecked")
-    private void close(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture close(DefaultChannelHandlerContext ctx, ChannelFuture future) {
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).close(ctx, future);
@@ -738,15 +799,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             channel().unsafe().close(future);
         }
+
+        return future;
     }
 
     @Override
-    public void deregister(final ChannelFuture future) {
-        deregister(firstOutboundContext(), future);
+    public ChannelFuture deregister(final ChannelFuture future) {
+        return deregister(firstOutboundContext(), future);
     }
 
     @SuppressWarnings("unchecked")
-    private void deregister(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture deregister(DefaultChannelHandlerContext ctx, ChannelFuture future) {
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).deregister(ctx, future);
@@ -756,46 +819,39 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             channel().unsafe().deregister(future);
         }
+
+        return future;
     }
 
     @Override
-    public void flush(ChannelFuture future) {
-        DefaultChannelHandlerContext ctx = firstOutboundContext();
-        if (ctx != null) {
-            flush(ctx, future);
-        } else {
-            channel().unsafe().flush(future);
-        }
+    public ChannelFuture flush(ChannelFuture future) {
+        return flush(firstOutboundContext(), future);
     }
 
     @SuppressWarnings("unchecked")
-    private void flush(DefaultChannelHandlerContext ctx, ChannelFuture future) {
-        try {
-            ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+    private ChannelFuture flush(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        if (ctx != null) {
+            try {
+                ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            channel().unsafe().flush(future);
         }
+
+        return future;
     }
 
     @Override
-    public void write(Object message, ChannelFuture future) {
+    public ChannelFuture write(Object message, ChannelFuture future) {
         if (message instanceof ChannelBuffer) {
             ChannelBuffer m = (ChannelBuffer) message;
-            nextOut().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
+            out().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
         } else {
-            nextOut().messageBuffer().add(message);
+            out().messageBuffer().add(message);
         }
-        flush(future);
-    }
-
-    private static void write(DefaultChannelHandlerContext ctx, Object message, ChannelFuture future) {
-        if (message instanceof ChannelBuffer) {
-            ChannelBuffer m = (ChannelBuffer) message;
-            ctx.nextOut().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
-        } else {
-            ctx.nextOut().messageBuffer().add(message);
-        }
-        ctx.flush(future);
+        return flush(future);
     }
 
     private DefaultChannelHandlerContext firstInboundContext() {
@@ -922,7 +978,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final boolean canHandleInbound;
         private final boolean canHandleOutbound;
         private final ChannelBufferHolder<Object> in;
-        private final ChannelBufferHolder<Object> out;
+        private final ChannelBufferHolder<Object> prevOut;
 
         @SuppressWarnings("unchecked")
         DefaultChannelHandlerContext(
@@ -961,7 +1017,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             if (canHandleOutbound) {
                 try {
-                    out = ((ChannelOutboundHandler<Object>) handler).newOutboundBuffer(this);
+                    prevOut = ((ChannelOutboundHandler<Object>) handler).newOutboundBuffer(this);
                 } catch (Exception e) {
                     throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
                 } finally {
@@ -970,7 +1026,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     }
                 }
             } else {
-                out = null;
+                prevOut = null;
             }
         }
 
@@ -1010,8 +1066,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public ChannelBufferHolder<Object> out() {
-            return out;
+        public ChannelBufferHolder<Object> prevOut() {
+            return prevOut;
         }
 
         @Override
@@ -1025,10 +1081,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public ChannelBufferHolder<Object> nextOut() {
+        public ChannelBufferHolder<Object> out() {
             DefaultChannelHandlerContext next = nextOutboundContext(prev);
             if (next != null) {
-                return next.out();
+                return next.prevOut();
             } else {
                 return channel().unsafe().out();
             }
@@ -1091,43 +1147,105 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void bind(SocketAddress localAddress, ChannelFuture future) {
-            DefaultChannelPipeline.this.bind(nextOutboundContext(prev), localAddress, future);
+        public ChannelFuture bind(SocketAddress localAddress) {
+            ChannelFuture f = newFuture();
+            bind(localAddress, f);
+            return f;
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, ChannelFuture future) {
-            connect(remoteAddress, null, future);
+        public ChannelFuture connect(SocketAddress remoteAddress) {
+            ChannelFuture f = newFuture();
+            connect(remoteAddress, f);
+            return f;
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-            DefaultChannelPipeline.this.connect(nextOutboundContext(prev), remoteAddress, localAddress, future);
+        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+            ChannelFuture f = newFuture();
+            connect(remoteAddress, localAddress, f);
+            return f;
         }
 
         @Override
-        public void disconnect(ChannelFuture future) {
-            DefaultChannelPipeline.this.disconnect(nextOutboundContext(prev), future);
+        public ChannelFuture disconnect() {
+            ChannelFuture f = newFuture();
+            disconnect(f);
+            return f;
         }
 
         @Override
-        public void close(ChannelFuture future) {
-            DefaultChannelPipeline.this.close(nextOutboundContext(prev), future);
+        public ChannelFuture close() {
+            ChannelFuture f = newFuture();
+            close(f);
+            return f;
         }
 
         @Override
-        public void deregister(ChannelFuture future) {
-            DefaultChannelPipeline.this.deregister(nextOutboundContext(prev), future);
+        public ChannelFuture deregister() {
+            ChannelFuture f = newFuture();
+            deregister(f);
+            return f;
         }
 
         @Override
-        public void flush(ChannelFuture future) {
-            DefaultChannelPipeline.this.flush(nextOutboundContext(prev), future);
+        public ChannelFuture flush() {
+            ChannelFuture f = newFuture();
+            flush(f);
+            return f;
         }
 
         @Override
-        public void write(Object message, ChannelFuture future) {
-            DefaultChannelPipeline.write(nextOutboundContext(prev), message, future);
+        public ChannelFuture write(Object message) {
+            ChannelFuture f = newFuture();
+            write(message, f);
+            return f;
+        }
+
+        @Override
+        public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
+            return DefaultChannelPipeline.this.bind(nextOutboundContext(prev), localAddress, future);
+        }
+
+        @Override
+        public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
+            return connect(remoteAddress, null, future);
+        }
+
+        @Override
+        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+            return DefaultChannelPipeline.this.connect(nextOutboundContext(prev), remoteAddress, localAddress, future);
+        }
+
+        @Override
+        public ChannelFuture disconnect(ChannelFuture future) {
+            return DefaultChannelPipeline.this.disconnect(nextOutboundContext(prev), future);
+        }
+
+        @Override
+        public ChannelFuture close(ChannelFuture future) {
+            return DefaultChannelPipeline.this.close(nextOutboundContext(prev), future);
+        }
+
+        @Override
+        public ChannelFuture deregister(ChannelFuture future) {
+            return DefaultChannelPipeline.this.deregister(nextOutboundContext(prev), future);
+        }
+
+        @Override
+        public ChannelFuture flush(ChannelFuture future) {
+            return DefaultChannelPipeline.this.flush(nextOutboundContext(prev), future);
+        }
+
+        @Override
+        public ChannelFuture write(Object message, ChannelFuture future) {
+            if (message instanceof ChannelBuffer) {
+                ChannelBuffer m = (ChannelBuffer) message;
+                out().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
+            } else {
+                out().messageBuffer().add(message);
+            }
+            return flush(future);
         }
 
         @Override
@@ -1143,6 +1261,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public ChannelFuture newFailedFuture(Throwable cause) {
             return channel().newFailedFuture(cause);
+        }
+
+        @Override
+        public ChannelFuture newVoidFuture() {
+            return channel().newVoidFuture();
         }
     }
 }

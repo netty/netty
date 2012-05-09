@@ -122,7 +122,9 @@ import java.nio.channels.Channels;
  * pipeline,  and how to handle the event in your application.
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
-public interface ChannelHandlerContext extends AttributeMap, ChannelHandlerInvoker, ChannelFutureFactory {
+public interface ChannelHandlerContext
+         extends AttributeMap, ChannelFutureFactory,
+                 ChannelInboundInvoker, ChannelOutboundInvoker {
     Channel channel();
     ChannelPipeline pipeline();
 

@@ -21,7 +21,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannelConfig;
 import io.netty.util.AttributeMap;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
@@ -106,7 +105,7 @@ import java.nio.channels.SelectionKey;
  *
  * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
-public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFutureFactory, Comparable<Channel> {
 
     /**
      * Returns the unique integer ID of this channel.
@@ -134,6 +133,7 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
      */
     ChannelPipeline pipeline();
 
+    boolean isOpen();
     boolean isRegistered();
     boolean isActive();
 
@@ -164,17 +164,6 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
      */
     SocketAddress remoteAddress();
 
-    void bind(SocketAddress localAddress, ChannelFuture future);
-    void connect(SocketAddress remoteAddress, ChannelFuture future);
-    void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
-    void disconnect(ChannelFuture future);
-    void close(ChannelFuture future);
-    void deregister(ChannelFuture future);
-
-    ChannelBufferHolder<Object> out();
-    void flush(ChannelFuture future);
-    void write(Object message, ChannelFuture future);
-
     // FIXME: Introduce more flexible channel state notification mechanism
     //        - notify me when channel becomes (un)registered, (in)active
     void addClosureListener(ChannelFutureListener listener);
@@ -197,7 +186,7 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
         void close(ChannelFuture future);
         void deregister(ChannelFuture future);
 
-        int read() throws IOException;
-        int flush(ChannelFuture future);
+        void read();
+        void flush(ChannelFuture future);
     }
 }

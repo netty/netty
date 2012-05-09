@@ -15,14 +15,22 @@
  */
 package io.netty.example.echo;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.EventLoop;
+import io.netty.channel.MultithreadEventLoop;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.SelectorEventLoop;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * Echoes back any received data from a client.
@@ -35,21 +43,52 @@ public class EchoServer {
         this.port = port;
     }
 
-    public void run() {
+    public void run() throws Exception {
         // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+        final EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.class);
+        ServerSocketChannel ssc = new NioServerSocketChannel();
+        ssc.pipeline().addLast("acceptor", new ChannelInboundHandlerAdapter<SocketChannel>() {
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(new EchoServerHandler());
+            @Override
+            public ChannelBufferHolder<SocketChannel> newInboundBuffer(
+                    ChannelInboundHandlerContext<SocketChannel> ctx)
+                    throws Exception {
+                return ChannelBufferHolders.messageBuffer(new ArrayDeque<SocketChannel>());
+            }
+
+            @Override
+            public void inboundBufferUpdated(
+                    ChannelInboundHandlerContext<SocketChannel> ctx)
+                    throws Exception {
+                Queue<SocketChannel> in = ctx.in().messageBuffer();
+                for (;;) {
+                    SocketChannel s = in.poll();
+                    if (s == null) {
+                        break;
+                    }
+                    s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
+                        @Override
+                        public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
+                            return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
+                        }
+
+                        @Override
+                        public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) {
+                            ChannelBuffer in = ctx.in().byteBuffer();
+                            ChannelBuffer out = ctx.out().byteBuffer();
+                            out.discardReadBytes();
+                            out.writeBytes(in);
+                            in.clear();
+                            ctx.flush();
+                        }
+                    });
+                    loop.register(s);
+                }
             }
         });
 
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+        loop.register(ssc).awaitUninterruptibly().rethrowIfFailed();
+        ssc.bind(new InetSocketAddress(port), ssc.newFuture());
     }
 
     public static void main(String[] args) throws Exception {

@@ -45,6 +45,8 @@ public interface DatagramChannel extends Channel {
      */
     void joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
 
+    void joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelFuture future);
+
     /**
      * Leaves a multicast group.
      */
