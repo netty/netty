@@ -23,10 +23,15 @@ import io.netty.util.internal.ConversionUtil;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.DatagramChannel;
+import java.util.Enumeration;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
@@ -167,6 +172,82 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         } else {
             try {
                 return (NetworkInterface) channel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public int getTimeToLive() {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                return (int) channel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public void setTimeToLive(int ttl) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+       
+    }
+    
+    @Override
+    public InetAddress getInterface() {
+        NetworkInterface inf = getNetworkInterface();
+        if (inf == null) {
+            return null;
+        } else {
+            Enumeration<InetAddress> addresses = inf.getInetAddresses();
+            if (addresses.hasMoreElements()) {
+                return addresses.nextElement();
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public void setInterface(InetAddress interfaceAddress) {
+        try {
+            setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
+        } catch (SocketException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public boolean isLoopbackModeDisabled() {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                return (Boolean) channel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                channel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
