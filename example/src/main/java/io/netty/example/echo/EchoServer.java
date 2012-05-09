@@ -88,7 +88,7 @@ public class EchoServer {
         });
 
         loop.register(ssc).awaitUninterruptibly().rethrowIfFailed();
-        ssc.bind(new InetSocketAddress(port), ssc.newFuture());
+        ssc.bind(new InetSocketAddress(port), ssc.newFuture()).awaitUninterruptibly().rethrowIfFailed();
     }
 
     public static void main(String[] args) throws Exception {

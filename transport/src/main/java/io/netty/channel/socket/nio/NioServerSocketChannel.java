@@ -75,8 +75,7 @@ public class NioServerSocketChannel extends AbstractServerChannel
 
     @Override
     public boolean isActive() {
-        // TODO Auto-generated method stub
-        return false;
+        return javaChannel().socket().isBound();
     }
 
     @Override
@@ -116,12 +115,14 @@ public class NioServerSocketChannel extends AbstractServerChannel
         }
 
         SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
-        selectionKey = javaChannel().register(loop.selector, javaChannel().validOps(), this);
+        selectionKey = javaChannel().register(
+                loop.selector, isActive()? SelectionKey.OP_ACCEPT : 0, this);
     }
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().socket().bind(localAddress);
+        selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
     }
 
     @Override

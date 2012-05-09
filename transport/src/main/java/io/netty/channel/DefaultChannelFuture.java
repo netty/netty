@@ -190,7 +190,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     @Override
     public ChannelFuture rethrowIfFailed() throws Exception {
         if (!isDone()) {
-            return this;
+            throw new IllegalStateException("not done yet");
         }
 
         Throwable cause = cause();

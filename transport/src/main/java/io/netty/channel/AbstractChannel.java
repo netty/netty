@@ -20,6 +20,7 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.ConcurrentHashMap;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
@@ -658,7 +659,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // FIXME: Wrap with a loop
             long readAmount = 0;
             try {
-                boolean closeIfClosed = false;
+                boolean closed = false;
                 for (;;) {
                     int localReadAmount = doRead();
                     if (localReadAmount > 0) {
@@ -669,7 +670,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         break;
                     }
                     if (localReadAmount < 0) {
-                        closeIfClosed = true;
+                        closed = true;
                         break;
                     }
                 }
@@ -678,12 +679,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                if (closeIfClosed) {
-                    closeIfClosed();
+                if (closed) {
+                    close(newFuture());
                 }
             } catch (Throwable t) {
                 pipeline().fireExceptionCaught(t);
-                closeIfClosed();
+                if (t instanceof IOException) {
+                    close(newFuture());
+                }
             }
         }
 
@@ -725,7 +728,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (isOpen()) {
                 return;
             }
-            close(newFuture());
+            close(newVoidFuture());
         }
     }
 

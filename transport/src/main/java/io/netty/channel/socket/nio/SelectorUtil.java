@@ -15,12 +15,12 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 public final class SelectorUtil {
     private static final InternalLogger logger =
@@ -30,10 +30,10 @@ public final class SelectorUtil {
 
     public static final int DEFAULT_IO_ACCEPTING_THREADS = 1;
 
-    
+
     // Workaround for JDK NIO bug.
     //
-    // See: 
+    // See:
     // - http://bugs.sun.com/view_bug.do?bug_id=6427854
     // - https://github.com/netty/netty/issues/203
     static {
@@ -49,7 +49,7 @@ public final class SelectorUtil {
             }
         }
     }
-    
+
     static void select(Selector selector) throws IOException {
         try {
             selector.select(10);

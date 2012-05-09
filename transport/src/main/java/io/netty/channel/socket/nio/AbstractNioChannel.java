@@ -87,6 +87,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
-        selectionKey = javaChannel().register(loop.selector, javaChannel().validOps() & ~SelectionKey.OP_WRITE, this);
+        selectionKey = javaChannel().register(loop.selector, SelectionKey.OP_READ, this);
     }
 }

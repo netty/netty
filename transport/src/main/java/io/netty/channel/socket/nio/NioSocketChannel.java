@@ -116,6 +116,9 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
         boolean success = false;
         try {
             boolean connected = javaChannel().connect(remoteAddress);
+            if (!connected) {
+                selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_CONNECT);
+            }
             success = true;
             return connected;
         } finally {

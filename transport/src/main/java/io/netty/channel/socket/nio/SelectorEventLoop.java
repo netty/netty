@@ -55,6 +55,7 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
      */
     protected final AtomicBoolean wakenUp = new AtomicBoolean();
 
+    // FIXME: It's not being increased by any channel implementations but we have to.
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     public SelectorEventLoop() {
@@ -199,7 +200,6 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     ch.unsafe().flush(null);
                 }
-
                 if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
                     ch.unsafe().read();
                 }
