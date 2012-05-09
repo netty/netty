@@ -24,14 +24,12 @@ import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.DatagramChannel;
 import java.util.Enumeration;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
