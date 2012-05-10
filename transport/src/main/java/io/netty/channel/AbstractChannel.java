@@ -73,7 +73,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelPipeline pipeline = new DefaultChannelPipeline(this);
     private final List<ChannelFutureListener> closureListeners = new ArrayList<ChannelFutureListener>(4);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
-    private final ChannelFuture voidFuture = new VoidChannelFuture(this);
 
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
@@ -159,58 +158,42 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        ChannelFuture f = newFuture();
-        pipeline().bind(localAddress, f);
-        return f;
+        return pipeline().bind(localAddress, newFuture());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        ChannelFuture f = newFuture();
-        pipeline().connect(remoteAddress, f);
-        return f;
+        return pipeline().connect(remoteAddress, newFuture());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        ChannelFuture f = newFuture();
-        pipeline().connect(remoteAddress, localAddress, f);
-        return f;
+        return pipeline().connect(remoteAddress, localAddress, newFuture());
     }
 
     @Override
     public ChannelFuture disconnect() {
-        ChannelFuture f = newFuture();
-        pipeline().disconnect(f);
-        return f;
+        return pipeline().disconnect(newFuture());
     }
 
     @Override
     public ChannelFuture close() {
-        ChannelFuture f = newFuture();
-        pipeline().close(f);
-        return f;
+        return pipeline().close(newFuture());
     }
 
     @Override
     public ChannelFuture deregister() {
-        ChannelFuture f = newFuture();
-        pipeline().deregister(f);
-        return f;
+        return pipeline().deregister(newFuture());
     }
 
     @Override
     public ChannelFuture flush() {
-        ChannelFuture f = newFuture();
-        pipeline().flush(f);
-        return f;
+        return pipeline().flush(newFuture());
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        ChannelFuture f = newFuture();
-        pipeline().write(message, f);
-        return f;
+        return pipeline().write(message, newFuture());
     }
 
     @Override
@@ -271,11 +254,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
         return new FailedChannelFuture(this, cause);
-    }
-
-    @Override
-    public ChannelFuture newVoidFuture() {
-        return voidFuture;
     }
 
     @Override
@@ -445,6 +423,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private class DefaultUnsafe implements Unsafe {
 
+        private final ChannelFuture voidFuture = new VoidChannelFuture(AbstractChannel.this);
+
         @Override
         public java.nio.channels.Channel ch() {
             return javaChannel();
@@ -453,6 +433,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public ChannelBufferHolder<Object> out() {
             return firstOut();
+        }
+
+        @Override
+        public ChannelFuture voidFuture() {
+            return voidFuture;
         }
 
         @Override
@@ -624,7 +609,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         pipeline().fireChannelInactive();
                     }
 
-                    deregister(newVoidFuture());
+                    deregister(voidFuture());
                 } else {
                     // Closed already.
                     future.setSuccess();
@@ -689,12 +674,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 if (closed) {
-                    close(newVoidFuture());
+                    close(voidFuture());
                 }
             } catch (Throwable t) {
                 pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
-                    close(newVoidFuture());
+                    close(voidFuture());
                 }
             }
         }
@@ -737,7 +722,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (isOpen()) {
                 return;
             }
-            close(newVoidFuture());
+            close(voidFuture());
         }
     }
 

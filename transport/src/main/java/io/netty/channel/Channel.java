@@ -174,6 +174,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     public interface Unsafe {
         java.nio.channels.Channel ch();
         ChannelBufferHolder<Object> out();
+        ChannelFuture voidFuture();
 
         SocketAddress localAddress();
         SocketAddress remoteAddress();

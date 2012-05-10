@@ -658,58 +658,42 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        ChannelFuture f = channel().newFuture();
-        bind(localAddress, f);
-        return f;
+        return bind(localAddress, channel().newFuture());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        ChannelFuture f = channel().newFuture();
-        connect(remoteAddress, f);
-        return f;
+        return connect(remoteAddress, channel().newFuture());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        ChannelFuture f = channel().newFuture();
-        connect(remoteAddress, localAddress, f);
-        return f;
+        return connect(remoteAddress, localAddress, channel().newFuture());
     }
 
     @Override
     public ChannelFuture disconnect() {
-        ChannelFuture f = channel().newFuture();
-        disconnect(f);
-        return f;
+        return disconnect(channel().newFuture());
     }
 
     @Override
     public ChannelFuture close() {
-        ChannelFuture f = channel().newFuture();
-        close(f);
-        return f;
+        return close(channel().newFuture());
     }
 
     @Override
     public ChannelFuture deregister() {
-        ChannelFuture f = channel().newFuture();
-        deregister(f);
-        return f;
+        return deregister(channel().newFuture());
     }
 
     @Override
     public ChannelFuture flush() {
-        ChannelFuture f = channel().newFuture();
-        flush(f);
-        return f;
+        return flush(channel().newFuture());
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        ChannelFuture f = channel().newFuture();
-        write(message, f);
-        return f;
+        return write(message, channel().newFuture());
     }
 
     @Override
@@ -1148,58 +1132,42 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public ChannelFuture bind(SocketAddress localAddress) {
-            ChannelFuture f = newFuture();
-            bind(localAddress, f);
-            return f;
+            return bind(localAddress, newFuture());
         }
 
         @Override
         public ChannelFuture connect(SocketAddress remoteAddress) {
-            ChannelFuture f = newFuture();
-            connect(remoteAddress, f);
-            return f;
+            return connect(remoteAddress, newFuture());
         }
 
         @Override
         public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            ChannelFuture f = newFuture();
-            connect(remoteAddress, localAddress, f);
-            return f;
+            return connect(remoteAddress, localAddress, newFuture());
         }
 
         @Override
         public ChannelFuture disconnect() {
-            ChannelFuture f = newFuture();
-            disconnect(f);
-            return f;
+            return disconnect(newFuture());
         }
 
         @Override
         public ChannelFuture close() {
-            ChannelFuture f = newFuture();
-            close(f);
-            return f;
+            return close(newFuture());
         }
 
         @Override
         public ChannelFuture deregister() {
-            ChannelFuture f = newFuture();
-            deregister(f);
-            return f;
+            return deregister(newFuture());
         }
 
         @Override
         public ChannelFuture flush() {
-            ChannelFuture f = newFuture();
-            flush(f);
-            return f;
+            return flush(newFuture());
         }
 
         @Override
         public ChannelFuture write(Object message) {
-            ChannelFuture f = newFuture();
-            write(message, f);
-            return f;
+            return write(message, newFuture());
         }
 
         @Override
@@ -1261,11 +1229,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public ChannelFuture newFailedFuture(Throwable cause) {
             return channel().newFailedFuture(cause);
-        }
-
-        @Override
-        public ChannelFuture newVoidFuture() {
-            return channel().newVoidFuture();
         }
     }
 }

@@ -51,9 +51,10 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
 
     @Override
     public ChannelFuture register(Channel channel) {
-        ChannelFuture future = channel.newFuture();
-        register(channel, future);
-        return future;
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return register(channel, channel.newFuture());
     }
 
     @Override

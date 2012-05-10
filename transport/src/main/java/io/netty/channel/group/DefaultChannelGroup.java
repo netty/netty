@@ -181,14 +181,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            ChannelFuture f = c.newFuture();
-            c.close(f);
-            futures.put(c.id(), f.awaitUninterruptibly());
+            futures.put(c.id(), c.close().awaitUninterruptibly());
         }
         for (Channel c: nonServerChannels.values()) {
-            ChannelFuture f = c.newFuture();
-            c.close(f);
-            futures.put(c.id(), f);
+            futures.put(c.id(), c.close());
         }
 
         return new DefaultChannelGroupFuture(this, futures);
@@ -200,14 +196,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            ChannelFuture f = c.newFuture();
-            c.disconnect(f);
-            futures.put(c.id(), f.awaitUninterruptibly());
+            futures.put(c.id(), c.disconnect());
         }
         for (Channel c: nonServerChannels.values()) {
-            ChannelFuture f = c.newFuture();
-            c.disconnect(f);
-            futures.put(c.id(), f);
+            futures.put(c.id(), c.disconnect());
         }
 
         return new DefaultChannelGroupFuture(this, futures);
@@ -220,15 +212,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         if (message instanceof ChannelBuffer) {
             ChannelBuffer buf = (ChannelBuffer) message;
             for (Channel c: nonServerChannels.values()) {
-                ChannelFuture f = c.newFuture();
-                c.write(buf.duplicate(), f);
-                futures.put(c.id(), f);
+                futures.put(c.id(), c.write(buf.duplicate()));
             }
         } else {
             for (Channel c: nonServerChannels.values()) {
-                ChannelFuture f = c.newFuture();
-                c.write(message, f);
-                futures.put(c.id(), f);
+                futures.put(c.id(), c.write(message));
             }
         }
         return new DefaultChannelGroupFuture(this, futures);
