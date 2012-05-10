@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 
 /**
  * A UDP/IP {@link Channel} which is created by {@link DatagramChannelFactory}.
@@ -35,20 +36,20 @@ public interface DatagramChannel extends Channel {
     /**
      * Joins a multicast group.
      */
-    void joinGroup(InetAddress multicastAddress);
+    ChannelFuture joinGroup(InetAddress multicastAddress);
 
     /**
      * Joins the specified multicast group at the specified interface.
      */
-    void joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
 
     /**
      * Leaves a multicast group.
      */
-    void leaveGroup(InetAddress multicastAddress);
+    ChannelFuture leaveGroup(InetAddress multicastAddress);
 
     /**
      * Leaves a multicast group on a specified local interface.
      */
-    void leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
 }

@@ -26,8 +26,10 @@ import java.net.SocketException;
 
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
@@ -68,22 +70,24 @@ final class OioDatagramChannel extends AbstractOioChannel
         return config;
     }
 
-    public void joinGroup(InetAddress multicastAddress) {
+    public ChannelFuture joinGroup(InetAddress multicastAddress) {
         ensureBound();
         try {
             socket.joinGroup(multicastAddress);
+            return Channels.succeededFuture(this);
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
-    public void joinGroup(
+    public ChannelFuture joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         ensureBound();
         try {
             socket.joinGroup(multicastAddress, networkInterface);
+            return Channels.succeededFuture(this);
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
@@ -95,20 +99,22 @@ final class OioDatagramChannel extends AbstractOioChannel
         }
     }
 
-    public void leaveGroup(InetAddress multicastAddress) {
+    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
         try {
             socket.leaveGroup(multicastAddress);
+            return Channels.succeededFuture(this);
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
-    public void leaveGroup(
+    public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         try {
             socket.leaveGroup(multicastAddress, networkInterface);
+            return Channels.succeededFuture(this);
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
