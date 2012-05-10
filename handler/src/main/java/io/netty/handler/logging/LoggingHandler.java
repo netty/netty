@@ -313,7 +313,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void bind(ChannelOutboundHandlerContext<Object> ctx,
             SocketAddress localAddress, ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, String.format("bind(%s)", localAddress)));
+            logger.log(level, format(ctx, String.format("BIND(%s)", localAddress)));
         }
         super.bind(ctx, localAddress, future);
     }
@@ -323,7 +323,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
             SocketAddress remoteAddress, SocketAddress localAddress,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, String.format("connect(%s, %s)", remoteAddress, localAddress)));
+            logger.log(level, format(ctx, String.format("CONNECT(%s, %s)", remoteAddress, localAddress)));
         }
         super.connect(ctx, remoteAddress, localAddress, future);
     }
@@ -332,7 +332,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void disconnect(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "disconnect()"));
+            logger.log(level, format(ctx, "DISCONNECT()"));
         }
         super.disconnect(ctx, future);
     }
@@ -341,7 +341,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void close(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "close()"));
+            logger.log(level, format(ctx, "CLOSE()"));
         }
         super.close(ctx, future);
     }
@@ -350,7 +350,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void deregister(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "deregister()"));
+            logger.log(level, format(ctx, "DEREGISTER()"));
         }
         super.deregister(ctx, future);
     }
@@ -359,8 +359,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void flush(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "flush()"));
+            logger.log(level, format(ctx, formatBuffer("OUTBUF", ctx.prevOut())));
         }
-        super.flush(ctx, future);
+        ctx.flush(future);
     }
 }
