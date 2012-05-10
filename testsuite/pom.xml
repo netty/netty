@@ -35,9 +35,5 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-  
-  <properties>
-    <sourceJavaVersion>1.7</sourceJavaVersion>
-  </properties>
 </project>
 

@@ -229,8 +229,8 @@
         <version>2.3.2</version>
         <configuration>
           <encoding>UTF-8</encoding>
-          <source>${sourceJavaVersion}</source>
-          <target>${targetJavaVersion}</target>
+          <source>1.6</source>
+          <target>1.6</target>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
@@ -340,10 +340,5 @@
       </plugins>
     </pluginManagement>
   </build>
-  
-  <properties>
-    <sourceJavaVersion>1.6</sourceJavaVersion>
-    <targetJavaVersion>1.7</targetJavaVersion>
-  </properties>
 </project>
 
