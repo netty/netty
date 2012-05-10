@@ -42,10 +42,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * non-negative integers are allowed.
      */
     private static Integer allocateId(Channel channel) {
-        int idVal = -Math.abs(System.identityHashCode(channel));
-        if (idVal >= 0) {
+        int idVal = System.identityHashCode(channel);
+        if (idVal > 0) {
+            idVal = -idVal;
+        } else if (idVal == 0) {
             idVal = -1;
         }
+
         Integer id;
         for (;;) {
             id = Integer.valueOf(idVal);
