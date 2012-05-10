@@ -58,14 +58,14 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
 
     public String getValue() throws IOException {
         byte [] bytes = get();
-        return new String(bytes, charset.name());
+        return new String(bytes, charset);
     }
 
     public void setValue(String value) throws IOException {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        byte [] bytes = value.getBytes(charset.name());
+        byte [] bytes = value.getBytes(charset);
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
