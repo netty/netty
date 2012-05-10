@@ -289,7 +289,7 @@
         <version>2.3.2</version>
         <configuration>
           <encoding>UTF-8</encoding>
-          <source>1.5</source>
+          <source>1.7</source>
           <target>1.5</target>
           <debug>true</debug>
           <optimize>true</optimize>
