@@ -15,20 +15,20 @@
  */
 package io.netty.handler.logging;
 
-import static io.netty.buffer.ChannelBuffers.*;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.logging.InternalLogLevel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+
+import java.net.SocketAddress;
 
 /**
  * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
@@ -38,7 +38,7 @@ import io.netty.logging.InternalLoggerFactory;
  * @apiviz.landmark
  */
 @Sharable
-public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
 
     private static final InternalLogLevel DEFAULT_LEVEL = InternalLogLevel.DEBUG;
 
@@ -192,45 +192,144 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         return level;
     }
 
-    /**
-     * Logs the specified event to the {@link InternalLogger} returned by
-     * {@link #getLogger()}. If hex dump has been enabled for this handler,
-     * the hex dump of the {@link ChannelBuffer} in a {@link MessageEvent} will
-     * be logged together.
-     */
-    public void log(ChannelEvent e) {
+    protected String message(ChannelHandlerContext ctx, String message) {
+        String chStr = ctx.channel().toString();
+        StringBuilder buf = new StringBuilder(chStr.length() + message.length() + 1);
+        buf.append(chStr);
+        buf.append(' ');
+        buf.append(message);
+        return buf.toString();
+    }
+
+    @Override
+    public ChannelBufferHolder<Object> newOutboundBuffer(
+            ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+        return ChannelBufferHolders.outboundBypassBuffer(ctx);
+    }
+
+    @Override
+    public ChannelBufferHolder<Object> newInboundBuffer(
+            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        return ChannelBufferHolders.inboundBypassBuffer(ctx);
+    }
+
+    @Override
+    public void channelRegistered(ChannelInboundHandlerContext<Object> ctx)
+            throws Exception {
         if (getLogger().isEnabled(level)) {
-            String msg = e.toString();
-
-            // Append hex dump if necessary.
-            if (hexDump && e instanceof MessageEvent) {
-                MessageEvent me = (MessageEvent) e;
-                if (me.getMessage() instanceof ChannelBuffer) {
-                    ChannelBuffer buf = (ChannelBuffer) me.getMessage();
-                    msg = msg + " - (HEXDUMP: " + hexDump(buf) + ')';
-                }
-            }
-
-            // Log the message (and exception if available.)
-            if (e instanceof ExceptionEvent) {
-                getLogger().log(level, msg, ((ExceptionEvent) e).cause());
-            } else {
-                getLogger().log(level, msg);
-            }
+            logger.log(level, message(ctx, "REGISTERED"));
         }
+        super.channelRegistered(ctx);
     }
 
     @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+    public void channelUnregistered(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        log(e);
-        ctx.sendUpstream(e);
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "UNREGISTERED"));
+        }
+        super.channelUnregistered(ctx);
     }
 
     @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+    public void channelActive(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        log(e);
-        ctx.sendDownstream(e);
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "ACTIVE"));
+        }
+        super.channelActive(ctx);
     }
+
+    @Override
+    public void channelInactive(ChannelInboundHandlerContext<Object> ctx)
+            throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "INACTIVE"));
+        }
+        super.channelInactive(ctx);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
+            Throwable cause) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, String.format("EXCEPTION: %s", cause)), cause);
+        }
+        super.exceptionCaught(ctx, cause);
+    }
+
+    @Override
+    public void userEventTriggered(ChannelInboundHandlerContext<Object> ctx,
+            Object evt) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, String.format("USER_EVENT: %s", evt)));
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
+            throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "INBOUND_UPDATED"));
+        }
+        // TODO Auto-generated method stub
+        super.inboundBufferUpdated(ctx);
+    }
+
+    @Override
+    public void bind(ChannelOutboundHandlerContext<Object> ctx,
+            SocketAddress localAddress, ChannelFuture future) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, String.format("bind(%s)", localAddress)));
+        }
+        super.bind(ctx, localAddress, future);
+    }
+
+    @Override
+    public void connect(ChannelOutboundHandlerContext<Object> ctx,
+            SocketAddress remoteAddress, SocketAddress localAddress,
+            ChannelFuture future) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, String.format("connect(%s, %s)", remoteAddress, localAddress)));
+        }
+        super.connect(ctx, remoteAddress, localAddress, future);
+    }
+
+    @Override
+    public void disconnect(ChannelOutboundHandlerContext<Object> ctx,
+            ChannelFuture future) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "disconnect()"));
+        }
+        super.disconnect(ctx, future);
+    }
+
+    @Override
+    public void close(ChannelOutboundHandlerContext<Object> ctx,
+            ChannelFuture future) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "close()"));
+        }
+        super.close(ctx, future);
+    }
+
+    @Override
+    public void deregister(ChannelOutboundHandlerContext<Object> ctx,
+            ChannelFuture future) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "deregister()"));
+        }
+        super.deregister(ctx, future);
+    }
+
+    @Override
+    public void flush(ChannelOutboundHandlerContext<Object> ctx,
+            ChannelFuture future) throws Exception {
+        if (getLogger().isEnabled(level)) {
+            logger.log(level, message(ctx, "flush()"));
+        }
+        super.flush(ctx, future);
+    }
+
 }

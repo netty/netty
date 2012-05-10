@@ -3,10 +3,9 @@ package io.netty.channel;
 import io.netty.buffer.ChannelBuffer;
 
 import java.net.SocketAddress;
-import java.util.ArrayDeque;
 import java.util.Queue;
 
-public class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<O> {
+public abstract class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<O> {
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // Do nothing by default.
@@ -53,12 +52,16 @@ public class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<
     }
 
     @Override
-    public ChannelBufferHolder<O> newOutboundBuffer(ChannelOutboundHandlerContext<O> ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer(new ArrayDeque<O>());
+    public void flush(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
+        flush0(ctx, future);
     }
 
-    @Override
-    public void flush(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
+    static <O> void flush0(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) {
+        if (ctx.prevOut().isBypass()) {
+            ctx.flush(future);
+            return;
+        }
+
         if (ctx.prevOut().hasMessageBuffer()) {
             Queue<O> out = ctx.prevOut().messageBuffer();
             Queue<Object> nextOut = ctx.out().messageBuffer();
@@ -73,6 +76,7 @@ public class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<
             ChannelBuffer out = ctx.prevOut().byteBuffer();
             ChannelBuffer nextOut = ctx.out().byteBuffer();
             nextOut.writeBytes(out);
+            out.discardReadBytes();
         }
         ctx.flush(future);
     }

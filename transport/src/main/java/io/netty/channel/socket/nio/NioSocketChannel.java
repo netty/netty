@@ -82,9 +82,9 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
 
     @Override
     public boolean isActive() {
-        return javaChannel().isConnected();
+        SocketChannel ch = javaChannel();
+        return ch.isOpen() && ch.isConnected();
     }
-
 
     @Override
     @SuppressWarnings("unchecked")

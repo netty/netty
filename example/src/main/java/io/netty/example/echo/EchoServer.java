@@ -27,6 +27,8 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.logging.InternalLogLevel;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
@@ -47,6 +49,7 @@ public class EchoServer {
         // Configure the server.
         final EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.class);
         ServerSocketChannel ssc = new NioServerSocketChannel();
+        ssc.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
         ssc.pipeline().addLast("acceptor", new ChannelInboundHandlerAdapter<SocketChannel>() {
 
             @Override
@@ -66,6 +69,7 @@ public class EchoServer {
                     if (s == null) {
                         break;
                     }
+                    s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
                     s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
                         @Override
                         public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {

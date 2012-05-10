@@ -2,10 +2,9 @@ package io.netty.channel;
 
 import io.netty.buffer.ChannelBuffer;
 
-import java.util.ArrayDeque;
 import java.util.Queue;
 
-public class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I> {
+public abstract class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I> {
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // Do nothing by default.
@@ -57,12 +56,16 @@ public class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I>
     }
 
     @Override
-    public ChannelBufferHolder<I> newInboundBuffer(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer(new ArrayDeque<I>());
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx) throws Exception {
+        inboundBufferUpdated0(ctx);
     }
 
-    @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx) throws Exception {
+    static <I> void inboundBufferUpdated0(ChannelInboundHandlerContext<I> ctx) {
+        if (ctx.in().isBypass()) {
+            ctx.fireInboundBufferUpdated();
+            return;
+        }
+
         if (ctx.in().hasMessageBuffer()) {
             Queue<I> in = ctx.in().messageBuffer();
             Queue<Object> nextIn = ctx.nextIn().messageBuffer();
@@ -77,8 +80,8 @@ public class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I>
             ChannelBuffer in = ctx.in().byteBuffer();
             ChannelBuffer nextIn = ctx.nextIn().byteBuffer();
             nextIn.writeBytes(in);
+            in.discardReadBytes();
         }
         ctx.fireInboundBufferUpdated();
     }
-
 }

@@ -486,6 +486,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 registered = true;
                 future.setSuccess();
                 pipeline().fireChannelRegistered();
+                if (isActive()) {
+                    pipeline().fireChannelActive();
+                }
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
                 try {
@@ -615,10 +618,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         future.setFailure(t);
                     }
+
+                    notifyClosureListeners();
                     if (wasActive && !isActive()) {
                         pipeline().fireChannelInactive();
                     }
-                    notifyClosureListeners();
+
+                    deregister(newVoidFuture());
                 } else {
                     // Closed already.
                     future.setSuccess();
@@ -683,12 +689,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 if (closed) {
-                    close(newFuture());
+                    close(newVoidFuture());
                 }
             } catch (Throwable t) {
                 pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
-                    close(newFuture());
+                    close(newVoidFuture());
                 }
             }
         }
