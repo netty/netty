@@ -612,7 +612,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
-            // FIXME: Wrap with a loop
             long readAmount = 0;
             try {
                 boolean closed = false;

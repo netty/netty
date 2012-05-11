@@ -27,6 +27,8 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -132,7 +134,7 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
 
                 cancelledKeys = 0;
                 processTaskQueue();
-                processSelectedKeys(selector.selectedKeys());
+                processSelectedKeys();
 
                 // Handle connection timeout every 10 milliseconds approximately.
                 long currentTimeNanos = System.nanoTime();
@@ -142,7 +144,7 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
                 }
 
                 if (isShutdown()) {
-                    // FIXME: Close all channels immediately and break the loop.
+                    closeAll();
                     break;
                 }
             } catch (Throwable t) {
@@ -182,8 +184,8 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
-        for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
+    private void processSelectedKeys() throws IOException {
+        for (Iterator<SelectionKey> i = selector.selectedKeys().iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             Channel ch = (Channel) k.attachment();
             boolean removeKey = true;
@@ -265,6 +267,18 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
             return true;
         }
         return false;
+    }
+
+    private void closeAll() {
+        Set<SelectionKey> keys = selector.keys();
+        Collection<Channel> channels = new ArrayList<Channel>(keys.size());
+        for (SelectionKey k: keys) {
+            channels.add((Channel) k.attachment());
+        }
+
+        for (Channel ch: channels) {
+            ch.unsafe().close(ch.unsafe().voidFuture());
+        }
     }
 
     @Override
