@@ -1,15 +1,19 @@
 package io.netty.channel;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class SingleThreadEventLoopTest {
 
@@ -79,6 +83,122 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
+    public void scheduleTask() throws Exception {
+        long startTime = System.nanoTime();
+        final AtomicLong endTime = new AtomicLong();
+        loop.schedule(new Runnable() {
+            @Override
+            public void run() {
+                endTime.set(System.nanoTime());
+            }
+        }, 500, TimeUnit.MILLISECONDS).get();
+        assertTrue(endTime.get() - startTime >= TimeUnit.MILLISECONDS.toNanos(500));
+    }
+
+    @Test
+    public void scheduleTaskAtFixedRate() throws Exception {
+        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        ScheduledFuture<?> f = loop.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                timestamps.add(System.nanoTime());
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+            }
+        }, 100, 100, TimeUnit.MILLISECONDS);
+        Thread.sleep(550);
+        assertTrue(f.cancel(true));
+        assertEquals(5, timestamps.size());
+
+        // Check if the task was run without a lag.
+        Long previousTimestamp = null;
+        for (Long t: timestamps) {
+            if (previousTimestamp == null) {
+                previousTimestamp = t;
+                continue;
+            }
+
+            assertTrue(t.longValue() - previousTimestamp.longValue() >= TimeUnit.MILLISECONDS.toNanos(90));
+            previousTimestamp = t;
+        }
+    }
+
+    @Test
+    public void scheduleLaggyTaskAtFixedRate() throws Exception {
+        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        ScheduledFuture<?> f = loop.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                boolean empty = timestamps.isEmpty();
+                timestamps.add(System.nanoTime());
+                if (empty) {
+                    try {
+                        Thread.sleep(400);
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                }
+            }
+        }, 100, 100, TimeUnit.MILLISECONDS);
+        Thread.sleep(550);
+        assertTrue(f.cancel(true));
+        assertEquals(5, timestamps.size());
+
+        // Check if the task was run with lag.
+        int i = 0;
+        Long previousTimestamp = null;
+        for (Long t: timestamps) {
+            if (previousTimestamp == null) {
+                previousTimestamp = t;
+                continue;
+            }
+
+            long diff = t.longValue() - previousTimestamp.longValue();
+            if (i == 0) {
+                assertTrue(diff >= TimeUnit.MILLISECONDS.toNanos(400));
+            } else {
+                assertTrue(diff <= TimeUnit.MILLISECONDS.toNanos(10));
+            }
+            previousTimestamp = t;
+            i ++;
+        }
+    }
+
+    @Test
+    public void scheduleTaskWithFixedDelay() throws Exception {
+        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        ScheduledFuture<?> f = loop.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                timestamps.add(System.nanoTime());
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+            }
+        }, 100, 100, TimeUnit.MILLISECONDS);
+        Thread.sleep(500);
+        assertTrue(f.cancel(true));
+        assertEquals(3, timestamps.size());
+
+        // Check if the task was run without a lag.
+        Long previousTimestamp = null;
+        for (Long t: timestamps) {
+            if (previousTimestamp == null) {
+                previousTimestamp = t;
+                continue;
+            }
+
+            assertTrue(t.longValue() - previousTimestamp.longValue() >= TimeUnit.MILLISECONDS.toNanos(150));
+            previousTimestamp = t;
+        }
+    }
+
+    @Test
     public void shutdownWithPendingTasks() throws Exception {
         final int NUM_TASKS = 3;
         final AtomicInteger ranTasks = new AtomicInteger();
@@ -143,6 +263,7 @@ public class SingleThreadEventLoopTest {
             }
         }
 
+        @Override
         protected void cleanup() {
             cleanedUp.incrementAndGet();
         }
@@ -155,8 +276,9 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public void register(Channel channel, ChannelFuture future) {
+        public ChannelFuture register(Channel channel, ChannelFuture future) {
             // Untested
+            return future;
         }
     }
 }

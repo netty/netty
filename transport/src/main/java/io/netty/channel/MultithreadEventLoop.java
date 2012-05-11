@@ -7,6 +7,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -151,6 +152,27 @@ public class MultithreadEventLoop implements EventLoop {
     @Override
     public void execute(Runnable command) {
         currentEventLoop().execute(command);
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay,
+            TimeUnit unit) {
+        return currentEventLoop().schedule(command, delay, unit);
+    }
+
+    @Override
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        return currentEventLoop().schedule(callable, delay, unit);
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        return currentEventLoop().scheduleAtFixedRate(command, initialDelay, period, unit);
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        return currentEventLoop().scheduleWithFixedDelay(command, initialDelay, delay, unit);
     }
 
     @Override
