@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.socket.nio.NioSocketChannelConfig;
+import io.netty.channel.socket.nio.NioChannelConfig;
 
 import java.util.Map;
 
@@ -38,9 +38,19 @@ import java.util.Map;
  * the configuration of a {@link Channel} without down-casting its associated
  * {@link ChannelConfig}.  To update an option map, please call {@link #setOptions(Map)}.
  * <p>
- * Options are available in the sub-types of {@link ChannelConfig}.  For
+ * All {@link ChannelConfig} has the following options:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "connectTimeoutMillis"}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
+ * </tr>
+ * </table>
+ * <p>
+ * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
- * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
+ * socket as explained in {@link SocketChannelConfig} or {@link NioChannelConfig}.
  *
  * @apiviz.has io.netty.channel.ChannelPipelineFactory
  * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
@@ -75,4 +85,23 @@ public interface ChannelConfig {
      * @return {@code true} if and only if the property has been set
      */
     boolean setOption(String name, Object value);
+
+    /**
+     * Returns the connect timeout of the channel in milliseconds.  If the
+     * {@link Channel} does not support connect operation, this property is not
+     * used at all, and therefore will be ignored.
+     *
+     * @return the connect timeout in milliseconds.  {@code 0} if disabled.
+     */
+    int getConnectTimeoutMillis();
+
+    /**
+     * Sets the connect timeout of the channel in milliseconds.  If the
+     * {@link Channel} does not support connect operation, this property is not
+     * used at all, and therefore will be ignored.
+     *
+     * @param connectTimeoutMillis the connect timeout in milliseconds.
+     *                             {@code 0} to disable.
+     */
+    void setConnectTimeoutMillis(int connectTimeoutMillis);
 }

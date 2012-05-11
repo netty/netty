@@ -22,7 +22,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -90,8 +89,6 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
-        long lastConnectTimeoutCheckTimeNanos = System.nanoTime();
-
         Selector selector = this.selector;
         for (;;) {
 
@@ -135,13 +132,6 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
                 cancelledKeys = 0;
                 processTaskQueue();
                 processSelectedKeys();
-
-                // Handle connection timeout every 10 milliseconds approximately.
-                long currentTimeNanos = System.nanoTime();
-                if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 10 * 1000000L) {
-                    lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
-                    processConnectTimeout(selector.keys(), currentTimeNanos);
-                }
 
                 if (isShutdown()) {
                     closeAll();
@@ -220,43 +210,6 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
             if (cleanUpCancelledKeys()) {
                 break; // break the loop to avoid ConcurrentModificationException
             }
-        }
-    }
-
-    protected void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
-        ConnectException cause = null;
-        for (SelectionKey k: keys) {
-            if (!k.isValid()) {
-                // Comment the close call again as it gave us major problems with ClosedChannelExceptions.
-                //
-                // See:
-                // * https://github.com/netty/netty/issues/142
-                // * https://github.com/netty/netty/issues/138
-                //
-                //close(k);
-                continue;
-            }
-
-            // Something is ready so skip it
-            if (k.readyOps() != 0) {
-                continue;
-            }
-            // check if the channel is in
-            // FIXME: Implement connect timeout.
-//            Channel ch = (Channel) k.attachment();
-//            if (attachment instanceof NioClientSocketChannel) {
-//                NioClientSocketChannel ch = (NioClientSocketChannel) attachment;
-//                if (!ch.isConnected() && ch.connectDeadlineNanos > 0 && currentTimeNanos >= ch.connectDeadlineNanos) {
-//
-//                    if (cause == null) {
-//                        cause = new ConnectException("connection timed out");
-//                    }
-//
-//                    ch.connectFuture.setFailure(cause);
-//                    fireExceptionCaught(ch, cause);
-//                    ch.getWorker().close(ch, succeededFuture(ch));
-//                }
-//            }
         }
     }
 

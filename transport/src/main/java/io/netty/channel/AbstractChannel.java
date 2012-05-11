@@ -21,11 +21,14 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.ConcurrentHashMap;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -73,6 +76,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelPipeline pipeline = new DefaultChannelPipeline(this);
     private final List<ChannelFutureListener> closureListeners = new ArrayList<ChannelFutureListener>(4);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
+    private final ChannelFuture voidFuture = new VoidChannelFuture(AbstractChannel.this);
 
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
@@ -83,6 +87,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * connection attempts will fail.
      */
     private ChannelFuture connectFuture;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private ConnectException connectTimeoutException;
+
     private long writtenAmount;
 
     /** Cache for the string representation of this channel */
@@ -385,8 +392,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private class DefaultUnsafe implements Unsafe {
 
-        private final ChannelFuture voidFuture = new VoidChannelFuture(AbstractChannel.this);
-
         @Override
         public java.nio.channels.Channel ch() {
             return javaChannel();
@@ -498,6 +503,28 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     } else {
                         connectFuture = future;
+
+                        // Schedule connect timeout.
+                        int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                        if (connectTimeoutMillis > 0) {
+                            connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (connectTimeoutException == null) {
+                                        connectTimeoutException = new ConnectException("connection timed out");
+                                    }
+                                    ChannelFuture connectFuture = AbstractChannel.this.connectFuture;
+                                    if (connectFuture == null) {
+                                        return;
+                                    } else {
+                                        if (connectFuture.setFailure(connectTimeoutException)) {
+                                            pipeline().fireExceptionCaught(connectTimeoutException);
+                                            close(voidFuture());
+                                        }
+                                    }
+                                }
+                            }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                        }
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
@@ -526,6 +553,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 pipeline().fireExceptionCaught(t);
                 closeIfClosed();
             } finally {
+                connectTimeoutFuture.cancel(false);
                 connectFuture = null;
             }
         }
