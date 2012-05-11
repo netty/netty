@@ -18,20 +18,21 @@ public class MultithreadEventLoop implements EventLoop {
     private final EventLoop[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
-    public MultithreadEventLoop(Class<? extends SingleThreadEventLoop> loopType) {
-        this(loopType, Runtime.getRuntime().availableProcessors() * 2);
+    public MultithreadEventLoop(EventLoopFactory<? extends SingleThreadEventLoop> loopFactory) {
+        this(loopFactory, Runtime.getRuntime().availableProcessors() * 2);
     }
 
-    public MultithreadEventLoop(Class<? extends SingleThreadEventLoop> loopType, int nThreads) {
-        this(loopType, nThreads, Executors.defaultThreadFactory());
+    public MultithreadEventLoop(EventLoopFactory<? extends SingleThreadEventLoop> loopFactory, int nThreads) {
+        this(loopFactory, nThreads, Executors.defaultThreadFactory());
     }
 
-    public MultithreadEventLoop(Class<? extends SingleThreadEventLoop> loopType, int nThreads, ThreadFactory threadFactory) {
-        if (loopType == null) {
-            throw new NullPointerException("loopType");
+    public MultithreadEventLoop(EventLoopFactory<? extends SingleThreadEventLoop> loopFactory, int nThreads, ThreadFactory threadFactory) {
+        if (loopFactory == null) {
+            throw new NullPointerException("loopFactory");
         }
         if (nThreads <= 0) {
-            throw new IllegalArgumentException("nThreads: " + nThreads + " (expected: > 0)");
+            throw new IllegalArgumentException(String.format(
+                    "nThreads: %d (expected: > 0)", nThreads));
         }
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
@@ -41,10 +42,10 @@ public class MultithreadEventLoop implements EventLoop {
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = loopType.getConstructor(ThreadFactory.class).newInstance(threadFactory);
+                children[i] = loopFactory.newEventLoop(threadFactory);
                 success = true;
             } catch (Exception e) {
-                throw new EventLoopException("failed to create a child event loop: " + loopType.getName(), e);
+                throw new EventLoopException("failed to create a child event loop", e);
             } finally {
                 if (!success) {
                     for (int j = 0; j < i; j ++) {

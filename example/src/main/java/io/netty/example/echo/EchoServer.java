@@ -49,7 +49,7 @@ public class EchoServer {
 
     public void run() throws Exception {
         // Configure the server.
-        final EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.class);
+        final EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
         ServerSocketChannel ssc = new NioServerSocketChannel();
         ssc.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
         ssc.pipeline().addLast("acceptor", new ChannelInboundHandlerAdapter<SocketChannel>() {
@@ -72,7 +72,7 @@ public class EchoServer {
                         break;
                     }
                     s.config().setTcpNoDelay(true);
-                    s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+                    //s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
                     s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
                         @Override
                         public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {

@@ -26,8 +26,6 @@ import io.netty.channel.MultithreadEventLoop;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.logging.InternalLogLevel;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicLong;
@@ -52,10 +50,10 @@ public class EchoClient {
     }
 
     public void run() throws Exception {
-        EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.class);
+        EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
         SocketChannel s = new NioSocketChannel();
         s.config().setTcpNoDelay(true);
-        s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+        //s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
         s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
 
             private final ChannelBuffer firstMessage;

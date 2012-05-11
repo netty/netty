@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.EventLoopFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -35,6 +36,15 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SelectorEventLoop extends SingleThreadEventLoop {
+
+    public static final EventLoopFactory<SelectorEventLoop> FACTORY = new EventLoopFactory<SelectorEventLoop>() {
+        @Override
+        public SelectorEventLoop newEventLoop(ThreadFactory threadFactory)
+                throws Exception {
+            return new SelectorEventLoop(threadFactory);
+        }
+    };
+
     /**
      * Internal Netty logger.
      */
