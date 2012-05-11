@@ -360,65 +360,27 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return strVal;
         }
 
-        StringBuilder buf = new StringBuilder(128);
-        buf.append("[id: 0x");
-        buf.append(getIdString());
-
-        SocketAddress localAddress = localAddress();
-        SocketAddress remoteAddress = remoteAddress();
-        if (remoteAddress != null) {
-            buf.append(", ");
-            if (parent() == null) {
-                buf.append(localAddress);
-                buf.append(active? " => " : " :> ");
-                buf.append(remoteAddress);
+        SocketAddress remoteAddr = remoteAddress();
+        SocketAddress localAddr = localAddress();
+        if (remoteAddr != null) {
+            SocketAddress srcAddr;
+            SocketAddress dstAddr;
+            if (parent == null) {
+                srcAddr = localAddr;
+                dstAddr = remoteAddr;
             } else {
-                buf.append(remoteAddress);
-                buf.append(active? " => " : " :> ");
-                buf.append(localAddress);
+                srcAddr = remoteAddr;
+                dstAddr = localAddr;
             }
-        } else if (localAddress != null) {
-            buf.append(", ");
-            buf.append(localAddress);
+            strVal = String.format("[id: 0x%08x, %s %s %s]", id, srcAddr, active? "=>" : ":>", dstAddr);
+        } else if (localAddr != null) {
+            strVal = String.format("[id: 0x%08x, %s]", id, localAddr);
+        } else {
+            strVal = String.format("[id: 0x%08x]", id);
         }
 
-        buf.append(']');
-
-        String strVal = buf.toString();
-        this.strVal = strVal;
         strValActive = active;
         return strVal;
-    }
-
-    private String getIdString() {
-        String answer = Integer.toHexString(id.intValue());
-        switch (answer.length()) {
-        case 0:
-            answer = "00000000";
-            break;
-        case 1:
-            answer = "0000000" + answer;
-            break;
-        case 2:
-            answer = "000000" + answer;
-            break;
-        case 3:
-            answer = "00000" + answer;
-            break;
-        case 4:
-            answer = "0000" + answer;
-            break;
-        case 5:
-            answer = "000" + answer;
-            break;
-        case 6:
-            answer = "00" + answer;
-            break;
-        case 7:
-            answer = "0" + answer;
-            break;
-        }
-        return answer;
     }
 
     private class DefaultUnsafe implements Unsafe {
