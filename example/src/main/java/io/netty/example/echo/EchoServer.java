@@ -72,7 +72,7 @@ public class EchoServer {
                         break;
                     }
                     s.config().setTcpNoDelay(true);
-                    //s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+                    s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
                     s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
                         @Override
                         public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
