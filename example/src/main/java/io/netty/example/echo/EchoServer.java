@@ -33,6 +33,7 @@ import io.netty.logging.InternalLogLevel;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Echoes back any received data from a client.
@@ -40,6 +41,7 @@ import java.util.Queue;
 public class EchoServer {
 
     private final int port;
+    private final AtomicLong transferredBytes = new AtomicLong();
 
     public EchoServer(int port) {
         this.port = port;
@@ -69,6 +71,7 @@ public class EchoServer {
                     if (s == null) {
                         break;
                     }
+                    s.config().setTcpNoDelay(true);
                     s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
                     s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
                         @Override
@@ -80,6 +83,8 @@ public class EchoServer {
                         public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) {
                             ChannelBuffer in = ctx.in().byteBuffer();
                             ChannelBuffer out = ctx.out().byteBuffer();
+                            transferredBytes.addAndGet(in.readableBytes());
+
                             out.discardReadBytes();
                             out.writeBytes(in);
                             in.clear();

@@ -15,15 +15,22 @@
  */
 package io.netty.example.echo;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.EventLoop;
+import io.netty.channel.MultithreadEventLoop;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.logging.InternalLogLevel;
 
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -36,6 +43,7 @@ public class EchoClient {
     private final String host;
     private final int port;
     private final int firstMessageSize;
+    private final AtomicLong transferredBytes = new AtomicLong();
 
     public EchoClient(String host, int port, int firstMessageSize) {
         this.host = host;
@@ -43,28 +51,54 @@ public class EchoClient {
         this.firstMessageSize = firstMessageSize;
     }
 
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.class);
+        SocketChannel s = new NioSocketChannel();
+        s.config().setTcpNoDelay(true);
+        s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+        s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new EchoClientHandler(firstMessageSize));
+            private final ChannelBuffer firstMessage;
+            {
+                if (firstMessageSize <= 0) {
+                    throw new IllegalArgumentException(
+                            "firstMessageSize: " + firstMessageSize);
+                }
+                firstMessage = ChannelBuffers.buffer(firstMessageSize);
+                for (int i = 0; i < firstMessage.capacity(); i ++) {
+                    firstMessage.writeByte((byte) i);
+                }
+            }
+
+            @Override
+            public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
+                return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
+            }
+
+            @Override
+            public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
+                    throws Exception {
+                ctx.write(firstMessage);
+            }
+
+            @Override
+            public void inboundBufferUpdated(
+                    ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelBuffer in = ctx.in().byteBuffer();
+                ChannelBuffer out = ctx.out().byteBuffer();
+                transferredBytes.addAndGet(in.readableBytes());
+
+                out.discardReadBytes();
+                out.writeBytes(in);
+                in.clear();
+                ctx.flush();
             }
         });
+        loop.register(s).awaitUninterruptibly().rethrowIfFailed();
+        s.connect(new InetSocketAddress(host, port)).awaitUninterruptibly().rethrowIfFailed();
 
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
-
-        // Wait until the connection is closed or the connection attempt fails.
-        future.channel().getCloseFuture().awaitUninterruptibly();
-
-        // Shut down thread pools to exit.
-        bootstrap.releaseExternalResources();
+        // FIXME: Wait until the connection is closed or the connection attempt fails.
+        // FIXME: Show how to shut down.
     }
 
     public static void main(String[] args) throws Exception {

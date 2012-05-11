@@ -546,8 +546,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assert eventLoop().inEventLoop();
             assert connectFuture != null;
             try {
+                boolean wasActive = isActive();
                 doFinishConnect();
                 connectFuture.setSuccess();
+                if (!wasActive && isActive()) {
+                    pipeline().fireChannelActive();
+                }
             } catch (Throwable t) {
                 connectFuture.setFailure(t);
                 pipeline().fireExceptionCaught(t);
