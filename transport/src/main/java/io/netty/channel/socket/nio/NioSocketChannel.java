@@ -161,10 +161,15 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
 
     @Override
     protected int doFlush() throws Exception {
+        final SelectionKey key = selectionKey();
+        final int interestOps = key.interestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+            return 0;
+        }
+
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
-
         final SocketChannel ch = javaChannel();
         final int writeSpinCount = config().getWriteSpinCount();
         final ChannelBuffer buf = unsafe().out().byteBuffer();
@@ -204,11 +209,9 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
 
         if (open) {
             if (addOpWrite) {
-                SelectionKey key = selectionKey();
-                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+                key.interestOps(interestOps | SelectionKey.OP_WRITE);
             } else if (removeOpWrite) {
-                SelectionKey key = selectionKey();
-                key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
             }
         }
 
