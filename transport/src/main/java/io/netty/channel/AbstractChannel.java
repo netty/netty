@@ -158,42 +158,42 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        return pipeline().bind(localAddress, newFuture());
+        return pipeline().bind(localAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        return pipeline().connect(remoteAddress, newFuture());
+        return pipeline().connect(remoteAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline().connect(remoteAddress, localAddress, newFuture());
+        return pipeline().connect(remoteAddress, localAddress);
     }
 
     @Override
     public ChannelFuture disconnect() {
-        return pipeline().disconnect(newFuture());
+        return pipeline().disconnect();
     }
 
     @Override
     public ChannelFuture close() {
-        return pipeline().close(newFuture());
+        return pipeline().close();
     }
 
     @Override
     public ChannelFuture deregister() {
-        return pipeline().deregister(newFuture());
+        return pipeline().deregister();
     }
 
     @Override
     public ChannelFuture flush() {
-        return pipeline().flush(newFuture());
+        return pipeline().flush();
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        return pipeline().write(message, newFuture());
+        return pipeline().write(message);
     }
 
     @Override

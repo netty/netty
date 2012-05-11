@@ -706,6 +706,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
+        validateFuture(future);
+
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).bind(ctx, localAddress, future);
@@ -733,6 +735,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
+        validateFuture(future);
 
         if (ctx != null) {
             try {
@@ -754,6 +757,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @SuppressWarnings("unchecked")
     private ChannelFuture disconnect(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        validateFuture(future);
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).disconnect(ctx, future);
@@ -774,6 +778,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @SuppressWarnings("unchecked")
     private ChannelFuture close(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        validateFuture(future);
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).close(ctx, future);
@@ -794,6 +799,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @SuppressWarnings("unchecked")
     private ChannelFuture deregister(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        validateFuture(future);
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).deregister(ctx, future);
@@ -814,6 +820,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @SuppressWarnings("unchecked")
     private ChannelFuture flush(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        validateFuture(future);
         if (ctx != null) {
             try {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
@@ -829,6 +836,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+        validateFuture(future);
+
         if (message instanceof ChannelBuffer) {
             ChannelBuffer m = (ChannelBuffer) message;
             out().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
@@ -836,6 +848,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             out().messageBuffer().add(message);
         }
         return flush(future);
+    }
+
+    private void validateFuture(ChannelFuture future) {
+        if (future == null) {
+            throw new NullPointerException("future");
+        }
+        if (future.channel() != channel()) {
+            throw new IllegalArgumentException(String.format(
+                    "future.channel does not match: %s (expected: %s)", future.channel(), channel()));
+        }
     }
 
     private DefaultChannelHandlerContext firstInboundContext() {
