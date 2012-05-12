@@ -12,6 +12,7 @@ public final class AttributeKey<T> implements Serializable, Comparable<Attribute
 
     private final String name;
     private final Class<T> valueType;
+    private final String strVal;
 
     public AttributeKey(String name, Class<T> valueType) {
         if (name == null) {
@@ -27,6 +28,7 @@ public final class AttributeKey<T> implements Serializable, Comparable<Attribute
 
         this.name = name;
         this.valueType = valueType;
+        strVal = name + '[' + valueType.getSimpleName() + ']';
     }
 
     public String name() {
@@ -38,22 +40,12 @@ public final class AttributeKey<T> implements Serializable, Comparable<Attribute
     }
 
     @Override
-    public int hashCode() {
-        return System.identityHashCode(this);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return this == o;
-    }
-
-    @Override
     public int compareTo(AttributeKey<T> o) {
         return name().compareTo(o.name());
     }
 
     @Override
     public String toString() {
-        return name();
+        return strVal;
     }
 }
