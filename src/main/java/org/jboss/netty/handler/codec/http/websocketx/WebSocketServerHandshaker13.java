@@ -39,10 +39,11 @@ import org.jboss.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>
- * (originally web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
- * 17</a>).
+ * Performs server side opening and closing handshakes for <a
+ * href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a> (originally web
+ * socket specification version <a
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17"
+ * >draft-ietf-hybi-thewebsocketprotocol- 17</a>).
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
@@ -57,30 +58,35 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Constructor using defaults
      * 
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols
      * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
+     *            Allow extensions to be used in the reserved bits of the web
+     *            socket frame
      */
     public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions) {
         this(webSocketURL, subprotocols, allowExtensions, Long.MAX_VALUE);
     }
-    
+
     /**
      * Constructor specifying the destination web socket location
      * 
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols
      * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
+     *            Allow extensions to be used in the reserved bits of the web
+     *            socket frame
      * @param maxFramePayloadLength
-     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
-     *            reduce denial of service attacks using long data frames.
+     *            Maximum allowable frame payload length. Setting this value to
+     *            your application's requirement may reduce denial of service
+     *            attacks using long data frames.
      */
     public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions,
             long maxFramePayloadLength) {
@@ -88,12 +94,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         this.allowExtensions = allowExtensions;
     }
 
-
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
-     * share the same wire protocol.
+     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi
+     * versions 13-17</a>. Versions 13-17 share the same wire protocol.
      * </p>
      * 
      * <p>
@@ -158,9 +163,15 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         res.addHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
         res.addHeader(Names.CONNECTION, Names.UPGRADE);
         res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String protocol = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
-        if (protocol != null) {
-            res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+        String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        if (subprotocols != null) {
+            String selectedSubprotocol = selectSubprotocol(subprotocols);
+            if (selectedSubprotocol == null) {
+                throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+            } else {
+                res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                this.setSelectedSubprotocol(selectedSubprotocol);
+            }
         }
 
         ChannelFuture future = channel.write(res);
