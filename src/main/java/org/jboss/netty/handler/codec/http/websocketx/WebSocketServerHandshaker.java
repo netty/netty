@@ -36,9 +36,12 @@ public abstract class WebSocketServerHandshaker {
     private final WebSocketVersion version;
 
     private final long maxFramePayloadLength;
-    
+
+    private String selectedSubprotocol = null;
+
     /**
-     * {@link ChannelFutureListener} which will call {@link Channels#fireExceptionCaught(org.jboss.netty.channel.ChannelHandlerContext, Throwable)} 
+     * {@link ChannelFutureListener} which will call
+     * {@link Channels#fireExceptionCaught(org.jboss.netty.channel.ChannelHandlerContext, Throwable)}
      * if the {@link ChannelFuture} was not successful.
      */
     public static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
@@ -48,32 +51,36 @@ public abstract class WebSocketServerHandshaker {
             }
         }
     };
-    
+
     /**
      * Constructor using default values
      * 
      * @param version
      *            the protocol version
      * @param webSocketUrl
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param subprotocols
-     *            CSV of supported protocols. Null if sub protocols not supported.
+     *            CSV of supported protocols. Null if sub protocols not
+     *            supported.
      */
     protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
         this(version, webSocketUrl, subprotocols, Long.MAX_VALUE);
     }
-    
+
     /**
      * Constructor specifying the destination web socket location
      * 
      * @param version
      *            the protocol version
      * @param webSocketUrl
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param subprotocols
-     *            CSV of supported protocols. Null if sub protocols not supported.
+     *            CSV of supported protocols. Null if sub protocols not
+     *            supported.
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      */
@@ -93,7 +100,6 @@ public abstract class WebSocketServerHandshaker {
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
-
     /**
      * Returns the URL of the web socket
      */
@@ -106,7 +112,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p: this.subprotocols) {
+        for (String p : this.subprotocols) {
             ret.add(p);
         }
         return ret;
@@ -120,12 +126,12 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Returns the max length for any frame's payload 
+     * Returns the max length for any frame's payload
      */
     public long getMaxFramePayloadLength() {
         return maxFramePayloadLength;
     }
-    
+
     /**
      * Performs the opening handshake
      * 
@@ -158,11 +164,11 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requesteSubprotocolArray = requestedSubprotocols.split(",");
-        for (String p: requesteSubprotocolArray) {
+        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
-            for (String supportedSubprotocol: subprotocols) {
+            for (String supportedSubprotocol : subprotocols) {
                 if (requestedSubprotocol.equals(supportedSubprotocol)) {
                     return requestedSubprotocol;
                 }
@@ -172,4 +178,19 @@ public abstract class WebSocketServerHandshaker {
         // No match found
         return null;
     }
+    
+    /**
+     * Returns the selected subprotocol. Null if no subprotocol has been selected. 
+     * <p>
+     * This is only available AFTER <tt>handshake()</tt> has been called.
+     * </p>
+     */
+    public String getSelectedSubprotocol() {
+        return selectedSubprotocol;
+    }
+    
+    protected void setSelectedSubprotocol(String value) {
+        selectedSubprotocol = value;
+    }
+    
 }

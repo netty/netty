@@ -151,9 +151,15 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // New handshake method with a challenge:
             res.addHeader(SEC_WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
             res.addHeader(SEC_WEBSOCKET_LOCATION, getWebSocketUrl());
-            String protocol = req.getHeader(SEC_WEBSOCKET_PROTOCOL);
-            if (protocol != null) {
-                res.addHeader(SEC_WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+            String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+            if (subprotocols != null) {
+                String selectedSubprotocol = selectSubprotocol(subprotocols);
+                if (selectedSubprotocol == null) {
+                    throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+                } else {
+                    res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                    this.setSelectedSubprotocol(selectedSubprotocol);
+                }
             }
 
             // Calculate the answer of the challenge.
