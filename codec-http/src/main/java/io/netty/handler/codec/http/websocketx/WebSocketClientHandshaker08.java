@@ -49,8 +49,6 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     private String expectedChallengeResponseString;
 
-    private static final String protocol = null;
-
     private final boolean allowExtensions;
 
     /**
@@ -157,9 +155,11 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         // See https://github.com/netty/netty/issues/264
         request.addHeader(Names.SEC_WEBSOCKET_ORIGIN, originValue);
 
-        if (protocol != null && !protocol.equals("")) {
-            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
+        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
+
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
 
         if (customHeaders != null) {
@@ -223,6 +223,9 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException(String.format("Invalid challenge. Actual: %s. Expected: %s", accept,
                     expectedChallengeResponseString));
         }
+
+        String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        setActualSubprotocol(subprotocol);
 
         channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
                 new WebSocket08FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));

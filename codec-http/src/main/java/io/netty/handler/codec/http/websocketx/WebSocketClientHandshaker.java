@@ -50,7 +50,7 @@ public abstract class WebSocketClientHandshaker {
      * @param version
      *            Version of web socket specification to use to connect to the server
      * @param subprotocol
-     *            Sub protocol request sent to the server.
+     *            CSV of requested subprotocol(s) sent to the server.
      * @param customHeaders
      *            Map of custom headers to add to the client request
      */
@@ -78,7 +78,7 @@ public abstract class WebSocketClientHandshaker {
             Map<String, String> customHeaders, long maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
-        expectedSubprotocol = subprotocol;
+        this.expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
@@ -116,14 +116,15 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Returns the sub protocol request sent to the server as specified in the constructor
+     * Returns the CSV of requested subprotocol(s) sent to the server as specified in the constructor
      */
     public String getExpectedSubprotocol() {
         return expectedSubprotocol;
     }
 
     /**
-     * Returns the sub protocol response and sent by the server. Only available after end of handshake.
+     * Returns the subprotocol response sent by the server. Only available after end of handshake.
+     * Null if no subprotocol was requested or confirmed by the server.
      */
     public String getActualSubprotocol() {
         return actualSubprotocol;
