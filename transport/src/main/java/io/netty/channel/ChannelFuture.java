@@ -322,4 +322,12 @@ public interface ChannelFuture {
      *         the specified time limit
      */
     boolean awaitUninterruptibly(long timeoutMillis);
+
+    /**
+     * A {@link ChannelFuture} which is not allowed to be sent to {@link ChannelPipeline} due to
+     * implementation details.
+     */
+    interface Unsafe extends ChannelFuture {
+        // Tag interface
+    }
 }

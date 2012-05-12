@@ -858,6 +858,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new IllegalArgumentException(String.format(
                     "future.channel does not match: %s (expected: %s)", future.channel(), channel()));
         }
+        if (future.isDone()) {
+            throw new IllegalArgumentException("future already done");
+        }
+        if (future instanceof ChannelFuture.Unsafe) {
+            throw new IllegalArgumentException("internal use only future not allowed");
+        }
     }
 
     private DefaultChannelHandlerContext firstInboundContext() {

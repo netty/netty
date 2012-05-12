@@ -1,14 +1,8 @@
 package io.netty.channel;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
 import java.util.concurrent.TimeUnit;
 
-public class VoidChannelFuture implements ChannelFuture {
-
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(VoidChannelFuture.class);
+public class VoidChannelFuture implements ChannelFuture.Unsafe {
 
     private final Channel channel;
 
