@@ -35,6 +35,8 @@ public abstract class WebSocketServerHandshaker {
 
     private final long maxFramePayloadLength;
 
+    private String selectedSubprotocol = null;
+
     /**
      * Constructor using default values
      * 
@@ -49,7 +51,7 @@ public abstract class WebSocketServerHandshaker {
     protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
         this(version, webSocketUrl, subprotocols, Long.MAX_VALUE);
     }
-    
+
     /**
      * Constructor specifying the destination web socket location
      * 
@@ -105,7 +107,7 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Returns the max length for any frame's payload 
+     * Returns the max length for any frame's payload
      */
     public long getMaxFramePayloadLength() {
         return maxFramePayloadLength;
@@ -143,8 +145,8 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requesteSubprotocolArray = requestedSubprotocols.split(",");
-        for (String p : requesteSubprotocolArray) {
+        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
             for (String supportedSubprotocol : subprotocols) {
@@ -157,4 +159,19 @@ public abstract class WebSocketServerHandshaker {
         // No match found
         return null;
     }
+    
+    /**
+     * Returns the selected subprotocol. Null if no subprotocol has been selected. 
+     * <p>
+     * This is only available AFTER <tt>handshake()</tt> has been called.
+     * </p>
+     */
+    public String getSelectedSubprotocol() {
+        return selectedSubprotocol;
+    }
+    
+    protected void setSelectedSubprotocol(String value) {
+        selectedSubprotocol = value;
+    }
+    
 }

@@ -169,9 +169,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
-        if (getExpectedSubprotocol() != null && !getExpectedSubprotocol().equals("")) {
-            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, getExpectedSubprotocol());
+        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
+
 
         if (customHeaders != null) {
             for (String header : customHeaders.keySet()) {
@@ -235,8 +237,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
 
-        String protocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
-        setActualSubprotocol(protocol);
+        String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        setActualSubprotocol(subprotocol);
 
         channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
                 new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
