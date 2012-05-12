@@ -200,7 +200,7 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
                     }
                 }
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    unsafe.flush(unsafe.voidFuture());
+                    unsafe.flushForcibly();
                 }
                 if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
                     unsafe.read();

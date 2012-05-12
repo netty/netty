@@ -636,7 +636,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void flush(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 // Append flush future to the notification list.
-                if (future != voidFuture && !future.isDone()) {
+                if (future != voidFuture) {
                     FlushFutureEntry newEntry = new FlushFutureEntry(future, flushedAmount + out().size(), null);
                     if (flushFuture == null) {
                         flushFuture = lastFlushFuture = newEntry;
@@ -646,21 +646,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 }
 
-                // Perform outbound I/O.
-                try {
-                    flushedAmount += doFlush();
-                } catch (Throwable t) {
-                    notifyFlushFutures(t);
-                    pipeline().fireExceptionCaught(t);
-                    if (t instanceof IOException) {
-                        close(voidFuture());
-                    }
-                } finally {
-                    // Notify flush futures if necessary.
-                    notifyFlushFutures();
-                    if (!isActive()) {
-                        close(voidFuture());
-                    }
+                // Attempt/perform outbound I/O if:
+                // - the channel is inactive - flush0() will fail the futures.
+                // - the event loop has no plan to call flushForcibly().
+                if (!isActive() || !inEventLoopDrivenFlush()) {
+                    // Note that we don't call flushForcibly() because otherwise its stack trace
+                    // will be confusing.
+                    flush0();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
@@ -669,6 +661,40 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         flush(future);
                     }
                 });
+            }
+        }
+
+        @Override
+        public void flushForcibly() {
+            flush0();
+        }
+
+        private void flush0() {
+            // Perform outbound I/O.
+            try {
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                    int localFlushedAmount = doFlush(i == 0);
+                    if (localFlushedAmount > 0) {
+                        flushedAmount += localFlushedAmount;
+                        notifyFlushFutures();
+                        break;
+                    }
+                    if (out().isEmpty()) {
+                        // Reset reader/writerIndex to 0 if the buffer is empty.
+                        if (out().hasByteBuffer()) {
+                            out().byteBuffer().clear();
+                        }
+                        break;
+                    }
+                }
+            } catch (Throwable t) {
+                notifyFlushFutures(t);
+                pipeline().fireExceptionCaught(t);
+                close(voidFuture());
+            } finally {
+                if (!isActive()) {
+                    close(voidFuture());
+                }
             }
         }
 
@@ -788,5 +814,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doDeregister() throws Exception;
 
     protected abstract int doRead() throws Exception;
-    protected abstract int doFlush() throws Exception;
+    protected abstract int doFlush(boolean lastSpin) throws Exception;
+    protected abstract boolean inEventLoopDrivenFlush();
 }

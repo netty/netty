@@ -140,4 +140,21 @@ public final class ChannelBufferHolder<E> {
             throw new Error();
         }
     }
+
+    public boolean isEmpty() {
+        switch (bypassDirection) {
+        case 0:
+            if (hasMessageBuffer()) {
+                return messageBuffer().isEmpty();
+            } else {
+                return byteBuffer().readable();
+            }
+        case 1:
+            return ctx.nextIn().isEmpty();
+        case 2:
+            return ctx.out().isEmpty();
+        default:
+            throw new Error();
+        }
+    }
 }

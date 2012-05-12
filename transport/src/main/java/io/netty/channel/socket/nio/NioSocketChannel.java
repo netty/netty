@@ -162,46 +162,36 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     @Override
-    protected int doFlush() throws Exception {
+    protected int doFlush(boolean lastSpin) throws Exception {
+        final ChannelBuffer buf = unsafe().out().byteBuffer();
+        final int expectedWrittenBytes = buf.readableBytes();
+        if (expectedWrittenBytes == 0) {
+            return 0;
+        }
+
+        final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
+
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
-        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-            return 0;
-        }
-
-        boolean addOpWrite = false;
-        boolean removeOpWrite = false;
-        final SocketChannel ch = javaChannel();
-        final int writeSpinCount = config().getWriteSpinCount();
-        final ChannelBuffer buf = unsafe().out().byteBuffer();
-        int bytesLeft = buf.readableBytes();
-        if (bytesLeft == 0) {
-            return 0;
-        }
-
-        int localWrittenBytes = 0;
-        int writtenBytes = 0;
-
-        // FIXME: Spinning should be done by AbstractChannel.
-        for (int i = writeSpinCount; i > 0; i --) {
-            localWrittenBytes = buf.readBytes(ch, bytesLeft);
-            if (localWrittenBytes > 0) {
-                writtenBytes += localWrittenBytes;
-                bytesLeft -= localWrittenBytes;
-                if (bytesLeft <= 0) {
-                    removeOpWrite = true;
-                    break;
-                }
-            } else {
-                addOpWrite = true;
-                break;
+        if (writtenBytes >= expectedWrittenBytes) {
+            // Wrote the outbound buffer completely - clear OP_WRITE.
+            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
             }
-        }
-
-        if (addOpWrite) {
-            key.interestOps(interestOps | SelectionKey.OP_WRITE);
-        } else if (removeOpWrite) {
-            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+        } else {
+            // Wrote something or nothing.
+            // a) If wrote something, the caller will not retry.
+            //    - Set OP_WRITE so that the event loop calls flushForcibly() later.
+            // b) If wrote nothing:
+            //    1) If 'lastSpin' is false, the caller will call this method again real soon.
+            //       - Do not update OP_WRITE.
+            //    a) If 'lastSpin' is true, the caller will not retry.
+            //       - Set OP_WRITE so that the event loop calls flushForcibly() later.
+            if (writtenBytes > 0 || lastSpin) {
+                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                }
+            }
         }
 
         return writtenBytes;
