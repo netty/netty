@@ -163,10 +163,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      */
     SocketAddress remoteAddress();
 
-    // FIXME: Introduce more flexible channel state notification mechanism
-    //        - notify me when channel becomes (un)registered, (in)active
-    void addClosureListener(ChannelFutureListener listener);
-    void removeClosureListener(ChannelFutureListener remover);
+    /**
+     * Returns the {@link ChannelFuture} which will be notified when this
+     * channel is closed.  This method always returns the same future instance.
+     */
+    ChannelFuture closeFuture();
 
     Unsafe unsafe();
 
