@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannelConfig;
 import io.netty.util.AttributeMap;
 
 import java.net.InetSocketAddress;

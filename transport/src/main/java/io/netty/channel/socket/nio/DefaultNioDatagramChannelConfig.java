@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 import io.netty.util.internal.DetectionUtil;
 
 import java.lang.reflect.Method;
@@ -27,8 +26,7 @@ import java.nio.channels.DatagramChannel;
 /**
  * The default {@link NioSocketChannelConfig} implementation.
  */
-class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
-        implements NioDatagramChannelConfig {
+class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     private static final Object IP_MULTICAST_IF;
     private static final Method GET_OPTION;
@@ -71,39 +69,10 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
     }
 
     private final DatagramChannel channel;
-    private volatile int writeSpinCount = 16;
 
     DefaultNioDatagramChannelConfig(DatagramChannel channel) {
         super(channel.socket());
         this.channel = channel;
-    }
-
-    @Override
-    public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
-        }
-
-        if (key.equals("writeSpinCount")) {
-            setWriteSpinCount(ConversionUtil.toInt(value));
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public int getWriteSpinCount() {
-        return writeSpinCount;
-    }
-
-    @Override
-    public void setWriteSpinCount(int writeSpinCount) {
-        if (writeSpinCount <= 0) {
-            throw new IllegalArgumentException(
-                    "writeSpinCount must be a positive integer.");
-        }
-        this.writeSpinCount = writeSpinCount;
     }
 
     @Override

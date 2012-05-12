@@ -15,21 +15,25 @@
  */
 package io.netty.channel.sctp;
 
-import com.sun.nio.sctp.SctpChannel;
-import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
+import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.socket.nio.NioSocketChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import com.sun.nio.sctp.SctpChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation for SCTP.
  */
 class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
 
-    private SctpChannel channel;
+    private final SctpChannel channel;
 
     DefaultSctpChannelConfig(SctpChannel channel) {
         if (channel == null) {
@@ -39,30 +43,63 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     }
 
     @Override
-    public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
+    public Map<ChannelOption<?>, Object> getOptions() {
+        // TODO: Investigate if other SCTP options such as SCTP_PRIMARY_ADDR can be exposed.
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_SNDBUF, SCTP_NODELAY, SCTP_INIT_MAXSTREAMS);
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SCTP_NODELAY) {
+            return (T) Boolean.valueOf(isSctpNoDelay());
+        }
+        if (option == SCTP_INIT_MAXSTREAMS) {
+            InitMaxStreams ims = getInitMaxStreams();
+            if (ims == null) {
+                return null;
+            }
+            List<Integer> values = new ArrayList<Integer>(2);
+            values.add(ims.maxInStreams());
+            values.add(ims.maxOutStreams());
+            @SuppressWarnings("unchecked")
+            T ret = (T) values;
+            return ret;
         }
 
-        if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sendBufferSize")) {
-            setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sctpNoDelay")) {
-            setSctpNoDelay(ConversionUtil.toBoolean(value));
-        } else if (key.equals("sctpInitMaxStreams")) {
-            final Integer maxInOutStreams = ConversionUtil.toInt(value);
-            setInitMaxStreams(InitMaxStreams.create(maxInOutStreams, maxInOutStreams));
+        return super.getOption(option);
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SCTP_NODELAY) {
+            setSctpNoDelay((Boolean) value);
+        } else if (option == SCTP_INIT_MAXSTREAMS) {
+            @SuppressWarnings("unchecked")
+            List<Integer> values = (List<Integer>) value;
+            setInitMaxStreams(InitMaxStreams.create(values.get(0), values.get(1)));
         } else {
-            return false;
+            return super.setOption(option, value);
         }
+
         return true;
     }
 
     @Override
     public boolean isSctpNoDelay() {
         try {
-            return channel.getOption(SCTP_NODELAY);
+            return channel.getOption(com.sun.nio.sctp.SctpStandardSocketOptions.SCTP_NODELAY);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -71,7 +108,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setSctpNoDelay(boolean sctpNoDelay) {
         try {
-            channel.setOption(SCTP_NODELAY, sctpNoDelay);
+            channel.setOption(com.sun.nio.sctp.SctpStandardSocketOptions.SCTP_NODELAY, sctpNoDelay);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -80,7 +117,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public int getSendBufferSize() {
         try {
-            return channel.getOption(SO_SNDBUF);
+            return channel.getOption(com.sun.nio.sctp.SctpStandardSocketOptions.SO_SNDBUF);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -89,7 +126,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setSendBufferSize(int sendBufferSize) {
         try {
-            channel.setOption(SO_SNDBUF, sendBufferSize);
+            channel.setOption(com.sun.nio.sctp.SctpStandardSocketOptions.SO_SNDBUF, sendBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -98,7 +135,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public int getReceiveBufferSize() {
         try {
-            return channel.getOption(SO_RCVBUF);
+            return channel.getOption(com.sun.nio.sctp.SctpStandardSocketOptions.SO_RCVBUF);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -107,7 +144,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
-            channel.setOption(SO_RCVBUF, receiveBufferSize);
+            channel.setOption(com.sun.nio.sctp.SctpStandardSocketOptions.SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -116,7 +153,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public InitMaxStreams getInitMaxStreams() {
         try {
-            return channel.getOption(SCTP_INIT_MAXSTREAMS);
+            return channel.getOption(com.sun.nio.sctp.SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -125,7 +162,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setInitMaxStreams(InitMaxStreams initMaxStreams) {
         try {
-            channel.setOption(SCTP_INIT_MAXSTREAMS, initMaxStreams);
+            channel.setOption(com.sun.nio.sctp.SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

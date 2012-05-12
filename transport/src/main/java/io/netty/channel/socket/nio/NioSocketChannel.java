@@ -21,12 +21,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
+import io.netty.channel.socket.DefaultSocketChannelConfig;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
@@ -34,7 +35,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
-    private final NioSocketChannelConfig config;
+    private final SocketChannelConfig config;
     private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
 
     private static SocketChannel newSocket() {
@@ -67,11 +68,11 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new DefaultNioSocketChannelConfig(socket.socket());
+        config = new DefaultSocketChannelConfig(socket.socket());
     }
 
     @Override
-    public NioSocketChannelConfig config() {
+    public SocketChannelConfig config() {
         return config;
     }
 
@@ -151,6 +152,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     @Override
     protected void doDeregister() throws Exception {
         selectionKey().cancel();
+        eventLoop().cancelledKeys ++;
     }
 
     @Override
@@ -167,7 +169,6 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
             return 0;
         }
 
-        boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
         final SocketChannel ch = javaChannel();
@@ -181,38 +182,26 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
         int localWrittenBytes = 0;
         int writtenBytes = 0;
 
-        try {
-            for (int i = writeSpinCount; i > 0; i --) {
-                localWrittenBytes = buf.readBytes(ch, bytesLeft);
-                if (localWrittenBytes > 0) {
-                    bytesLeft -= localWrittenBytes;
-                    if (bytesLeft <= 0) {
-                        removeOpWrite = true;
-                        break;
-                    }
-
-                    writtenBytes += localWrittenBytes;
-                } else {
-                    addOpWrite = true;
+        // FIXME: Spinning should be done by AbstractChannel.
+        for (int i = writeSpinCount; i > 0; i --) {
+            localWrittenBytes = buf.readBytes(ch, bytesLeft);
+            if (localWrittenBytes > 0) {
+                writtenBytes += localWrittenBytes;
+                bytesLeft -= localWrittenBytes;
+                if (bytesLeft <= 0) {
+                    removeOpWrite = true;
                     break;
                 }
-            }
-        } catch (AsynchronousCloseException e) {
-            // Doesn't need a user attention - ignore.
-        } catch (Throwable t) {
-            if (t instanceof IOException) {
-                open = false;
-                selectionKey().cancel();
-                ch.close();
+            } else {
+                addOpWrite = true;
+                break;
             }
         }
 
-        if (open) {
-            if (addOpWrite) {
-                key.interestOps(interestOps | SelectionKey.OP_WRITE);
-            } else if (removeOpWrite) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
+        if (addOpWrite) {
+            key.interestOps(interestOps | SelectionKey.OP_WRITE);
+        } else if (removeOpWrite) {
+            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
         }
 
         return writtenBytes;

@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -74,6 +75,11 @@ public class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
+    public SelectorEventLoop eventLoop() {
+        return (SelectorEventLoop) super.eventLoop();
+    }
+
+    @Override
     public boolean isActive() {
         return javaChannel().socket().isBound();
     }
@@ -109,12 +115,13 @@ public class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    protected void doRegister() throws Exception {
-        if (!(eventLoop() instanceof SelectorEventLoop)) {
-            throw new ChannelException("unsupported event loop: " + eventLoop().getClass().getName());
-        }
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof SelectorEventLoop;
+    }
 
-        SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
+    @Override
+    protected void doRegister() throws Exception {
+        SelectorEventLoop loop = eventLoop();
         selectionKey = javaChannel().register(
                 loop.selector, isActive()? SelectionKey.OP_ACCEPT : 0, this);
     }

@@ -122,6 +122,22 @@ public final class ChannelBufferHolder<E> {
         default:
             throw new Error();
         }
+    }
 
+    public int size() {
+        switch (bypassDirection) {
+        case 0:
+            if (hasMessageBuffer()) {
+                return messageBuffer().size();
+            } else {
+                return byteBuffer().readableBytes();
+            }
+        case 1:
+            return ctx.nextIn().size();
+        case 2:
+            return ctx.out().size();
+        default:
+            throw new Error();
+        }
     }
 }

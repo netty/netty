@@ -15,9 +15,9 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.TimeUnit;
-
 import io.netty.bootstrap.ClientBootstrap;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * The result of an asynchronous {@link Channel} I/O operation.

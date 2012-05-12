@@ -16,8 +16,9 @@
 package io.netty.channel;
 
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.socket.nio.NioChannelConfig;
 
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.util.Map;
 
 /**
@@ -50,7 +51,7 @@ import java.util.Map;
  * <p>
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
- * socket as explained in {@link SocketChannelConfig} or {@link NioChannelConfig}.
+ * socket as explained in {@link SocketChannelConfig}.
  *
  * @apiviz.has io.netty.channel.ChannelPipelineFactory
  * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
@@ -59,10 +60,14 @@ import java.util.Map;
  */
 public interface ChannelConfig {
 
+    Map<ChannelOption<?>, Object> getOptions();
+
     /**
      * Sets the configuration properties from the specified {@link Map}.
      */
-    void setOptions(Map<String, Object> options);
+    boolean setOptions(Map<ChannelOption<?>, ?> options);
+
+    <T> T getOption(ChannelOption<T> option);
 
     /**
      * Sets a configuration property with the specified name and value.
@@ -84,7 +89,7 @@ public interface ChannelConfig {
      *
      * @return {@code true} if and only if the property has been set
      */
-    boolean setOption(String name, Object value);
+    <T> boolean setOption(ChannelOption<T> option, T value);
 
     /**
      * Returns the connect timeout of the channel in milliseconds.  If the
@@ -104,4 +109,25 @@ public interface ChannelConfig {
      *                             {@code 0} to disable.
      */
     void setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    /**
+     * Returns the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is used for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     */
+    int getWriteSpinCount();
+
+    /**
+     * Sets the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is used for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified value is {@code 0} or less than {@code 0}
+     */
+    void setWriteSpinCount(int writeSpinCount);
 }

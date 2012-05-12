@@ -15,9 +15,10 @@
  */
 package io.netty.channel.socket;
 
+import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -25,12 +26,12 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.Map;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
  */
-public class DefaultDatagramChannelConfig extends DefaultChannelConfig
-                                        implements DatagramChannelConfig {
+public class DefaultDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
 
     private final DatagramSocket socket;
 
@@ -45,32 +46,76 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(
+                super.getOptions(),
+                SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED,
+                IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS);
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == SO_BROADCAST) {
+            return (T) Boolean.valueOf(isBroadcast());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == IP_MULTICAST_LOOP_DISABLED) {
+            return (T) Boolean.valueOf(isLoopbackModeDisabled());
+        }
+        if (option == IP_MULTICAST_ADDR) {
+            @SuppressWarnings("unchecked")
+            T i = (T) getInterface();
+            return i;
+        }
+        if (option == IP_MULTICAST_IF) {
+            @SuppressWarnings("unchecked")
+            T i = (T) getNetworkInterface();
+            return i;
+        }
+        if (option == IP_MULTICAST_TTL) {
+            return (T) Integer.valueOf(getTimeToLive());
+        }
+        if (option == IP_TOS) {
+            return (T) Integer.valueOf(getTrafficClass());
         }
 
-        if (key.equals("broadcast")) {
-            setBroadcast(ConversionUtil.toBoolean(value));
-        } else if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sendBufferSize")) {
-            setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("loopbackModeDisabled")) {
-            setLoopbackModeDisabled(ConversionUtil.toBoolean(value));
-        } else if (key.equals("interface")) {
+        return super.getOption(option);
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == SO_BROADCAST) {
+            setBroadcast((Boolean) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == IP_MULTICAST_LOOP_DISABLED) {
+            setLoopbackModeDisabled((Boolean) value);
+        } else if (option == IP_MULTICAST_ADDR) {
             setInterface((InetAddress) value);
-        } else if (key.equals("networkInterface")) {
+        } else if (option == IP_MULTICAST_IF) {
             setNetworkInterface((NetworkInterface) value);
-        } else if (key.equals("timeToLive")) {
-            setTimeToLive(ConversionUtil.toInt(value));
-        } else if (key.equals("trafficClass")) {
-            setTrafficClass(ConversionUtil.toInt(value));
+        } else if (option == IP_MULTICAST_TTL) {
+            setTimeToLive((Integer) value);
+        } else if (option == IP_TOS) {
+            setTrafficClass((Integer) value);
         } else {
-            return false;
+            return super.setOption(option, value);
         }
+
         return true;
     }
 

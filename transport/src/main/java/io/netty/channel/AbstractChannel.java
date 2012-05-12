@@ -90,7 +90,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
-    private long writtenAmount;
+    private long flushedAmount;
+    private FlushFutureEntry flushFuture;
+    private FlushFutureEntry lastFlushFuture;
+    private ClosedChannelException closedChannelException;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -425,6 +428,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (AbstractChannel.this.eventLoop != null) {
                 throw new IllegalStateException("registered to an event loop already");
             }
+            if (!isCompatible(eventLoop)) {
+                throw new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName());
+            }
+
             AbstractChannel.this.eventLoop = eventLoop;
 
             assert eventLoop().inEventLoop();
@@ -598,7 +605,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         future.setFailure(t);
                     }
 
+                    if (closedChannelException != null) {
+                        closedChannelException = new ClosedChannelException();
+                    }
+
+                    notifyFlushFutures(closedChannelException);
                     notifyClosureListeners();
+
                     if (wasActive && !isActive()) {
                         pipeline().fireChannelInactive();
                     }
@@ -645,8 +658,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void read() {
             assert eventLoop().inEventLoop();
             long readAmount = 0;
+            boolean closed = false;
             try {
-                boolean closed = false;
                 for (;;) {
                     int localReadAmount = doRead();
                     if (localReadAmount > 0) {
@@ -665,13 +678,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (readAmount > 0) {
                     pipeline.fireInboundBufferUpdated();
                 }
-
-                if (closed) {
-                    close(voidFuture());
-                }
             } catch (Throwable t) {
                 pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
+                    close(voidFuture());
+                }
+            } finally {
+                if (closed && isOpen()) {
                     close(voidFuture());
                 }
             }
@@ -679,25 +692,88 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void flush(final ChannelFuture future) {
-            // FIXME: Notify future properly using writtenAmount.
             if (eventLoop().inEventLoop()) {
+                // Append flush future to the notification list.
+                if (future != voidFuture && !future.isDone()) {
+                    FlushFutureEntry newEntry = new FlushFutureEntry(future, flushedAmount + out().size(), null);
+                    if (flushFuture == null) {
+                        flushFuture = lastFlushFuture = newEntry;
+                    } else {
+                        lastFlushFuture.next = newEntry;
+                        lastFlushFuture = newEntry;
+                    }
+                }
+
+                // Perform outbound I/O.
                 try {
-                    writtenAmount += doFlush();
-                } catch (Exception e) {
-                    future.setFailure(e);
+                    flushedAmount += doFlush();
+                } catch (Throwable t) {
+                    notifyFlushFutures(t);
+                    pipeline().fireExceptionCaught(t);
+                    if (t instanceof IOException) {
+                        close(voidFuture());
+                    }
+                } finally {
+                    // Notify flush futures if necessary.
+                    notifyFlushFutures();
+                    if (!isActive()) {
+                        close(voidFuture());
+                    }
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            writtenAmount += doFlush();
-                        } catch (Exception e) {
-                            future.setFailure(e);
-                        }
+                        flush(future);
                     }
                 });
             }
+        }
+
+        private void notifyFlushFutures() {
+            FlushFutureEntry e = flushFuture;
+            if (e == null) {
+                return;
+            }
+
+            final long flushedAmount = AbstractChannel.this.flushedAmount;
+            do {
+                if (e.expectedFlushedAmount > flushedAmount) {
+                    break;
+                }
+                e.future.setSuccess();
+                e = e.next;
+            } while (e != null);
+
+            flushFuture = e;
+
+            // Avoid overflow
+            if (e == null) {
+                // Reset the counter if there's nothing in the notification list.
+                AbstractChannel.this.flushedAmount = 0;
+            } else if (flushedAmount >= 0x1000000000000000L) {
+                // Otherwise, reset the counter only when the counter grew pretty large
+                // so that we can reduce the cost of updating all entries in the notification list.
+                AbstractChannel.this.flushedAmount = 0;
+                do {
+                    e.expectedFlushedAmount -= flushedAmount;
+                    e = e.next;
+                } while (e != null);
+            }
+        }
+
+        private void notifyFlushFutures(Throwable cause) {
+            FlushFutureEntry e = flushFuture;
+            if (e == null) {
+                return;
+            }
+
+            do {
+                e.future.setFailure(cause);
+                e = e.next;
+            } while (e != null);
+
+            flushFuture = null;
         }
 
         private boolean ensureOpen(ChannelFuture future) {
@@ -718,6 +794,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             close(voidFuture());
         }
     }
+
+    private static class FlushFutureEntry {
+        private final ChannelFuture future;
+        private long expectedFlushedAmount;
+        private FlushFutureEntry next;
+
+        FlushFutureEntry(ChannelFuture future, long expectedWrittenAmount, FlushFutureEntry next) {
+            this.future = future;
+            expectedFlushedAmount = expectedWrittenAmount;
+            this.next = next;
+        }
+    }
+
+    protected abstract boolean isCompatible(EventLoop loop);
 
     protected abstract java.nio.channels.Channel javaChannel();
     protected abstract ChannelBufferHolder<Object> firstOut();

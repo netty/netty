@@ -15,12 +15,14 @@
  */
 package io.netty.channel.socket;
 
+import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.util.Map;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
@@ -42,20 +44,39 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == SO_BACKLOG) {
+            return (T) Integer.valueOf(getBacklog());
         }
 
-        if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("backlog")) {
-            setBacklog(ConversionUtil.toInt(value));
+        return super.getOption(option);
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == SO_BACKLOG) {
+            setBacklog((Integer) value);
         } else {
-            return false;
+            return super.setOption(option, value);
         }
+
         return true;
     }
 

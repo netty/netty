@@ -15,9 +15,10 @@
  */
 package io.netty.channel;
 
+import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -29,22 +30,74 @@ public class DefaultChannelConfig implements ChannelConfig {
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
+    private volatile int writeSpinCount = 16;
 
     @Override
-    public void setOptions(Map<String, Object> options) {
-        for (Entry<String, Object> e: options.entrySet()) {
-            setOption(e.getKey(), e.getValue());
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT);
+    }
+
+    protected Map<ChannelOption<?>, Object> getOptions(Map<ChannelOption<?>, Object> result, ChannelOption<?>... options) {
+        if (result == null) {
+            result = new IdentityHashMap<ChannelOption<?>, Object>();
         }
+        for (ChannelOption<?> o: options) {
+            result.put(o, getOption(o));
+        }
+        return result;
     }
 
     @Override
-    public boolean setOption(String key, Object value) {
-        if ("connectTimeoutMillis".equals(key)) {
-            setConnectTimeoutMillis(ConversionUtil.toInt(value));
+    public boolean setOptions(Map<ChannelOption<?>, ?> options) {
+        if (options == null) {
+            throw new NullPointerException("options");
+        }
+
+        boolean setAllOptions = true;
+        for (Entry<ChannelOption<?>, ?> e: options.entrySet()) {
+            if (!setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                setAllOptions = false;
+            }
+        }
+
+        return setAllOptions;
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == null) {
+            throw new NullPointerException("option");
+        }
+
+        if (option == CONNECT_TIMEOUT_MILLIS) {
+            return (T) Integer.valueOf(getConnectTimeoutMillis());
+        } else if (option == WRITE_SPIN_COUNT) {
+            return (T) Integer.valueOf(getWriteSpinCount());
+        }
+
+        return null;
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == CONNECT_TIMEOUT_MILLIS) {
+            setConnectTimeoutMillis((Integer) value);
+        } else if (option == WRITE_SPIN_COUNT) {
+            setWriteSpinCount((Integer) value);
         } else {
             return false;
         }
+
         return true;
+    }
+
+    protected <T> void validate(ChannelOption<T> option, T value) {
+        if (option == null) {
+            throw new NullPointerException("option");
+        }
+        option.validate(value);
     }
 
     @Override
@@ -59,5 +112,19 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "connectTimeoutMillis: %d (expected: >= 0)", connectTimeoutMillis));
         }
         this.connectTimeoutMillis = connectTimeoutMillis;
+    }
+
+    @Override
+    public int getWriteSpinCount() {
+        return writeSpinCount;
+    }
+
+    @Override
+    public void setWriteSpinCount(int writeSpinCount) {
+        if (writeSpinCount <= 0) {
+            throw new IllegalArgumentException(
+                    "writeSpinCount must be a positive integer.");
+        }
+        this.writeSpinCount = writeSpinCount;
     }
 }
