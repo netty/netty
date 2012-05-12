@@ -98,14 +98,15 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Returns the sub protocol request sent to the server as specified in the constructor
+     * Returns the CSV of requested subprotocol(s) sent to the server as specified in the constructor
      */
     public String getExpectedSubprotocol() {
         return expectedSubprotocol;
     }
 
     /**
-     * Returns the sub protocol response and sent by the server. Only available after end of handshake.
+     * Returns the subprotocol response sent by the server. Only available after end of handshake.
+     * Null if no subprotocol was requested or confirmed by the server.
      */
     public String getActualSubprotocol() {
         return actualSubprotocol;

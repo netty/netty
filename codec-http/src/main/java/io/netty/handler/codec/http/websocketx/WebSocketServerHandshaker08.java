@@ -131,10 +131,17 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         res.addHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
         res.addHeader(Names.CONNECTION, Names.UPGRADE);
         res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String protocol = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
-        if (protocol != null) {
-            res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+        String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        if (subprotocols != null) {
+            String selectedSubprotocol = selectSubprotocol(subprotocols);
+            if (selectedSubprotocol == null) {
+                throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+            } else {
+                res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                this.setSelectedSubprotocol(selectedSubprotocol);
+            }
         }
+
 
         ChannelFuture future = channel.write(res);
 
