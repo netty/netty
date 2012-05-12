@@ -35,7 +35,7 @@ public abstract class WebSocketClientHandshaker {
 
     private final String expectedSubprotocol;
 
-    private String actualSubprotocol;
+    private String actualSubprotocol = null;
 
     protected final Map<String, String> customHeaders;
 
