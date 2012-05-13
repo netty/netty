@@ -45,13 +45,15 @@ public interface SpdyDataFrame {
     void setLast(boolean last);
 
     /**
-     * Returns {@code true} if the data in this frame has been compressed.
+     * @deprecated Removed from SPDY specification.
      */
+    @Deprecated
     boolean isCompressed();
 
     /**
-     * Sets if the data in this frame has been compressed.
+     * @deprecated Removed from SPDY specification.
      */
+    @Deprecated
     void setCompressed(boolean compressed);
 
     /**
