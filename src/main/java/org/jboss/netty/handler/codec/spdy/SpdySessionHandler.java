@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
@@ -251,6 +252,18 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         }
 
         super.messageReceived(ctx, e);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+            throws Exception {
+
+        Throwable cause = e.getCause();
+        if (cause instanceof SpdyProtocolException) {
+            issueSessionError(ctx, e.getChannel(), null);
+        }
+
+        super.exceptionCaught(ctx, e);
     }
 
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
