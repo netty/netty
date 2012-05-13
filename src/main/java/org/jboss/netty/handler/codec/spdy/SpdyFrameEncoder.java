@@ -82,9 +82,6 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
             ChannelBuffer data = spdyDataFrame.getData();
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
-            if (spdyDataFrame.isCompressed()) {
-                flags |= SPDY_DATA_FLAG_COMPRESS;
-            }
             ChannelBuffer header = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE);
             header.writeInt(spdyDataFrame.getStreamID() & 0x7FFFFFFF);

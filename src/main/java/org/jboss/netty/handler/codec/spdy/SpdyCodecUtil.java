@@ -28,8 +28,7 @@ final class SpdyCodecUtil {
 
     static final int SPDY_MAX_LENGTH = 0xFFFFFF; // Length is a 24-bit field
 
-    static final byte SPDY_DATA_FLAG_FIN      = 0x01;
-    static final byte SPDY_DATA_FLAG_COMPRESS = 0x02;
+    static final byte SPDY_DATA_FLAG_FIN = 0x01;
 
     static final int SPDY_SYN_STREAM_FRAME    = 1;
     static final int SPDY_SYN_REPLY_FRAME     = 2;
