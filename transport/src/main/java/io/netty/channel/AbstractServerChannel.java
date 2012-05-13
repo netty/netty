@@ -77,8 +77,13 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected int doFlush() throws Exception {
+    protected int doFlush(boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean inEventLoopDrivenFlush() {
+        return false;
     }
 
     private static class NoopQueue extends AbstractQueue<Object> {
