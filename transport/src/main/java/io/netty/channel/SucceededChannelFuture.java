@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import java.nio.channels.Channels;
+
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
  * recommended to use {@link Channels#succeededFuture(Channel)} instead of
@@ -42,7 +44,12 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture rethrowIfFailed() throws Exception {
+    public ChannelFuture sync() throws InterruptedException {
+        return this;
+    }
+
+    @Override
+    public ChannelFuture syncUninterruptibly() {
         return this;
     }
 }

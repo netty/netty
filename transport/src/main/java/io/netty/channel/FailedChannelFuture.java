@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import java.nio.channels.Channels;
+
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channels#failedFuture(Channel, Throwable)}
@@ -49,15 +51,24 @@ public class FailedChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture rethrowIfFailed() throws Exception {
-        if (cause instanceof Exception) {
-            throw (Exception) cause;
+    public ChannelFuture sync() throws InterruptedException {
+        return rethrow();
+    }
+
+    @Override
+    public ChannelFuture syncUninterruptibly() {
+        return rethrow();
+    }
+
+    private ChannelFuture rethrow() {
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
         }
-        
+
         if (cause instanceof Error) {
             throw (Error) cause;
         }
-        
-        throw new RuntimeException(cause);
+
+        throw new ChannelException(cause);
     }
 }

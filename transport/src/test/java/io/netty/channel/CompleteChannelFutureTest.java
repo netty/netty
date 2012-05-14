@@ -99,9 +99,14 @@ public class CompleteChannelFutureTest {
         public boolean isSuccess() {
             throw new Error();
         }
-        
+
         @Override
-        public ChannelFuture rethrowIfFailed() throws Exception {
+        public ChannelFuture sync() throws InterruptedException {
+            throw new Error();
+        }
+
+        @Override
+        public ChannelFuture syncUninterruptibly() {
             throw new Error();
         }
     }

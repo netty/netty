@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.group.ChannelGroup;
 
 import java.lang.annotation.Documented;
@@ -24,6 +23,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.channels.Channels;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a

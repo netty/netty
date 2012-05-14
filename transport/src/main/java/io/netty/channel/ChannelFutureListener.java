@@ -39,7 +39,7 @@ public interface ChannelFutureListener extends EventListener {
     ChannelFutureListener CLOSE = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) {
-            future.channel().close(null);
+            future.channel().close();
         }
     };
 
@@ -51,7 +51,7 @@ public interface ChannelFutureListener extends EventListener {
         @Override
         public void operationComplete(ChannelFuture future) {
             if (!future.isSuccess()) {
-                future.channel().close(null);
+                future.channel().close();
             }
         }
     };

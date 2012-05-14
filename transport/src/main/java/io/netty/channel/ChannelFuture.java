@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.bootstrap.ClientBootstrap;
-
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -247,7 +245,7 @@ public interface ChannelFuture {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    void addListener(ChannelFutureListener listener);
+    ChannelFuture addListener(ChannelFutureListener listener);
 
     /**
      * Removes the specified listener from this future.
@@ -256,13 +254,21 @@ public interface ChannelFuture {
      * listener is not associated with this future, this method
      * does nothing and returns silently.
      */
-    void removeListener(ChannelFutureListener listener);
+    ChannelFuture removeListener(ChannelFutureListener listener);
 
     /**
-     * Rethrows the exception that caused this future fail if this future is
-     * complete and failed.
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
+     * {@link ChannelException} before being thrown.
      */
-    ChannelFuture rethrowIfFailed() throws Exception;
+    ChannelFuture sync() throws InterruptedException;
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
+     * {@link ChannelException} before being thrown.
+     */
+    ChannelFuture syncUninterruptibly();
 
     /**
      * Waits for this future to be completed.

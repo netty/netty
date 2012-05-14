@@ -15,22 +15,20 @@
  */
 package io.netty.example.echo;
 
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoop;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.ServerChannelBuilder;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 /**
  * Echoes back any received data from a client.
@@ -44,39 +42,36 @@ public class EchoServer {
     }
 
     public void run() throws Exception {
-        // Configure the server.
-        final EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
-        ServerSocketChannel ssc = new NioServerSocketChannel();
-        ssc.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
-        ssc.pipeline().addLast("acceptor", new ChannelInboundHandlerAdapter<SocketChannel>() {
+        // Create the required event loops.
+        EventLoop parentLoop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
+        EventLoop childLoop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
+        try {
+            // Configure the server.
+            ServerChannelBuilder b = new ServerChannelBuilder();
+            b.parentEventLoop(parentLoop)
+             .childEventLoop(childLoop)
+             .parentChannel(new NioServerSocketChannel())
+             .childOption(ChannelOption.TCP_NODELAY, true)
+             .localAddress(new InetSocketAddress(port))
+             .childInitializer(new ChannelInitializer() {
+                 @Override
+                 public void initChannel(Channel ch) throws Exception {
+                     ChannelPipeline p = ch.pipeline();
+                     p.addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+                     p.addLast("echoer", new EchoServerHandler());
+                 }
+             });
 
-            @Override
-            public ChannelBufferHolder<SocketChannel> newInboundBuffer(
-                    ChannelInboundHandlerContext<SocketChannel> ctx)
-                    throws Exception {
-                return ChannelBufferHolders.messageBuffer(new ArrayDeque<SocketChannel>());
-            }
+            // Start the server.
+            ChannelFuture f = b.bind().sync();
 
-            @Override
-            public void inboundBufferUpdated(
-                    ChannelInboundHandlerContext<SocketChannel> ctx)
-                    throws Exception {
-                Queue<SocketChannel> in = ctx.in().messageBuffer();
-                for (;;) {
-                    SocketChannel s = in.poll();
-                    if (s == null) {
-                        break;
-                    }
-                    s.config().setTcpNoDelay(true);
-                    s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
-                    s.pipeline().addLast("echoer", new EchoServerHandler());
-                    loop.register(s);
-                }
-            }
-        });
-
-        loop.register(ssc).awaitUninterruptibly().rethrowIfFailed();
-        ssc.bind(new InetSocketAddress(port)).awaitUninterruptibly().rethrowIfFailed();
+            // Wait until the server socket is closed.
+            f.channel().closeFuture().sync();
+        } finally {
+            // Shut down all event loops to terminate all threads.
+            parentLoop.shutdown();
+            childLoop.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

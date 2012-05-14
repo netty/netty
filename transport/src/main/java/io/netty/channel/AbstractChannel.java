@@ -367,7 +367,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
-            if (AbstractChannel.this.eventLoop != null) {
+            if (isRegistered()) {
                 throw new IllegalStateException("registered to an event loop already");
             }
             if (!isCompatible(eventLoop)) {
@@ -581,10 +581,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception occurred while deregistering a channel.", t);
                 } finally {
-                    future.setSuccess();
                     registered = false;
+                    future.setSuccess();
                     pipeline().fireChannelUnregistered();
-                    eventLoop = null;
                 }
             } else {
                 eventLoop().execute(new Runnable() {

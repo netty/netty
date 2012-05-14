@@ -44,7 +44,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public void addListener(final ChannelFutureListener listener) {
+    public ChannelFuture addListener(final ChannelFutureListener listener) {
         if (channel().eventLoop().inEventLoop()) {
             notifyListener(listener);
         } else {
@@ -55,6 +55,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
                 }
             });
         }
+        return this;
     }
 
     private void notifyListener(ChannelFutureListener listener) {
@@ -70,8 +71,9 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public void removeListener(ChannelFutureListener listener) {
+    public ChannelFuture removeListener(ChannelFutureListener listener) {
         // NOOP
+        return this;
     }
 
     @Override

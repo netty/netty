@@ -105,10 +105,10 @@ public class WebSocketClient {
             ChannelFuture future =
                     bootstrap.connect(
                             new InetSocketAddress(uri.getHost(), uri.getPort()));
-            future.awaitUninterruptibly().rethrowIfFailed();
+            future.awaitUninterruptibly().sync();
     
             ch = future.channel();
-            handshaker.handshake(ch).awaitUninterruptibly().rethrowIfFailed();
+            handshaker.handshake(ch).awaitUninterruptibly().sync();
             
             // Send 10 messages and wait for responses
             System.out.println("WebSocket Client sending message");

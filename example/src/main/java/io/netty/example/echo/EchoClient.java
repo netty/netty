@@ -15,9 +15,14 @@
  */
 package io.netty.example.echo;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelBuilder;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoop;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
 import io.netty.handler.logging.LoggingHandler;
@@ -44,23 +49,33 @@ public class EchoClient {
     }
 
     public void run() throws Exception {
-        // Create a new socket and configure it.
-        SocketChannel s = new NioSocketChannel();
-        s.config().setTcpNoDelay(true);
-        s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
-        s.pipeline().addLast("echoer", new EchoClientHandler(firstMessageSize));
-
-        // Begin the communication by registering the channel to an event loop and connecting
-        // to the peer.
+        // Create the required event loop.
         EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
-        loop.register(s).awaitUninterruptibly().rethrowIfFailed();
-        s.connect(new InetSocketAddress(host, port));
+        try {
+            // Configure the client.
+            ChannelBuilder b = new ChannelBuilder();
+            b.eventLoop(loop)
+             .channel(new NioSocketChannel())
+             .option(ChannelOption.TCP_NODELAY, true)
+             .remoteAddress(new InetSocketAddress(host, port))
+             .initializer(new ChannelInitializer() {
+                @Override
+                public void initChannel(Channel ch) throws Exception {
+                    ChannelPipeline p = ch.pipeline();
+                    p.addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+                    p.addLast("echoer", new EchoClientHandler(firstMessageSize));
+                }
+             });
 
-        // Wait until the connection is closed.
-        s.closeFuture().awaitUninterruptibly();
+            // Start the client.
+            ChannelFuture f = b.connect().sync();
 
-        // Terminate the event loop.
-        loop.shutdown();
+            // Wait until the connection is closed.
+            f.channel().closeFuture().sync();
+        } finally {
+            // Shut down the event loop to terminate all threads.
+            loop.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

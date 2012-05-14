@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
 
-public final class SelectorUtil {
+final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
 
@@ -61,6 +61,14 @@ public final class SelectorUtil {
             }
             // Harmless exception - log anyway
 
+        }
+    }
+
+    static void cleanupKeys(Selector selector) {
+        try {
+            selector.selectNow();
+        } catch (Throwable t) {
+            logger.warn("Failed to update SelectionKeys.", t);
         }
     }
 

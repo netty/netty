@@ -119,7 +119,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public void addListener(final ChannelFutureListener listener) {
+    public ChannelFuture addListener(final ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -160,10 +160,12 @@ public class DefaultChannelFuture implements ChannelFuture {
                 });
             }
         }
+
+        return this;
     }
 
     @Override
-    public void removeListener(ChannelFutureListener listener) {
+    public ChannelFuture removeListener(ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -185,28 +187,39 @@ public class DefaultChannelFuture implements ChannelFuture {
                 }
             }
         }
+
+        return this;
     }
 
     @Override
-    public ChannelFuture rethrowIfFailed() throws Exception {
-        if (!isDone()) {
-            throw new IllegalStateException("not done yet");
-        }
+    public ChannelFuture sync() throws InterruptedException {
+        await();
+        rethrowIfFailed();
+        return this;
+    }
 
+    @Override
+    public ChannelFuture syncUninterruptibly() {
+        awaitUninterruptibly();
+        rethrowIfFailed();
+        return this;
+    }
+
+    private void rethrowIfFailed() {
         Throwable cause = cause();
         if (cause == null) {
-            return this;
+            return;
         }
 
-        if (cause instanceof Exception) {
-            throw (Exception) cause;
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
         }
 
         if (cause instanceof Error) {
             throw (Error) cause;
         }
 
-        throw new RuntimeException(cause);
+        throw new ChannelException(cause);
     }
 
     @Override
@@ -333,7 +346,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
-    private void checkDeadLock() {
+    private static void checkDeadLock() {
         if (isUseDeadLockChecker() && DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +

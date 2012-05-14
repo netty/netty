@@ -52,7 +52,7 @@ public final class RedisClient {
             }
         });
         ChannelFuture redis = cb.connect(new InetSocketAddress("localhost", 6379));
-        redis.await().rethrowIfFailed();
+        redis.await().sync();
         Channel channel = redis.channel();
 
         channel.write(new Command("set", "1", "value"));

@@ -172,7 +172,7 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void processTaskQueue() throws IOException {
+    private void processTaskQueue() {
         for (;;) {
             final Runnable task = pollTask();
             if (task == null) {
@@ -184,7 +184,7 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void processSelectedKeys() throws IOException {
+    private void processSelectedKeys() {
         for (Iterator<SelectionKey> i = selector.selectedKeys().iterator(); i.hasNext();) {
             final SelectionKey k = i.next();
             final Channel ch = (Channel) k.attachment();
@@ -222,16 +222,17 @@ public class SelectorEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private boolean cleanUpCancelledKeys() throws IOException {
+    private boolean cleanUpCancelledKeys() {
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
-            selector.selectNow();
+            SelectorUtil.cleanupKeys(selector);
             return true;
         }
         return false;
     }
 
     private void closeAll() {
+        SelectorUtil.cleanupKeys(selector);
         Set<SelectionKey> keys = selector.keys();
         Collection<Channel> channels = new ArrayList<Channel>(keys.size());
         for (SelectionKey k: keys) {

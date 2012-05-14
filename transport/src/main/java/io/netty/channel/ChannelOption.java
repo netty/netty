@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentMap;
 
 public class ChannelOption<T> implements Comparable<ChannelOption<T>> {
 
+    private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
+
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS", Integer.class);
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT =
@@ -72,8 +74,6 @@ public class ChannelOption<T> implements Comparable<ChannelOption<T>> {
             new ChannelOption<SocketAddress>("SCTP_PRIMARY_ADDR", SocketAddress.class);
     public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
             new ChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR", SocketAddress.class);
-
-    private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
 
     private final String name;
     private final Class<T> valueType;

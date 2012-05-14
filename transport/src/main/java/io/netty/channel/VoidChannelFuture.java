@@ -19,13 +19,15 @@ public class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public void addListener(final ChannelFutureListener listener) {
+    public ChannelFuture addListener(final ChannelFutureListener listener) {
         fail();
+        return this;
     }
 
     @Override
-    public void removeListener(ChannelFutureListener listener) {
+    public ChannelFuture removeListener(ChannelFutureListener listener) {
         // NOOP
+        return this;
     }
 
     @Override
@@ -92,7 +94,13 @@ public class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public ChannelFuture rethrowIfFailed() throws Exception {
+    public ChannelFuture sync() throws InterruptedException {
+        fail();
+        return this;
+    }
+
+    @Override
+    public ChannelFuture syncUninterruptibly() {
         fail();
         return this;
     }
