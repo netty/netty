@@ -99,6 +99,9 @@ public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
         return decoded;
     }
 
+    /**
+     * Calls {@link Channel#close()} if a TooLongFrameException was thrown
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
         if (e.getCause() instanceof TooLongFrameException) {
