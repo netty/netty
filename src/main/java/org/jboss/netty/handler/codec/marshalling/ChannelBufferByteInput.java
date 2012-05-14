@@ -25,7 +25,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * 
  *
  */
-public class ChannelBufferByteInput implements ByteInput {
+class ChannelBufferByteInput implements ByteInput {
 
     private final ChannelBuffer buffer;
 

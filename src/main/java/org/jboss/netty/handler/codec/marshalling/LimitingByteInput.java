@@ -25,7 +25,7 @@ import org.jboss.marshalling.ByteInput;
  * 
  *
  */
-public class LimitingByteInput implements ByteInput {
+class LimitingByteInput implements ByteInput {
 
     private final ByteInput input;
     private final long limit;
