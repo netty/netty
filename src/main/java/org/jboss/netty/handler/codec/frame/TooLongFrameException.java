@@ -17,7 +17,7 @@ package org.jboss.netty.handler.codec.frame;
 
 /**
  * An {@link Exception} which is thrown when the length of the frame
- * decoded by {@link DelimiterBasedFrameDecoder} is greater than the maximum.
+ * decoded is greater than the maximum.
  *
  * @apiviz.hidden
  */
