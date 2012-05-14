@@ -71,6 +71,15 @@
   </developers>
 
   <dependencies>
+    <!-- JBoss Marshalling - completely optional -->
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling</artifactId>
+      <version>${jboss.marshalling.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+            
     <!-- Google Protocol Buffers - completely optional -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -198,10 +207,24 @@
       <version>1.6.4</version>
       <scope>test</scope>
     </dependency>
+    <!-- Test dependencies for jboss marshalling encoder/decoder -->
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling-serial</artifactId>
+      <version>${jboss.marshalling.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling-river</artifactId>
+      <version>${jboss.marshalling.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <properties>
     <attach-distribution>false</attach-distribution>
+    <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
   </properties>
 
   <build>
