@@ -92,7 +92,7 @@ public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
             }
         }
 
-        Object decoded =  decode(ctx, channel, buffer, state);
+        Object decoded = decode(ctx, channel, buffer, state);
         return decoded;
     }
 
