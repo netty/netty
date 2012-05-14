@@ -35,7 +35,7 @@ public abstract class WebSocketServerHandshaker {
 
     private final long maxFramePayloadLength;
 
-    private String selectedSubprotocol = null;
+    private String selectedSubprotocol;
 
     /**
      * Constructor using default values
