@@ -100,6 +100,14 @@ public class CompleteChannelFutureTest {
         public ChannelFuture rethrowIfFailed() throws Exception {
             throw new Error();
         }
+
+        public ChannelFuture sync() throws InterruptedException {
+            throw new Error();
+        }
+
+        public ChannelFuture syncUninterruptibly() {
+            throw new Error();
+        }
     }
 
     private static class ExpectedError extends Error {

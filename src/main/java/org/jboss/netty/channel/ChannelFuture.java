@@ -262,10 +262,24 @@ public interface ChannelFuture {
     void removeListener(ChannelFutureListener listener);
 
     /**
-     * Rethrows the exception that caused this future fail if this future is
-     * complete and failed.
+     * @deprecated Use {@link #sync()} or {@link #syncUninterruptibly()} instead.
      */
+    @Deprecated
     ChannelFuture rethrowIfFailed() throws Exception;
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
+     * {@link ChannelException} before being thrown.
+     */
+    ChannelFuture sync() throws InterruptedException;
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
+     * {@link ChannelException} before being thrown.
+     */
+    ChannelFuture syncUninterruptibly();
 
     /**
      * Waits for this future to be completed.

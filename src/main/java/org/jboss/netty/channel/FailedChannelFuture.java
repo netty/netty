@@ -57,4 +57,26 @@ public class FailedChannelFuture extends CompleteChannelFuture {
 
         throw new RuntimeException(cause);
     }
+
+    public ChannelFuture sync() throws InterruptedException {
+        rethrow();
+        return this;
+    }
+
+    public ChannelFuture syncUninterruptibly() {
+        rethrow();
+        return this;
+    }
+
+    private void rethrow() {
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+        }
+
+        if (cause instanceof Error) {
+            throw (Error) cause;
+        }
+
+        throw new ChannelException(cause);
+    }
 }

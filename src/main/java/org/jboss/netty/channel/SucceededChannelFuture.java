@@ -42,4 +42,12 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     public ChannelFuture rethrowIfFailed() throws Exception {
         return this;
     }
+
+    public ChannelFuture sync() throws InterruptedException {
+        return this;
+    }
+
+    public ChannelFuture syncUninterruptibly() {
+        return this;
+    }
 }

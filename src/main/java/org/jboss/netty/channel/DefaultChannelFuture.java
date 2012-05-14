@@ -191,6 +191,35 @@ public class DefaultChannelFuture implements ChannelFuture {
         throw new RuntimeException(cause);
     }
 
+    public ChannelFuture sync() throws InterruptedException {
+        await();
+        rethrowIfFailed0();
+        return this;
+    }
+
+    public ChannelFuture syncUninterruptibly() {
+        awaitUninterruptibly();
+        rethrowIfFailed0();
+        return this;
+    }
+
+    private void rethrowIfFailed0() {
+        Throwable cause = getCause();
+        if (cause == null) {
+            return;
+        }
+
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+        }
+
+        if (cause instanceof Error) {
+            throw (Error) cause;
+        }
+
+        throw new ChannelException(cause);
+    }
+
     public ChannelFuture await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
