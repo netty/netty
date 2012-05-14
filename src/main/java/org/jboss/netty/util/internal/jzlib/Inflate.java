@@ -562,7 +562,7 @@ final class Inflate {
         }
     }
 
-    int inflateSetDictionary(ZStream z, byte[] dictionary, int dictLength) {
+    static int inflateSetDictionary(ZStream z, byte[] dictionary, int dictLength) {
         int index = 0;
         int length = dictLength;
         if (z == null || z.istate == null || z.istate.mode != DICT0) {

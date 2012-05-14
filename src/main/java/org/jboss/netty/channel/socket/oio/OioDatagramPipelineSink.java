@@ -49,14 +49,14 @@ class OioDatagramPipelineSink extends AbstractOioChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    OioDatagramWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (SocketAddress) value);
                 } else {
-                    OioDatagramWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case CONNECTED:
@@ -67,7 +67,7 @@ class OioDatagramPipelineSink extends AbstractOioChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                OioDatagramWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                AbstractOioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
@@ -102,7 +102,7 @@ class OioDatagramPipelineSink extends AbstractOioChannelSink {
             fireExceptionCaught(channel, t);
         } finally {
             if (bound && !workerStarted) {
-                OioDatagramWorker.close(channel, future);
+                AbstractOioWorker.close(channel, future);
             }
         }
     }
@@ -157,7 +157,7 @@ class OioDatagramPipelineSink extends AbstractOioChannelSink {
             fireExceptionCaught(channel, t);
         } finally {
             if (connected && !workerStarted) {
-                OioDatagramWorker.close(channel, future);
+                AbstractOioWorker.close(channel, future);
             }
         }
     }

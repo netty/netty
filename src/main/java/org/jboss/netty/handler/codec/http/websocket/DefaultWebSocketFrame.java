@@ -24,6 +24,7 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * The default {@link WebSocketFrame} implementation.
  */
+@Deprecated
 public class DefaultWebSocketFrame implements WebSocketFrame {
 
     private int type;

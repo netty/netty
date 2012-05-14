@@ -30,7 +30,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * disabled dynamic insertion and removal of {@link ChannelHandler}s.
  * An attempt to insert, remove, or replace a handler in this pipeline will
  * trigger an {@link UnsupportedOperationException}.
- * 
+ *
  * @deprecated use {@link DefaultChannelPipeline}
  */
 @Deprecated
@@ -99,7 +99,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
     public ChannelFuture execute(Runnable task) {
         return getSink().execute(this, task);
     }
-    
+
     public Channel getChannel() {
         return channel;
     }
@@ -179,7 +179,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         throw new UnsupportedOperationException();
     }
 
-    private void callBeforeAdd(ChannelHandlerContext ctx) {
+    private static void callBeforeAdd(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -196,7 +196,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterAdd(ChannelHandlerContext ctx) {
+    private static void callAfterAdd(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -228,7 +228,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callBeforeRemove(ChannelHandlerContext ctx) {
+    private static void callBeforeRemove(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -245,7 +245,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(ChannelHandlerContext ctx) {
+    private static void callAfterRemove(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -279,7 +279,6 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public <T extends ChannelHandler> T get(Class<T> handlerType) {
         ChannelHandlerContext ctx = getContext(handlerType);
         if (ctx == null) {

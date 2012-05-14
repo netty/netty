@@ -42,7 +42,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         }
     }
 
-    private void handleServerChannel(ChannelEvent e) {
+    private static void handleServerChannel(ChannelEvent e) {
         if (!(e instanceof ChannelStateEvent)) {
             return;
         }
@@ -69,7 +69,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         }
     }
 
-    private void handleAcceptedChannel(ChannelEvent e) {
+    private static void handleAcceptedChannel(ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             DefaultLocalChannel channel = (DefaultLocalChannel) event.getChannel();
@@ -103,7 +103,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         }
     }
 
-    private void bind(DefaultLocalServerChannel channel, ChannelFuture future, LocalAddress localAddress) {
+    private static void bind(DefaultLocalServerChannel channel, ChannelFuture future, LocalAddress localAddress) {
         try {
             if (!LocalChannelRegistry.register(localAddress, channel)) {
                 throw new ChannelException("address already in use: " + localAddress);
@@ -122,7 +122,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         }
     }
 
-    private void close(DefaultLocalServerChannel channel, ChannelFuture future) {
+    private static void close(DefaultLocalServerChannel channel, ChannelFuture future) {
         try {
             if (channel.setClosed()) {
                 future.setSuccess();

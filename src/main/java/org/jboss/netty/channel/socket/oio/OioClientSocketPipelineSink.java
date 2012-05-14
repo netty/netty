@@ -50,25 +50,25 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    OioWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (SocketAddress) value);
                 } else {
-                    OioWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
                     connect(channel, future, (SocketAddress) value);
                 } else {
-                    OioWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                OioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                AbstractOioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
@@ -78,7 +78,7 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
         }
     }
 
-    private void bind(
+    private static void bind(
             OioClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
@@ -129,7 +129,7 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
             fireExceptionCaught(channel, t);
         } finally {
             if (connected && !workerStarted) {
-                OioWorker.close(channel, future);
+                AbstractOioWorker.close(channel, future);
             }
         }
     }

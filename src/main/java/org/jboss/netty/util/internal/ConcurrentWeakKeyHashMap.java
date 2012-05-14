@@ -142,7 +142,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
         return segments[hash >>> segmentShift & segmentMask];
     }
 
-    private int hashOf(Object key) {
+    private static int hashOf(Object key) {
         return hash(key.hashCode());
     }
 
@@ -315,7 +315,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
             return new Segment[i];
         }
 
-        private boolean keyEq(Object src, Object dest) {
+        private static boolean keyEq(Object src, Object dest) {
             return src.equals(dest);
         }
 

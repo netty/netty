@@ -160,7 +160,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void send100Continue(MessageEvent e) {
+    private static void send100Continue(MessageEvent e) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
         e.getChannel().write(response);
     }

@@ -46,7 +46,7 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
     };
 
     private final boolean removeOnClose;
-    
+
     /**
      * Creates a {@link Channel} local variable by calling {@link #ChannelLocal(boolean)} with <code>false</code> as parameter
      */
@@ -65,6 +65,8 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
     /**
      * Returns the initial value of the variable.  By default, it returns
      * {@code null}.  Override it to change the initial value.
+     *
+     * @param channel the channel where this local variable is accessed with
      */
     protected T initialValue(Channel channel) {
         return null;
@@ -125,7 +127,7 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
                 throw new NullPointerException("channel");
             }
             T mapping = map.putIfAbsent(channel, value);
-            
+
             if (removeOnClose && mapping == null) {
                 channel.getCloseFuture().addListener(remover);
             }

@@ -123,12 +123,10 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         return productQueue.isEmpty();
     }
 
-    @SuppressWarnings("unchecked")
     public final E poll() {
         return (E) productQueue.poll();
     }
 
-    @SuppressWarnings("unchecked")
     public final E peek() {
         return (E) productQueue.peek();
     }
@@ -217,7 +215,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
             throw new CodecEmbedderException(actualCause);
         }
-        
+
         public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
             try {
                 task.run();

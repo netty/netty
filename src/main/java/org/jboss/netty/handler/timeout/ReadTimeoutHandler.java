@@ -198,7 +198,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    private void destroy(ChannelHandlerContext ctx) {
+    private static void destroy(ChannelHandlerContext ctx) {
         State state;
         synchronized (ctx) {
             state = state(ctx);
@@ -211,7 +211,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    private State state(ChannelHandlerContext ctx) {
+    private static State state(ChannelHandlerContext ctx) {
         State state;
         synchronized (ctx) {
             // FIXME: It could have been better if there is setAttachmentIfAbsent().

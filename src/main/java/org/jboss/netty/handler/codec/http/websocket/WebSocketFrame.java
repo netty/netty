@@ -23,6 +23,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
  *
  * A Web Socket frame that represents either text or binary data.
  */
+@Deprecated
 public interface WebSocketFrame {
 
     /**

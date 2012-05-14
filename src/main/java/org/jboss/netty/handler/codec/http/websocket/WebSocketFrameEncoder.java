@@ -17,8 +17,8 @@ package org.jboss.netty.handler.codec.http.websocket;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
@@ -32,6 +32,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
  */
+@Deprecated
 @Sharable
 public class WebSocketFrameEncoder extends OneToOneEncoder {
 

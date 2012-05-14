@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -260,7 +261,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         // Misuse check
         misuseDetector.increase();
     }
-    
+
     @Override
     protected void terminated() {
         super.terminated();
@@ -274,16 +275,16 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     public List<Runnable> shutdownNow() {
         return shutdownNow(notifyOnShutdown);
     }
-    
+
     /**
      * See {@link ThreadPoolExecutor#shutdownNow()} for how it handles the shutdown. If <code>true</code> is given to this method it also notifies all {@link ChannelFuture}'s
      * of the not executed {@link ChannelEventRunnable}'s.
-     * 
+     *
      * <p>
      * Be aware that if you call this with <code>false</code> you will need to handle the notification of the {@link ChannelFuture}'s by your self. So only use this if you
      * really have a use-case for it.
      * </p>
-     * 
+     *
      */
     public List<Runnable> shutdownNow(boolean notify) {
         if (!notify) {
@@ -302,17 +303,17 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                 }
                 ChannelEvent event = ((ChannelEventRunnable) task).getEvent();
                 event.getFuture().setFailure(cause);
-                
+
                 if (channels == null) {
                     channels = new HashSet<Channel>();
                 }
-                
-                
+
+
                 // store the Channel of the event for later notification of the exceptionCaught event
                 channels.add(event.getChannel());
             }
         }
-        
+
         // loop over all channels and fire an exceptionCaught event
         if (channels != null) {
             for (Channel channel: channels) {
@@ -376,7 +377,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         return totalLimiter.limit;
     }
 
-    
+
     /**
      * @deprecated <tt>maxTotalMemorySize</tt> is not modifiable anymore.
      */
@@ -396,7 +397,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     /**
      * If set to <code>false</code> no queued {@link ChannelEventRunnable}'s {@link ChannelFuture} will get notified once {@link #shutdownNow()} is called.
      * If set to <code>true</code> every queued {@link ChannelEventRunnable} will get marked as failed via {@link ChannelFuture#setFailure(Throwable)}.
-     * 
+     *
      * <p>
      * Please only set this to <code>false</code> if you want to handle the notification by yourself and know what you are doing. Default is <code>true</code>.
      * </p>
@@ -404,17 +405,17 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     public void setNotifyChannelFuturesOnShutdown(boolean notifyOnShutdown) {
         this.notifyOnShutdown = notifyOnShutdown;
     }
-    
+
     /**
      * Returns if the {@link ChannelFuture}'s of the {@link ChannelEventRunnable}'s should be notified about the shutdown of this {@link MemoryAwareThreadPoolExecutor}.
-     * 
+     *
      */
     public boolean getNotifyChannelFuturesOnShutdown() {
         return notifyOnShutdown;
     }
-    
-    
-    
+
+
+
     @Override
     public void execute(Runnable command) {
         if (command instanceof ChannelDownstreamEventRunnable) {
@@ -523,7 +524,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                     //System.out.println("READABLE");
                     ChannelHandlerContext ctx = eventTask.getContext();
                     if (ctx.getHandler() instanceof ExecutionHandler) {
-                        // check if the attachment was set as this means that we suspend the channel from reads. This only works when 
+                        // check if the attachment was set as this means that we suspend the channel from reads. This only works when
                         // this pool is used with ExecutionHandler but I guess thats good enough for us.
                         //
                         // See #215

@@ -30,6 +30,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -207,12 +208,12 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             if (input.readable()) {
                 // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
-                (this.cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
+                (cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
             }
         } else {
             assert cumulation.readable();
             boolean fit = false;
-            
+
             int readable = input.readableBytes();
             int writable = cumulation.writableBytes();
             int w = writable - readable;
@@ -228,28 +229,28 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
                 // ok the input fit into the cumulation buffer
                 fit = true;
             }
-            
-            
+
+
             ChannelBuffer buf;
             if (fit) {
                 // the input fit in the cumulation buffer so copy it over
-                buf = this.cumulation;
+                buf = cumulation;
                 buf.writeBytes(input);
             } else {
-                // wrap the cumulation and input 
+                // wrap the cumulation and input
                 buf = ChannelBuffers.wrappedBuffer(cumulation, input);
-                this.cumulation = buf;
+                cumulation = buf;
             }
 
 
             callDecode(ctx, e.getChannel(), buf, e.getRemoteAddress());
             if (!buf.readable()) {
                 // nothing readable left so reset the state
-                this.cumulation = null;
+                cumulation = null;
             } else {
                 // create a new buffer and copy the readable buffer into it
-                this.cumulation = newCumulationBuffer(ctx, buf.readableBytes());
-                this.cumulation.writeBytes(buf);
+                cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                cumulation.writeBytes(buf);
 
             }
         }

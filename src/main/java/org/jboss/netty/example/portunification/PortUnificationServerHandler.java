@@ -102,7 +102,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         return false;
     }
 
-    private boolean isHttp(int magic1, int magic2) {
+    private static boolean isHttp(int magic1, int magic2) {
         return
             magic1 == 'G' && magic2 == 'E' || // GET
             magic1 == 'P' && magic2 == 'O' || // POST
@@ -115,7 +115,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
             magic1 == 'C' && magic2 == 'O';   // CONNECT
     }
 
-    private boolean isFactorial(int magic1) {
+    private static boolean isFactorial(int magic1) {
         return magic1 == 'F';
     }
 

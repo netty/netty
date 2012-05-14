@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import java.nio.ByteOrder;
 import java.util.Set;
 
@@ -25,8 +27,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
-
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ChannelBuffer}.
@@ -99,7 +99,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
                 flags |= SPDY_FLAG_UNIDIRECTIONAL;
             }
             int headerBlockLength = data.readableBytes();
-            int length = (headerBlockLength == 0) ? 12 : 10 + headerBlockLength;
+            int length = headerBlockLength == 0 ? 12 : 10 + headerBlockLength;
             ChannelBuffer frame = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + length);
             frame.writeShort(SPDY_VERSION | 0x8000);
@@ -108,7 +108,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeMedium(length);
             frame.writeInt(spdySynStreamFrame.getStreamID());
             frame.writeInt(spdySynStreamFrame.getAssociatedToStreamID());
-            frame.writeShort(((short) spdySynStreamFrame.getPriority()) << 14);
+            frame.writeShort((spdySynStreamFrame.getPriority() & 0xFF) << 14);
             if (data.readableBytes() == 0) {
                 frame.writeShort(0);
             }
@@ -121,7 +121,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
                     encodeHeaderBlock(spdySynReplyFrame));
             byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
             int headerBlockLength = data.readableBytes();
-            int length = (headerBlockLength == 0) ? 8 : 6 + headerBlockLength;
+            int length = headerBlockLength == 0 ? 8 : 6 + headerBlockLength;
             ChannelBuffer frame = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + length);
             frame.writeShort(SPDY_VERSION | 0x8000);
@@ -175,9 +175,9 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
                 // Chromium Issue 79156
                 // SPDY setting ids are not written in network byte order
                 // Write id assuming the architecture is little endian
-                frame.writeByte((id >>  0) & 0xFF);
-                frame.writeByte((id >>  8) & 0xFF);
-                frame.writeByte((id >> 16) & 0xFF);
+                frame.writeByte(id >>  0 & 0xFF);
+                frame.writeByte(id >>  8 & 0xFF);
+                frame.writeByte(id >> 16 & 0xFF);
                 frame.writeByte(ID_flags);
                 frame.writeInt(spdySettingsFrame.getValue(id));
             }
@@ -220,7 +220,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             ChannelBuffer data = compressHeaderBlock(
                     encodeHeaderBlock(spdyHeadersFrame));
             int headerBlockLength = data.readableBytes();
-            int length = (headerBlockLength == 0) ? 4 : 6 + headerBlockLength;
+            int length = headerBlockLength == 0 ? 4 : 6 + headerBlockLength;
             ChannelBuffer frame = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + length);
             frame.writeShort(SPDY_VERSION | 0x8000);
@@ -237,7 +237,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
         return msg;
     }
 
-    private ChannelBuffer encodeHeaderBlock(SpdyHeaderBlock headerFrame)
+    private static ChannelBuffer encodeHeaderBlock(SpdyHeaderBlock headerFrame)
             throws Exception {
         Set<String> names = headerFrame.getHeaderNames();
         int numHeaders = names.size();

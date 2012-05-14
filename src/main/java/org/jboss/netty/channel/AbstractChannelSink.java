@@ -49,7 +49,15 @@ public abstract class AbstractChannelSink implements ChannelSink {
             fireExceptionCaught(event.getChannel(), actualCause);
         }
     }
-    
+
+    /**
+     * Returns {@code true} if and only if the specified {@code actualCause}, which was raised while
+     * handling the specified {@code event}, must trigger an {@code exceptionCaught()} event in
+     * an I/O thread.
+     *
+     * @param event the event which raised exception
+     * @param actualCause the raised exception
+     */
     protected boolean isFireExceptionCaughtLater(ChannelEvent event, Throwable actualCause) {
         return false;
     }

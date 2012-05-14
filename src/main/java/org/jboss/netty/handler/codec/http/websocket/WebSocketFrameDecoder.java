@@ -33,6 +33,7 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
  */
+@Deprecated
 public class WebSocketFrameDecoder extends ReplayingDecoder<VoidEnum> {
 
     public static final int DEFAULT_MAX_FRAME_SIZE = 16384;

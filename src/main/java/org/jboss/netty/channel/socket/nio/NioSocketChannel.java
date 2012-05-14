@@ -50,6 +50,7 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
         return (NioWorker) super.getWorker();
     }
 
+    @Override
     public NioSocketChannelConfig getConfig() {
         return config;
     }
@@ -78,6 +79,7 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
         }
     }
 
+    @Override
     protected boolean setClosed() {
         state = ST_CLOSED;
         return super.setClosed();
@@ -93,8 +95,8 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
     InetSocketAddress getRemoteSocketAddress() throws Exception {
         return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
     }
-    
-    
+
+
     @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {
         if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {

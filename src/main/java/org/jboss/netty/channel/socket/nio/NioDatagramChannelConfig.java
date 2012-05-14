@@ -41,6 +41,5 @@ import org.jboss.netty.channel.socket.DatagramChannelConfig;
  * </table>
  */
 public interface NioDatagramChannelConfig extends DatagramChannelConfig, NioChannelConfig {
-
-
+    // Tag interface
 }

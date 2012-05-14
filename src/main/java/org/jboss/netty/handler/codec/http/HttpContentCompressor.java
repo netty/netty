@@ -119,7 +119,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
-    private ZlibWrapper determineWrapper(String acceptEncoding) {
+    private static ZlibWrapper determineWrapper(String acceptEncoding) {
         float starQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;

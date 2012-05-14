@@ -67,15 +67,15 @@ import org.jboss.netty.util.internal.QueueFactory;
  * renegotiating.  You will be notified by the {@link ChannelFuture} which is
  * returned by the {@link #handshake()} method when the handshake
  * process succeeds or fails.
- * 
+ *
  * <h3>Handshake</h3>
  * <p>
  * If {@link #isIssueHandshake()} is {@code false}
  * (default) you will need to take care of calling {@link #handshake()} by your own. In most situations were {@link SslHandler} is used in 'client mode'
- * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to 
+ * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to
  * worry about this as the {@link SslHandler} will take care of it.
  * <p>
- * 
+ *
  * <h3>Renegotiation</h3>
  * <p>
  * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true}
@@ -198,7 +198,7 @@ public class SslHandler extends FrameDecoder
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
     private volatile boolean issueHandshake;
-    
+
     private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
@@ -206,9 +206,9 @@ public class SslHandler extends FrameDecoder
             }
         }
     };
-       
+
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
-    
+
     /**
      * Creates a new instance.
      *
@@ -386,7 +386,7 @@ public class SslHandler extends FrameDecoder
      * @deprecated Use {@link #handshake()} instead.
      */
     @Deprecated
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake(@SuppressWarnings("unused") Channel channel) {
         return handshake();
     }
 
@@ -410,7 +410,7 @@ public class SslHandler extends FrameDecoder
      * @deprecated Use {@link #close()} instead.
      */
     @Deprecated
-    public ChannelFuture close(Channel channel) {
+    public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
         return close();
     }
 
@@ -446,18 +446,18 @@ public class SslHandler extends FrameDecoder
 
     /**
      * Return the {@link ChannelFuture} that will get notified if the inbound of the {@link SSLEngine} will get closed.
-     * 
+     *
      * This method will return the same {@link ChannelFuture} all the time.
-     * 
+     *
      * For more informations see the apidocs of {@link SSLEngine}
-     * 
+     *
      */
     public ChannelFuture getSSLEngineInboundCloseFuture() {
         return sslEngineCloseFuture;
-        
+
     }
-    
-    
+
+
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
         if (evt instanceof ChannelStateEvent) {
@@ -476,7 +476,7 @@ public class SslHandler extends FrameDecoder
             context.sendDownstream(evt);
             return;
         }
-        
+
         MessageEvent e = (MessageEvent) evt;
         if (!(e.getMessage() instanceof ChannelBuffer)) {
             context.sendDownstream(evt);
@@ -551,7 +551,7 @@ public class SslHandler extends FrameDecoder
                                     "Swallowing an exception raised while " +
                                     "writing non-app data", cause);
                         }
-                       
+
                         return;
                     }
                 }
@@ -944,7 +944,7 @@ public class SslHandler extends FrameDecoder
                         !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
                         needsHandshake = true;
-                        
+
                     }
                 }
                 if (needsHandshake) {
@@ -954,13 +954,13 @@ public class SslHandler extends FrameDecoder
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
                 }
-                
+
                 // notify about the CLOSED state of the SSLEngine. See #137
                 if (result.getStatus() == Status.CLOSED) {
                     sslEngineCloseFuture.setClosed();
                 }
-                
-                
+
+
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 handleRenegotiation(handshakeStatus);
                 switch (handshakeStatus) {
@@ -987,9 +987,9 @@ public class SslHandler extends FrameDecoder
                     throw new IllegalStateException(
                             "Unknown handshake status: " + handshakeStatus);
                 }
-                
+
             }
-           
+
             if (needsWrap) {
                 // wrap() acquires pendingUnencryptedWrites first and then
                 // handshakeLock.  If handshakeLock is already hold by the
@@ -1123,7 +1123,7 @@ public class SslHandler extends FrameDecoder
             // is managing.
 
             engine.closeOutbound();
-            
+
             try {
                 engine.closeInbound();
             } catch (SSLException e) {
@@ -1135,7 +1135,7 @@ public class SslHandler extends FrameDecoder
 
             }
         }
-        
+
         handshakeFuture.setFailure(cause);
     }
 
@@ -1226,7 +1226,7 @@ public class SslHandler extends FrameDecoder
      * Fail all pending writes which we were not able to flush out
      */
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        
+
         // there is no need for synchronization here as we do not receive downstream events anymore
         Throwable cause = null;
         for (;;) {
@@ -1257,8 +1257,8 @@ public class SslHandler extends FrameDecoder
             fireExceptionCaughtLater(ctx, cause);
         }
     }
-    
-       
+
+
     /**
      * Calls {@link #handshake()} once the {@link Channel} is connected
      */
@@ -1270,10 +1270,10 @@ public class SslHandler extends FrameDecoder
         }
         super.channelConnected(ctx, e);
     }
-    
+
     /**
-     * Loop over all the pending writes and fail them. 
-     * 
+     * Loop over all the pending writes and fail them.
+     *
      * See <a href="https://github.com/netty/netty/issues/305">#305</a> for more details.
      */
     @Override
@@ -1289,10 +1289,10 @@ public class SslHandler extends FrameDecoder
                     cause = new ClosedChannelException();
                 }
                 pw.future.setFailure(cause);
-                
+
             }
-            
-            
+
+
             for (;;) {
                 MessageEvent ev = pendingEncryptedWrites.poll();
                 if (ev == null) {
@@ -1302,14 +1302,14 @@ public class SslHandler extends FrameDecoder
                     cause = new ClosedChannelException();
                 }
                 ev.getFuture().setFailure(cause);
-                
+
             }
         }
-       
+
         if (cause != null) {
             fireExceptionCaught(ctx, cause);
         }
-        
+
         super.channelClosed(ctx, e);
     }
 
@@ -1317,9 +1317,9 @@ public class SslHandler extends FrameDecoder
         public SSLEngineInboundCloseFuture() {
             super(null, true);
         }
-        
+
         void setClosed() {
-            super.setSuccess();            
+            super.setSuccess();
         }
 
         @Override

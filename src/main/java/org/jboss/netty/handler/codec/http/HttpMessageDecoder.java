@@ -368,10 +368,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             int code = res.getStatus().getCode();
-            
+
             // Correctly handle return codes of 1xx.
-            // 
-            // See: 
+            //
+            // See:
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
@@ -405,7 +405,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return message;
     }
 
-    private void skipControlCharacters(ChannelBuffer buffer) {
+    private static void skipControlCharacters(ChannelBuffer buffer) {
         for (;;) {
             char c = (char) buffer.readUnsignedByte();
             if (!Character.isISOControl(c) &&
@@ -557,7 +557,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected abstract boolean isDecodingRequest();
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
 
-    private int getChunkSize(String hex) {
+    private static int getChunkSize(String hex) {
         hex = hex.trim();
         for (int i = 0; i < hex.length(); i ++) {
             char c = hex.charAt(i);
@@ -570,7 +570,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return Integer.parseInt(hex, 16);
     }
 
-    private String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
+    private static String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int lineLength = 0;
         while (true) {
@@ -598,7 +598,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    private String[] splitInitialLine(String sb) {
+    private static String[] splitInitialLine(String sb) {
         int aStart;
         int aEnd;
         int bStart;
@@ -621,7 +621,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
-    private String[] splitHeader(String sb) {
+    private static String[] splitHeader(String sb) {
         final int length = sb.length();
         int nameStart;
         int nameEnd;
@@ -659,7 +659,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         };
     }
 
-    private int findNonWhitespace(String sb, int offset) {
+    private static int findNonWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (!Character.isWhitespace(sb.charAt(result))) {
@@ -669,7 +669,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return result;
     }
 
-    private int findWhitespace(String sb, int offset) {
+    private static int findWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (Character.isWhitespace(sb.charAt(result))) {
@@ -679,7 +679,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return result;
     }
 
-    private int findEndOfString(String sb) {
+    private static int findEndOfString(String sb) {
         int result;
         for (result = sb.length(); result > 0; result --) {
             if (!Character.isWhitespace(sb.charAt(result - 1))) {

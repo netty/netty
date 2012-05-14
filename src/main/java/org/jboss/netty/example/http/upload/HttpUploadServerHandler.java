@@ -63,7 +63,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
-    
+
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
 
@@ -87,6 +87,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         DiskAttribute.baseDirectory = null; // system temp directory
     }
 
+    @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         if (decoder != null) {
@@ -94,6 +95,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             // clean previous FileUpload if Any
@@ -480,6 +482,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         e.getChannel().write(response);
     }
 
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
         logger.error(responseContent.toString(), e.getCause());

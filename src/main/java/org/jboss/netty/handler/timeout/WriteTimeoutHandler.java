@@ -22,13 +22,13 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
@@ -130,6 +130,13 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         timer.stop();
     }
 
+    /**
+     * Returns the write timeout of the specified event.  By default, this method returns the
+     * timeout value you specified in the constructor.  Override this method to determine the
+     * timeout value depending on the message being written.
+     *
+     * @param e the message being written
+     */
     protected long getTimeoutMillis(MessageEvent e) {
         return timeoutMillis;
     }

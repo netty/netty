@@ -135,7 +135,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
         return segments[hash >>> segmentShift & segmentMask];
     }
 
-    private int hashOf(Object key) {
+    private static int hashOf(Object key) {
         return hash(System.identityHashCode(key));
     }
 
@@ -270,7 +270,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
             return new Segment[i];
         }
 
-        private boolean keyEq(Object src, Object dest) {
+        private static boolean keyEq(Object src, Object dest) {
             return src == dest;
         }
 

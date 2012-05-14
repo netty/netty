@@ -66,7 +66,7 @@ public class StringUtilTest {
         }
     }
 
-    private void assertStripped(final char controlCode) {
+    private static void assertStripped(final char controlCode) {
         final Object object = "aaa" + controlCode + "bbb";
         final String stripped = StringUtil.stripControlCharacters(object);
         assertEquals("aaa bbb", stripped);

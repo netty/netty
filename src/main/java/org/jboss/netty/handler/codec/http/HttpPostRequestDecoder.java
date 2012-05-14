@@ -867,7 +867,7 @@ public class HttpPostRequestDecoder {
             }
         }
     }
-    
+
     /**
      * Find the next Multipart Delimiter
      * @param delimiter delimiter to find
@@ -1272,7 +1272,7 @@ public class HttpPostRequestDecoder {
         undecodedChunk.readerIndex(readerIndex);
         throw new NotEnoughDataDecoderException();
     }
-    
+
     /**
      * Read a FileUpload data as Byte (Binary) and add the bytes directly to the
      * FileUpload. If the delimiter is found, the FileUpload is completed.
@@ -1482,7 +1482,7 @@ public class HttpPostRequestDecoder {
             }
         }
     }
-    
+
     /**
      * Load the field value from a Multipart request
      * @throws NotEnoughDataDecoderException Need more chunks
@@ -1691,12 +1691,12 @@ public class HttpPostRequestDecoder {
             throw new NotEnoughDataDecoderException(e);
         }
     }
-    
+
     /**
      * Clean the String from any unallowed character
      * @return the cleaned String
      */
-    private String cleanString(String field) {
+    private static String cleanString(String field) {
         StringBuilder sb = new StringBuilder(field.length());
         int i = 0;
         for (i = 0; i < field.length(); i ++) {
@@ -1752,7 +1752,7 @@ public class HttpPostRequestDecoder {
      * @param sb
      * @return the array of 2 Strings
      */
-    private String[] splitHeaderContentType(String sb) {
+    private static String[] splitHeaderContentType(String sb) {
         int size = sb.length();
         int aStart;
         int aEnd;
@@ -1778,7 +1778,7 @@ public class HttpPostRequestDecoder {
      * @return an array of String where rank 0 is the name of the header, follows by several
      *  values that were separated by ';' or ','
      */
-    private String[] splitMultipartHeader(String sb) {
+    private static String[] splitMultipartHeader(String sb) {
         ArrayList<String> headers = new ArrayList<String>(1);
         int nameStart;
         int nameEnd;

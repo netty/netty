@@ -56,11 +56,11 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     /**
      * InterfaceHttpData for Body (without encoding)
      */
-    private List<InterfaceHttpData> bodyListDatas;
+    private final List<InterfaceHttpData> bodyListDatas;
     /**
      * The final Multipart List of InterfaceHttpData including encoding
      */
-    private List<InterfaceHttpData> multipartHttpDatas;
+    private final List<InterfaceHttpData> multipartHttpDatas;
 
     /**
      * Does this request is a Multipart request
@@ -201,7 +201,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      *
      * @return a newly generated Delimiter (either for DATA or MIXED)
      */
-    private String getNewMultipartDelimiter() {
+    private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
         Random random = new Random();
         return Long.toHexString(random.nextLong()).toLowerCase();

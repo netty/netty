@@ -32,7 +32,7 @@ abstract class AbstractOioChannel extends AbstractChannel {
     volatile InetSocketAddress remoteAddress;
     volatile Thread workerThread;
     volatile Worker worker;
-    
+
     final Object interestOpsLock = new Object();
 
     AbstractOioChannel(
@@ -42,7 +42,7 @@ abstract class AbstractOioChannel extends AbstractChannel {
             ChannelSink sink) {
         super(parent, factory, pipeline, sink);
     }
-    
+
     @Override
     protected boolean setClosed() {
         return super.setClosed();
@@ -61,25 +61,24 @@ abstract class AbstractOioChannel extends AbstractChannel {
             return super.write(message, remoteAddress);
         }
     }
-    
-    
+
+
     public boolean isBound() {
         return isOpen() && isSocketBound();
     }
 
-    
+
     public boolean isConnected() {
         return isOpen() && isSocketConnected();
     }
-    
 
-    
+
+
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) getLocalSocketAddress();
+                this.localAddress = localAddress = getLocalSocketAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -88,13 +87,13 @@ abstract class AbstractOioChannel extends AbstractChannel {
         return localAddress;
     }
 
-    
+
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
             try {
                 this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) getRemoteSocketAddress();
+                    getRemoteSocketAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -102,17 +101,17 @@ abstract class AbstractOioChannel extends AbstractChannel {
         }
         return remoteAddress;
     }
-    
+
     abstract boolean isSocketBound();
-    
+
     abstract boolean isSocketConnected();
-    
+
     abstract boolean isSocketClosed();
-    
+
     abstract InetSocketAddress getLocalSocketAddress() throws Exception;
-    
+
     abstract InetSocketAddress getRemoteSocketAddress() throws Exception;
-    
+
     abstract void closeSocket() throws IOException;
-    
+
 }

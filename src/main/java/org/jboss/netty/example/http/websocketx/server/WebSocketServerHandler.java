@@ -91,12 +91,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Handshake
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                this.getWebSocketLocation(req), null, false);
-        this.handshaker = wsFactory.newHandshaker(req);
-        if (this.handshaker == null) {
+                getWebSocketLocation(req), null, false);
+        handshaker = wsFactory.newHandshaker(req);
+        if (handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
         } else {
-            this.handshaker.handshake(ctx.getChannel(), req).addListener(WebSocketServerHandshaker.HANDSHAKE_LISTENER);
+            handshaker.handshake(ctx.getChannel(), req).addListener(WebSocketServerHandshaker.HANDSHAKE_LISTENER);
         }
     }
 
@@ -104,7 +104,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            this.handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
             return;
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.getChannel().write(new PongWebSocketFrame(frame.getBinaryData()));
@@ -122,7 +122,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
         ctx.getChannel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
-    private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.getStatus().getCode() != 200) {
             res.setContent(ChannelBuffers.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
@@ -142,7 +142,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
         e.getChannel().close();
     }
 
-    private String getWebSocketLocation(HttpRequest req) {
+    private static String getWebSocketLocation(HttpRequest req) {
         return "ws://" + req.getHeader(HttpHeaders.Names.HOST) + WEBSOCKET_PATH;
     }
 }

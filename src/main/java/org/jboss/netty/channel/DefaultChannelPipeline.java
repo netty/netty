@@ -316,7 +316,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.getHandler();
     }
 
-    private void callBeforeAdd(ChannelHandlerContext ctx) {
+    private static void callBeforeAdd(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -366,7 +366,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callBeforeRemove(ChannelHandlerContext ctx) {
+    private static void callBeforeRemove(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -383,7 +383,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(ChannelHandlerContext ctx) {
+    private static void callAfterRemove(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
             return;
         }
@@ -425,7 +425,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public synchronized <T extends ChannelHandler> T get(Class<T> handlerType) {
         ChannelHandlerContext ctx = getContext(handlerType);
         if (ctx == null) {
@@ -586,7 +585,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (e instanceof UpstreamMessageEvent) {
             throw new IllegalArgumentException("cannot send an upstream event to downstream");
         }
-        
+
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {
@@ -631,11 +630,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         return realCtx;
     }
-    
+
     public ChannelFuture execute(Runnable task) {
         return getSink().execute(this, task);
     }
-    
+
     protected void notifyHandlerException(ChannelEvent e, Throwable t) {
         if (e instanceof ExceptionEvent) {
             if (logger.isWarnEnabled()) {
@@ -803,15 +802,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (logger.isWarnEnabled()) {
                 logger.warn("Not attached yet; discarding: " + e);
             }
-                
+
         }
 
         public void exceptionCaught(ChannelPipeline pipeline,
                 ChannelEvent e, ChannelPipelineException cause) throws Exception {
             throw cause;
         }
-        
-        
+
+
         public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Not attached yet; rejecting: " + task);

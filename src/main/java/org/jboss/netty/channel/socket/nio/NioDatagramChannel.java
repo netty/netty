@@ -15,15 +15,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.DatagramChannelConfig;
-import org.jboss.netty.util.internal.DetectionUtil;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -39,6 +31,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.socket.DatagramChannelConfig;
+import org.jboss.netty.util.internal.DetectionUtil;
+
 /**
  * Provides an NIO based {@link org.jboss.netty.channel.socket.DatagramChannel}.
  */
@@ -53,13 +54,13 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         INET,
         INET6
     }
-    
+
     /**
      * The {@link DatagramChannelConfig}.
      */
     private final NioDatagramChannelConfig config;
     private Map<InetAddress, List<MembershipKey>> memberships;
-    
+
     /**
      * Use {@link #NioDatagramChannel(ChannelFactory, ChannelPipeline, ChannelSink, NioDatagramWorker, ProtocolFamily)}
      */
@@ -69,13 +70,13 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             final NioDatagramWorker worker) {
         this(factory, pipeline, sink, worker, null);
     }
-    
+
     NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker, ProtocolFamily family) {
         super(null, factory, pipeline, sink, worker, openNonBlockingChannel(family));
         config = new DefaultNioDatagramChannelConfig(channel);
-        
+
         fireChannelOpen(this);
 
     }
@@ -83,7 +84,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     private static DatagramChannel openNonBlockingChannel(ProtocolFamily family) {
         try {
             final DatagramChannel channel;
-            
+
             // check if we are on java 7 or if the family was not specified
             if (DetectionUtil.javaVersion() < 7 || family == null) {
                 channel = DatagramChannel.open();
@@ -102,7 +103,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                     throw new IllegalArgumentException();
                 }
             }
-            
+
             channel.configureBlocking(false);
             return channel;
         } catch (final IOException e) {
@@ -116,7 +117,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     public NioDatagramWorker getWorker() {
         return (NioDatagramWorker) super.getWorker();
     }
-    
+
     public boolean isBound() {
         return isOpen() && channel.socket().isBound();
     }
@@ -130,6 +131,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         return super.setClosed();
     }
 
+    @Override
     public NioDatagramChannelConfig getConfig() {
         return config;
     }
@@ -139,7 +141,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     }
 
 
-    
+
     public ChannelFuture joinGroup(InetAddress multicastAddress) {
        try {
             return joinGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
@@ -148,7 +150,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         }
     }
 
-    
+
     public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         return joinGroup(multicastAddress.getAddress(), networkInterface, null);
     }
@@ -163,11 +165,11 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             if (multicastAddress == null) {
                 throw new NullPointerException("multicastAddress");
             }
-            
+
             if (networkInterface == null) {
                 throw new NullPointerException("networkInterface");
             }
-            
+
             try {
                 MembershipKey key;
                 if (source == null) {
@@ -179,7 +181,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                 synchronized (this) {
                     if (memberships == null) {
                         memberships = new HashMap<InetAddress, List<MembershipKey>>();
-                       
+
                     }
                     List<MembershipKey> keys = memberships.get(multicastAddress);
                     if (keys == null) {
@@ -194,14 +196,14 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         }
         return Channels.succeededFuture(this);
     }
-    
+
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
         try {
             return leaveGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
             return Channels.failedFuture(this, e);
         }
-        
+
     }
 
     public ChannelFuture leaveGroup(InetSocketAddress multicastAddress,
@@ -220,25 +222,25 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             if (multicastAddress == null) {
                 throw new NullPointerException("multicastAddress");
             }
-            
+
             if (networkInterface == null) {
                 throw new NullPointerException("networkInterface");
             }
-            
+
             synchronized (this) {
                 if (memberships != null) {
                     List<MembershipKey> keys = memberships.get(multicastAddress);
                     if (keys != null) {
                         Iterator<MembershipKey> keyIt = keys.iterator();
-                        
+
                         while (keyIt.hasNext()) {
                             MembershipKey key = keyIt.next();
                             if (networkInterface.equals(key.networkInterface())) {
-                               if (source == null && key.sourceAddress() == null || (source != null && source.equals(key.sourceAddress()))) {
+                               if (source == null && key.sourceAddress() == null || source != null && source.equals(key.sourceAddress())) {
                                    key.drop();
                                    keyIt.remove();
                                }
-                               
+
                             }
                         }
                         if (keys.isEmpty()) {
@@ -250,7 +252,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             return Channels.succeededFuture(this);
         }
     }
-    
+
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
      *
@@ -266,7 +268,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             if (sourceToBlock == null) {
                 throw new NullPointerException("sourceToBlock");
             }
-            
+
             if (networkInterface == null) {
                 throw new NullPointerException("networkInterface");
             }
@@ -285,11 +287,11 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                 }
             }
             return Channels.succeededFuture(this);
-            
-            
+
+
         }
     }
-    
+
     /**
 * Block the given sourceToBlock address for the given multicastAddress
 *

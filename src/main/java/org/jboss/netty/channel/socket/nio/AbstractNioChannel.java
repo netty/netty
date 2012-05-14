@@ -15,17 +15,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.QueueFactory;
-import org.jboss.netty.util.internal.ThreadLocalBoolean;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
@@ -37,6 +27,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.util.internal.QueueFactory;
+import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel {
 
@@ -92,19 +93,19 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
      */
     boolean inWriteNowLoop;
     boolean writeSuspended;
-    
+
 
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
-    
+
     final C channel;
-    
+
     protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, C ch) {
         super(id, parent, factory, pipeline, sink);
         this.worker = worker;
         this.channel = ch;
     }
-    
+
     protected AbstractNioChannel(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, C ch)  {
@@ -116,19 +117,18 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     /**
      * Return the {@link AbstractNioWorker} that handle the IO of the
      * {@link AbstractNioChannel}
-     * 
+     *
      * @return worker
      */
     public AbstractNioWorker getWorker() {
         return worker;
     }
-    
+
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) getLocalSocketAddress();
+                this.localAddress = localAddress = getLocalSocketAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -142,7 +142,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         if (remoteAddress == null) {
             try {
                 this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) getRemoteSocketAddress();
+                    getRemoteSocketAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -150,9 +150,9 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         }
         return remoteAddress;
     }
-    
+
     public abstract NioChannelConfig getConfig();
-    
+
     int getRawInterestOps() {
         return super.getInterestOps();
     }
@@ -161,7 +161,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         super.setInterestOpsNow(interestOps);
     }
 
-    
+
     @Override
     public int getInterestOps() {
         if (!isOpen()) {
@@ -192,16 +192,16 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
 
         return interestOps;
     }
-    
+
     @Override
     protected boolean setClosed() {
         return super.setClosed();
     }
-    
+
     abstract InetSocketAddress getLocalSocketAddress() throws Exception;
-    
+
     abstract InetSocketAddress getRemoteSocketAddress() throws Exception;
-    
+
     private final class WriteRequestQueue implements BlockingQueue<MessageEvent> {
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
@@ -260,7 +260,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         }
 
         public void clear() {
-            queue.clear();        
+            queue.clear();
         }
 
         public boolean add(MessageEvent e) {

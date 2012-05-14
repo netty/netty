@@ -35,12 +35,12 @@ import org.junit.Test;
 public class ChunkedWriteHandlerTest {
     private static final byte[] BYTES = new byte[1024 * 64];
     private static final File TMP;
-    
+
     static {
         for (int i = 0; i < BYTES.length; i++) {
             BYTES[i] = (byte) i;
         }
-        
+
         FileOutputStream out = null;
         try {
             TMP = File.createTempFile("netty-chunk-", ".tmp");
@@ -65,35 +65,35 @@ public class ChunkedWriteHandlerTest {
     @Test
     public void testChunkedStream() {
         check(new ChunkedStream(new ByteArrayInputStream(BYTES)));
-        
+
         check(new ChunkedStream(new ByteArrayInputStream(BYTES)), new ChunkedStream(new ByteArrayInputStream(BYTES)), new ChunkedStream(new ByteArrayInputStream(BYTES)));
 
     }
-    
+
     @Test
     public void testChunkedNioStream() {
         check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
-        
+
         check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))), new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))), new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
 
     }
-    
-    
+
+
     @Test
     public void testChunkedFile() throws IOException {
         check(new ChunkedFile(TMP));
 
         check(new ChunkedFile(TMP), new ChunkedFile(TMP), new ChunkedFile(TMP));
     }
-    
+
     @Test
     public void testChunkedNioFile() throws IOException {
         check(new ChunkedNioFile(TMP));
 
         check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
     }
-    
-    private void check(ChunkedInput... inputs) {
+
+    private static void check(ChunkedInput... inputs) {
         EncoderEmbedder<ChannelBuffer> embedder = new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler());
         for (ChunkedInput input: inputs) {
             embedder.offer(input);

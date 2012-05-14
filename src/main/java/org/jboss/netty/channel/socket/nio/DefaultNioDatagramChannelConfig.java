@@ -45,7 +45,7 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
     private volatile int writeBufferLowWaterMark = 32 * 1024;
     private volatile int writeSpinCount = 16;
     private final DatagramChannel channel;
-    
+
     DefaultNioDatagramChannelConfig(DatagramChannel channel) {
         super(channel.socket());
         this.channel = channel;
@@ -142,7 +142,7 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         }
         this.writeSpinCount = writeSpinCount;
     }
-    
+
     @Override
     public void setNetworkInterface(NetworkInterface networkInterface) {
         if (DetectionUtil.javaVersion() < 7) {
@@ -162,7 +162,7 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             throw new UnsupportedOperationException();
         } else {
             try {
-                return (NetworkInterface) channel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
+                return channel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
@@ -175,7 +175,7 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             throw new UnsupportedOperationException();
         } else {
             try {
-                return (int) channel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
+                return channel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
@@ -193,9 +193,9 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
                 throw new ChannelException(e);
             }
         }
-       
+
     }
-    
+
     @Override
     public InetAddress getInterface() {
         NetworkInterface inf = getNetworkInterface();
@@ -225,7 +225,7 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             throw new UnsupportedOperationException();
         } else {
             try {
-                return (Boolean) channel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
+                return channel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }

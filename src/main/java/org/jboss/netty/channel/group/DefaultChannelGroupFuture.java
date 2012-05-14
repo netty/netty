@@ -315,7 +315,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
-    private void checkDeadLock() {
+    private static void checkDeadLock() {
         if (DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +

@@ -239,7 +239,7 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void detectDeadLock() {
+    private static void detectDeadLock() {
         if (DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "read*(...) in I/O thread causes a dead lock or " +
@@ -267,7 +267,6 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
         getQueue().put(e);
     }
 
-    @SuppressWarnings("unchecked")
     private E getMessage(MessageEvent e) {
         return (E) e.getMessage();
     }

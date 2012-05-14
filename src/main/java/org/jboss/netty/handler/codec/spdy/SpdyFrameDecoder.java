@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -22,8 +24,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Decodes {@link ChannelBuffer}s into SPDY Data and Control Frames.
@@ -76,7 +76,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
      */
     @Deprecated
     public SpdyFrameDecoder(
-            int maxChunkSize, int maxFrameSize, int maxHeaderSize) {
+            int maxChunkSize, @SuppressWarnings("unused") int maxFrameSize, int maxHeaderSize) {
         this(maxChunkSize, maxHeaderSize);
     }
 
@@ -95,7 +95,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
         this.maxChunkSize = maxChunkSize;
         this.maxHeaderSize = maxHeaderSize;
-        this.state = State.READ_COMMON_HEADER;
+        state = State.READ_COMMON_HEADER;
     }
 
     @Override
@@ -166,7 +166,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 // Chromium Issue 79156
                 // SPDY setting ids are not written in network byte order
                 // Read id assuming the architecture is little endian
-                int ID = (buffer.readByte() & 0xFF) |
+                int ID = buffer.readByte() & 0xFF |
                         (buffer.readByte() & 0xFF) << 8 |
                         (buffer.readByte() & 0xFF) << 16;
                 byte ID_flags = buffer.readByte();
@@ -181,7 +181,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
                     return null;
                 }
 
-                if (!(spdySettingsFrame.isSet(ID))) {
+                if (!spdySettingsFrame.isSet(ID)) {
                     boolean persistVal = (ID_flags & SPDY_SETTINGS_PERSIST_VALUE) != 0;
                     boolean persisted  = (ID_flags & SPDY_SETTINGS_PERSISTED) != 0;
                     spdySettingsFrame.setValue(ID, value, persistVal, persisted);
@@ -438,7 +438,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
 
         case SPDY_HEADERS_FRAME:
             // Protocol allows length 4 frame when there are no name/value pairs
-            int minLength = (length == 4) ? 4 : 8;
+            int minLength = length == 4 ? 4 : 8;
             if (buffer.readableBytes() < minLength) {
                 return null;
             }
@@ -695,7 +695,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
         fireProtocolException(ctx, message);
     }
 
-    private void fireProtocolException(ChannelHandlerContext ctx, String message) {
+    private static void fireProtocolException(ChannelHandlerContext ctx, String message) {
         Channels.fireExceptionCaught(ctx, new SpdyProtocolException(message));
     }
 }

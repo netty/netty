@@ -73,7 +73,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
         this.workerPool = workerPool;
     }
-    
+
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -117,7 +117,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         }
     }
 
-    private void bind(
+    private static void bind(
             NioClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
@@ -158,7 +158,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             channel.worker.close(channel, succeededFuture(channel));
         }
     }
-    
+
     Boss nextBoss() {
         return bosses[Math.abs(
                 bossIndex.getAndIncrement() % bosses.length)];
@@ -175,10 +175,10 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         private final AtomicBoolean wakenUp = new AtomicBoolean();
         private final Object startStopLock = new Object();
         private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
-        private final int subId;;
+        private final int subId;
 
         Boss(int subId) {
-            this.subId = subId; 
+            this.subId = subId;
         }
 
         void register(NioClientSocketChannel channel) {
@@ -199,7 +199,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     boolean success = false;
                     try {
                         DeadLockProofWorker.start(bossExecutor,
-                                new ThreadRenamingRunnable(this, 
+                                new ThreadRenamingRunnable(this,
                                         "New I/O client boss #" + id + '-' + subId));
 
                         success = true;

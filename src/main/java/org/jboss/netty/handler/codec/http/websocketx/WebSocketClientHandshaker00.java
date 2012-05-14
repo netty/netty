@@ -50,7 +50,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
     /**
      * Constructor with default values
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -65,10 +65,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             Map<String, String> customHeaders) {
         this(webSocketURL, version, subprotocol, customHeaders, Long.MAX_VALUE);
     }
-    
+
     /**
      * Constructor
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -91,7 +91,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -100,10 +100,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Origin: http://example.com
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -167,10 +167,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             originValue = originValue + ":" + wsPort;
         }
         request.addHeader(Names.ORIGIN, originValue);
-        
+
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
-        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
@@ -194,7 +194,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -202,10 +202,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
@@ -241,12 +241,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         setActualSubprotocol(subprotocol);
 
         channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
-                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
+                new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }
 
-    private String insertRandomCharacters(String key) {
+    private static String insertRandomCharacters(String key) {
         int count = WebSocketUtil.randomNumber(1, 12);
 
         char[] randomChars = new char[count];
@@ -269,7 +269,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         return key;
     }
 
-    private String insertSpaces(String key, int spaces) {
+    private static String insertSpaces(String key, int spaces) {
         for (int i = 0; i < spaces; i++) {
             int split = WebSocketUtil.randomNumber(1, key.length() - 1);
             String part1 = key.substring(0, split);

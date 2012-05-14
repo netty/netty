@@ -90,37 +90,37 @@ final class SpdyCodecUtil {
      * Reads a big-endian unsigned short integer from the buffer.
      */
     static int getUnsignedShort(ChannelBuffer buf, int offset) {
-        return (int) ((buf.getByte(offset)     & 0xFF) << 8 |
-                      (buf.getByte(offset + 1) & 0xFF));
+        return (buf.getByte(offset)     & 0xFF) << 8 |
+                buf.getByte(offset + 1) & 0xFF;
     }
 
     /**
      * Reads a big-endian unsigned medium integer from the buffer.
      */
     static int getUnsignedMedium(ChannelBuffer buf, int offset) {
-        return (int) ((buf.getByte(offset)     & 0xFF) << 16 |
-                      (buf.getByte(offset + 1) & 0xFF) <<  8 |
-                      (buf.getByte(offset + 2) & 0xFF));
+        return (buf.getByte(offset)     & 0xFF) << 16 |
+               (buf.getByte(offset + 1) & 0xFF) <<  8 |
+                buf.getByte(offset + 2) & 0xFF;
     }
 
     /**
      * Reads a big-endian (31-bit) integer from the buffer.
      */
     static int getUnsignedInt(ChannelBuffer buf, int offset) {
-        return (int) ((buf.getByte(offset)     & 0x7F) << 24 |
-                      (buf.getByte(offset + 1) & 0xFF) << 16 |
-                      (buf.getByte(offset + 2) & 0xFF) <<  8 |
-                      (buf.getByte(offset + 3) & 0xFF));
+        return (buf.getByte(offset)     & 0x7F) << 24 |
+               (buf.getByte(offset + 1) & 0xFF) << 16 |
+               (buf.getByte(offset + 2) & 0xFF) <<  8 |
+                buf.getByte(offset + 3) & 0xFF;
     }
 
     /**
      * Reads a big-endian signed integer from the buffer.
      */
     static int getSignedInt(ChannelBuffer buf, int offset) {
-        return (int) ((buf.getByte(offset)     & 0xFF) << 24 |
-                      (buf.getByte(offset + 1) & 0xFF) << 16 |
-                      (buf.getByte(offset + 2) & 0xFF) <<  8 |
-                      (buf.getByte(offset + 3) & 0xFF));
+        return (buf.getByte(offset)     & 0xFF) << 24 |
+               (buf.getByte(offset + 1) & 0xFF) << 16 |
+               (buf.getByte(offset + 2) & 0xFF) <<  8 |
+                buf.getByte(offset + 3) & 0xFF;
     }
 
     /**

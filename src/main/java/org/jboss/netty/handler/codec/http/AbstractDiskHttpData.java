@@ -312,7 +312,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
      * @return the array of bytes
      * @throws IOException
      */
-    private byte[] readFrom(File src) throws IOException {
+    private static byte[] readFrom(File src) throws IOException {
         long srcsize = src.length();
         if (srcsize > Integer.MAX_VALUE) {
             throw new IllegalArgumentException(

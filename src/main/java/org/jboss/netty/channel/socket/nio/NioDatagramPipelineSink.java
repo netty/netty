@@ -98,7 +98,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
         }
     }
 
-    private void close(NioDatagramChannel channel, ChannelFuture future) {
+    private static void close(NioDatagramChannel channel, ChannelFuture future) {
         try {
             channel.getDatagramChannel().socket().close();
             if (channel.setClosed()) {
@@ -120,7 +120,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
      * Will bind the DatagramSocket to the passed-in address.
      * Every call bind will spawn a new thread using the that basically in turn
      */
-    private void bind(final NioDatagramChannel channel,
+    private static void bind(final NioDatagramChannel channel,
             final ChannelFuture future, final InetSocketAddress address) {
         boolean bound = false;
         boolean started = false;
@@ -144,7 +144,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
         }
     }
 
-    private void connect(
+    private static void connect(
             NioDatagramChannel channel, ChannelFuture future,
             SocketAddress remoteAddress) {
 

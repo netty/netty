@@ -85,7 +85,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         }
     }
 
-    private void bind(DefaultLocalChannel channel, ChannelFuture future, LocalAddress localAddress) {
+    private static void bind(DefaultLocalChannel channel, ChannelFuture future, LocalAddress localAddress) {
         try {
             if (!LocalChannelRegistry.register(localAddress, channel)) {
                 throw new ChannelException("address already in use: " + localAddress);

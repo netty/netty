@@ -138,7 +138,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
 
-            // Only compare up to the second because the datetime format we send to the client does not have milliseconds 
+            // Only compare up to the second because the datetime format we send to the client does not have milliseconds
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
             long fileLastModifiedSeconds = file.lastModified() / 1000;
             if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
@@ -146,7 +146,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
                 return;
             }
         }
-        
+
         RandomAccessFile raf;
         try {
             raf = new RandomAccessFile(file, "r");
@@ -160,7 +160,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
-        
+
         Channel ch = e.getChannel();
 
         // Write the initial line and the header.
@@ -211,7 +211,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private String sanitizeUri(String uri) {
+    private static String sanitizeUri(String uri) {
         // Decode the path.
         try {
             uri = URLDecoder.decode(uri, "UTF-8");
@@ -238,7 +238,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         return System.getProperty("user.dir") + File.separator + uri;
     }
 
-    private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
+    private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setContent(ChannelBuffers.copiedBuffer(
@@ -248,44 +248,44 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         // Close the connection as soon as the error message is sent.
         ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
-    
+
     /**
      * When file timestamp is the same as what the browser is sending up, send a "304 Not Modified"
-     * 
+     *
      * @param ctx
      *            Context
      */
-    private void sendNotModified(ChannelHandlerContext ctx) {
+    private static void sendNotModified(ChannelHandlerContext ctx) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
         ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
-    
+
     /**
      * Sets the Date header for the HTTP response
-     * 
+     *
      * @param response
      *            HTTP response
      */
-    private void setDateHeader(HttpResponse response) {
+    private static void setDateHeader(HttpResponse response) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
         Calendar time = new GregorianCalendar();
         response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
     }
-    
+
     /**
      * Sets the Date and Cache headers for the HTTP Response
-     * 
+     *
      * @param response
      *            HTTP response
      * @param fileToCache
      *            file to extract content type
      */
-    private void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
+    private static void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
@@ -302,13 +302,13 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
     /**
      * Sets the content type header for the HTTP Response
-     * 
+     *
      * @param response
      *            HTTP response
      * @param file
      *            file to extract content type
      */
-    private void setContentTypeHeader(HttpResponse response, File file) {
+    private static void setContentTypeHeader(HttpResponse response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }

@@ -84,7 +84,7 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
         }
     }
 
-    private void handleAcceptedSocket(ChannelEvent e) {
+    private static void handleAcceptedSocket(ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             OioAcceptedSocketChannel channel =
@@ -96,17 +96,17 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    OioWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case BOUND:
             case CONNECTED:
                 if (value == null) {
-                    OioWorker.close(channel, future);
+                    AbstractOioWorker.close(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                OioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                AbstractOioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
@@ -150,7 +150,7 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
         }
     }
 
-    private void close(OioServerSocketChannel channel, ChannelFuture future) {
+    private static void close(OioServerSocketChannel channel, ChannelFuture future) {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();

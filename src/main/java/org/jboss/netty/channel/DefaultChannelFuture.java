@@ -338,7 +338,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
-    private void checkDeadLock() {
+    private static void checkDeadLock() {
         if (isUseDeadLockChecker() && DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +

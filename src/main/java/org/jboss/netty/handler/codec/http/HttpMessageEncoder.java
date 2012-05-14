@@ -136,7 +136,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         return msg;
     }
 
-    private void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
+    private static void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
         try {
             for (Map.Entry<String, String> h: message.getHeaders()) {
                 encodeHeader(buf, h.getKey(), h.getValue());
@@ -146,7 +146,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         }
     }
 
-    private void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
+    private static void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
         try {
             for (Map.Entry<String, String> h: trailer.getHeaders()) {
                 encodeHeader(buf, h.getKey(), h.getValue());
@@ -156,7 +156,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         }
     }
 
-    private void encodeHeader(ChannelBuffer buf, String header, String value)
+    private static void encodeHeader(ChannelBuffer buf, String header, String value)
             throws UnsupportedEncodingException {
         buf.writeBytes(header.getBytes("ASCII"));
         buf.writeByte(COLON);

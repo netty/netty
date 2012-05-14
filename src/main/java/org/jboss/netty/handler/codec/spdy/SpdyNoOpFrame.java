@@ -19,4 +19,5 @@ package org.jboss.netty.handler.codec.spdy;
  * A SPDY Protocol NOOP Control Frame
  */
 public interface SpdyNoOpFrame {
+    // Tag interface
 }

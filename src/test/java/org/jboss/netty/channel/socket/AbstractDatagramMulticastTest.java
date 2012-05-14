@@ -15,18 +15,7 @@
  */
 package org.jboss.netty.channel.socket;
 
-import static org.junit.Assert.assertTrue;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import static org.junit.Assert.*;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -37,6 +26,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.util.TestUtil;
+import org.jboss.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -66,14 +64,14 @@ public abstract class AbstractDatagramMulticastTest {
         ConnectionlessBootstrap sb = new ConnectionlessBootstrap(newServerSocketChannelFactory(executor));
         ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
         MulticastTestHandler mhandler = new MulticastTestHandler();
-        
+
         cb.getPipeline().addFirst("handler", mhandler);
         sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
         int port = TestUtil.getFreePort();
-        
+
         NetworkInterface iface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
-        
+
         // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
         // if so fail back the the first interface
         if (iface == null) {
@@ -82,10 +80,10 @@ public abstract class AbstractDatagramMulticastTest {
         }
         sb.setOption("networkInterface", iface);
         sb.setOption("reuseAddress", true);
-        
+
         Channel sc = sb.bind(new InetSocketAddress(port));
 
-        
+
         String group = "230.0.0.1";
         InetSocketAddress groupAddress = new InetSocketAddress(group, port);
 
@@ -93,14 +91,14 @@ public abstract class AbstractDatagramMulticastTest {
         cb.setOption("reuseAddress", true);
 
         DatagramChannel cc = (DatagramChannel) cb.bind(new InetSocketAddress(port));
-        
+
         assertTrue(cc.joinGroup(groupAddress, iface).awaitUninterruptibly().isSuccess());
- 
+
         assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
-        
-        
+
+
         assertTrue(mhandler.await());
-      
+
         assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
 
 
@@ -109,42 +107,42 @@ public abstract class AbstractDatagramMulticastTest {
 
         // sleep a second to make sure we left the group
         Thread.sleep(1000);
-        
+
         // we should not receive a message anymore as we left the group before
         assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
 
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
-        
+
     }
-    
-    private ChannelBuffer wrapInt(int value) {
+
+    private static ChannelBuffer wrapInt(int value) {
         ChannelBuffer buf = ChannelBuffers.buffer(4);
         buf.writeInt(value);
         return buf;
     }
-    
+
     private final class MulticastTestHandler extends SimpleChannelUpstreamHandler {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done = false;
         private volatile boolean fail = false;
-        
+
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             super.messageReceived(ctx, e);
             if (done) {
                 fail = true;
             }
-            
+
             Assert.assertEquals(1,((ChannelBuffer)e.getMessage()).readInt());
-            
+
             latch.countDown();
-            
+
             // mark the handler as done as we only are supposed to receive one message
             done = true;
         }
-        
+
         public boolean await() throws Exception {
             boolean success = latch.await(10, TimeUnit.SECONDS);
             if (fail) {
@@ -153,6 +151,6 @@ public abstract class AbstractDatagramMulticastTest {
             }
             return success;
         }
-        
+
     }
 }

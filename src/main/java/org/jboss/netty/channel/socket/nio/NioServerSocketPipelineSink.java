@@ -47,7 +47,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
-    
+
     final int id = nextId.incrementAndGet();
 
     private final WorkerPool<NioWorker> workerPool;
@@ -95,7 +95,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
         }
     }
 
-    private void handleAcceptedSocket(ChannelEvent e) {
+    private static void handleAcceptedSocket(ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
@@ -143,8 +143,8 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            DeadLockProofWorker.start(bossExecutor, 
-                    new ThreadRenamingRunnable(new Boss(channel), 
+            DeadLockProofWorker.start(bossExecutor,
+                    new ThreadRenamingRunnable(new Boss(channel),
                             "New I/O server boss #" + id + " (" + channel + ')'));
             bossStarted = true;
         } catch (Throwable t) {
@@ -157,7 +157,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
         }
     }
 
-    private void close(NioServerSocketChannel channel, ChannelFuture future) {
+    private static void close(NioServerSocketChannel channel, ChannelFuture future) {
         boolean bound = channel.isBound();
         try {
             if (channel.socket.isOpen()) {
@@ -225,7 +225,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
                 for (;;) {
                     try {
                         if (selector.select(1000) > 0) {
-                            // There was something selected if we reach this point, so clear 
+                            // There was something selected if we reach this point, so clear
                             // the selected keys
                             selector.selectedKeys().clear();
                         }
@@ -237,7 +237,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
                                 break;
                             }
                             registerAcceptedChannel(acceptedSocket, currentThread);
-                            
+
                         }
 
                     } catch (SocketTimeoutException e) {
