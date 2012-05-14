@@ -37,7 +37,7 @@ public abstract class WebSocketServerHandshaker {
 
     private final long maxFramePayloadLength;
 
-    private String selectedSubprotocol = null;
+    private String selectedSubprotocol;
 
     /**
      * {@link ChannelFutureListener} which will call
