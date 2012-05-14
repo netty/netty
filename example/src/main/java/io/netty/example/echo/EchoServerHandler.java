@@ -15,46 +15,43 @@
  */
 package io.netty.example.echo;
 
-import java.util.concurrent.atomic.AtomicLong;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handler implementation for the echo server.
  */
-public class EchoServerHandler extends SimpleChannelUpstreamHandler {
+public class EchoServerHandler extends ChannelInboundHandlerAdapter<Byte> {
 
     private static final Logger logger = Logger.getLogger(
             EchoServerHandler.class.getName());
 
-    private final AtomicLong transferredBytes = new AtomicLong();
-
-    public long getTransferredBytes() {
-        return transferredBytes.get();
+    @Override
+    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
+        return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
-        // Send back the received message to the remote peer.
-        transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
-        e.channel().write(e.getMessage());
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) {
+        ChannelBuffer in = ctx.in().byteBuffer();
+        ChannelBuffer out = ctx.out().byteBuffer();
+        out.discardReadBytes();
+        out.writeBytes(in);
+        in.discardReadBytes();
+        ctx.flush();
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+        logger.log(Level.WARNING, "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

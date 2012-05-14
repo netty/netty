@@ -400,6 +400,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 future.setFailure(t);
                 pipeline().fireExceptionCaught(t);
+                closeFuture().setSuccess();
             }
         }
 
@@ -538,7 +539,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void close(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
-                if (isOpen()) {
+                if (closeFuture.setClosed()) {
                     boolean wasActive = isActive();
                     try {
                         doClose();
@@ -557,7 +558,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         pipeline().fireChannelInactive();
                     }
 
-                    closeFuture.setClosed();
                     deregister(voidFuture());
                 } else {
                     // Closed already.
@@ -791,9 +791,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             throw new IllegalStateException();
         }
 
-        void setClosed() {
+        boolean setClosed() {
             boolean set = super.setSuccess();
             assert set;
+            return set;
         }
     }
 

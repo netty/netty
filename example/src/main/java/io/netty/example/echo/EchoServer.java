@@ -15,8 +15,6 @@
  */
 package io.netty.example.echo;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -33,7 +31,6 @@ import io.netty.logging.InternalLogLevel;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Echoes back any received data from a client.
@@ -41,7 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class EchoServer {
 
     private final int port;
-    private final AtomicLong transferredBytes = new AtomicLong();
 
     public EchoServer(int port) {
         this.port = port;
@@ -73,24 +69,7 @@ public class EchoServer {
                     }
                     s.config().setTcpNoDelay(true);
                     s.pipeline().addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
-                    s.pipeline().addLast("echoer", new ChannelInboundHandlerAdapter<Byte>() {
-                        @Override
-                        public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
-                            return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
-                        }
-
-                        @Override
-                        public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) {
-                            ChannelBuffer in = ctx.in().byteBuffer();
-                            ChannelBuffer out = ctx.out().byteBuffer();
-                            transferredBytes.addAndGet(in.readableBytes());
-
-                            out.discardReadBytes();
-                            out.writeBytes(in);
-                            in.clear();
-                            ctx.flush();
-                        }
-                    });
+                    s.pipeline().addLast("echoer", new EchoServerHandler());
                     loop.register(s);
                 }
             }

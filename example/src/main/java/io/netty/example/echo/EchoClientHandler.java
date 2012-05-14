@@ -15,38 +15,34 @@
  */
 package io.netty.example.echo;
 
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Handler implementation for the echo client.  It initiates the ping-pong
  * traffic between the echo client and server by sending the first message to
  * the server.
  */
-public class EchoClientHandler extends SimpleChannelUpstreamHandler {
+public class EchoClientHandler extends ChannelInboundHandlerAdapter<Byte> {
 
     private static final Logger logger = Logger.getLogger(
             EchoClientHandler.class.getName());
 
     private final ChannelBuffer firstMessage;
-    private final AtomicLong transferredBytes = new AtomicLong();
 
     /**
      * Creates a client-side handler.
      */
     public EchoClientHandler(int firstMessageSize) {
         if (firstMessageSize <= 0) {
-            throw new IllegalArgumentException(
-                    "firstMessageSize: " + firstMessageSize);
+            throw new IllegalArgumentException("firstMessageSize: " + firstMessageSize);
         }
         firstMessage = ChannelBuffers.buffer(firstMessageSize);
         for (int i = 0; i < firstMessage.capacity(); i ++) {
@@ -54,34 +50,31 @@ public class EchoClientHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    public long getTransferredBytes() {
-        return transferredBytes.get();
+    @Override
+    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
+        return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
     }
 
     @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) {
-        // Send the first message.  Server will not send anything here
-        // because the firstMessage's capacity is 0.
-        e.channel().write(firstMessage);
+    public void channelActive(ChannelInboundHandlerContext<Byte> ctx) {
+        ctx.write(firstMessage);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
-        // Send back the received message to the remote peer.
-        transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
-        e.channel().write(e.getMessage());
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) {
+        ChannelBuffer in = ctx.in().byteBuffer();
+        ChannelBuffer out = ctx.out().byteBuffer();
+        out.discardReadBytes();
+        out.writeBytes(in);
+        in.discardReadBytes();
+        ctx.flush();
     }
 
     @Override
     public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+            ChannelInboundHandlerContext<Byte> ctx, Throwable cause) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+        logger.log(Level.WARNING, "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }
