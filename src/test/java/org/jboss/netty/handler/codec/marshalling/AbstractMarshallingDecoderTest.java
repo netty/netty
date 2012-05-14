@@ -32,6 +32,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.junit.Test;
 
 public abstract class AbstractMarshallingDecoderTest {
@@ -116,7 +117,7 @@ public abstract class AbstractMarshallingDecoderTest {
             decoder.offer(ChannelBuffers.wrappedBuffer(testBytes));
             fail();
         } catch (CodecEmbedderException e) {
-            assertEquals(TooBigObjectException.class, e.getCause().getClass());
+            assertEquals(TooLongFrameException.class, e.getCause().getClass());
             
         
         }        

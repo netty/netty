@@ -26,6 +26,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.handler.codec.replay.VoidEnum;
 
@@ -70,6 +71,8 @@ public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
             return obj;
+        } catch (LimitingByteInput.TooBigObjectException e) {
+            throw new TooLongFrameException("Object to big to unmarshal");
         } finally {
             // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
             // readable. This helps to be sure that we do not leak resource
@@ -98,7 +101,7 @@ public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        if (e.getCause() instanceof TooBigObjectException) {
+        if (e.getCause() instanceof TooLongFrameException) {
             e.getChannel().close();
 
         } else {
