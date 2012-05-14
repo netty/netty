@@ -36,7 +36,7 @@ public class EchoClient {
     private final String host;
     private final int port;
     private final int firstMessageSize;
-    
+
     public EchoClient(String host, int port, int firstMessageSize) {
         this.host = host;
         this.port = port;
