@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.jboss.netty.util.internal.DetectionUtil;
+
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
  * is recommended to use {@link ChannelBuffers#wrappedBuffer(ChannelBuffer...)}
