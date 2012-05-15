@@ -26,9 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.jboss.netty.util.internal.DetectionUtil;
-
-
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
  * is recommended to use {@link ChannelBuffers#wrappedBuffer(ChannelBuffer...)}
@@ -637,7 +634,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         //
         // See https://github.com/netty/netty/issues/325
         if (list.isEmpty()) {
-            list = new ArrayList<ChannelBuffer>();
+            list = new ArrayList<ChannelBuffer>(1);
         }
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
