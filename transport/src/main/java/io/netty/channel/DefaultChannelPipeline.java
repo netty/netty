@@ -143,7 +143,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
-        if (handlers[0] == null) {
+        if (handlers.length == 0 || handlers[0] == null) {
             return this;
         }
 
