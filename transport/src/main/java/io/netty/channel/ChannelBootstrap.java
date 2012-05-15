@@ -125,7 +125,7 @@ public class ChannelBootstrap {
         }
 
         ChannelPipeline p = channel.pipeline();
-        p.addLast(generateName(initializer), initializer);
+        p.addLast(DefaultChannelPipeline.generateName(initializer), initializer);
 
         for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
             try {
@@ -156,15 +156,5 @@ public class ChannelBootstrap {
         if (initializer == null) {
             throw new IllegalStateException("initializer not set");
         }
-    }
-
-    static String generateName(ChannelHandler handler) {
-        String type = handler.getClass().getSimpleName();
-        StringBuilder buf = new StringBuilder(type.length() + 10);
-        buf.append(type);
-        buf.append("-0");
-        buf.append(Long.toHexString(System.identityHashCode(handler) & 0xFFFFFFFFL | 0x100000000L));
-        buf.setCharAt(buf.length() - 9, 'x');
-        return buf.toString();
     }
 }

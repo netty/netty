@@ -216,7 +216,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    void addFirst(String name, ChannelHandler handler);
+    ChannelPipeline addFirst(String name, ChannelHandler handler);
 
     /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
@@ -229,7 +229,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    void addLast(String name, ChannelHandler handler);
+    ChannelPipeline addLast(String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -246,7 +246,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    void addBefore(String baseName, String name, ChannelHandler handler);
+    ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} after an existing handler of this
@@ -263,7 +263,10 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    void addAfter(String baseName, String name, ChannelHandler handler);
+    ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
+
+    ChannelPipeline addFirst(ChannelHandler... handlers);
+    ChannelPipeline addLast(ChannelHandler... handlers);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.

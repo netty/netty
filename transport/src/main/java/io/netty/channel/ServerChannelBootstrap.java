@@ -22,7 +22,7 @@ public class ServerChannelBootstrap {
         @Override
         public void initChannel(Channel ch) throws Exception {
             Acceptor acceptor = new Acceptor();
-            ch.pipeline().addLast(ChannelBootstrap.generateName(acceptor), acceptor);
+            ch.pipeline().addLast(DefaultChannelPipeline.generateName(acceptor), acceptor);
         }
     };
 
@@ -119,9 +119,9 @@ public class ServerChannelBootstrap {
 
         ChannelPipeline p = channel.pipeline();
         if (initializer != null) {
-            p.addLast(ChannelBootstrap.generateName(initializer), initializer);
+            p.addLast(DefaultChannelPipeline.generateName(initializer), initializer);
         }
-        p.addLast(ChannelBootstrap.generateName(acceptor), acceptor);
+        p.addLast(DefaultChannelPipeline.generateName(acceptor), acceptor);
 
         ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
@@ -178,7 +178,7 @@ public class ServerChannelBootstrap {
                     break;
                 }
 
-                child.pipeline().addLast(ChannelBootstrap.generateName(childInitializer), childInitializer);
+                child.pipeline().addLast(DefaultChannelPipeline.generateName(childInitializer), childInitializer);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions.entrySet()) {
                     try {

@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
@@ -51,9 +50,9 @@ public class EchoServer {
              .childInitializer(new ChannelInitializer() {
                  @Override
                  public void initChannel(Channel ch) throws Exception {
-                     ChannelPipeline p = ch.pipeline();
-                     p.addLast("logger", new LoggingHandler(LogLevel.INFO));
-                     p.addLast("echoer", new EchoServerHandler());
+                     ch.pipeline().addLast(
+                             new LoggingHandler(LogLevel.INFO),
+                             new EchoServerHandler());
                  }
              });
 

@@ -20,7 +20,6 @@ import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
@@ -58,12 +57,12 @@ public class EchoClient {
              .option(ChannelOption.TCP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
              .initializer(new ChannelInitializer() {
-                @Override
-                public void initChannel(Channel ch) throws Exception {
-                    ChannelPipeline p = ch.pipeline();
-                    p.addLast("logger", new LoggingHandler(LogLevel.INFO));
-                    p.addLast("echoer", new EchoClientHandler(firstMessageSize));
-                }
+                 @Override
+                 public void initChannel(Channel ch) throws Exception {
+                     ch.pipeline().addLast(
+                             new LoggingHandler(LogLevel.INFO),
+                             new EchoClientHandler(firstMessageSize));
+                 }
              });
 
             // Start the client.

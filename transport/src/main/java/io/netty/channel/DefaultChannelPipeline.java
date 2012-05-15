@@ -55,7 +55,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized void addFirst(String name, ChannelHandler handler) {
+    public synchronized ChannelPipeline addFirst(String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
             init(name, handler);
         } else {
@@ -71,10 +71,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             callAfterAdd(newHead);
         }
+
+        return this;
     }
 
     @Override
-    public synchronized void addLast(String name, ChannelHandler handler) {
+    public synchronized ChannelPipeline addLast(String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
             init(name, handler);
         } else {
@@ -90,10 +92,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             callAfterAdd(newTail);
         }
+
+        return this;
     }
 
     @Override
-    public synchronized void addBefore(String baseName, String name, ChannelHandler handler) {
+    public synchronized ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
         if (ctx == head) {
             addFirst(name, handler);
@@ -109,10 +113,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             callAfterAdd(newCtx);
         }
+
+        return this;
     }
 
     @Override
-    public synchronized void addAfter(String baseName, String name, ChannelHandler handler) {
+    public synchronized ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
         if (ctx == tail) {
             addLast(name, handler);
@@ -128,6 +134,58 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             callAfterAdd(newCtx);
         }
+
+        return this;
+    }
+
+    @Override
+    public ChannelPipeline addFirst(ChannelHandler... handlers) {
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+        if (handlers[0] == null) {
+            return this;
+        }
+
+        int size;
+        for (size = 1; size < handlers.length; size ++) {
+            if (handlers[size] == null) {
+                break;
+            }
+        }
+
+        for (int i = size - 1; i >= 0; i --) {
+            ChannelHandler h = handlers[i];
+            addFirst(generateName(h), h);
+        }
+
+        return this;
+    }
+
+    @Override
+    public ChannelPipeline addLast(ChannelHandler... handlers) {
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+
+        for (ChannelHandler h: handlers) {
+            if (h == null) {
+                break;
+            }
+            addLast(generateName(h), h);
+        }
+
+        return this;
+    }
+
+    static String generateName(ChannelHandler handler) {
+        String type = handler.getClass().getSimpleName();
+        StringBuilder buf = new StringBuilder(type.length() + 10);
+        buf.append(type);
+        buf.append("-0");
+        buf.append(Long.toHexString(System.identityHashCode(handler) & 0xFFFFFFFFL | 0x100000000L));
+        buf.setCharAt(buf.length() - 9, 'x');
+        return buf.toString();
     }
 
     @Override
