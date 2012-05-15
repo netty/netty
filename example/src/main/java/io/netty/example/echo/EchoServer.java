@@ -49,7 +49,7 @@ public class EchoServer {
             ServerChannelBuilder b = new ServerChannelBuilder();
             b.parentEventLoop(parentLoop)
              .parentChannel(new NioServerSocketChannel())
-             .parentOption(ChannelOption.SO_BACKLOG, 24)
+             .parentOption(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))
              .childEventLoop(childLoop)
              .childOption(ChannelOption.TCP_NODELAY, true)
