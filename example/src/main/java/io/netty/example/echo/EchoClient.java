@@ -16,7 +16,7 @@
 package io.netty.example.echo;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBuilder;
+import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -52,7 +52,7 @@ public class EchoClient {
         EventLoop loop = new SelectorEventLoop();
         try {
             // Configure the client.
-            ChannelBuilder b = new ChannelBuilder();
+            ChannelBootstrap b = new ChannelBootstrap();
             b.eventLoop(loop)
              .channel(new NioSocketChannel())
              .option(ChannelOption.TCP_NODELAY, true)

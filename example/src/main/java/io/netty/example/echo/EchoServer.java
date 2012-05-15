@@ -20,8 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
-import io.netty.channel.ServerChannelBuilder;
+import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
 import io.netty.handler.logging.LogLevel;
@@ -41,17 +40,13 @@ public class EchoServer {
     }
 
     public void run() throws Exception {
-        // Create the required event loops.
-        EventLoop parentLoop = new SelectorEventLoop();
-        EventLoop childLoop = new SelectorEventLoop();
+        // Configure the server.
+        ServerChannelBootstrap b = new ServerChannelBootstrap();
         try {
-            // Configure the server.
-            ServerChannelBuilder b = new ServerChannelBuilder();
-            b.parentEventLoop(parentLoop)
-             .parentChannel(new NioServerSocketChannel())
-             .parentOption(ChannelOption.SO_BACKLOG, 100)
+            b.eventLoop(new SelectorEventLoop(), new SelectorEventLoop())
+             .channel(new NioServerSocketChannel())
+             .option(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))
-             .childEventLoop(childLoop)
              .childOption(ChannelOption.TCP_NODELAY, true)
              .childInitializer(new ChannelInitializer() {
                  @Override
@@ -69,8 +64,7 @@ public class EchoServer {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            parentLoop.shutdown();
-            childLoop.shutdown();
+            b.shutdown();
         }
     }
 

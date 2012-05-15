@@ -13,46 +13,46 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 
-public class ServerChannelBuilder {
+public class ServerChannelBootstrap {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerChannelBuilder.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerChannelBootstrap.class);
     private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(SocketAddresses.LOCALHOST, 0);
 
-    private final Acceptor acceptor = new Acceptor();
+    private final ChannelHandler acceptor = new ChannelInitializer() {
+        @Override
+        public void initChannel(Channel ch) throws Exception {
+            Acceptor acceptor = new Acceptor();
+            ch.pipeline().addLast(ChannelBootstrap.generateName(acceptor), acceptor);
+        }
+    };
+
     private final Map<ChannelOption<?>, Object> parentOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private EventLoop parentEventLoop;
     private EventLoop childEventLoop;
-    private ServerChannel parentChannel;
-    private ChannelHandler parentInitializer;
+    private ServerChannel channel;
+    private ChannelHandler initializer;
     private ChannelHandler childInitializer;
     private SocketAddress localAddress;
 
-    public ServerChannelBuilder parentEventLoop(EventLoop parentEventLoop) {
+    public ServerChannelBootstrap eventLoop(EventLoop parentEventLoop, EventLoop childEventLoop) {
         if (parentEventLoop == null) {
             throw new NullPointerException("parentEventLoop");
         }
         this.parentEventLoop = parentEventLoop;
-        return this;
-    }
-
-    public ServerChannelBuilder childEventLoop(EventLoop childEventLoop) {
-        if (childEventLoop == null) {
-            throw new NullPointerException("childEventLoop");
-        }
         this.childEventLoop = childEventLoop;
         return this;
     }
 
-    public ServerChannelBuilder parentChannel(ServerChannel parentChannel) {
-        if (parentChannel == null) {
-            throw new NullPointerException("parentChannel");
+    public ServerChannelBootstrap channel(ServerChannel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
         }
-        this.parentChannel = parentChannel;
+        this.channel = channel;
         return this;
     }
 
-    public <T> ServerChannelBuilder parentOption(ChannelOption<T> parentOption, T value) {
+    public <T> ServerChannelBootstrap option(ChannelOption<T> parentOption, T value) {
         if (parentOption == null) {
             throw new NullPointerException("parentOption");
         }
@@ -64,7 +64,7 @@ public class ServerChannelBuilder {
         return this;
     }
 
-    public <T> ServerChannelBuilder childOption(ChannelOption<T> childOption, T value) {
+    public <T> ServerChannelBootstrap childOption(ChannelOption<T> childOption, T value) {
         if (childOption == null) {
             throw new NullPointerException("childOption");
         }
@@ -76,12 +76,12 @@ public class ServerChannelBuilder {
         return this;
     }
 
-    public ServerChannelBuilder parentInitializer(ChannelHandler parentInitializer) {
-        this.parentInitializer = parentInitializer;
+    public ServerChannelBootstrap initializer(ChannelHandler initializer) {
+        this.initializer = initializer;
         return this;
     }
 
-    public ServerChannelBuilder childInitializer(ChannelHandler childInitializer) {
+    public ServerChannelBootstrap childInitializer(ChannelHandler childInitializer) {
         if (childInitializer == null) {
             throw new NullPointerException("childInitializer");
         }
@@ -89,7 +89,7 @@ public class ServerChannelBuilder {
         return this;
     }
 
-    public ServerChannelBuilder localAddress(SocketAddress localAddress) {
+    public ServerChannelBootstrap localAddress(SocketAddress localAddress) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
@@ -99,53 +99,62 @@ public class ServerChannelBuilder {
 
     public ChannelFuture bind() {
         validate();
-        return bind(parentChannel.newFuture());
+        return bind(channel.newFuture());
     }
 
     public ChannelFuture bind(ChannelFuture future) {
         validate();
-        if (parentChannel.isActive()) {
-            future.setFailure(new IllegalStateException("parentChannel already bound: " + parentChannel));
+        if (channel.isActive()) {
+            future.setFailure(new IllegalStateException("channel already bound: " + channel));
             return future;
         }
-        if (parentChannel.isRegistered()) {
-            future.setFailure(new IllegalStateException("parentChannel already registered: " + parentChannel));
+        if (channel.isRegistered()) {
+            future.setFailure(new IllegalStateException("channel already registered: " + channel));
             return future;
         }
-        if (!parentChannel.isOpen()) {
+        if (!channel.isOpen()) {
             future.setFailure(new ClosedChannelException());
             return future;
         }
 
-        ChannelPipeline p = parentChannel.pipeline();
-        if (parentInitializer != null) {
-            p.addLast(ChannelBuilder.generateName(parentInitializer), parentInitializer);
+        ChannelPipeline p = channel.pipeline();
+        if (initializer != null) {
+            p.addLast(ChannelBootstrap.generateName(initializer), initializer);
         }
-        p.addLast(ChannelBuilder.generateName(acceptor), acceptor);
+        p.addLast(ChannelBootstrap.generateName(acceptor), acceptor);
 
-        ChannelFuture f = parentEventLoop.register(parentChannel).awaitUninterruptibly();
+        ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
             future.setFailure(f.cause());
             return future;
         }
 
-        parentChannel.bind(localAddress, future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        channel.bind(localAddress, future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         return future;
     }
 
-    public void validate() {
-        if (parentEventLoop == null) {
-            throw new IllegalStateException("parentEventLoop not set");
+    public void shutdown() {
+        if (parentEventLoop != null) {
+            parentEventLoop.shutdown();
         }
-        if (parentChannel == null) {
-            throw new IllegalStateException("parentChannel not set");
+        if (childEventLoop != null) {
+            childEventLoop.shutdown();
+        }
+    }
+
+    private void validate() {
+        if (parentEventLoop == null) {
+            throw new IllegalStateException("eventLoop not set");
+        }
+        if (channel == null) {
+            throw new IllegalStateException("channel not set");
         }
         if (childInitializer == null) {
             throw new IllegalStateException("childInitializer not set");
         }
         if (childEventLoop == null) {
-            logger.warn("childEventLoop is not set. Using parentEventLoop instead.");
+            logger.warn("childEventLoop is not set. Using eventLoop instead.");
             childEventLoop = parentEventLoop;
         }
         if (localAddress == null) {
@@ -169,7 +178,7 @@ public class ServerChannelBuilder {
                     break;
                 }
 
-                child.pipeline().addLast(ChannelBuilder.generateName(childInitializer), childInitializer);
+                child.pipeline().addLast(ChannelBootstrap.generateName(childInitializer), childInitializer);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions.entrySet()) {
                     try {

@@ -9,9 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class ChannelBuilder {
+public class ChannelBootstrap {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelBuilder.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelBootstrap.class);
 
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private EventLoop eventLoop;
@@ -20,7 +20,7 @@ public class ChannelBuilder {
     private SocketAddress localAddress;
     private SocketAddress remoteAddress;
 
-    public ChannelBuilder eventLoop(EventLoop eventLoop) {
+    public ChannelBootstrap eventLoop(EventLoop eventLoop) {
         if (eventLoop == null) {
             throw new NullPointerException("eventLoop");
         }
@@ -28,7 +28,7 @@ public class ChannelBuilder {
         return this;
     }
 
-    public ChannelBuilder channel(Channel channel) {
+    public ChannelBootstrap channel(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -36,7 +36,7 @@ public class ChannelBuilder {
         return this;
     }
 
-    public <T> ChannelBuilder option(ChannelOption<T> option, T value) {
+    public <T> ChannelBootstrap option(ChannelOption<T> option, T value) {
         if (option == null) {
             throw new NullPointerException("option");
         }
@@ -48,7 +48,7 @@ public class ChannelBuilder {
         return this;
     }
 
-    public ChannelBuilder initializer(ChannelHandler initializer) {
+    public ChannelBootstrap initializer(ChannelHandler initializer) {
         if (initializer == null) {
             throw new NullPointerException("initializer");
         }
@@ -56,12 +56,12 @@ public class ChannelBuilder {
         return this;
     }
 
-    public ChannelBuilder localAddress(SocketAddress localAddress) {
+    public ChannelBootstrap localAddress(SocketAddress localAddress) {
         this.localAddress = localAddress;
         return this;
     }
 
-    public ChannelBuilder remoteAddress(SocketAddress remoteAddress) {
+    public ChannelBootstrap remoteAddress(SocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
         return this;
     }
@@ -140,7 +140,13 @@ public class ChannelBuilder {
         eventLoop.register(channel).syncUninterruptibly();
     }
 
-    public void validate() {
+    public void shutdown() {
+        if (eventLoop != null) {
+            eventLoop.shutdown();
+        }
+    }
+
+    private void validate() {
         if (eventLoop == null) {
             throw new IllegalStateException("eventLoop not set");
         }
