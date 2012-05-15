@@ -15,15 +15,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MultithreadEventLoop implements EventLoop {
 
+    protected static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    protected static final ThreadFactory DEFAULT_THREAD_FACTORY = Executors.defaultThreadFactory();
+
     private final EventLoop[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
     public MultithreadEventLoop(EventLoopFactory<? extends SingleThreadEventLoop> loopFactory) {
-        this(loopFactory, Runtime.getRuntime().availableProcessors() * 2);
+        this(loopFactory, DEFAULT_POOL_SIZE);
     }
 
     public MultithreadEventLoop(EventLoopFactory<? extends SingleThreadEventLoop> loopFactory, int nThreads) {
-        this(loopFactory, nThreads, Executors.defaultThreadFactory());
+        this(loopFactory, nThreads, DEFAULT_THREAD_FACTORY);
     }
 
     public MultithreadEventLoop(EventLoopFactory<? extends SingleThreadEventLoop> loopFactory, int nThreads, ThreadFactory threadFactory) {

@@ -42,7 +42,7 @@ import java.util.Queue;
 @Sharable
 public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
 
-    private static final InternalLogLevel DEFAULT_LEVEL = InternalLogLevel.DEBUG;
+    private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
     private static final String NEWLINE = String.format("%n");
 
     private static final String[] BYTE2HEX = new String[256];
@@ -104,7 +104,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     private final InternalLogger logger;
-    private final InternalLogLevel level;
+    private final LogLevel level;
+    private final InternalLogLevel internalLevel;
 
     /**
      * Creates a new instance whose logger name is the fully qualified class
@@ -120,13 +121,14 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
      *
      * @param level   the log level
      */
-    public LoggingHandler(InternalLogLevel level) {
+    public LoggingHandler(LogLevel level) {
         if (level == null) {
             throw new NullPointerException("level");
         }
 
         logger = InternalLoggerFactory.getInstance(getClass());
         this.level = level;
+        internalLevel = level.toInternalLevel();
     }
 
     /**
@@ -142,7 +144,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
      *
      * @param level   the log level
      */
-    public LoggingHandler(Class<?> clazz, InternalLogLevel level) {
+    public LoggingHandler(Class<?> clazz, LogLevel level) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
         }
@@ -151,34 +153,22 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
         }
         logger = InternalLoggerFactory.getInstance(clazz);
         this.level = level;
-    }
-
-    /**
-     * Creates a new instance with the specified logger name and with hex dump
-     * enabled.
-     */
-    public LoggingHandler(String name) {
-        this(name, true);
+        internalLevel = level.toInternalLevel();
     }
 
     /**
      * Creates a new instance with the specified logger name.
-     *
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
      */
-    public LoggingHandler(String name, boolean hexDump) {
-        this(name, DEFAULT_LEVEL, hexDump);
+    public LoggingHandler(String name) {
+        this(name, DEFAULT_LEVEL);
     }
 
     /**
      * Creates a new instance with the specified logger name.
      *
      * @param level   the log level
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
      */
-    public LoggingHandler(String name, InternalLogLevel level, boolean hexDump) {
+    public LoggingHandler(String name, LogLevel level) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -187,6 +177,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
         }
         logger = InternalLoggerFactory.getInstance(name);
         this.level = level;
+        internalLevel = level.toInternalLevel();
     }
 
     /**
@@ -201,7 +192,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
      * Returns the {@link InternalLogLevel} that this handler uses to log
      * a {@link ChannelEvent}.
      */
-    public InternalLogLevel getLevel() {
+    public LogLevel getLevel() {
         return level;
     }
 
@@ -306,8 +297,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void channelRegistered(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "REGISTERED"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "REGISTERED"));
         }
         super.channelRegistered(ctx);
     }
@@ -315,8 +306,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void channelUnregistered(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "UNREGISTERED"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "UNREGISTERED"));
         }
         super.channelUnregistered(ctx);
     }
@@ -324,8 +315,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void channelActive(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "ACTIVE"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "ACTIVE"));
         }
         super.channelActive(ctx);
     }
@@ -333,8 +324,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void channelInactive(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "INACTIVE"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "INACTIVE"));
         }
         super.channelInactive(ctx);
     }
@@ -342,8 +333,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
             Throwable cause) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "EXCEPTION: " + cause), cause);
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "EXCEPTION: " + cause), cause);
         }
         super.exceptionCaught(ctx, cause);
     }
@@ -351,8 +342,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void userEventTriggered(ChannelInboundHandlerContext<Object> ctx,
             Object evt) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "USER_EVENT: " + evt));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "USER_EVENT: " + evt));
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -360,8 +351,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, formatBuffer("INBUF", ctx.in())));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, formatBuffer("INBUF", ctx.in())));
         }
         ctx.fireInboundBufferUpdated();
     }
@@ -369,8 +360,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void bind(ChannelOutboundHandlerContext<Object> ctx,
             SocketAddress localAddress, ChannelFuture future) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "BIND(" + localAddress + ')'));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "BIND(" + localAddress + ')'));
         }
         super.bind(ctx, localAddress, future);
     }
@@ -379,8 +370,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void connect(ChannelOutboundHandlerContext<Object> ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
             ChannelFuture future) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "CONNECT(" + remoteAddress + ", " + localAddress + ')'));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "CONNECT(" + remoteAddress + ", " + localAddress + ')'));
         }
         super.connect(ctx, remoteAddress, localAddress, future);
     }
@@ -388,8 +379,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void disconnect(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "DISCONNECT()"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "DISCONNECT()"));
         }
         super.disconnect(ctx, future);
     }
@@ -397,8 +388,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void close(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "CLOSE()"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "CLOSE()"));
         }
         super.close(ctx, future);
     }
@@ -406,8 +397,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void deregister(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, "DEREGISTER()"));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "DEREGISTER()"));
         }
         super.deregister(ctx, future);
     }
@@ -415,8 +406,8 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void flush(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
-        if (getLogger().isEnabled(level)) {
-            logger.log(level, format(ctx, formatBuffer("OUTBUF", ctx.prevOut())));
+        if (getLogger().isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, formatBuffer("OUTBUF", ctx.prevOut())));
         }
         ctx.flush(future);
     }

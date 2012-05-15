@@ -75,11 +75,6 @@ public class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    public SelectorEventLoop eventLoop() {
-        return (SelectorEventLoop) super.eventLoop();
-    }
-
-    @Override
     public boolean isActive() {
         return javaChannel().socket().isBound();
     }
@@ -116,12 +111,12 @@ public class NioServerSocketChannel extends AbstractServerChannel
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SelectorEventLoop;
+        return loop instanceof SingleThreadSelectorEventLoop;
     }
 
     @Override
     protected void doRegister() throws Exception {
-        SelectorEventLoop loop = eventLoop();
+        SingleThreadSelectorEventLoop loop = (SingleThreadSelectorEventLoop) eventLoop();
         selectionKey = javaChannel().register(
                 loop.selector, isActive()? SelectionKey.OP_ACCEPT : 0, this);
     }

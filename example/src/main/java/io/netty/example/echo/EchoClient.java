@@ -22,11 +22,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MultithreadEventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.logging.InternalLogLevel;
 
 import java.net.InetSocketAddress;
 
@@ -50,7 +49,7 @@ public class EchoClient {
 
     public void run() throws Exception {
         // Create the required event loop.
-        EventLoop loop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
+        EventLoop loop = new SelectorEventLoop();
         try {
             // Configure the client.
             ChannelBuilder b = new ChannelBuilder();
@@ -62,7 +61,7 @@ public class EchoClient {
                 @Override
                 public void initChannel(Channel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
-                    p.addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+                    p.addLast("logger", new LoggingHandler(LogLevel.INFO));
                     p.addLast("echoer", new EchoClientHandler(firstMessageSize));
                 }
              });

@@ -21,12 +21,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MultithreadEventLoop;
 import io.netty.channel.ServerChannelBuilder;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.logging.InternalLogLevel;
 
 import java.net.InetSocketAddress;
 
@@ -43,21 +42,22 @@ public class EchoServer {
 
     public void run() throws Exception {
         // Create the required event loops.
-        EventLoop parentLoop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
-        EventLoop childLoop = new MultithreadEventLoop(SelectorEventLoop.FACTORY);
+        EventLoop parentLoop = new SelectorEventLoop();
+        EventLoop childLoop = new SelectorEventLoop();
         try {
             // Configure the server.
             ServerChannelBuilder b = new ServerChannelBuilder();
             b.parentEventLoop(parentLoop)
-             .childEventLoop(childLoop)
              .parentChannel(new NioServerSocketChannel())
-             .childOption(ChannelOption.TCP_NODELAY, true)
+             .parentOption(ChannelOption.SO_BACKLOG, 24)
              .localAddress(new InetSocketAddress(port))
+             .childEventLoop(childLoop)
+             .childOption(ChannelOption.TCP_NODELAY, true)
              .childInitializer(new ChannelInitializer() {
                  @Override
                  public void initChannel(Channel ch) throws Exception {
                      ChannelPipeline p = ch.pipeline();
-                     p.addLast("logger", new LoggingHandler(InternalLogLevel.INFO));
+                     p.addLast("logger", new LoggingHandler(LogLevel.INFO));
                      p.addLast("echoer", new EchoServerHandler());
                  }
              });

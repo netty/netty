@@ -43,7 +43,7 @@ import java.util.concurrent.Executor;
  * A class responsible for registering channels with {@link Selector}.
  * It also implements the {@link Selector} loop.
  */
-public class NioDatagramWorker extends SelectorEventLoop {
+public class NioDatagramWorker extends SingleThreadSelectorEventLoop {
 
     /**
      * Sole constructor.

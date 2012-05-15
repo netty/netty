@@ -43,7 +43,6 @@ public abstract class ChannelInitializer extends ChannelInboundHandlerAdapter<Ob
             ctx.pipeline().remove(this);
             // Note that we do not call ctx.fireChannelRegistered() because a user might have
             // inserted a handler before the initializer using pipeline.addFirst().
-            System.out.println(ctx.pipeline().toMap());
             ctx.pipeline().fireChannelRegistered();
         } catch (Throwable t) {
             logger.warn("Failed to initialize a channel. Closing: " + ctx.channel());
