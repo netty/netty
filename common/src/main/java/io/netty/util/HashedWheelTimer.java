@@ -15,11 +15,17 @@
  */
 package io.netty.util;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.ReusableIterator;
+import io.netty.util.internal.SharedResourceMisuseDetector;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -27,12 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.ConcurrentIdentityHashMap;
-import io.netty.util.internal.ReusableIterator;
-import io.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -221,8 +221,8 @@ public class HashedWheelTimer implements Timer {
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
         Set<HashedWheelTimeout>[] wheel = new Set[ticksPerWheel];
         for (int i = 0; i < wheel.length; i ++) {
-            wheel[i] = new MapBackedSet<HashedWheelTimeout>(
-                    new ConcurrentIdentityHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
+            wheel[i] = Collections.newSetFromMap(
+                    new ConcurrentHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
         }
         return wheel;
     }
@@ -496,7 +496,7 @@ public class HashedWheelTimer implements Timer {
                 // TODO return false
                 return;
             }
-            
+
             wheel[stopIndex].remove(this);
         }
 

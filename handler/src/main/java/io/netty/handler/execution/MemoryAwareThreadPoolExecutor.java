@@ -15,6 +15,13 @@
  */
 package io.netty.handler.execution;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.QueueFactory;
+import io.netty.util.internal.SharedResourceMisuseDetector;
+
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -24,18 +31,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelState;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.WriteCompletionEvent;
-import io.netty.util.internal.ConcurrentIdentityHashMap;
-import io.netty.util.internal.QueueFactory;
-import io.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link ThreadPoolExecutor} which blocks the task submission when there's
@@ -132,7 +127,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     private volatile Settings settings;
 
     private final ConcurrentMap<Channel, AtomicLong> channelCounters =
-        new ConcurrentIdentityHashMap<Channel, AtomicLong>();
+        new ConcurrentHashMap<Channel, AtomicLong>();
     private final Limiter totalLimiter;
 
     /**
@@ -221,7 +216,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         }
 
         allowCoreThreadTimeOut(true);
-        
+
         settings = new Settings(
                 objectSizeEstimator, maxChannelMemorySize);
 
@@ -419,7 +414,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                     //System.out.println("READABLE");
                     ChannelHandlerContext ctx = eventTask.getContext();
                     if (ctx.getHandler() instanceof ExecutionHandler) {
-                        // check if the attachment was set as this means that we suspend the channel from reads. This only works when 
+                        // check if the attachment was set as this means that we suspend the channel from reads. This only works when
                         // this pool is used with ExecutionHandler but I guess thats good enough for us.
                         //
                         // See #215

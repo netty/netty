@@ -18,12 +18,12 @@ package io.netty.channel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.internal.ConcurrentHashMap;
 
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;

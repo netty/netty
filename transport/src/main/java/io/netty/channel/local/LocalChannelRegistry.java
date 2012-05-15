@@ -15,10 +15,10 @@
  */
 package io.netty.channel.local;
 
-import java.util.concurrent.ConcurrentMap;
-
 import io.netty.channel.Channel;
-import io.netty.util.internal.ConcurrentHashMap;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  */
