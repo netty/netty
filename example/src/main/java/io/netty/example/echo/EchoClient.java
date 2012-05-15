@@ -20,7 +20,6 @@ import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.SelectorEventLoop;
 import io.netty.handler.logging.LogLevel;
@@ -47,12 +46,10 @@ public class EchoClient {
     }
 
     public void run() throws Exception {
-        // Create the required event loop.
-        EventLoop loop = new SelectorEventLoop();
+        // Configure the client.
+        ChannelBootstrap b = new ChannelBootstrap();
         try {
-            // Configure the client.
-            ChannelBootstrap b = new ChannelBootstrap();
-            b.eventLoop(loop)
+            b.eventLoop(new SelectorEventLoop())
              .channel(new NioSocketChannel())
              .option(ChannelOption.TCP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
@@ -72,7 +69,7 @@ public class EchoClient {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            loop.shutdown();
+            b.shutdown();
         }
     }
 
