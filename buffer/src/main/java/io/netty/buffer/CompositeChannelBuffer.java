@@ -660,6 +660,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         final int bytesToMove = capacity() - localReaderIndex;
         List<ChannelBuffer> list = decompose(localReaderIndex, bytesToMove);
 
+
+        // If the list is empty we need to assign a new one because
+        // we get a List that is immutable. 
+        //
+        // See https://github.com/netty/netty/issues/325
+        if (list.isEmpty()) {
+            list = new ArrayList<ChannelBuffer>(1);
+        }
+        
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.
