@@ -1641,4 +1641,12 @@ public abstract class AbstractChannelBufferTest {
         assertFalse(set.contains(elemB));
         assertEquals(0, set.size());
     }
+    
+    // Test case for https://github.com/netty/netty/issues/325
+    @Test
+    public void testDiscardAllReadBytes() {
+        buffer.writerIndex(buffer.capacity());
+        buffer.readerIndex(buffer.writerIndex());
+        buffer.discardReadBytes();
+    }
 }
