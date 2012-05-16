@@ -26,6 +26,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -73,6 +74,16 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     @Override
     public SocketChannelConfig config() {
         return config;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override
