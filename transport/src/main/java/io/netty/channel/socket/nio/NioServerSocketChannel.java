@@ -37,7 +37,6 @@ public class NioServerSocketChannel extends AbstractServerChannel
 
     private final ServerSocketChannel socket;
     private final ServerSocketChannelConfig config;
-    private volatile InetSocketAddress localAddress;
     private volatile SelectionKey selectionKey;
 
     public NioServerSocketChannel() {
@@ -81,17 +80,7 @@ public class NioServerSocketChannel extends AbstractServerChannel
 
     @Override
     public InetSocketAddress localAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) unsafe().localAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
