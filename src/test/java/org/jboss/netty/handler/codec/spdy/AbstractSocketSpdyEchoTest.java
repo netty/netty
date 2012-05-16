@@ -47,7 +47,7 @@ import org.junit.Test;
 public abstract class AbstractSocketSpdyEchoTest {
 
     private static final Random random = new Random();
-    static final ChannelBuffer frames = ChannelBuffers.buffer(1160);
+    static final ChannelBuffer frames = ChannelBuffers.buffer(1176);
     static final int ignoredBytes = 20;
 
     private static ExecutorService executor;
@@ -68,7 +68,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeInt(0);
 
         // SPDY Data Frame
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeByte(0x01);
         frames.writeMedium(1024);
         for (int i = 0; i < 256; i ++) {
@@ -81,7 +81,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeShort(1);
         frames.writeByte(0x03);
         frames.writeMedium(12);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
         frames.writeShort(0x8000);
         frames.writeShort(0);
@@ -92,7 +92,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeShort(2);
         frames.writeByte(0x01);
         frames.writeMedium(8);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(0);
 
         // SPDY RST_STREAM Frame
@@ -100,7 +100,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeByte(2);
         frames.writeShort(3);
         frames.writeInt(8);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(random.nextInt() | 0x01);
 
         // SPDY SETTINGS Frame
@@ -133,7 +133,15 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeByte(2);
         frames.writeShort(8);
         frames.writeInt(4);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
+
+        // SPDY WINDOW_UPDATE Frame
+        frames.writeByte(0x80);
+        frames.writeByte(2);
+        frames.writeShort(9);
+        frames.writeInt(8);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
     }
 
     @BeforeClass

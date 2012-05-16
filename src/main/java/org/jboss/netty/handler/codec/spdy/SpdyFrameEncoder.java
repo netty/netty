@@ -231,6 +231,18 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
                 frame.writeShort(0);
             }
             return ChannelBuffers.wrappedBuffer(frame, data);
+
+        } else if (msg instanceof SpdyWindowUpdateFrame) {
+
+            SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
+            ChannelBuffer frame = ChannelBuffers.buffer(
+                    ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 8);
+            frame.writeShort(SPDY_VERSION | 0x8000);
+            frame.writeShort(SPDY_WINDOW_UPDATE_FRAME);
+            frame.writeInt(8);
+            frame.writeInt(spdyWindowUpdateFrame.getStreamID());
+            frame.writeInt(spdyWindowUpdateFrame.getDeltaWindowSize());
+            return frame;
         }
 
         // Unknown message type
