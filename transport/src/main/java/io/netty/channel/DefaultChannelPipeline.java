@@ -911,7 +911,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             throw new IllegalArgumentException(
                     "cannot write a message whose type is not " +
-                    ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName()));
+                    ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
         }
 
         return flush(future);
