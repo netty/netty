@@ -39,6 +39,23 @@
       <artifactId>protobuf-java</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling</artifactId>
+      <optional>true</optional>
+    </dependency>
+    
+    <!-- Test dependencies for jboss marshalling encoder/decoder -->
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling-serial</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling-river</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
 
