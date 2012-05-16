@@ -57,7 +57,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
         // Get the SslHandler in the current pipeline.
         // We added it in SecureChatPipelineFactory.
-        final SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
+        final SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
 
         // Get notified when SSL handshake is done.
         ChannelFuture handshakeFuture = sslHandler.handshake();

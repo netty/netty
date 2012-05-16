@@ -1,13 +1,24 @@
 package io.netty.channel;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
+import java.util.ArrayDeque;
 import java.util.Queue;
 
 public final class ChannelBufferHolders {
 
+    public static <E> ChannelBufferHolder<E> messageBuffer() {
+        return messageBuffer(new ArrayDeque<E>());
+    }
+
     public static <E> ChannelBufferHolder<E> messageBuffer(Queue<E> buffer) {
         return new ChannelBufferHolder<E>(buffer);
+    }
+
+    public static ChannelBufferHolder<Byte> byteBuffer() {
+        // TODO: Use more efficient implementation.
+        return byteBuffer(ChannelBuffers.dynamicBuffer());
     }
 
     public static ChannelBufferHolder<Byte> byteBuffer(ChannelBuffer buffer) {

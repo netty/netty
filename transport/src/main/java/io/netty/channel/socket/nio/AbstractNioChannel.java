@@ -19,17 +19,12 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
-import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
 public abstract class AbstractNioChannel extends AbstractChannel {
 
     private final SelectableChannel ch;
-
-    private volatile InetSocketAddress localAddress;
-    private volatile InetSocketAddress remoteAddress;
-
     private volatile SelectionKey selectionKey;
 
     protected AbstractNioChannel(Channel parent, Integer id, SelectableChannel ch) {
@@ -45,36 +40,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected SelectionKey selectionKey() {
         assert selectionKey != null;
         return selectionKey;
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) unsafe().localAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) unsafe().remoteAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
     }
 
     @Override

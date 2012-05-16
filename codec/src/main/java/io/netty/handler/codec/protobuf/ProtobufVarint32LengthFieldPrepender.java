@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.ChannelBuffers.*;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToStreamEncoder;
 
 import com.google.protobuf.CodedOutputStream;
 
@@ -41,7 +38,7 @@ import com.google.protobuf.CodedOutputStream;
  * @see com.google.protobuf.CodedOutputStream
  */
 @Sharable
-public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
+public class ProtobufVarint32LengthFieldPrepender extends MessageToStreamEncoder<ChannelBuffer> {
 
     /**
      * Creates a new instance.
@@ -50,23 +47,18 @@ public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel,
-            Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
+    public void encode(
+            ChannelOutboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg, ChannelBuffer out) throws Exception {
+        ChannelBuffer body = msg;
+        int bodyLen = body.readableBytes();
+        int headerLen = CodedOutputStream.computeRawVarint32Size(bodyLen);
+        out.ensureWritableBytes(headerLen + bodyLen);
 
-        ChannelBuffer body = (ChannelBuffer) msg;
-        int length = body.readableBytes();
-        ChannelBuffer header =
-            channel.getConfig().getBufferFactory().getBuffer(
-                    body.order(),
-                    CodedOutputStream.computeRawVarint32Size(length));
-        CodedOutputStream codedOutputStream = CodedOutputStream
-                .newInstance(new ChannelBufferOutputStream(header));
-        codedOutputStream.writeRawVarint32(length);
-        codedOutputStream.flush();
-        return wrappedBuffer(header, body);
+        CodedOutputStream headerOut =
+                CodedOutputStream.newInstance(new ChannelBufferOutputStream(out));
+        headerOut.writeRawVarint32(bodyLen);
+        headerOut.flush();
+
+        out.writeBytes(body);
     }
-
 }

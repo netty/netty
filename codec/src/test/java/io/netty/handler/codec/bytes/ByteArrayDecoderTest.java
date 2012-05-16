@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.bytes;
 
-import static org.hamcrest.core.Is.is;
-import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
-import static org.junit.Assert.assertThat;
+import static io.netty.buffer.ChannelBuffers.*;
+import static org.hamcrest.core.Is.*;
+import static org.junit.Assert.*;
+import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 import java.util.Random;
 
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,27 +35,31 @@ public class ByteArrayDecoderTest {
     public void setUp() {
         embedder = new DecoderEmbedder<byte[]>(new ByteArrayDecoder());
     }
-	
-	@Test
-	public void testDecode() {
+
+    @Test
+    public void testDecode() {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         embedder.offer(wrappedBuffer(b));
         assertThat(embedder.poll(), is(b));
-	}
-	
-	@Test
-	public void testDecodeEmpty() {
+    }
+
+    @Test
+    public void testDecodeEmpty() {
         byte[] b = new byte[0];
         embedder.offer(wrappedBuffer(b));
         assertThat(embedder.poll(), is(b));
-	}
-	
-	@Test
-	public void testDecodeOtherType() {
+    }
+
+    @Test
+    public void testDecodeOtherType() {
         String str = "Meep!";
         embedder.offer(str);
-        assertThat(embedder.poll(), is((Object) str));
-	}
-
+        try {
+            embedder.poll();
+            fail();
+        } catch (ClassCastException e) {
+            // Expected
+        }
+    }
 }

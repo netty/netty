@@ -157,11 +157,11 @@ public abstract class AbstractSocketSpdyEchoTest {
         EchoHandler sh = new EchoHandler(true);
         EchoHandler ch = new EchoHandler(false);
 
-        sb.getPipeline().addLast("decoder", new SpdyFrameDecoder());
-        sb.getPipeline().addLast("encoder", new SpdyFrameEncoder());
-        sb.getPipeline().addLast("handler", sh);
+        sb.pipeline().addLast("decoder", new SpdyFrameDecoder());
+        sb.pipeline().addLast("encoder", new SpdyFrameEncoder());
+        sb.pipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("handler", ch);
+        cb.pipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

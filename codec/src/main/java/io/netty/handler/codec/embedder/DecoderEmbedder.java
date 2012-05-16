@@ -15,13 +15,11 @@
  */
 package io.netty.handler.codec.embedder;
 
-import static io.netty.channel.Channels.*;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelUpstreamHandler;
 import io.netty.handler.codec.base64.Base64Decoder;
 import io.netty.handler.codec.string.StringDecoder;
 
@@ -51,24 +49,20 @@ public class DecoderEmbedder<E> extends AbstractCodecEmbedder<E> {
      * Creates a new embedder whose pipeline is composed of the specified
      * handlers.
      */
-    public DecoderEmbedder(ChannelUpstreamHandler... handlers) {
+    public DecoderEmbedder(ChannelHandler... handlers) {
         super(handlers);
-    }
-
-    /**
-     * Creates a new embedder whose pipeline is composed of the specified
-     * handlers.
-     *
-     * @param bufferFactory the {@link ChannelBufferFactory} to be used when
-     *                      creating a new buffer.
-     */
-    public DecoderEmbedder(ChannelBufferFactory bufferFactory, ChannelUpstreamHandler... handlers) {
-        super(bufferFactory, handlers);
     }
 
     @Override
     public boolean offer(Object input) {
-        fireMessageReceived(getChannel(), input);
-        return !super.isEmpty();
+        ChannelBufferHolder<Object> in = pipeline().nextIn();
+        if (in.hasByteBuffer()) {
+            in.byteBuffer().writeBytes((ChannelBuffer) input);
+        } else {
+            in.messageBuffer().add(input);
+        }
+
+        pipeline().fireInboundBufferUpdated();
+        return !isEmpty();
     }
 }

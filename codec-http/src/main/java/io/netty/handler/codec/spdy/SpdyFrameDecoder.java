@@ -19,7 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.FrameDecoder;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 

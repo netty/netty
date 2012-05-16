@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.replay.ReplayingDecoder;
 import io.netty.handler.codec.replay.VoidEnum;
 

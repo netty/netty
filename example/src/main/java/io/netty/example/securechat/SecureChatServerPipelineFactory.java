@@ -21,8 +21,8 @@ import javax.net.ssl.SSLEngine;
 
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.ssl.SslHandler;

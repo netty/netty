@@ -13,41 +13,42 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.frame;
+package io.netty.handler.codec;
 
 /**
- * An {@link Exception} which is thrown when the length of the frame
- * decoded by {@link DelimiterBasedFrameDecoder} is greater than the maximum.
+ * An {@link Exception} which is thrown when the received frame data could not be decoded by
+ * an inbound handler.
+ *
  * @apiviz.hidden
  */
-public class TooLongFrameException extends Exception {
+public class CorruptedFrameException extends Exception {
 
-    private static final long serialVersionUID = -1995801950698951640L;
+    private static final long serialVersionUID = 3918052232492988408L;
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException() {
+    public CorruptedFrameException() {
     }
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException(String message, Throwable cause) {
+    public CorruptedFrameException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException(String message) {
+    public CorruptedFrameException(String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException(Throwable cause) {
+    public CorruptedFrameException(Throwable cause) {
         super(cause);
     }
 }

@@ -232,7 +232,7 @@ final class HttpTunnelClientChannel extends AbstractChannel implements
 
     void setTunnelIdForPollChannel() {
         HttpTunnelClientPollHandler pollHandler =
-                pollChannel.getPipeline()
+                pollChannel.pipeline()
                         .get(HttpTunnelClientPollHandler.class);
         pollHandler.setTunnelId(tunnelId);
     }

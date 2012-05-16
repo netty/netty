@@ -37,7 +37,7 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.frame.FixedLengthFrameDecoder;
+import io.netty.handler.codec.FixedLengthFrameDecoder;
 import io.netty.util.SocketAddresses;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
@@ -76,10 +76,10 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        sb.getPipeline().addAfter("decoder", "handler", sh);
-        cb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        cb.getPipeline().addAfter("decoder", "handler", ch);
+        sb.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+        sb.pipeline().addAfter("decoder", "handler", sh);
+        cb.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+        cb.pipeline().addAfter("decoder", "handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

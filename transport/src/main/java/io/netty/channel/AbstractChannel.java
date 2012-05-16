@@ -76,6 +76,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelFuture voidFuture = new VoidChannelFuture(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
+    private volatile SocketAddress localAddress;
+    private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
@@ -151,6 +153,42 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             throw new IllegalStateException("channel not registered to an event loop");
         }
         return eventLoop;
+    }
+
+    @Override
+    public SocketAddress localAddress() {
+        SocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            try {
+                this.localAddress = localAddress = unsafe().localAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
+        }
+        return localAddress;
+    }
+
+    protected void invalidateLocalAddress() {
+        localAddress = null;
+    }
+
+    @Override
+    public SocketAddress remoteAddress() {
+        SocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            try {
+                this.remoteAddress = remoteAddress = unsafe().remoteAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
+        }
+        return remoteAddress;
+    }
+
+    protected void invalidateRemoteAddress() {
+        remoteAddress = null;
     }
 
     @Override

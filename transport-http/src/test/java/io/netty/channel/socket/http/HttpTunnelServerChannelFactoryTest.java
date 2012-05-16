@@ -68,7 +68,7 @@ public class HttpTunnelServerChannelFactoryTest {
         ChannelPipeline pipeline = Channels.pipeline();
         HttpTunnelServerChannel newChannel = factory.newChannel(pipeline);
         assertNotNull(newChannel);
-        assertSame(pipeline, newChannel.getPipeline());
+        assertSame(pipeline, newChannel.pipeline());
     }
 
     @Test

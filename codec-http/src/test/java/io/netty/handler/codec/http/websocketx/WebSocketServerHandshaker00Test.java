@@ -55,7 +55,7 @@ public class WebSocketServerHandshaker00Test {
         Channel channelMock = EasyMock.createMock(Channel.class);
         
         DefaultChannelPipeline pipeline = createPipeline();
-        EasyMock.expect(channelMock.getPipeline()).andReturn(pipeline);
+        EasyMock.expect(channelMock.pipeline()).andReturn(pipeline);
         
         // capture the http response in order to verify the headers
         Capture<HttpResponse> res = new Capture<HttpResponse>();

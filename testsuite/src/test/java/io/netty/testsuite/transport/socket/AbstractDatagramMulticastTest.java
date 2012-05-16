@@ -68,8 +68,8 @@ public abstract class AbstractDatagramMulticastTest {
         ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
         MulticastTestHandler mhandler = new MulticastTestHandler();
         
-        cb.getPipeline().addFirst("handler", mhandler);
-        sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
+        cb.pipeline().addFirst("handler", mhandler);
+        sb.pipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
         int port = TestUtils.getFreePort();
         

@@ -62,7 +62,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     public void testFailedConnectionAttempt() throws Exception {
         ClientBootstrap bootstrap = new ClientBootstrap();
         bootstrap.setFactory(newClientSocketChannelFactory(executor));
-        bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+        bootstrap.pipeline().addLast("dummy", new DummyHandler());
         bootstrap.setOption("remoteAddress", new InetSocketAddress("255.255.255.255", 1));
         ChannelFuture future = bootstrap.connect();
         future.awaitUninterruptibly();
@@ -81,7 +81,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             ClientBootstrap bootstrap =
                 new ClientBootstrap(newClientSocketChannelFactory(executor));
 
-            bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+            bootstrap.pipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
@@ -118,7 +118,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             ClientBootstrap bootstrap =
                 new ClientBootstrap(newClientSocketChannelFactory(executor));
 
-            bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+            bootstrap.pipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
@@ -151,7 +151,7 @@ public abstract class AbstractSocketClientBootstrapTest {
         ChannelPipelineFactory pipelineFactory = EasyMock.createMock(ChannelPipelineFactory.class);
         bootstrap.setPipelineFactory(pipelineFactory);
 
-        EasyMock.expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
+        EasyMock.expect(pipelineFactory.pipeline()).andThrow(new ChannelPipelineException());
         EasyMock.replay(pipelineFactory);
 
         bootstrap.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, 1));

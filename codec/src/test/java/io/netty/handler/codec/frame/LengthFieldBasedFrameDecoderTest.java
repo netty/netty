@@ -17,6 +17,8 @@ package io.netty.handler.codec.frame;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.embedder.CodecEmbedderException;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.util.CharsetUtil;

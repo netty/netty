@@ -136,7 +136,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         
         ChannelFuture future = channel.write(request);
 
-        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
+        channel.pipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
 
         return future;
     }
@@ -186,7 +186,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
                     expectedChallengeResponseString));
         }
 
-        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
+        channel.pipeline().replace(HttpResponseDecoder.class, "ws-decoder",
                 new WebSocket13FrameDecoder(false, allowExtensions));
 
         setHandshakeComplete();

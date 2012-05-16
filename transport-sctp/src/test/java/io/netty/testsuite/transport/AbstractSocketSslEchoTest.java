@@ -102,19 +102,19 @@ public abstract class AbstractSocketSslEchoTest {
         cse.setUseClientMode(true);
 
 
-        sb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        sb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        sb.getPipeline().addLast("ssl", new SslHandler(sse));
-        sb.getPipeline().addLast("handler", sh);
+        sb.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        sb.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        sb.pipeline().addLast("ssl", new SslHandler(sse));
+        sb.pipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        cb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        cb.getPipeline().addLast("ssl", new SslHandler(cse));
-        cb.getPipeline().addLast("handler", ch);
+        cb.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        cb.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        cb.pipeline().addLast("ssl", new SslHandler(cse));
+        cb.pipeline().addLast("handler", ch);
 
         if (isExecutorRequired()) {
-            sb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
-            cb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
+            sb.pipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
+            cb.pipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
         }
 
         Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
@@ -129,7 +129,7 @@ public abstract class AbstractSocketSslEchoTest {
         assertTrue(ccf.isSuccess());
 
         Channel cc = ccf.channel();
-        ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake();
+        ChannelFuture hf = cc.pipeline().get(SslHandler.class).handshake();
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
             logger.error("Handshake failed", hf.cause());

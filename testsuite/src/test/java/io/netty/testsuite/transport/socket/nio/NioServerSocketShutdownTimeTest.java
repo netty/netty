@@ -43,7 +43,7 @@ public class NioServerSocketShutdownTimeTest {
         bootstrap.setOption("child.sendBufferSize", 8642);
 
         DummyHandler handler = new DummyHandler();
-        bootstrap.getPipeline().addLast("dummy", handler);
+        bootstrap.pipeline().addLast("dummy", handler);
 
         Channel channel = bootstrap.bind();
 

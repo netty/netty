@@ -121,11 +121,11 @@ public abstract class AbstractSocketServerBootstrapTest {
         bootstrap.setOption("child.receiveBufferSize", 9753);
         bootstrap.setOption("child.sendBufferSize", 8642);
 
-        bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+        bootstrap.pipeline().addLast("dummy", new DummyHandler());
 
         Channel channel = bootstrap.bind();
         ParentChannelHandler pch =
-            channel.getPipeline().get(ParentChannelHandler.class);
+            channel.pipeline().get(ParentChannelHandler.class);
 
         Socket socket = null;
         try {
@@ -183,7 +183,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         ChannelPipelineFactory pipelineFactory = EasyMock.createMock(ChannelPipelineFactory.class);
         bootstrap.setPipelineFactory(pipelineFactory);
 
-        EasyMock.expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
+        EasyMock.expect(pipelineFactory.pipeline()).andThrow(new ChannelPipelineException());
         EasyMock.replay(pipelineFactory);
 
         bootstrap.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, 1));

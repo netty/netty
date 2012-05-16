@@ -133,9 +133,9 @@ public class SctpWorker extends NioWorker {
             if (acceptedSocket != null) {
                 
                 ChannelPipeline pipeline =
-                        channel.getConfig().getPipelineFactory().getPipeline();
+                        channel.getConfig().getPipelineFactory().pipeline();
                 registerTask(new SctpAcceptedChannel(channel.getFactory(), pipeline, channel,
-                        channel.getPipeline().getSink(), acceptedSocket, this), null);
+                        channel.pipeline().getSink(), acceptedSocket, this), null);
                 return true;
             }
             return false;

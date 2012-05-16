@@ -161,14 +161,14 @@ class SctpChannelImpl extends AbstractNioChannel implements SctpChannel {
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
         ChannelFuture future = future(this);
-        getPipeline().sendDownstream(new SctpBindAddressEvent(this, future, localAddress));
+        pipeline().sendDownstream(new SctpBindAddressEvent(this, future, localAddress));
         return future;
     }
 
     @Override
     public ChannelFuture unbindAddress(InetAddress localAddress) {
         ChannelFuture future = future(this);
-        getPipeline().sendDownstream(new SctpUnbindAddressEvent(this, future, localAddress));
+        pipeline().sendDownstream(new SctpUnbindAddressEvent(this, future, localAddress));
         return future;
     }
 

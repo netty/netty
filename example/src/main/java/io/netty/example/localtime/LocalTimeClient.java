@@ -62,7 +62,7 @@ public class LocalTimeClient {
 
         // Get the handler instance to initiate the request.
         LocalTimeClientHandler handler =
-            channel.getPipeline().get(LocalTimeClientHandler.class);
+            channel.pipeline().get(LocalTimeClientHandler.class);
 
         // Request and get the response.
         List<String> response = handler.getLocalTimes(cities);

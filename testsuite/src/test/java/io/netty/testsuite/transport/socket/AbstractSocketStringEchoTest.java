@@ -35,8 +35,8 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
@@ -86,15 +86,15 @@ public abstract class AbstractSocketStringEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-        sb.getPipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-        sb.getPipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-        sb.getPipeline().addAfter("decoder", "handler", sh);
+        sb.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+        sb.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
+        sb.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+        sb.pipeline().addAfter("decoder", "handler", sh);
 
-        cb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-        cb.getPipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-        cb.getPipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-        cb.getPipeline().addAfter("decoder", "handler", ch);
+        cb.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+        cb.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
+        cb.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+        cb.pipeline().addAfter("decoder", "handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

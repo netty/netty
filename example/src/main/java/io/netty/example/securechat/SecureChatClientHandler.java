@@ -48,7 +48,7 @@ public class SecureChatClientHandler extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         // Get the SslHandler from the pipeline
         // which were added in SecureChatPipelineFactory.
-        SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
+        SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
 
         // Begin handshake.
         sslHandler.handshake();

@@ -15,11 +15,8 @@
  */
 package io.netty.handler.codec.embedder;
 
-import static io.netty.channel.Channels.*;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.channel.ChannelDownstreamHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.base64.Base64Encoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -51,24 +48,13 @@ public class EncoderEmbedder<E> extends AbstractCodecEmbedder<E> {
      * Creates a new embedder whose pipeline is composed of the specified
      * handlers.
      */
-    public EncoderEmbedder(ChannelDownstreamHandler... handlers) {
+    public EncoderEmbedder(ChannelHandler... handlers) {
         super(handlers);
-    }
-
-    /**
-     * Creates a new embedder whose pipeline is composed of the specified
-     * handlers.
-     *
-     * @param bufferFactory the {@link ChannelBufferFactory} to be used when
-     *                      creating a new buffer.
-     */
-    public EncoderEmbedder(ChannelBufferFactory bufferFactory, ChannelDownstreamHandler... handlers) {
-        super(bufferFactory, handlers);
     }
 
     @Override
     public boolean offer(Object input) {
-        write(getChannel(), input).setSuccess();
+        channel().write(input);
         return !isEmpty();
     }
 }

@@ -95,5 +95,5 @@ public interface CodecEmbedder<E> {
     /**
      * Returns the {@link ChannelPipeline} that handles the input.
      */
-    ChannelPipeline getPipeline();
+    ChannelPipeline pipeline();
 }

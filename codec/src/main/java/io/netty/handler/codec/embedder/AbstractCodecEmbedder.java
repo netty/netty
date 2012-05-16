@@ -15,96 +15,44 @@
  */
 package io.netty.handler.codec.embedder;
 
-import static io.netty.channel.Channels.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 
 import java.lang.reflect.Array;
 import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import io.netty.channel.Channels;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineException;
-import io.netty.channel.ChannelSink;
-import io.netty.channel.ChannelUpstreamHandler;
-import io.netty.channel.DefaultChannelPipeline;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-
 /**
  * A skeletal {@link CodecEmbedder} implementation.
  */
 abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
-    private final Channel channel;
-    private final ChannelPipeline pipeline;
-    private final EmbeddedChannelSink sink = new EmbeddedChannelSink();
+    private static final EventLoop loop = new EmbeddedEventLoop();
 
-    final Queue<Object> productQueue = new LinkedList<Object>();
+    private final Queue<Object> productQueue = new LinkedList<Object>();
+    private final Channel channel = new EmbeddedChannel(productQueue);
 
     /**
      * Creates a new embedder whose pipeline is composed of the specified
      * handlers.
      */
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
-        pipeline = new EmbeddedChannelPipeline();
-        configurePipeline(handlers);
-        channel = new EmbeddedChannel(pipeline, sink);
-        fireInitialEvents();
-    }
-
-    /**
-     * Creates a new embedder whose pipeline is composed of the specified
-     * handlers.
-     *
-     * @param bufferFactory the {@link ChannelBufferFactory} to be used when
-     *                      creating a new buffer.
-     */
-    protected AbstractCodecEmbedder(ChannelBufferFactory bufferFactory, ChannelHandler... handlers) {
-        this(handlers);
-        getChannel().getConfig().setBufferFactory(bufferFactory);
-    }
-
-    private void fireInitialEvents() {
-        // Fire the typical initial events.
-        fireChannelOpen(channel);
-        fireChannelBound(channel, channel.getLocalAddress());
-        fireChannelConnected(channel, channel.getRemoteAddress());
-    }
-
-    private void configurePipeline(ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
-
-        if (handlers.length == 0) {
-            throw new IllegalArgumentException(
-                    "handlers should contain at least one " +
-                    ChannelHandler.class.getSimpleName() + '.');
-        }
-
-        for (int i = 0; i < handlers.length; i ++) {
-            ChannelHandler h = handlers[i];
-            if (h == null) {
-                throw new NullPointerException("handlers[" + i + "]");
-            }
-            pipeline.addLast(String.valueOf(i), handlers[i]);
-        }
-        pipeline.addLast("SINK", sink);
+        channel.pipeline().addLast(handlers);
+        channel.pipeline().addLast(new LastHandler());
+        loop.register(channel);
     }
 
     @Override
     public boolean finish() {
-        close(channel);
-        fireChannelDisconnected(channel);
-        fireChannelUnbound(channel);
-        fireChannelClosed(channel);
+        channel.pipeline().close().syncUninterruptibly();
         return !productQueue.isEmpty();
     }
 
@@ -112,7 +60,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
      * Returns the virtual {@link Channel} which will be used as a mock
      * during encoding and decoding.
      */
-    protected final Channel getChannel() {
+    protected final Channel channel() {
         return channel;
     }
 
@@ -125,15 +73,27 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public final E poll() {
-        return (E) productQueue.poll();
+        return product(productQueue.poll());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public final E peek() {
-        return (E) productQueue.peek();
+        return product(productQueue.peek());
+    }
+
+    @SuppressWarnings("unchecked")
+    private E product(Object p) {
+        if (p instanceof Throwable) {
+            if (p instanceof RuntimeException) {
+                throw (RuntimeException) p;
+            }
+            if (p instanceof Error) {
+                throw (Error) p;
+            }
+            throw new ChannelException((Throwable) p);
+        }
+        return (E) p;
     }
 
     @Override
@@ -186,73 +146,20 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     }
 
     @Override
-    public ChannelPipeline getPipeline() {
-        return pipeline;
+    public ChannelPipeline pipeline() {
+        return channel.pipeline();
     }
 
-    private final class EmbeddedChannelSink implements ChannelSink, ChannelUpstreamHandler {
-        EmbeddedChannelSink() {
+    private final class LastHandler extends ChannelInboundHandlerAdapter<Object> {
+        @Override
+        public ChannelBufferHolder<Object> newInboundBuffer(
+                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            return ChannelBufferHolders.messageBuffer(productQueue);
         }
 
         @Override
-        public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) {
-            handleEvent(e);
-        }
-
-        @Override
-        public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
-            handleEvent(e);
-        }
-
-        private void handleEvent(ChannelEvent e) {
-            if (e instanceof MessageEvent) {
-                boolean offered = productQueue.offer(((MessageEvent) e).getMessage());
-                assert offered;
-            } else if (e instanceof ExceptionEvent) {
-                throw new CodecEmbedderException(((ExceptionEvent) e).cause());
-            }
-
-            // Swallow otherwise.
-        }
-
-        @Override
-        public void exceptionCaught(
-                ChannelPipeline pipeline, ChannelEvent e,
-                ChannelPipelineException cause) throws Exception {
-            Throwable actualCause = cause.getCause();
-            if (actualCause == null) {
-                actualCause = cause;
-            }
-
-            throw new CodecEmbedderException(actualCause);
-        }
-
-        @Override
-        public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
-            try {
-                task.run();
-                return Channels.succeededFuture(pipeline.channel());
-            } catch (Throwable t) {
-                return Channels.failedFuture(pipeline.channel(), t);
-            }
-        }
-    }
-
-    private static final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
-
-        EmbeddedChannelPipeline() {
-        }
-
-        @Override
-        protected void notifyHandlerException(ChannelEvent e, Throwable t) {
-            while (t instanceof ChannelPipelineException && t.getCause() != null) {
-                t = t.getCause();
-            }
-            if (t instanceof CodecEmbedderException) {
-                throw (CodecEmbedderException) t;
-            } else {
-                throw new CodecEmbedderException(t);
-            }
+        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+            productQueue.add(cause);
         }
     }
 }

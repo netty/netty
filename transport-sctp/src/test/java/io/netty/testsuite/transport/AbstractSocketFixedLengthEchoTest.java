@@ -22,7 +22,7 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.*;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
-import io.netty.handler.codec.frame.FixedLengthFrameDecoder;
+import io.netty.handler.codec.FixedLengthFrameDecoder;
 import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
@@ -75,16 +75,16 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        sb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        sb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        sb.getPipeline().addAfter("decoder", "handler", sh);
+        sb.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        sb.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        sb.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+        sb.pipeline().addAfter("decoder", "handler", sh);
 
 
-        cb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        cb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        cb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        cb.getPipeline().addAfter("decoder", "handler", ch);
+        cb.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        cb.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        cb.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+        cb.pipeline().addAfter("decoder", "handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

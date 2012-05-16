@@ -16,10 +16,8 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.handler.codec.StreamToStreamDecoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
@@ -29,7 +27,7 @@ import io.netty.util.internal.jzlib.ZStream;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
-public class ZlibDecoder extends OneToOneDecoder {
+public class ZlibDecoder extends StreamToStreamDecoder {
 
     private final ZStream z = new ZStream();
     private byte[] dictionary;
@@ -93,39 +91,62 @@ public class ZlibDecoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer) || finished) {
-            return msg;
-        }
+    public void decode(
+            ChannelInboundHandlerContext<Byte> ctx,
+            ChannelBuffer in, ChannelBuffer out) throws Exception {
 
         synchronized (z) {
             try {
                 // Configure input.
-                ChannelBuffer compressed = (ChannelBuffer) msg;
-                byte[] in = new byte[compressed.readableBytes()];
-                compressed.readBytes(in);
-                z.next_in = in;
-                z.next_in_index = 0;
-                z.avail_in = in.length;
+                int inputLength = in.readableBytes();
+                boolean inHasArray = in.hasArray();
+                z.avail_in = inputLength;
+                if (inHasArray) {
+                    z.next_in = in.array();
+                    z.next_in_index = in.arrayOffset() + in.readerIndex();
+                } else {
+                    byte[] array = new byte[inputLength];
+                    in.readBytes(array);
+                    z.next_in = array;
+                    z.next_in_index = 0;
+                }
+                int oldNextInIndex = z.next_in_index;
 
                 // Configure output.
-                byte[] out = new byte[in.length << 1];
-                ChannelBuffer decompressed = ChannelBuffers.dynamicBuffer(
-                        compressed.order(), out.length,
-                        ctx.channel().getConfig().getBufferFactory());
-                z.next_out = out;
-                z.next_out_index = 0;
-                z.avail_out = out.length;
-
+                int maxOutputLength = inputLength << 1;
+                boolean outHasArray = out.hasArray();
+                if (!outHasArray) {
+                    z.next_out = new byte[maxOutputLength];
+                }
 
                 loop: for (;;) {
-                    // Decompress 'in' into 'out'
-                    int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
-                    if (z.next_out_index > 0) {
-                        decompressed.writeBytes(out, 0, z.next_out_index);
-                        z.avail_out = out.length;
+                    z.avail_out = maxOutputLength;
+                    if (outHasArray) {
+                        out.ensureWritableBytes(maxOutputLength);
+                        z.next_out = out.array();
+                        z.next_out_index = out.arrayOffset() + out.writerIndex();
+                    } else {
+                        z.next_out_index = 0;
                     }
-                    z.next_out_index = 0;
+                    int oldNextOutIndex = z.next_out_index;
+
+                    // Decompress 'in' into 'out'
+                    int resultCode;
+                    try {
+                        resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
+                    } finally {
+                        if (inHasArray) {
+                            in.skipBytes(z.next_in_index - oldNextInIndex);
+                        }
+                    }
+                    int outputLength = z.next_out_index - oldNextOutIndex;
+                    if (outputLength > 0) {
+                        if (outHasArray) {
+                            out.writerIndex(out.writerIndex() + outputLength);
+                        } else {
+                            out.writeBytes(z.next_out, 0, outputLength);
+                        }
+                    }
 
                     switch (resultCode) {
                     case JZlib.Z_NEED_DICT:
@@ -152,12 +173,6 @@ public class ZlibDecoder extends OneToOneDecoder {
                     default:
                         ZlibUtil.fail(z, "decompression failure", resultCode);
                     }
-                }
-
-                if (decompressed.writerIndex() != 0) { // readerIndex is always 0
-                    return decompressed;
-                } else {
-                    return null;
                 }
             } finally {
                 // Deference the external references explicitly to tell the VM that

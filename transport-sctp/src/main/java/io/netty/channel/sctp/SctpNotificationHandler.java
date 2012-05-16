@@ -36,7 +36,7 @@ class SctpNotificationHandler extends AbstractNotificationHandler<Object> {
 
     SctpNotificationHandler(SctpChannelImpl sctpChannel) {
         this.sctpChannel = sctpChannel;
-        pipeline = sctpChannel.getPipeline();
+        pipeline = sctpChannel.pipeline();
     }
 
     @Override

@@ -15,21 +15,17 @@
  */
 package io.netty.handler.codec.compression;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.Channels;
-import io.netty.channel.LifeCycleAwareChannelHandler;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.StreamToStreamEncoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -37,7 +33,7 @@ import io.netty.util.internal.jzlib.ZStream;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
-public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
+public class ZlibEncoder extends StreamToStreamEncoder {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
 
@@ -247,11 +243,19 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
     }
 
     public ChannelFuture close() {
+        return close(ctx().channel().newFuture());
+    }
+
+    public ChannelFuture close(ChannelFuture future) {
+        return finishEncode(ctx(), future);
+    }
+
+    private ChannelHandlerContext ctx() {
         ChannelHandlerContext ctx = this.ctx;
         if (ctx == null) {
             throw new IllegalStateException("not added to a pipeline");
         }
-        return finishEncode(ctx, null);
+        return ctx;
     }
 
     public boolean isClosed() {
@@ -259,39 +263,65 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer) || finished.get()) {
-            return msg;
+    public void encode(ChannelOutboundHandlerContext<Byte> ctx,
+            ChannelBuffer in, ChannelBuffer out) throws Exception {
+        if (finished.get()) {
+            return;
         }
 
-        ChannelBuffer result;
         synchronized (z) {
             try {
                 // Configure input.
-                ChannelBuffer uncompressed = (ChannelBuffer) msg;
-                byte[] in = new byte[uncompressed.readableBytes()];
-                uncompressed.readBytes(in);
-                z.next_in = in;
-                z.next_in_index = 0;
-                z.avail_in = in.length;
+                int inputLength = in.readableBytes();
+                boolean inHasArray = in.hasArray();
+                z.avail_in = inputLength;
+                if (inHasArray) {
+                    z.next_in = in.array();
+                    z.next_in_index = in.arrayOffset() + in.readerIndex();
+                } else {
+                    byte[] array = new byte[inputLength];
+                    in.readBytes(array);
+                    z.next_in = array;
+                    z.next_in_index = 0;
+                }
+                int oldNextInIndex = z.next_in_index;
 
                 // Configure output.
-                byte[] out = new byte[(int) Math.ceil(in.length * 1.001) + 12];
-                z.next_out = out;
-                z.next_out_index = 0;
-                z.avail_out = out.length;
+                int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12;
+                boolean outHasArray = out.hasArray();
+                z.avail_out = maxOutputLength;
+                if (outHasArray) {
+                    out.ensureWritableBytes(maxOutputLength);
+                    z.next_out = out.array();
+                    z.next_out_index = out.arrayOffset() + out.writerIndex();
+                } else {
+                    byte[] array = new byte[maxOutputLength];
+                    z.next_out = array;
+                    z.next_out_index = 0;
+                }
+                int oldNextOutIndex = z.next_out_index;
 
                 // Note that Z_PARTIAL_FLUSH has been deprecated.
-                int resultCode = z.deflate(JZlib.Z_SYNC_FLUSH);
+                int resultCode;
+                try {
+                    resultCode = z.deflate(JZlib.Z_SYNC_FLUSH);
+                } finally {
+                    if (inHasArray) {
+                        in.skipBytes(z.next_in_index - oldNextInIndex);
+                    }
+                }
+
                 if (resultCode != JZlib.Z_OK) {
                     ZlibUtil.fail(z, "compression failure", resultCode);
                 }
 
-                if (z.next_out_index != 0) {
-                    result = ctx.channel().getConfig().getBufferFactory().getBuffer(
-                            uncompressed.order(), out, 0, z.next_out_index);
-                } else {
-                    result = ChannelBuffers.EMPTY_BUFFER;
+                int outputLength = z.next_out_index - oldNextOutIndex;
+                if (outputLength > 0) {
+                    if (outHasArray) {
+                        out.writerIndex(out.writerIndex() + outputLength);
+                    } else {
+                        out.writeBytes(z.next_out, 0, outputLength);
+                    }
                 }
             } finally {
                 // Deference the external references explicitly to tell the VM that
@@ -302,39 +332,39 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
                 z.next_out = null;
             }
         }
-
-        return result;
     }
 
     @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
-            throws Exception {
-        if (evt instanceof ChannelStateEvent) {
-            ChannelStateEvent e = (ChannelStateEvent) evt;
-            switch (e.getState()) {
-            case OPEN:
-            case CONNECTED:
-            case BOUND:
-                if (Boolean.FALSE.equals(e.getValue()) || e.getValue() == null) {
-                    finishEncode(ctx, evt);
-                    return;
-                }
+    public void disconnect(
+            final ChannelOutboundHandlerContext<Byte> ctx,
+            final ChannelFuture future) throws Exception {
+        finishEncode(ctx, ctx.newFuture()).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture f) throws Exception {
+                ctx.disconnect(future);
             }
-        }
-
-        super.handleDownstream(ctx, evt);
+        });
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, final ChannelEvent evt) {
-        if (!finished.compareAndSet(false, true)) {
-            if (evt != null) {
-                ctx.sendDownstream(evt);
+    @Override
+    public void close(
+            final ChannelOutboundHandlerContext<Byte> ctx,
+            final ChannelFuture future) throws Exception {
+        finishEncode(ctx, ctx.newFuture()).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture f) throws Exception {
+                ctx.close(future);
             }
-            return Channels.succeededFuture(ctx.channel());
+        });
+    }
+
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelFuture future) {
+        if (!finished.compareAndSet(false, true)) {
+            future.setSuccess();
+            return future;
         }
 
         ChannelBuffer footer;
-        ChannelFuture future;
         synchronized (z) {
             try {
                 // Configure input.
@@ -351,20 +381,11 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
                 // Write the ADLER32 checksum (stream footer).
                 int resultCode = z.deflate(JZlib.Z_FINISH);
                 if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
-                    future = Channels.failedFuture(
-                            ctx.channel(),
-                            ZlibUtil.exception(z, "compression failure", resultCode));
-                    footer = null;
+                    future.setFailure(ZlibUtil.exception(z, "compression failure", resultCode));
+                    return future;
                 } else if (z.next_out_index != 0) {
-                    future = Channels.future(ctx.channel());
-                    footer =
-                        ctx.channel().getConfig().getBufferFactory().getBuffer(
-                                out, 0, z.next_out_index);
+                    footer = ChannelBuffers.wrappedBuffer(out, 0, z.next_out_index);
                 } else {
-                    // Note that we should never use a SucceededChannelFuture
-                    // here just in case any downstream handler or a sink wants
-                    // to notify a write error.
-                    future = Channels.future(ctx.channel());
                     footer = ChannelBuffers.EMPTY_BUFFER;
                 }
             } finally {
@@ -379,39 +400,12 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
             }
         }
 
-        if (footer != null) {
-            Channels.write(ctx, future, footer);
-        }
-
-        if (evt != null) {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    ctx.sendDownstream(evt);
-                }
-            });
-        }
-
+        ctx.write(footer, future);
         return future;
     }
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // Unused
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
     }
 }

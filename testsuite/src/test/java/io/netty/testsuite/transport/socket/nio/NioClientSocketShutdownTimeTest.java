@@ -39,7 +39,7 @@ public class NioClientSocketShutdownTimeTest {
 
         ClientBootstrap b = new ClientBootstrap(
                 new NioClientSocketChannelFactory(Executors.newCachedThreadPool()));
-        b.getPipeline().addLast("handler", new DummyHandler());
+        b.pipeline().addLast("handler", new DummyHandler());
 
         long startTime;
         long stopTime;

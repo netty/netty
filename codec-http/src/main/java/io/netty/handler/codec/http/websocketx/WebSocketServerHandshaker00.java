@@ -163,7 +163,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         }
 
         // Upgrade the connection and send the handshake response.
-        ChannelPipeline p = channel.getPipeline();
+        ChannelPipeline p = channel.pipeline();
         if (p.get(HttpChunkAggregator.class) != null) {
             p.remove(HttpChunkAggregator.class);
         }

@@ -15,9 +15,13 @@
  */
 
 /**
- * Simplistic abstract classes which help implement encoder and decoder that
- * transform an object into another object and vice versa.
+ * Extensible decoder and its common implementations which deal with the
+ * packet fragmentation and reassembly issue found in a stream-based transport
+ * such as TCP/IP.
  *
- * @apiviz.exclude \.codec\.(?!oneone)[a-z0-9]+\.
+ * @apiviz.exclude OneToOne(Encoder|Decoder)$
+ * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
+ * @apiviz.exclude \.codec\.[a-eg-z][a-z0-9]*\.
+ * @apiviz.exclude \.ssl\.
  */
-package io.netty.handler.codec.oneone;
+package io.netty.handler.codec;

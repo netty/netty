@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.frame;
+package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelInboundHandlerContext;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s by the fixed number
@@ -37,7 +37,7 @@ import io.netty.channel.ChannelHandlerContext;
  * +-----+-----+-----+
  * </pre>
  */
-public class FixedLengthFrameDecoder extends FrameDecoder {
+public class FixedLengthFrameDecoder extends StreamToMessageDecoder<ChannelBuffer> {
 
     private final int frameLength;
     private final boolean allocateFullBuffer;
@@ -63,25 +63,23 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
         this.frameLength = frameLength;
         this.allocateFullBuffer = allocateFullBuffer;
     }
-    
+
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-        if (buffer.readableBytes() < frameLength) {
+    public ChannelBufferHolder<Byte> newInboundBuffer(
+            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+        if (allocateFullBuffer) {
+            return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer(frameLength));
+        } else {
+            return super.newInboundBuffer(ctx);
+        }
+    }
+
+    @Override
+    public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+        if (in.readableBytes() < frameLength) {
             return null;
         } else {
-            return buffer.readBytes(frameLength);
+            return in.readBytes(frameLength);
         }
     }
-
-    @Override
-    protected ChannelBuffer newCumulationBuffer(ChannelHandlerContext ctx, int minimumCapacity) {
-        ChannelBufferFactory factory = ctx.channel().getConfig().getBufferFactory();
-        if (allocateFullBuffer) {
-            return ChannelBuffers.dynamicBuffer(
-                    factory.getDefaultOrder(), frameLength, ctx.channel().getConfig().getBufferFactory());
-        }
-        return super.newCumulationBuffer(ctx, minimumCapacity);
-    }
-
 }

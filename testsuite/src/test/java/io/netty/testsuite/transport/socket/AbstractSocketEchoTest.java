@@ -75,8 +75,8 @@ public abstract class AbstractSocketEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addFirst("handler", sh);
-        cb.getPipeline().addFirst("handler", ch);
+        sb.pipeline().addFirst("handler", sh);
+        cb.pipeline().addFirst("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

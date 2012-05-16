@@ -22,7 +22,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferInputStream;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 /**
  * A decoder which deserializes the received {@link ChannelBuffer}s into Java

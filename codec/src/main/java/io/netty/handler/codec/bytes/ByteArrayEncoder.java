@@ -15,16 +15,16 @@
  */
 package io.netty.handler.codec.bytes;
 
-import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
  * Encodes the requested array of bytes into a {@link ChannelBuffer}.
@@ -51,14 +51,15 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * }
  * </pre>
  */
-public class ByteArrayEncoder extends OneToOneEncoder {
+public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ChannelBuffer> {
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof byte[])) {
-            return msg;
-        }
-        return wrappedBuffer((byte[]) msg);
+    public ChannelBufferHolder<byte[]> newOutboundBuffer(ChannelOutboundHandlerContext<byte[]> ctx) throws Exception {
+        return ChannelBufferHolders.messageBuffer();
     }
 
+    @Override
+    public ChannelBuffer encode(ChannelOutboundHandlerContext<byte[]> ctx, byte[] msg) throws Exception {
+        return ChannelBuffers.wrappedBuffer(msg);
+    }
 }

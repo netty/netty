@@ -138,7 +138,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.getPipeline().isAttached()) {
+        if (ctx.pipeline().isAttached()) {
             // channelOpen event has been fired already, which means
             // this.channelOpen() will not be invoked.
             // We have to initialize here instead.

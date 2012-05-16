@@ -47,7 +47,7 @@ import io.netty.channel.DownstreamMessageEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.LifeCycleAwareChannelHandler;
 import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.FrameDecoder;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.NonReentrantLock;

@@ -46,7 +46,7 @@ import io.netty.channel.ExceptionEvent;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -171,7 +171,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
         // Write the content.
         ChannelFuture writeFuture;
-        if (ch.getPipeline().get(SslHandler.class) != null) {
+        if (ch.pipeline().get(SslHandler.class) != null) {
             // Cannot use zero-copy with HTTPS.
             writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
         } else {

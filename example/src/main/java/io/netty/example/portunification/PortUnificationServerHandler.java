@@ -26,10 +26,10 @@ import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
 import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.example.securechat.SecureChatSslContextFactory;
+import io.netty.handler.codec.FrameDecoder;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.frame.FrameDecoder;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -120,7 +120,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void enableSsl(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
 
         SSLEngine engine =
             SecureChatSslContextFactory.getServerContext().createSSLEngine();
@@ -132,7 +132,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void enableGzip(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
         p.addLast("gzipdeflater", new ZlibEncoder(ZlibWrapper.GZIP));
         p.addLast("gzipinflater", new ZlibDecoder(ZlibWrapper.GZIP));
         p.addLast("unificationB", new PortUnificationServerHandler(detectSsl, false));
@@ -140,7 +140,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void switchToHttp(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("deflater", new HttpContentCompressor());
@@ -149,7 +149,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void switchToFactorial(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new BigIntegerDecoder());
         p.addLast("encoder", new NumberEncoder());
         p.addLast("handler", new FactorialServerHandler());

@@ -59,7 +59,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
         // Start the connection attempt.
         ClientBootstrap cb = new ClientBootstrap(cf);
-        cb.getPipeline().addLast("handler", new OutboundHandler(e.channel()));
+        cb.pipeline().addLast("handler", new OutboundHandler(e.channel()));
         ChannelFuture f = cb.connect(new InetSocketAddress(remoteHost, remotePort));
 
         outboundChannel = f.channel();

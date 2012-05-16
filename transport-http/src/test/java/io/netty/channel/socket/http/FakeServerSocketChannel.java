@@ -79,7 +79,7 @@ public class FakeServerSocketChannel extends AbstractChannel implements
     public FakeSocketChannel acceptNewConnection(
             InetSocketAddress remoteAddress, ChannelSink sink) throws Exception {
         ChannelPipeline newPipeline =
-                getConfig().getPipelineFactory().getPipeline();
+                getConfig().getPipelineFactory().pipeline();
         FakeSocketChannel newChannel =
                 new FakeSocketChannel(this, getFactory(), newPipeline, sink);
         newChannel.localAddress = localAddress;

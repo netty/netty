@@ -29,7 +29,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.Channels;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
 /**

@@ -16,10 +16,9 @@
 package io.netty.handler.codec.protobuf;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.CorruptedFrameException;
-import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.StreamToMessageDecoder;
 
 import com.google.protobuf.CodedInputStream;
 
@@ -38,7 +37,7 @@ import com.google.protobuf.CodedInputStream;
  *
  * @see com.google.protobuf.CodedInputStream
  */
-public class ProtobufVarint32FrameDecoder extends FrameDecoder {
+public class ProtobufVarint32FrameDecoder extends StreamToMessageDecoder<ChannelBuffer> {
 
     // TODO maxFrameLength + safe skip + fail-fast option
     //      (just like LengthFieldBasedFrameDecoder)
@@ -50,27 +49,27 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-        buffer.markReaderIndex();
+    public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+        in.markReaderIndex();
         final byte[] buf = new byte[5];
         for (int i = 0; i < buf.length; i ++) {
-            if (!buffer.readable()) {
-                buffer.resetReaderIndex();
+            if (!in.readable()) {
+                in.resetReaderIndex();
                 return null;
             }
 
-            buf[i] = buffer.readByte();
+            buf[i] = in.readByte();
             if (buf[i] >= 0) {
                 int length = CodedInputStream.newInstance(buf, 0, i + 1).readRawVarint32();
                 if (length < 0) {
                     throw new CorruptedFrameException("negative length: " + length);
                 }
 
-                if (buffer.readableBytes() < length) {
-                    buffer.resetReaderIndex();
+                if (in.readableBytes() < length) {
+                    in.resetReaderIndex();
                     return null;
                 } else {
-                    return buffer.readBytes(length);
+                    return in.readBytes(length);
                 }
             }
         }

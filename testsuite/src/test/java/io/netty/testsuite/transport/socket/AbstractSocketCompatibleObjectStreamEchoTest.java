@@ -84,13 +84,13 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("decoder", new CompatibleObjectDecoder());
-        sb.getPipeline().addLast("encoder", new CompatibleObjectEncoder());
-        sb.getPipeline().addLast("handler", sh);
+        sb.pipeline().addLast("decoder", new CompatibleObjectDecoder());
+        sb.pipeline().addLast("encoder", new CompatibleObjectEncoder());
+        sb.pipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("decoder", new CompatibleObjectDecoder());
-        cb.getPipeline().addLast("encoder", new CompatibleObjectEncoder());
-        cb.getPipeline().addLast("handler", ch);
+        cb.pipeline().addLast("decoder", new CompatibleObjectDecoder());
+        cb.pipeline().addLast("encoder", new CompatibleObjectEncoder());
+        cb.pipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

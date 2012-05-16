@@ -52,7 +52,7 @@ public class EchoClientHandler extends ChannelInboundHandlerAdapter<Byte> {
 
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(ChannelInboundHandlerContext<Byte> ctx) {
-        return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
+        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

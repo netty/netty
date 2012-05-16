@@ -69,9 +69,9 @@ public abstract class AbstractSocketClientBootstrapTest {
         
         ClientBootstrap bootstrap = new ClientBootstrap();
         bootstrap.setFactory(newClientSocketChannelFactory(executor));
-        bootstrap.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        bootstrap.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+        bootstrap.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        bootstrap.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        bootstrap.pipeline().addLast("dummy", new DummyHandler());
         bootstrap.setOption("remoteAddress", new InetSocketAddress("255.255.255.255", 1));
         ChannelFuture future = bootstrap.connect();
         future.awaitUninterruptibly();
@@ -96,9 +96,9 @@ public abstract class AbstractSocketClientBootstrapTest {
             ClientBootstrap bootstrap =
                 new ClientBootstrap(newClientSocketChannelFactory(executor));
 
-            bootstrap.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-            bootstrap.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-            bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+            bootstrap.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+            bootstrap.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+            bootstrap.pipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
@@ -140,7 +140,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             ClientBootstrap bootstrap =
                 new ClientBootstrap(newClientSocketChannelFactory(executor));
 
-            bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+            bootstrap.pipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
@@ -175,7 +175,7 @@ public abstract class AbstractSocketClientBootstrapTest {
         ChannelPipelineFactory pipelineFactory = EasyMock.createMock(ChannelPipelineFactory.class);
         bootstrap.setPipelineFactory(pipelineFactory);
 
-        EasyMock.expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
+        EasyMock.expect(pipelineFactory.pipeline()).andThrow(new ChannelPipelineException());
         EasyMock.replay(pipelineFactory);
 
         bootstrap.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 1));

@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.testsuite.util.SctpTestUtil;
@@ -85,19 +85,19 @@ public abstract class AbstractSocketStringEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addFirst("sctp-decoder", new SctpFrameDecoder());
-        sb.getPipeline().addFirst("sctp-encoder", new SctpFrameEncoder());
-        sb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-        sb.getPipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-        sb.getPipeline().addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-        sb.getPipeline().addLast("handler", sh);
+        sb.pipeline().addFirst("sctp-decoder", new SctpFrameDecoder());
+        sb.pipeline().addFirst("sctp-encoder", new SctpFrameEncoder());
+        sb.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+        sb.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
+        sb.pipeline().addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+        sb.pipeline().addLast("handler", sh);
 
-        cb.getPipeline().addFirst("sctp-decoder", new SctpFrameDecoder());
-        cb.getPipeline().addFirst("sctp-encoder", new SctpFrameEncoder());
-        cb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-        cb.getPipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-        cb.getPipeline().addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-        cb.getPipeline().addLast("handler", ch);
+        cb.pipeline().addFirst("sctp-decoder", new SctpFrameDecoder());
+        cb.pipeline().addFirst("sctp-encoder", new SctpFrameEncoder());
+        cb.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+        cb.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
+        cb.pipeline().addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+        cb.pipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

@@ -20,8 +20,8 @@ import java.math.BigInteger;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.CorruptedFrameException;
-import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.FrameDecoder;
 
 /**
  * Decodes the binary representation of a {@link BigInteger} prepended

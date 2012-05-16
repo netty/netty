@@ -29,8 +29,8 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelHandler;
 import io.netty.channel.iostream.IoStreamAddress;
 import io.netty.channel.iostream.IoStreamChannelFactory;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 

@@ -580,6 +580,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelBufferHolder<Object> out() {
+        DefaultChannelHandlerContext ctx = firstOutboundContext();
+        if (ctx != null) {
+            return ctx.prevOut();
+        }
         return channel().unsafe().out();
     }
 
@@ -899,12 +903,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         validateFuture(future);
 
-        if (message instanceof ChannelBuffer) {
+        if (out().hasMessageBuffer()) {
+            out().messageBuffer().add(message);
+        } else if (message instanceof ChannelBuffer) {
             ChannelBuffer m = (ChannelBuffer) message;
             out().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
         } else {
-            out().messageBuffer().add(message);
+            throw new IllegalArgumentException(
+                    "cannot write a message whose type is not " +
+                    ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName()));
         }
+
         return flush(future);
     }
 

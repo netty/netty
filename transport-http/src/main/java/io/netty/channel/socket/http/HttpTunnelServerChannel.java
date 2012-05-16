@@ -61,7 +61,7 @@ final class HttpTunnelServerChannel extends AbstractServerChannel implements
         realChannel = factory.createRealChannel(this, messageSwitch);
         // TODO fix calling of overrideable getPipeline() from constructor
         HttpTunnelServerChannelSink sink =
-                (HttpTunnelServerChannelSink) getPipeline().getSink();
+                (HttpTunnelServerChannelSink) pipeline().getSink();
         sink.setRealChannel(realChannel);
         sink.setCloseListener(CLOSE_FUTURE_PROXY);
         config = new HttpTunnelServerChannelConfig(realChannel);
@@ -107,7 +107,7 @@ final class HttpTunnelServerChannel extends AbstractServerChannel implements
                 String newTunnelId, InetSocketAddress remoteAddress) {
             ChannelPipeline childPipeline = null;
             try {
-                childPipeline = getConfig().getPipelineFactory().getPipeline();
+                childPipeline = getConfig().getPipelineFactory().pipeline();
             } catch (Exception e) {
                 throw new ChannelPipelineException(
                         "Failed to initialize a pipeline.", e);

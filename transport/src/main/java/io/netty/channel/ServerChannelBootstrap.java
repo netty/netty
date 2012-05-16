@@ -7,7 +7,6 @@ import io.netty.util.SocketAddresses;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -166,7 +165,7 @@ public class ServerChannelBootstrap {
     private class Acceptor extends ChannelInboundHandlerAdapter<Channel> {
         @Override
         public ChannelBufferHolder<Channel> newInboundBuffer(ChannelInboundHandlerContext<Channel> ctx) {
-            return ChannelBufferHolders.messageBuffer(new ArrayDeque<Channel>());
+            return ChannelBufferHolders.messageBuffer();
         }
 
         @Override

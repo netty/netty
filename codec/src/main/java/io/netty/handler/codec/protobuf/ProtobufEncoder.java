@@ -16,16 +16,14 @@
 package io.netty.handler.codec.protobuf;
 
 import static io.netty.buffer.ChannelBuffers.*;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
@@ -60,17 +58,16 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufEncoder extends OneToOneEncoder {
+public class ProtobufEncoder extends MessageToMessageEncoder<Object, ChannelBuffer> {
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+    public ChannelBuffer encode(ChannelOutboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());
         }
         if (msg instanceof MessageLite.Builder) {
             return wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
         }
-        return msg;
+        return null;
     }
 }

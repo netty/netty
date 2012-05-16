@@ -16,7 +16,7 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;

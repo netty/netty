@@ -16,13 +16,12 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
  * Encodes a {@link ChannelBuffer} into a Base64-encoded {@link ChannelBuffer}.
@@ -41,7 +40,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Encoder extends OneToOneEncoder {
+public class Base64Encoder extends MessageToMessageEncoder<ChannelBuffer, ChannelBuffer> {
 
     private final boolean breakLines;
     private final Base64Dialect dialect;
@@ -64,15 +63,8 @@ public class Base64Encoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel,
-            Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-
-        ChannelBuffer src = (ChannelBuffer) msg;
-        return Base64.encode(
-                src, src.readerIndex(), src.readableBytes(),
-                breakLines, dialect);
+    public ChannelBuffer encode(ChannelOutboundHandlerContext<ChannelBuffer> ctx,
+            ChannelBuffer msg) throws Exception {
+        return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
     }
 }

@@ -16,21 +16,18 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
-import io.netty.handler.codec.frame.FrameDecoder;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
-import io.netty.util.CharsetUtil;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.StreamToMessageDecoder;
 
 /**
  * Decodes a Base64-encoded {@link ChannelBuffer} or US-ASCII {@link String}
  * into a {@link ChannelBuffer}.  Please note that this decoder must be used
- * with a proper {@link FrameDecoder} such as {@link DelimiterBasedFrameDecoder}
+ * with a proper {@link StreamToMessageDecoder} such as {@link DelimiterBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP.  A typical decoder
  * setup for TCP/IP would be:
  * <pre>
@@ -47,7 +44,7 @@ import io.netty.util.CharsetUtil;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Decoder extends OneToOneDecoder {
+public class Base64Decoder extends MessageToMessageDecoder<ChannelBuffer, ChannelBuffer> {
 
     private final Base64Dialect dialect;
 
@@ -63,17 +60,7 @@ public class Base64Decoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg)
-            throws Exception {
-        if (msg instanceof String) {
-            msg = ChannelBuffers.copiedBuffer((String) msg, CharsetUtil.US_ASCII);
-        } else if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-
-        ChannelBuffer src = (ChannelBuffer) msg;
-        return Base64.decode(
-                src, src.readerIndex(), src.readableBytes(), dialect);
+    public ChannelBuffer decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
+        return Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect);
     }
-
 }

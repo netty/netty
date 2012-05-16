@@ -92,9 +92,9 @@ public class SctpMultiStreamingEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("handler", sh);
+        sb.pipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("handler", ch);
+        cb.pipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

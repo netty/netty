@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -36,7 +35,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
     private final SocketChannelConfig config;
-    private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer());
+    private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer();
 
     private static SocketChannel newSocket() {
         try {

@@ -13,12 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.frame;
+package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
+import io.netty.channel.ChannelInboundHandlerContext;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s by one or more
@@ -56,7 +55,7 @@ import io.netty.channel.Channels;
  * </pre>
  * @apiviz.uses io.netty.handler.codec.frame.Delimiters - - useful
  */
-public class DelimiterBasedFrameDecoder extends FrameDecoder {
+public class DelimiterBasedFrameDecoder extends StreamToMessageDecoder<ChannelBuffer> {
 
     private final ChannelBuffer[] delimiters;
     private final int maxFrameLength;
@@ -188,8 +187,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     }
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+    public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
         // Try all delimiters and choose the delimiter which yields the shortest frame.
         int minFrameLength = Integer.MAX_VALUE;
         ChannelBuffer minDelim = null;
@@ -256,14 +254,12 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {
-            Channels.fireExceptionCaught(
-                    ctx.channel(),
+            ctx.fireExceptionCaught(
                     new TooLongFrameException(
                             "frame length exceeds " + maxFrameLength +
                             ": " + frameLength + " - discarded"));
         } else {
-            Channels.fireExceptionCaught(
-                    ctx.channel(),
+            ctx.fireExceptionCaught(
                     new TooLongFrameException(
                             "frame length exceeds " + maxFrameLength +
                             " - discarding"));

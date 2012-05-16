@@ -13,18 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.frame;
-
-import static io.netty.buffer.ChannelBuffers.*;
-
-import java.nio.ByteOrder;
+package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelOutboundHandlerContext;
+
+import java.nio.ByteOrder;
 
 /**
  * An encoder that prepends the length of the message.  The length value is
@@ -55,7 +51,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * </pre>
  */
 @Sharable
-public class LengthFieldPrepender extends OneToOneEncoder {
+public class LengthFieldPrepender extends MessageToStreamEncoder<ChannelBuffer> {
 
     private final int lengthFieldLength;
     private final boolean lengthIncludesLengthFieldLength;
@@ -101,48 +97,44 @@ public class LengthFieldPrepender extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-
-        ChannelBuffer body = (ChannelBuffer) msg;
-        ChannelBuffer header = channel.getConfig().getBufferFactory().getBuffer(body.order(), lengthFieldLength);
+    public void encode(
+            ChannelOutboundHandlerContext<ChannelBuffer> ctx,
+            ChannelBuffer msg, ChannelBuffer out) throws Exception {
 
         int length = lengthIncludesLengthFieldLength?
-                body.readableBytes() + lengthFieldLength : body.readableBytes();
+                msg.readableBytes() + lengthFieldLength : msg.readableBytes();
         switch (lengthFieldLength) {
         case 1:
             if (length >= 256) {
                 throw new IllegalArgumentException(
                         "length does not fit into a byte: " + length);
             }
-            header.writeByte((byte) length);
+            out.writeByte((byte) length);
             break;
         case 2:
             if (length >= 65536) {
                 throw new IllegalArgumentException(
                         "length does not fit into a short integer: " + length);
             }
-            header.writeShort((short) length);
+            out.writeShort((short) length);
             break;
         case 3:
             if (length >= 16777216) {
                 throw new IllegalArgumentException(
                         "length does not fit into a medium integer: " + length);
             }
-            header.writeMedium(length);
+            out.writeMedium(length);
             break;
         case 4:
-            header.writeInt(length);
+            out.writeInt(length);
             break;
         case 8:
-            header.writeLong(length);
+            out.writeLong(length);
             break;
         default:
             throw new Error("should not reach here");
         }
-        return wrappedBuffer(header, body);
+
+        out.writeBytes(msg, msg.readerIndex(), msg.readableBytes());
     }
 }

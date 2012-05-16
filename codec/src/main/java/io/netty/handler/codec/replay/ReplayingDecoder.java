@@ -29,7 +29,7 @@ import io.netty.channel.Channels;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.FrameDecoder;
 
 /**
  * A specialized variation of {@link FrameDecoder} which enables implementation

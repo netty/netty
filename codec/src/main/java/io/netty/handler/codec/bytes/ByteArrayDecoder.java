@@ -16,13 +16,12 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
  * Decodes a received {@link ChannelBuffer} into an array of bytes.
@@ -49,31 +48,26 @@ import io.netty.handler.codec.oneone.OneToOneDecoder;
  * }
  * </pre>
  */
-public class ByteArrayDecoder extends OneToOneDecoder {
+public class ByteArrayDecoder extends MessageToMessageDecoder<ChannelBuffer, byte[]> {
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-        ChannelBuffer buf = (ChannelBuffer) msg;
+    public byte[] decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
         byte[] array;
-        if (buf.hasArray()) {
-            if (buf.arrayOffset() == 0 && buf.readableBytes() == buf.capacity()) {
+        if (msg.hasArray()) {
+            if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {
                 // we have no offset and the length is the same as the capacity. Its safe to reuse the array without copy it first
-                array = buf.array();
+                array = msg.array();
             } else {
                 // copy the ChannelBuffer to a byte array
-                array = new byte[buf.readableBytes()];
-                buf.getBytes(0, array);
+                array = new byte[msg.readableBytes()];
+                msg.getBytes(0, array);
             }
         } else {
             // copy the ChannelBuffer to a byte array
-
-            array = new byte[buf.readableBytes()];
-            buf.getBytes(0, array);
+            array = new byte[msg.readableBytes()];
+            msg.getBytes(0, array);
         }
+
         return array;
     }
-
 }

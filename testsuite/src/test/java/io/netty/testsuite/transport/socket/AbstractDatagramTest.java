@@ -63,7 +63,7 @@ public abstract class AbstractDatagramTest {
         ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
 
         final CountDownLatch latch = new CountDownLatch(1);
-        sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler() {
+        sb.pipeline().addFirst("handler", new SimpleChannelUpstreamHandler() {
 
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
@@ -74,7 +74,7 @@ public abstract class AbstractDatagramTest {
             }
             
         });
-        cb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
+        cb.pipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
         Channel sc = sb.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
 

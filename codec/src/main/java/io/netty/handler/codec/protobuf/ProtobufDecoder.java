@@ -17,15 +17,13 @@ package io.netty.handler.codec.protobuf;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferInputStream;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.FrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
@@ -64,7 +62,7 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufDecoder extends OneToOneDecoder {
+public class ProtobufDecoder extends MessageToMessageDecoder<ChannelBuffer, MessageLite> {
 
     private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
@@ -85,29 +83,23 @@ public class ProtobufDecoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-
-        ChannelBuffer buf = (ChannelBuffer) msg;
-        if (buf.hasArray()) {
-            final int offset = buf.readerIndex();
+    public MessageLite decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
+        if (msg.hasArray()) {
+            final int offset = msg.readerIndex();
             if (extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes()).build();
+                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes()).build();
             } else {
                 return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes(), extensionRegistry).build();
+                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes(), extensionRegistry).build();
             }
         } else {
             if (extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream((ChannelBuffer) msg)).build();
+                        new ChannelBufferInputStream(msg)).build();
             } else {
                 return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream((ChannelBuffer) msg), extensionRegistry).build();
+                        new ChannelBufferInputStream(msg), extensionRegistry).build();
             }
         }
     }

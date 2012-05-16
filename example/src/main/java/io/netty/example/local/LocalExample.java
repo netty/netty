@@ -52,7 +52,7 @@ public class LocalExample {
 
         // Set up the default server-side event pipeline.
         EchoServerHandler handler = new EchoServerHandler();
-        sb.getPipeline().addLast("handler", handler);
+        sb.pipeline().addLast("handler", handler);
 
         // Start up the server.
         sb.bind(socketAddress);

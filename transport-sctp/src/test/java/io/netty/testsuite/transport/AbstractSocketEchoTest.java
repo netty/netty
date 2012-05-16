@@ -76,13 +76,13 @@ public abstract class AbstractSocketEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        sb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        sb.getPipeline().addLast("handler", sh);
+        sb.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        sb.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        sb.pipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
-        cb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        cb.getPipeline().addLast("handler", ch);
+        cb.pipeline().addLast("sctp-decoder", new SctpFrameDecoder());
+        cb.pipeline().addLast("sctp-encoder", new SctpFrameEncoder());
+        cb.pipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

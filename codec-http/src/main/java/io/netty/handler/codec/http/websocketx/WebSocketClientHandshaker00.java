@@ -155,7 +155,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         ChannelFuture future = channel.write(request);
 
-        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
+        channel.pipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
 
         return future;
     }
@@ -210,7 +210,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String protocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(protocol);
 
-        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket00FrameDecoder());
+        channel.pipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket00FrameDecoder());
 
         setHandshakeComplete();
     }

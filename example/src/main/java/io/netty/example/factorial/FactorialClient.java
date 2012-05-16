@@ -57,7 +57,7 @@ public class FactorialClient {
 
         // Get the handler instance to retrieve the answer.
         FactorialClientHandler handler =
-            (FactorialClientHandler) channel.getPipeline().last();
+            (FactorialClientHandler) channel.pipeline().last();
 
         // Print out the answer.
         System.err.format(

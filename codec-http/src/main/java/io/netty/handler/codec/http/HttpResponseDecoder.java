@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 
 
 /**

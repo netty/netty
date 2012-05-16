@@ -59,7 +59,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.oneone.OneToOneEncoder;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
