@@ -382,6 +382,10 @@ public class HttpHeaders {
          */
         static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
+         * {@code "multipart"}
+         */
+        static final String MULTIPART = "multipart";
+        /**
          * {@code "must-revalidate"}
          */
         public static final String MUST_REVALIDATE = "must-revalidate";

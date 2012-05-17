@@ -247,10 +247,11 @@ public class HttpPostRequestDecoder {
      */
     private void checkMultipart(String contentType)
             throws ErrorDataDecoderException {
-        // Check if Post using "multipart/form-data; boundary=--89421926422648"
+        // Check if Post using "multipart/form-data; boundary=--89421926422648" or something like that.
+        // for example "multipart/mixed; boundary=--89421926422648"
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(
-                HttpHeaders.Values.MULTIPART_FORM_DATA) &&
+                HttpHeaders.Values.MULTIPART) &&
                 headerContentType[1].toLowerCase().startsWith(
                         HttpHeaders.Values.BOUNDARY)) {
             String[] boundary = headerContentType[1].split("=");
