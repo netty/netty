@@ -200,6 +200,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 // Remove the headers which are not supposed to be present not
                 // to confuse subsequent handlers.
                 message.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+                if (buffer.readable() && isSwitchingToWebSockets(message)) {
+                    return new Object[] {message, buffer.readBytes(actualReadableBytes())};
+                }
                 return message;
             } else {
                 long contentLength = HttpHeaders.getContentLength(message, -1);
@@ -390,6 +393,29 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return false;
     }
 
+    private boolean isSwitchingToWebSockets(final HttpMessage message) {
+        if (message instanceof HttpResponse) {
+            final HttpResponse httpResponse = (HttpResponse) message;
+
+            final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
+            if (!httpResponse.getStatus().equals(status)) {
+                return false;
+            }
+
+            final String upgrade = httpResponse.getHeader(HttpHeaders.Names.UPGRADE);
+            if (upgrade == null || !upgrade.toLowerCase().equals(HttpHeaders.Values.WEBSOCKET.toLowerCase())) {
+                return false;
+            }
+
+            final String connection = httpResponse.getHeader(HttpHeaders.Names.CONNECTION);
+            if (connection == null || !connection.toLowerCase().equals(HttpHeaders.Values.UPGRADE.toLowerCase())) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
 
     private Object reset() {
         HttpMessage message = this.message;

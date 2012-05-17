@@ -23,6 +23,7 @@ import java.util.Map;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
@@ -240,8 +241,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(subprotocol);
 
-        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
-                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
+        final ChannelHandlerContext httpDecoderCtx = channel.getPipeline().getContext(HttpResponseDecoder.class);
+        channel.getPipeline().addAfter(httpDecoderCtx.getName(), "ws-decoder", new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
+        channel.getPipeline().remove(httpDecoderCtx.getHandler());
 
         setHandshakeComplete();
     }
