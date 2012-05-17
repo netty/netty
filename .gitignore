@@ -4,6 +4,7 @@
 /target
 /reports
 /src/main/java/org/jboss/netty/util/Version.java
-/*.iml
-/*.ipr
-/*.iws
+*.iml
+*.ipr
+*.iws
+.idea
