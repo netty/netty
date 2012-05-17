@@ -23,7 +23,6 @@
     <version>4.0.0.Alpha1-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-codec</artifactId>
   <packaging>jar</packaging>
 
@@ -39,6 +38,23 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling</artifactId>
+      <optional>true</optional>
+    </dependency>
+    
+    <!-- Test dependencies for jboss marshalling encoder/decoder -->
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling-serial</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.marshalling</groupId>
+      <artifactId>jboss-marshalling-river</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

@@ -16,17 +16,11 @@
 package io.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.util.CharsetUtil;
 
 /**
  * Base class for web socket client handshake implementations
@@ -45,6 +39,26 @@ public abstract class WebSocketClientHandshaker {
 
     protected final Map<String, String> customHeaders;
 
+    private final long maxFramePayloadLength;
+    
+    /**
+     * Base constructor with default values
+     *
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            CSV of requested subprotocol(s) sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     */
+    public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
+            Map<String, String> customHeaders) {
+        this(webSocketUrl, version, subprotocol, customHeaders, Long.MAX_VALUE);
+    }
+    
     /**
      * Base constructor
      *
@@ -57,13 +71,16 @@ public abstract class WebSocketClientHandshaker {
      *            Sub protocol request sent to the server.
      * @param customHeaders
      *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders) {
+            Map<String, String> customHeaders, long maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
-        expectedSubprotocol = subprotocol;
+        this.expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     /**
@@ -81,6 +98,13 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
+     * Returns the max length for any frame's payload 
+     */
+    public long getMaxFramePayloadLength() {
+        return maxFramePayloadLength;
+    }
+    
+    /**
      * Flag to indicate if the opening handshake is complete
      */
     public boolean isHandshakeComplete() {
@@ -92,14 +116,15 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Returns the sub protocol request sent to the server as specified in the constructor
+     * Returns the CSV of requested subprotocol(s) sent to the server as specified in the constructor
      */
     public String getExpectedSubprotocol() {
         return expectedSubprotocol;
     }
 
     /**
-     * Returns the sub protocol response and sent by the server. Only available after end of handshake.
+     * Returns the subprotocol response sent by the server. Only available after end of handshake.
+     * Null if no subprotocol was requested or confirmed by the server.
      */
     public String getActualSubprotocol() {
         return actualSubprotocol;
@@ -111,7 +136,7 @@ public abstract class WebSocketClientHandshaker {
 
     /**
      * Begins the opening handshake
-     * 
+     *
      * @param channel
      *            Channel
      */
@@ -119,7 +144,7 @@ public abstract class WebSocketClientHandshaker {
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
-     * 
+     *
      * @param channel
      *            Channel
      * @param response

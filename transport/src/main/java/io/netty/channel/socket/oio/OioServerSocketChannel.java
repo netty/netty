@@ -72,8 +72,11 @@ final class OioServerSocketChannel extends AbstractServerChannel
             try {
                 socket.close();
             } catch (IOException e2) {
-                logger.warn(
-                        "Failed to close a partially initialized socket.", e2);
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Failed to close a partially initialized socket.", e2);
+                }
+               
             }
             throw new ChannelException(
                     "Failed to set the server socket timeout.", e);

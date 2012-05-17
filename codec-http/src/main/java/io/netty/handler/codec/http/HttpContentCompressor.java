@@ -30,16 +30,20 @@ import io.netty.handler.codec.embedder.EncoderEmbedder;
 public class HttpContentCompressor extends HttpContentEncoder {
 
     private final int compressionLevel;
+    private final int windowBits;
+    private final int memLevel;
 
     /**
-     * Creates a new handler with the default compression level (<tt>6</tt>).
+     * Creates a new handler with the default compression level (<tt>6</tt>),
+     * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
      */
     public HttpContentCompressor() {
         this(6);
     }
 
     /**
-     * Creates a new handler with the specified compression level.
+     * Creates a new handler with the specified compression level, default
+     * window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -47,12 +51,45 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        compression level is {@code 6}.
      */
     public HttpContentCompressor(int compressionLevel) {
+        this(compressionLevel, 15, 8);
+    }
+
+    /**
+     * Creates a new handler with the specified compression level, window size,
+     * and memory level..
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     * @param windowBits
+     *        The base two logarithm of the size of the history buffer.  The
+     *        value should be in the range {@code 9} to {@code 15} inclusive.
+     *        Larger values result in better compression at the expense of
+     *        memory usage.  The default value is {@code 15}.
+     * @param memLevel
+     *        How much memory should be allocated for the internal compression
+     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *        memory.  Larger values result in better and faster compression
+     *        at the expense of memory usage.  The default value is {@code 8}
+     */
+    public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel +
                     " (expected: 0-9)");
         }
+        if (windowBits < 9 || windowBits > 15) {
+            throw new IllegalArgumentException(
+                    "windowBits: " + windowBits + " (expected: 9-15)");
+        }
+        if (memLevel < 1 || memLevel > 9) {
+            throw new IllegalArgumentException(
+                    "memLevel: " + memLevel + " (expected: 1-9)");
+        }
         this.compressionLevel = compressionLevel;
+        this.windowBits = windowBits;
+        this.memLevel = memLevel;
     }
 
     @Override
@@ -83,16 +120,46 @@ public class HttpContentCompressor extends HttpContentEncoder {
         return new Result(
                 targetContentEncoding,
                 new EncoderEmbedder<ChannelBuffer>(
-                        new ZlibEncoder(wrapper, compressionLevel)));
+                        new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel)));
     }
 
-    private ZlibWrapper determineWrapper(String acceptEncoding) {
-        // FIXME: Use the Q value.
-        if (acceptEncoding.indexOf("gzip") >= 0) {
-            return ZlibWrapper.GZIP;
+    protected ZlibWrapper determineWrapper(String acceptEncoding) {
+        float starQ = -1.0f;
+        float gzipQ = -1.0f;
+        float deflateQ = -1.0f;
+        for (String encoding : acceptEncoding.split(",")) {
+            float q = 1.0f;
+            int equalsPos = encoding.indexOf('=');
+            if (equalsPos != -1) {
+                try {
+                    q = Float.valueOf(encoding.substring(equalsPos + 1));
+                } catch (NumberFormatException e) {
+                    // Ignore encoding
+                    q = 0.0f;
+                }
+            }
+            if (encoding.indexOf("*") >= 0) {
+                starQ = q;
+            } else if (encoding.indexOf("gzip") >= 0 && q > gzipQ) {
+                gzipQ = q;
+            } else if (encoding.indexOf("deflate") >= 0 && q > deflateQ) {
+                deflateQ = q;
+            }
         }
-        if (acceptEncoding.indexOf("deflate") >= 0) {
-            return ZlibWrapper.ZLIB;
+        if (gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (gzipQ >= deflateQ) {
+                return ZlibWrapper.GZIP;
+            } else {
+                return ZlibWrapper.ZLIB;
+            }
+        }
+        if (starQ > 0.0f) {
+            if (gzipQ == -1.0f) {
+                return ZlibWrapper.GZIP;
+            }
+            if (deflateQ == -1.0f) {
+                return ZlibWrapper.ZLIB;
+            }
         }
         return null;
     }

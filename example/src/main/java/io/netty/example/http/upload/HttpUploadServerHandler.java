@@ -58,13 +58,18 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.InterfaceHttpData;
 import io.netty.handler.codec.http.InterfaceHttpData.HttpDataType;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
 
-    private volatile HttpRequest request;
+    private HttpRequest request;
 
-    private volatile boolean readingChunks;
+    private boolean readingChunks;
 
     private final StringBuilder responseContent = new StringBuilder();
 
@@ -480,8 +485,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        e.getCause().printStackTrace();
-        System.err.println(responseContent.toString());
+        logger.error(responseContent.toString(), e.getCause());
         e.getChannel().close();
     }
 }

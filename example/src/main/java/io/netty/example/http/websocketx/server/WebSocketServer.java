@@ -17,32 +17,35 @@ package io.netty.example.http.websocketx.server;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A HTTP server which serves Web Socket requests at:
- * 
+ *
  * http://localhost:8080/websocket
- * 
+ *
  * Open your browser at http://localhost:8080/, then the demo page will be loaded and a Web Socket connection will be
  * made automatically.
- * 
+ *
  * This server illustrates support for the different web socket specification versions and will work with:
- * 
+ *
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
  * <li>Chrome 6-13 (draft-ietf-hybi-thewebsocketprotocol-00)
  * <li>Chrome 14+ (draft-ietf-hybi-thewebsocketprotocol-10)
  * <li>Chrome 16+ (RFC 6455 aka draft-ietf-hybi-thewebsocketprotocol-17)
  * <li>Firefox 7+ (draft-ietf-hybi-thewebsocketprotocol-10)
+ * <li>Firefox 11+ (RFC 6455 aka draft-ietf-hybi-thewebsocketprotocol-17)
  * </ul>
  */
 public class WebSocketServer {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(WebSocketServer.class);
 
     private final int port;
 
@@ -52,8 +55,7 @@ public class WebSocketServer {
 
     public void run() {
         // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
@@ -61,8 +63,8 @@ public class WebSocketServer {
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
 
-        System.out.println("Web socket server started at port " + port + '.');
-        System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
+        logger.info("Web socket server started at port " + port + '.');
+        logger.info("Open your browser and navigate to http://localhost:" + port + '/');
     }
 
     public static void main(String[] args) {

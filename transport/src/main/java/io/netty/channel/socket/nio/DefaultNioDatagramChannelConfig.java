@@ -15,13 +15,21 @@
  */
 package io.netty.channel.socket.nio;
 
-import java.net.DatagramSocket;
-import java.util.Map;
-
+import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.ConversionUtil;
+import io.netty.util.internal.DetectionUtil;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.StandardSocketOptions;
+import java.nio.channels.DatagramChannel;
+import java.util.Enumeration;
+import java.util.Map;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
@@ -37,8 +45,11 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
     private volatile int writeBufferLowWaterMark = 32 * 1024;
     private volatile int writeSpinCount = 16;
 
-    DefaultNioDatagramChannelConfig(DatagramSocket socket) {
-        super(socket);
+    private final DatagramChannel channel;
+
+    DefaultNioDatagramChannelConfig(DatagramChannel channel) {
+        super(channel.socket());
+        this.channel = channel;
     }
 
     @Override
@@ -47,10 +58,13 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
             // Recover the integrity of the configuration with a sensible value.
             setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
-            // Notify the user about misconfiguration.
-            logger.warn("writeBufferLowWaterMark cannot be greater than "
-                    + "writeBufferHighWaterMark; setting to the half of the "
-                    + "writeBufferHighWaterMark.");
+            if (logger.isWarnEnabled()) {
+                // Notify the user about misconfiguration.
+                logger.warn("writeBufferLowWaterMark cannot be greater than "
+                        + "writeBufferHighWaterMark; setting to the half of the "
+                        + "writeBufferHighWaterMark.");
+            }
+
         }
     }
 
@@ -135,4 +149,107 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         }
         this.writeSpinCount = writeSpinCount;
     }
+    
+    @Override
+    public void setNetworkInterface(NetworkInterface networkInterface) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                channel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public NetworkInterface getNetworkInterface() {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                return (NetworkInterface) channel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public int getTimeToLive() {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                return (int) channel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public void setTimeToLive(int ttl) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                channel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+       
+    }
+    
+    @Override
+    public InetAddress getInterface() {
+        NetworkInterface inf = getNetworkInterface();
+        if (inf == null) {
+            return null;
+        } else {
+            Enumeration<InetAddress> addresses = inf.getInetAddresses();
+            if (addresses.hasMoreElements()) {
+                return addresses.nextElement();
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public void setInterface(InetAddress interfaceAddress) {
+        try {
+            setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
+        } catch (SocketException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public boolean isLoopbackModeDisabled() {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                return (Boolean) channel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                channel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
 }

@@ -49,7 +49,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     private byte[] expectedChallengeResponseBytes;
 
     /**
-     * Constructor specifying the destination web socket location and version to initiate
+     * Constructor with default values
      * 
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -63,8 +63,27 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
             Map<String, String> customHeaders) {
-        super(webSocketURL, version, subprotocol, customHeaders);
-
+        this(webSocketURL, version, subprotocol, customHeaders, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Constructor specifying the destination web socket location and version to initiate
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     */
+    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
+            Map<String, String> customHeaders, long maxFramePayloadLength) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
     }
 
     /**
@@ -138,12 +157,23 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         request.addHeader(Names.UPGRADE, Values.WEBSOCKET);
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.HOST, wsURL.getHost());
-        request.addHeader(Names.ORIGIN, "http://" + wsURL.getHost());
+
+        int wsPort = wsURL.getPort();
+        String originValue = "http://" + wsURL.getHost();
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            originValue = originValue + ":" + wsPort;
+        }
+        request.addHeader(Names.ORIGIN, originValue);
+
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
-        if (getExpectedSubprotocol() != null && !getExpectedSubprotocol().equals("")) {
-            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, getExpectedSubprotocol());
+        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
+
 
         if (customHeaders != null) {
             for (String header : customHeaders.keySet()) {
@@ -207,10 +237,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
 
-        String protocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
-        setActualSubprotocol(protocol);
+        String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        setActualSubprotocol(subprotocol);
 
-        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket00FrameDecoder());
+        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
+                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }

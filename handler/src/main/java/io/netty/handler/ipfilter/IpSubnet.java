@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -52,6 +54,10 @@ import java.net.UnknownHostException;
  * where inetAddress2 is 1fff:0:0a88:85a3:0:0:ac1f:8001<BR>
  */
 public class IpSubnet implements IpSet, Comparable<IpSubnet> {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(IpSubnet.class);
+    
     /** Internal representation */
     private CIDR cidr;
 
@@ -152,10 +158,10 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
             } catch (UnknownHostException e) {
                 return;
             }
-            System.out.println("IpSubnet: " + ipSubnet.toString() + " from " + ipSubnet.cidr.getBaseAddress() + " to "
+            logger.debug("IpSubnet: " + ipSubnet.toString() + " from " + ipSubnet.cidr.getBaseAddress() + " to "
                     + ipSubnet.cidr.getEndAddress() + " mask " + ipSubnet.cidr.getMask());
             if (args.length > 1) {
-                System.out.println("Is IN: " + args[1] + " " + ipSubnet.contains(args[1]));
+                logger.debug("Is IN: " + args[1] + " " + ipSubnet.contains(args[1]));
             }
         }
     }

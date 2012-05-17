@@ -15,18 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.util.CharsetUtil;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -39,6 +33,25 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
+    private final long maxFramePayloadLength;
+
+    private String selectedSubprotocol;
+
+    /**
+     * Constructor using default values
+     * 
+     * @param version
+     *            the protocol version
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols. Null if sub protocols not supported.
+     */
+    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
+        this(version, webSocketUrl, subprotocols, Long.MAX_VALUE);
+    }
+
     /**
      * Constructor specifying the destination web socket location
      * 
@@ -49,9 +62,11 @@ public abstract class WebSocketServerHandshaker {
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
-    protected WebSocketServerHandshaker(
-            WebSocketVersion version, String webSocketUrl, String subprotocols) {
+    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols,
+            long maxFramePayloadLength) {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
@@ -63,6 +78,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = new String[0];
         }
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     /**
@@ -77,7 +93,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p: this.subprotocols) {
+        for (String p : this.subprotocols) {
             ret.add(p);
         }
         return ret;
@@ -88,6 +104,13 @@ public abstract class WebSocketServerHandshaker {
      */
     public WebSocketVersion getVersion() {
         return version;
+    }
+
+    /**
+     * Returns the max length for any frame's payload
+     */
+    public long getMaxFramePayloadLength() {
+        return maxFramePayloadLength;
     }
 
     /**
@@ -122,11 +145,11 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requesteSubprotocolArray = requestedSubprotocols.split(",");
-        for (String p: requesteSubprotocolArray) {
+        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
-            for (String supportedSubprotocol: subprotocols) {
+            for (String supportedSubprotocol : subprotocols) {
                 if (requestedSubprotocol.equals(supportedSubprotocol)) {
                     return requestedSubprotocol;
                 }
@@ -136,4 +159,19 @@ public abstract class WebSocketServerHandshaker {
         // No match found
         return null;
     }
+    
+    /**
+     * Returns the selected subprotocol. Null if no subprotocol has been selected. 
+     * <p>
+     * This is only available AFTER <tt>handshake()</tt> has been called.
+     * </p>
+     */
+    public String getSelectedSubprotocol() {
+        return selectedSubprotocol;
+    }
+    
+    protected void setSelectedSubprotocol(String value) {
+        selectedSubprotocol = value;
+    }
+    
 }

@@ -16,6 +16,9 @@
 package com.sun.nio.sctp;
 
 public class UnsupportedOperatingSystemException extends RuntimeException {
+
+    private static final long serialVersionUID = -221782446524784377L;
+
     public static void raise() {
         throw new UnsupportedOperatingSystemException();
     }

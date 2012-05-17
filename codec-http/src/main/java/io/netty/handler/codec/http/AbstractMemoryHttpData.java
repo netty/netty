@@ -212,8 +212,8 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int written = 0;
         while (written < length) {
             written += fileChannel.write(byteBuffer);
-            fileChannel.force(false);
         }
+        fileChannel.force(false);
         fileChannel.close();
         isRenamed = true;
         return written == length;

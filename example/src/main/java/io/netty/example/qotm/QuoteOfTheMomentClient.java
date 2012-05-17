@@ -28,6 +28,8 @@ import io.netty.channel.socket.DatagramChannelFactory;
 import io.netty.channel.socket.nio.NioDatagramChannelFactory;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -37,6 +39,9 @@ import io.netty.util.CharsetUtil;
  * Inspired by <a href="http://java.sun.com/docs/books/tutorial/networking/datagrams/clientServer.html">the official Java tutorial</a>.
  */
 public class QuoteOfTheMomentClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(QuoteOfTheMomentClient.class);
 
     private final int port;
 
@@ -86,7 +91,7 @@ public class QuoteOfTheMomentClient {
         // response is received.  If the channel is not closed within 5 seconds,
         // print an error message and quit.
         if (!c.getCloseFuture().awaitUninterruptibly(5000)) {
-            System.err.println("QOTM request timed out.");
+            logger.error("QOTM request timed out.");
             c.close().awaitUninterruptibly();
         }
 

@@ -23,7 +23,6 @@
     <version>4.0.0.Alpha1-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-transport-http</artifactId>
   <packaging>jar</packaging>
 
@@ -34,6 +33,14 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-http</artifactId>
       <version>${project.version}</version>
+    </dependency>
+
+    <!-- Servlet API - completely optional -->
+    <!-- Used for HTTP tunneling transport -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 </project>

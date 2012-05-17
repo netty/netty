@@ -43,6 +43,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.Channels;
+import io.netty.channel.DefaultChannelFuture;
 import io.netty.channel.DownstreamMessageEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.LifeCycleAwareChannelHandler;
@@ -206,6 +207,8 @@ public class SslHandler extends FrameDecoder
         }
         
     };
+    
+    private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
     
     /**
      * Creates a new instance.
@@ -426,6 +429,18 @@ public class SslHandler extends FrameDecoder
         return issueHandshake;
     }
     
+    /**
+     * Return the {@link ChannelFuture} that will get notified if the inbound of the {@link SSLEngine} will get closed.
+     * 
+     * This method will return the same {@link ChannelFuture} all the time.
+     * 
+     * For more informations see the apidocs of {@link SSLEngine}
+     * 
+     */
+    public ChannelFuture getSSLEngineInboundCloseFuture() {
+        return sslEngineCloseFuture;
+    }
+
     @Override
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
@@ -497,7 +512,9 @@ public class SslHandler extends FrameDecoder
                 try {
                     engine.closeInbound();
                 } catch (SSLException ex) {
-                    logger.debug("Failed to clean up SSLEngine.", ex);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Failed to clean up SSLEngine.", ex);
+                    }
                 }
             }
         }
@@ -513,9 +530,12 @@ public class SslHandler extends FrameDecoder
                 synchronized (ignoreClosedChannelExceptionLock) {
                     if (ignoreClosedChannelException > 0) {
                         ignoreClosedChannelException --;
-                        logger.debug(
-                                "Swallowing an exception raised while " +
-                                "writing non-app data", cause);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug(
+                                    "Swallowing an exception raised while " +
+                                    "writing non-app data", cause);
+                        }
+                       
                         return;
                     }
                 }
@@ -524,10 +544,12 @@ public class SslHandler extends FrameDecoder
                 if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
                     // It is safe to ignore the 'connection reset by peer' or
                     // 'broken pipe' error after sending closure_notify.
-                    logger.debug(
-                            "Swallowing a 'connection reset by peer / " +
-                            "broken pipe' error occurred while writing " +
-                            "'closure_notify'", cause);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(
+                                "Swallowing a 'connection reset by peer / " +
+                                "broken pipe' error occurred while writing " +
+                                "'closure_notify'", cause);
+                    }
 
                     // Close the connection explicitly just in case the transport
                     // did not close the connection automatically.
@@ -567,15 +589,15 @@ public class SslHandler extends FrameDecoder
         if (tls) {
             // SSLv3 or TLS - Check ProtocolVersion
             int majorVersion = buffer.getUnsignedByte(buffer.readerIndex() + 1);
-            if (majorVersion >= 3 && majorVersion < 10) {
+            if (majorVersion == 3) {
                 // SSLv3 or TLS
                 packetLength = (getShort(buffer, buffer.readerIndex() + 3) & 0xFFFF) + 5;
                 if (packetLength <= 5) {
-                    // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
+                    // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
                 }
             } else {
-                // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
+                // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                 tls = false;
             }
         }
@@ -587,7 +609,7 @@ public class SslHandler extends FrameDecoder
                     buffer.readerIndex()) & 0x80) != 0 ? 2 : 3;
             int majorVersion = buffer.getUnsignedByte(
                     buffer.readerIndex() + headerLength + 1);
-            if (majorVersion >= 2 && majorVersion < 10) {
+            if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 if (headerLength == 2) {
                     packetLength = (getShort(buffer, buffer.readerIndex()) & 0x7FFF) + 2;
@@ -917,7 +939,12 @@ public class SslHandler extends FrameDecoder
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
                 }
-
+                
+                // notify about the CLOSED state of the SSLEngine. See #137
+                if (result.getStatus() == Status.CLOSED) {
+                    sslEngineCloseFuture.setClosed();
+                }
+                
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 handleRenegotiation(handshakeStatus);
                 switch (handshakeStatus) {
@@ -965,7 +992,7 @@ public class SslHandler extends FrameDecoder
             outAppBuf.flip();
 
             if (outAppBuf.hasRemaining()) {
-                ChannelBuffer frame = ChannelBuffers.buffer(outAppBuf.remaining());
+                ChannelBuffer frame = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
                 frame.writeBytes(outAppBuf.array(), 0, frame.capacity());
                 return frame;
             } else {
@@ -1085,9 +1112,12 @@ public class SslHandler extends FrameDecoder
             try {
                 engine.closeInbound();
             } catch (SSLException e) {
-                logger.debug(
-                        "SSLEngine.closeInbound() raised an exception after " +
-                        "a handshake failure.", e);
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "SSLEngine.closeInbound() raised an exception after " +
+                            "a handshake failure.", e);
+                }
+
             }
         }
         
@@ -1106,7 +1136,9 @@ public class SslHandler extends FrameDecoder
             try {
                 unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
             } catch (SSLException ex) {
-                logger.debug("Failed to unwrap before sending a close_notify message", ex);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Failed to unwrap before sending a close_notify message", ex);
+                }
             }
 
             if (!engine.isInboundDone()) {
@@ -1118,7 +1150,9 @@ public class SslHandler extends FrameDecoder
                                 new ClosingChannelFutureListener(context, e));
                         success = true;
                     } catch (SSLException ex) {
-                        logger.debug("Failed to encode a close_notify message", ex);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Failed to encode a close_notify message", ex);
+                        }
                     }
                 }
             } else {
@@ -1177,9 +1211,41 @@ public class SslHandler extends FrameDecoder
         // Unused
     }
 
+    /**
+     * Fail all pending writes which we were not able to flush out
+     */
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
+        
+        // there is no need for synchronization here as we do not receive downstream events anymore
+        Throwable cause = null;
+        for (;;) {
+            PendingWrite pw = pendingUnencryptedWrites.poll();
+            if (pw == null) {
+                break;
+            }
+            if (cause == null) {
+                cause = new IOException("Unable to write data");
+            }
+            pw.future.setFailure(cause);
+
+        }
+
+        for (;;) {
+            MessageEvent ev = pendingEncryptedWrites.poll();
+            if (ev == null) {
+                break;
+            }
+            if (cause == null) {
+                cause = new IOException("Unable to write data");
+            }
+            ev.getFuture().setFailure(cause);
+
+        }
+
+        if (cause != null) {
+            fireExceptionCaughtLater(ctx, cause);
+        }
     }
     
 
@@ -1195,4 +1261,76 @@ public class SslHandler extends FrameDecoder
         }
         super.channelConnected(ctx, e);     
     } 
+    
+    /**
+     * Loop over all the pending writes and fail them.
+     *
+     * See <a href="https://github.com/netty/netty/issues/305">#305</a> for more details.
+     */
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        Throwable cause = null;
+        synchronized (pendingUnencryptedWrites) {
+            for (;;) {
+                PendingWrite pw = pendingUnencryptedWrites.poll();
+                if (pw == null) {
+                    break;
+                }
+                if (cause == null) {
+                    cause = new ClosedChannelException();
+                }
+                pw.future.setFailure(cause);
+                
+            }
+            
+            
+            for (;;) {
+                MessageEvent ev = pendingEncryptedWrites.poll();
+                if (ev == null) {
+                    break;
+                }
+                if (cause == null) {
+                    cause = new ClosedChannelException();
+                }
+                ev.getFuture().setFailure(cause);
+                
+            }
+        }
+       
+        if (cause != null) {
+            fireExceptionCaught(ctx, cause);
+        }
+        
+        super.channelClosed(ctx, e);
+    }
+    
+    private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
+        public SSLEngineInboundCloseFuture() {
+            super(null, true);
+        }
+        
+        void setClosed() {
+            super.setSuccess();            
+        }
+        
+        @Override
+        public Channel getChannel() {
+            if (ctx == null) {
+                // Maybe we should better throw an IllegalStateException() ?
+                return null;
+            } else {
+                return ctx.getChannel();
+            }
+        }
+        
+        @Override
+        public boolean setSuccess() {
+            return false;
+        }
+        
+        @Override
+        public boolean setFailure(Throwable cause) {
+            return false;
+        }
+    }
 }

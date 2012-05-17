@@ -81,7 +81,9 @@ public class DefaultFileRegion implements FileRegion {
         try {
             file.close();
         } catch (IOException e) {
-            logger.warn("Failed to close a file.", e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close a file.", e);
+            }
         }
     }
 }

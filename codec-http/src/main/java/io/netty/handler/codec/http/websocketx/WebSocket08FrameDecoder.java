@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 // (BSD License: http://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
@@ -67,6 +82,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private UTF8Output fragmentedFramesText;
     private int fragmentedFramesCount;
 
+    private long maxFramePayloadLength;
     private boolean frameFinalFlag;
     private int frameRsv;
     private int frameOpcode;
@@ -84,7 +100,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     }
 
     /**
-     * Constructor
+     * Constructor with default values
      * 
      * @param maskedPayload
      *            Web socket servers must set this to true processed incoming masked payload. Client implementations
@@ -93,9 +109,26 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
      *            Flag to allow reserved extension bits to be used or not
      */
     public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions) {
+        this(maskedPayload, allowExtensions, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Constructor
+     * 
+     * @param maskedPayload
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
+     *            helps check for denial of services attacks.
+     */
+    public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, long maxFramePayloadLength) {
         super(State.FRAME_START);
         this.maskedPayload = maskedPayload;
         this.allowExtensions = allowExtensions;
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     @Override
@@ -205,6 +238,10 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 framePayloadLength = framePayloadLen1;
             }
 
+            if (framePayloadLength > this.maxFramePayloadLength) {
+                protocolViolation(channel, "Max frame length of " + this.maxFramePayloadLength + " has been exceeded.");
+                return null;
+            }
             if (logger.isDebugEnabled()) {
                 logger.debug("Decoding WebSocket Frame length=" + framePayloadLength);
             }
@@ -221,10 +258,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             int rbytes = actualReadableBytes();
             ChannelBuffer payloadBuffer = null;
 
-            int willHaveReadByteCount = framePayloadBytesRead + rbytes;
+            long willHaveReadByteCount = framePayloadBytesRead + rbytes;
+
             // logger.debug("Frame rbytes=" + rbytes + " willHaveReadByteCount="
             // + willHaveReadByteCount + " framePayloadLength=" +
             // framePayloadLength);
+            
             if (willHaveReadByteCount == framePayloadLength) {
                 // We have all our content so proceed to process
                 payloadBuffer = buffer.readBytes(rbytes);
@@ -269,8 +308,9 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             } else if (frameOpcode == OPCODE_PONG) {
                 return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_CLOSE) {
+                checkCloseFrameBody(channel, framePayload);
                 receivedClosingHandshake = true;
-                return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
+                return new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             }
 
             // Processing for possible fragmented messages for text and binary
@@ -375,5 +415,39 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
         } catch (UTF8Exception ex) {
             protocolViolation(channel, "invalid UTF-8 bytes");
         }
+    }
+
+    protected void checkCloseFrameBody(Channel channel, ChannelBuffer buffer) throws CorruptedFrameException {
+        if (buffer == null || buffer.capacity() == 0) {
+            return;
+        }
+        if (buffer.capacity() == 1) {
+            protocolViolation(channel, "Invalid close frame body");
+        }
+
+        // Save reader index
+        int idx = buffer.readerIndex();
+        buffer.readerIndex(0);
+
+        // Must have 2 byte integer within the valid range
+        int statusCode = buffer.readShort();
+        if ((statusCode >= 0 && statusCode <= 999) || (statusCode >= 1004 && statusCode <= 1006)
+                || (statusCode >= 1012 && statusCode <= 2999)) {
+            protocolViolation(channel, "Invalid close frame status code: " + statusCode);
+        }
+
+        // May have UTF-8 message
+        if (buffer.readableBytes() > 0) {
+            byte[] b = new byte[buffer.readableBytes()];
+            buffer.readBytes(b);
+            try {
+                new UTF8Output(b);
+            } catch (UTF8Exception ex) {
+                protocolViolation(channel, "Invalid close frame reason text. Invalid UTF-8 bytes");
+            }
+        }
+
+        // Restore reader index
+        buffer.readerIndex(idx);
     }
 }

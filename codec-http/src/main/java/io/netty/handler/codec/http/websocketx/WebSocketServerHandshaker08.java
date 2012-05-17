@@ -50,7 +50,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     private final boolean allowExtensions;
 
     /**
-     * Constructor specifying the destination web socket location
+     * Constructor using defaults
      * 
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -61,7 +61,26 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      *            Allow extensions to be used in the reserved bits of the web socket frame
      */
     public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions) {
-        super(WebSocketVersion.V08, webSocketURL, subprotocols);
+        this(webSocketURL, subprotocols, allowExtensions, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Constructor specifying the destination web socket location
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param maxFramePayloadLength
+     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
+     *            reduce denial of service attacks using long data frames.
+     */
+    public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions,
+            long maxFramePayloadLength) {
+        super(WebSocketVersion.V08, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
 
@@ -129,17 +148,28 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         res.addHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
         res.addHeader(Names.CONNECTION, Names.UPGRADE);
         res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String protocol = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
-        if (protocol != null) {
-            res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+        String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        if (subprotocols != null) {
+            String selectedSubprotocol = selectSubprotocol(subprotocols);
+            if (selectedSubprotocol == null) {
+                throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+            } else {
+                res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                this.setSelectedSubprotocol(selectedSubprotocol);
+            }
         }
+
 
         ChannelFuture future = channel.write(res);
 
         // Upgrade the connection and send the handshake response.
         ChannelPipeline p = channel.getPipeline();
-        p.remove(HttpChunkAggregator.class);
-        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket08FrameDecoder(true, allowExtensions));
+        if (p.get(HttpChunkAggregator.class) != null) {
+            p.remove(HttpChunkAggregator.class);
+        }
+
+        p.replace(HttpRequestDecoder.class, "wsdecoder",
+                new WebSocket08FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
 
         return future;

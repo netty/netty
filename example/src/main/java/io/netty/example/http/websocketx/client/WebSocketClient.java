@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 //The MIT License
 //
 //Copyright (c) 2009 Carl Bystršm
@@ -42,8 +57,13 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class WebSocketClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(WebSocketClient.class);
 
     private final URI uri;
     
@@ -55,7 +75,6 @@ public class WebSocketClient {
         ClientBootstrap bootstrap =
                 new ClientBootstrap(
                         new NioClientSocketChannelFactory(
-                                Executors.newCachedThreadPool(),
                                 Executors.newCachedThreadPool()));
 
         Channel ch = null;
@@ -69,7 +88,7 @@ public class WebSocketClient {
             HashMap<String, String> customHeaders = new HashMap<String, String>();
             customHeaders.put("MyHeader", "MyValue");
     
-            // Connect with V13 (RFC 6455). You can change it to V08 or V00.
+            // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change
             // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
             final WebSocketClientHandshaker handshaker =
@@ -79,12 +98,7 @@ public class WebSocketClient {
             bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
                 public ChannelPipeline getPipeline() throws Exception {
                     ChannelPipeline pipeline = Channels.pipeline();
-    
-                    // If you wish to support HyBi V00, you need to use
-                    // WebSocketHttpResponseDecoder instead for
-                    // HttpResponseDecoder.
                     pipeline.addLast("decoder", new HttpResponseDecoder());
-    
                     pipeline.addLast("encoder", new HttpRequestEncoder());
                     pipeline.addLast("ws-handler", new WebSocketClientHandler(handshaker));
                     return pipeline;
@@ -92,7 +106,7 @@ public class WebSocketClient {
             });
     
             // Connect
-            System.out.println("WebSocket Client connecting");
+            logger.info("WebSocket Client connecting");
             ChannelFuture future =
                     bootstrap.connect(
                             new InetSocketAddress(uri.getHost(), uri.getPort()));
@@ -102,17 +116,17 @@ public class WebSocketClient {
             handshaker.handshake(ch).awaitUninterruptibly().rethrowIfFailed();
             
             // Send 10 messages and wait for responses
-            System.out.println("WebSocket Client sending message");
-            for (int i = 0; i < 10; i++) {
+            logger.info("WebSocket Client sending message");
+            for (int i = 0; i < 1000; i++) {
                 ch.write(new TextWebSocketFrame("Message #" + i));
             }
     
             // Ping
-            System.out.println("WebSocket Client sending ping");
+            logger.info("WebSocket Client sending ping");
             ch.write(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
     
             // Close
-            System.out.println("WebSocket Client sending close");
+            logger.info("WebSocket Client sending close");
             ch.write(new CloseWebSocketFrame());
     
             // WebSocketClientHandler will close the connection when the server

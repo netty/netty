@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.DetectionUtil;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -291,6 +293,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
+        if (DetectionUtil.javaVersion() >= 7) {
+            return (int) out.write(toByteBuffers(index, length));
+        }
         // XXX Gathering write is not supported because of a known issue.
         //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
         //     This issue appeared in 2004 and is still unresolved!?
@@ -655,6 +660,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         final int bytesToMove = capacity() - localReaderIndex;
         List<ChannelBuffer> list = decompose(localReaderIndex, bytesToMove);
 
+
+        // If the list is empty we need to assign a new one because
+        // we get a List that is immutable. 
+        //
+        // See https://github.com/netty/netty/issues/325
+        if (list.isEmpty()) {
+            list = new ArrayList<ChannelBuffer>(1);
+        }
+        
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.

@@ -15,6 +15,9 @@
  */
 package io.netty.channel;
 
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
 import io.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
@@ -33,7 +36,7 @@ import io.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * @apiviz.stereotype utility
  */
 @Deprecated
-public class ChannelLocal<T> {
+public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
 
     private final ConcurrentMap<Channel, T> map =
         new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
@@ -158,5 +161,12 @@ public class ChannelLocal<T> {
             }
             return removed;
         }
+    }
+
+    /**
+     * Returns a <strong>read-only</strong> {@link Iterator} that holds all {@link Entry}'s of this ChannelLocal
+     */
+    public Iterator<Entry<Channel, T>> iterator() {
+        return Collections.unmodifiableSet(map.entrySet()).iterator();
     }
 }

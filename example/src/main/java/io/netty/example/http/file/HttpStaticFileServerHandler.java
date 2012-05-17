@@ -54,6 +54,8 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedFile;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -103,6 +105,9 @@ import io.netty.util.CharsetUtil;
  * </pre>
  */
 public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpStaticFileServerHandler.class);
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
@@ -160,6 +165,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
+        if (isKeepAlive(request)) {
+            response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+        }
         
         Channel ch = e.getChannel();
 
@@ -185,7 +193,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
                 @Override
                 public void operationProgressed(
                         ChannelFuture future, long amount, long current, long total) {
-                    System.out.printf("%s: %d / %d (+%d)%n", path, current, total, amount);
+                    logger.info(String.format("%s: %d / %d (+%d)%n", path, current, total, amount));
                 }
             });
         }

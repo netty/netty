@@ -18,9 +18,9 @@ package io.netty.channel.sctp;
 import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -31,38 +31,41 @@ import java.util.concurrent.locks.ReentrantLock;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.socket.nio.NioChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 /**
  */
 class SctpServerChannelImpl extends AbstractServerChannel
-                             implements SctpServerChannel {
+                             implements SctpServerChannel, NioChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpServerChannelImpl.class);
 
     final com.sun.nio.sctp.SctpServerChannel serverChannel;
     final Lock shutdownLock = new ReentrantLock();
-    volatile Selector selector;
     private final SctpServerChannelConfig config;
 
     private volatile boolean bound;
 
+    private SctpWorker worker;
+
     SctpServerChannelImpl(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink) {
+            ChannelSink sink, SctpWorker worker) {
 
         super(factory, pipeline, sink);
-
+        this.worker = worker;
         try {
             serverChannel = com.sun.nio.sctp.SctpServerChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
-                    "Failed to open a server socket.", e);
+                    "Failed to open a server sctp channel.", e);
         }
 
         try {
@@ -71,8 +74,10 @@ class SctpServerChannelImpl extends AbstractServerChannel
             try {
                 serverChannel.close();
             } catch (IOException e2) {
-                logger.warn(
-                        "Failed to close a partially initialized socket.", e2);
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Failed to close a partially initialized socket.", e2);
+                }
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
@@ -81,6 +86,20 @@ class SctpServerChannelImpl extends AbstractServerChannel
         config = new DefaultSctpServerChannelConfig(serverChannel);
 
         fireChannelOpen(this);
+    }
+
+    @Override
+    public ChannelFuture bindAddress(InetAddress localAddress) {
+        ChannelFuture future = future(this);
+        getPipeline().sendDownstream(new SctpBindAddressEvent(this, future, localAddress));
+        return future;
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(InetAddress localAddress) {
+        ChannelFuture future = future(this);
+        getPipeline().sendDownstream(new SctpUnbindAddressEvent(this, future, localAddress));
+        return future;
     }
 
     @Override
@@ -134,5 +153,10 @@ class SctpServerChannelImpl extends AbstractServerChannel
     @Override
     protected boolean setClosed() {
         return super.setClosed();
+    }
+
+    @Override
+    public SctpWorker getWorker() {
+        return worker;
     }
 }

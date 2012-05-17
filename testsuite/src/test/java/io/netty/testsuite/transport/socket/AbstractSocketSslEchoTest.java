@@ -129,7 +129,9 @@ public abstract class AbstractSocketSslEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
-            logger.error("Connection attempt failed", ccf.getCause());
+            if(logger.isErrorEnabled()) {
+                logger.error("Connection attempt failed", ccf.getCause());
+            }
             sc.close().awaitUninterruptibly();
         }
         assertTrue(ccf.isSuccess());
@@ -238,9 +240,11 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            logger.warn(
-                    "Unexpected exception from the " +
-                    (server? "server" : "client") + " side", e.getCause());
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "Unexpected exception from the " +
+                        (server? "server" : "client") + " side", e.getCause());
+            }
 
             exception.compareAndSet(null, e.getCause());
             e.getChannel().close();
@@ -318,8 +322,7 @@ public abstract class AbstractSocketSslEchoTest {
                 // You should do something in the real world.
                 // You will reach here only if you enabled client certificate auth,
                 // as described in SecureChatSslContextFactory.
-                System.err.println(
-                        "UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
+                logger.error("UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
             }
 
             @Override
@@ -327,8 +330,7 @@ public abstract class AbstractSocketSslEchoTest {
                     X509Certificate[] chain, String authType) throws CertificateException {
                 // Always trust - it is an example.
                 // You should do something in the real world.
-                System.err.println(
-                        "UNKNOWN SERVER CERTIFICATE: " + chain[0].getSubjectDN());
+                logger.error("UNKNOWN SERVER CERTIFICATE: " + chain[0].getSubjectDN());
             }
         };
 

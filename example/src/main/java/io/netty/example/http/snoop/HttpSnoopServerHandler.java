@@ -39,6 +39,7 @@ import io.netty.handler.codec.http.CookieEncoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpChunkTrailer;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -131,6 +132,8 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
             response.setHeader(CONTENT_LENGTH, response.getContent().readableBytes());
+            // Add keep alive header as per http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+            response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         }
 
         // Encode the cookie.

@@ -25,11 +25,16 @@ import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Simplistic telnet client.
  */
 public class TelnetClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(TelnetClient.class);
 
     private final String host;
     private final int port;
@@ -43,7 +48,6 @@ public class TelnetClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Configure the pipeline factory.
@@ -96,7 +100,7 @@ public class TelnetClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 2) {
-            System.err.println(
+            logger.error(
                     "Usage: " + TelnetClient.class.getSimpleName() +
                     " <host> <port>");
             return;

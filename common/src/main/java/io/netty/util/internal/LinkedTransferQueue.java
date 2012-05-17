@@ -81,6 +81,7 @@ import java.util.concurrent.locks.LockSupport;
 
  * @param <E> the type of elements held in this collection
  */
+@SuppressWarnings("restriction")
 public class LinkedTransferQueue<E> extends AbstractQueue<E>
     implements BlockingQueue<E>, java.io.Serializable {
     private static final long serialVersionUID = -3223113410248163686L;
@@ -528,8 +529,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             }
             return false;
         }
-
-        private static final long serialVersionUID = -3375979862319811754L;
 
         // Unsafe mechanics
         private static final sun.misc.Unsafe UNSAFE;

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 //The MIT License
 //
 //Copyright (c) 2009 Carl Bystršm
@@ -34,9 +49,14 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(WebSocketClientHandler.class);
 
     private final WebSocketClientHandshaker handshaker;
 
@@ -46,7 +66,7 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        System.out.println("WebSocket Client disconnected!");
+        logger.debug("WebSocket Client disconnected!");
     }
 
     @Override
@@ -54,24 +74,24 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
         Channel ch = ctx.getChannel();
         if (!handshaker.isHandshakeComplete()) {
             handshaker.finishHandshake(ch, (HttpResponse) e.getMessage());
-            System.out.println("WebSocket Client connected!");
+            logger.debug("WebSocket Client connected!");
             return;
         }
 
         if (e.getMessage() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) e.getMessage();
-            throw new WebSocketException("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
+            throw new Exception("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
                     + response.getContent().toString(CharsetUtil.UTF_8) + ")");
         }
 
         WebSocketFrame frame = (WebSocketFrame) e.getMessage();
         if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-            System.out.println("WebSocket Client received message: " + textFrame.getText());
+            logger.info("WebSocket Client received message: " + textFrame.getText());
         } else if (frame instanceof PongWebSocketFrame) {
-            System.out.println("WebSocket Client received pong");
+            logger.info("WebSocket Client received pong");
         } else if (frame instanceof CloseWebSocketFrame) {
-            System.out.println("WebSocket Client received closing");
+            logger.info("WebSocket Client received closing");
             ch.close();
         }
     }

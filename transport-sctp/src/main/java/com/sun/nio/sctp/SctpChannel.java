@@ -16,6 +16,7 @@
 package com.sun.nio.sctp;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.spi.AbstractSelectableChannel;
@@ -45,6 +46,12 @@ public abstract class SctpChannel extends AbstractSelectableChannel {
     public abstract SctpChannel bind(SocketAddress local) throws IOException;
     public abstract boolean connect(SocketAddress remote) throws IOException;
     public abstract boolean finishConnect() throws IOException;
+
+    public abstract SctpChannel bindAddress(InetAddress inetAddress) throws IOException;
+    public abstract SctpChannel unbindAddress(InetAddress inetAddress) throws IOException;
+
     public abstract <T> MessageInfo receive(ByteBuffer dst, T attachment, NotificationHandler<T> handler) throws IOException;
     public abstract int send(ByteBuffer src, MessageInfo messageInfo) throws IOException;
+    
+    public abstract Set<SctpSocketOption<?>> supportedOptions();
 }

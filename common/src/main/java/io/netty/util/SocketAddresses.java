@@ -15,12 +15,17 @@
  */
 package io.netty.util;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 public final class SocketAddresses {
 
     public static final InetAddress LOCALHOST;
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(SocketAddresses.class);
 
     static {
         // We cache this because some machine takes almost forever to return
@@ -36,8 +41,7 @@ public final class SocketAddresses {
                 try {
                     localhost = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
                 } catch (UnknownHostException e2) {
-                    System.err.println("Failed to get the localhost.");
-                    e2.printStackTrace();
+                    logger.error("Failed to resolve localhost", e2);
                 }
             }
         }

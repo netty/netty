@@ -289,11 +289,12 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
 
     private ChannelBuffer cumulation;
-    private boolean needsCleanup;
     private final boolean unfold;
     private ReplayingDecoderBuffer replayable;
     private T state;
     private int checkpoint;
+    private boolean needsCleanup;
+    
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -430,11 +431,93 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             return;
         }
 
-        ChannelBuffer cumulation = cumulation(ctx);
         needsCleanup = true;
-        cumulation.discardReadBytes();
-        cumulation.writeBytes(input);
-        callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
+        
+        if (cumulation == null) {
+            // the cumulation buffer is not created yet so just pass the input
+            // to callDecode(...) method
+            this.cumulation = input;
+            replayable = new ReplayingDecoderBuffer(input);
+
+            int oldReaderIndex = input.readerIndex();
+            int inputSize = input.readableBytes();
+            callDecode(
+                    ctx, e.getChannel(),
+                    input, replayable,
+                    e.getRemoteAddress());
+
+            if (input.readable()) {
+                // seems like there is something readable left in the input buffer
+                // or decoder wants a replay - create the cumulation buffer and
+                // copy the input into it
+                ChannelBuffer cumulation;
+                if (checkpoint > 0) {
+                    int bytesToPreserve = inputSize - (checkpoint - oldReaderIndex);
+                    cumulation = this.cumulation =
+                            newCumulationBuffer(ctx, bytesToPreserve);
+                    cumulation.writeBytes(input, checkpoint, bytesToPreserve);
+                } else if (checkpoint == 0) {
+                    cumulation = this.cumulation =
+                            newCumulationBuffer(ctx, inputSize);
+                    cumulation.writeBytes(input, oldReaderIndex, inputSize);
+                    cumulation.readerIndex(input.readerIndex());
+
+                } else {
+                    cumulation = this.cumulation =
+                            newCumulationBuffer(ctx, input.readableBytes());
+                    cumulation.writeBytes(input);
+                }
+                replayable = new ReplayingDecoderBuffer(cumulation);
+            } else {
+                this.cumulation = null;
+                replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
+            }
+        } else {
+            assert cumulation.readable();
+            boolean fit = false;
+            
+            int readable = input.readableBytes();
+            int writable = cumulation.writableBytes();
+            int w = writable - readable;
+            if (w < 0) {
+                int readerIndex = cumulation.readerIndex();
+                if (w + readerIndex >= 0) {
+                    // the input will fit if we discard all read bytes, so do it
+                    cumulation.discardReadBytes();
+                    fit = true;
+                }
+            } else {
+
+                // ok the input fit into the cumulation buffer
+                fit = true;
+            }
+            
+            ChannelBuffer buf;
+            if (fit) {
+                // the input fit in the cumulation buffer so copy it over
+                buf = this.cumulation;
+                buf.writeBytes(input);
+            } else {
+                // wrap the cumulation and input 
+                buf = ChannelBuffers.wrappedBuffer(cumulation, input);
+                this.cumulation = buf;
+                replayable = new ReplayingDecoderBuffer(cumulation);
+            }
+
+
+            callDecode(ctx, e.getChannel(), buf, replayable, e.getRemoteAddress());
+            if (!buf.readable()) {
+                // nothing readable left so reset the state
+                this.cumulation = null;
+                replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
+            } else {
+                // create a new buffer and copy the readable buffer into it
+                this.cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                this.cumulation.writeBytes(buf);
+                replayable = new ReplayingDecoderBuffer(this.cumulation);
+
+            }
+        }
     }
 
     @Override
@@ -455,15 +538,15 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         ctx.sendUpstream(e);
     }
 
-    private void callDecode(ChannelHandlerContext context, Channel channel, ChannelBuffer cumulation, SocketAddress remoteAddress) throws Exception {
-        while (cumulation.readable()) {
-            int oldReaderIndex = checkpoint = cumulation.readerIndex();
+    private void callDecode(ChannelHandlerContext context, Channel channel, ChannelBuffer input, ChannelBuffer replayableInput, SocketAddress remoteAddress) throws Exception {
+        while (input.readable()) {
+            int oldReaderIndex = checkpoint = input.readerIndex();
             Object result = null;
             T oldState = state;
             try {
-                result = decode(context, channel, replayable, state);
+                result = decode(context, channel, replayableInput, state);
                 if (result == null) {
-                    if (oldReaderIndex == cumulation.readerIndex() && oldState == state) {
+                    if (oldReaderIndex == input.readerIndex() && oldState == state) {
                         throw new IllegalStateException(
                                 "null cannot be returned if no data is consumed and state didn't change.");
                     } else {
@@ -476,7 +559,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 // Return to the checkpoint (or oldPosition) and retry.
                 int checkpoint = this.checkpoint;
                 if (checkpoint >= 0) {
-                    cumulation.readerIndex(checkpoint);
+                    input.readerIndex(checkpoint);
                 } else {
                     // Called by cleanup() - no need to maintain the readerIndex
                     // anymore because the buffer has been released already.
@@ -489,7 +572,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 break;
             }
 
-            if (oldReaderIndex == cumulation.readerIndex() && oldState == state) {
+            if (oldReaderIndex == input.readerIndex() && oldState == state) {
                 throw new IllegalStateException(
                         "decode() method must consume at least one byte " +
                         "if it returned a decoded message (caused by: " +
@@ -498,11 +581,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
             // A successful decode
             unfoldAndFireMessageReceived(context, result, remoteAddress);
-
-            if (!cumulation.readable()) {
-                this.cumulation = null;
-                replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
-            }
         }
     }
 
@@ -528,19 +606,19 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         try {
+            ChannelBuffer cumulation = this.cumulation;
             if (!needsCleanup) {
                 return;
             } else {
                 needsCleanup = false;
             }
 
-            ChannelBuffer cumulation = this.cumulation;
             this.cumulation = null;
             replayable.terminate();
 
             if (cumulation != null && cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.
-                callDecode(ctx, e.getChannel(), cumulation, null);
+                callDecode(ctx, e.getChannel(), cumulation, replayable, null);
             }
 
             // Call decodeLast() finally.  Please note that decodeLast() is
@@ -558,19 +636,16 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
     }
 
-    private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
-        ChannelBuffer buf = this.cumulation;
-        if (buf == null) {
-            
-            if (cumulation == null) {
-                ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-                buf = new UnsafeDynamicChannelBuffer(factory);
-                cumulation = buf;
-                replayable = new ReplayingDecoderBuffer(buf);
-            } else {
-                buf = cumulation;
-            }
-        }
-        return buf;
+    /**
+     * Create a new {@link ChannelBuffer} which is used for the cumulation.
+     * Sub-classes may override this.
+     *
+     * @param ctx {@link ChannelHandlerContext} for this handler
+     * @return buffer the {@link ChannelBuffer} which is used for cumulation
+     */
+    protected ChannelBuffer newCumulationBuffer(
+            ChannelHandlerContext ctx, int minimumCapacity) {
+        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        return factory.getBuffer(Math.max(minimumCapacity, 256));
     }
 }

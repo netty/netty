@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 // (BSD License: http://www.opensource.org/licenses/bsd-license)
 //
 // Copyright (c) 2011, Joe Walnes and contributors
@@ -44,7 +59,7 @@ package io.netty.handler.codec.http.websocketx;
 public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
 
     /**
-     * Constructor
+     * Constructor with default values
      * 
      * @param maskedPayload
      *            Web socket servers must set this to true processed incoming masked payload. Client implementations
@@ -53,6 +68,22 @@ public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
      *            Flag to allow reserved extension bits to be used or not
      */
     public WebSocket13FrameDecoder(boolean maskedPayload, boolean allowExtensions) {
-        super(maskedPayload, allowExtensions);
+        this(maskedPayload, allowExtensions, Long.MAX_VALUE);
     }
+    
+    /**
+     * Constructor
+     * 
+     * @param maskedPayload
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
+     *            helps check for denial of services attacks.
+     */
+    public WebSocket13FrameDecoder(boolean maskedPayload, boolean allowExtensions, long maxFramePayloadLength) {
+        super(maskedPayload, allowExtensions, maxFramePayloadLength);
+    }    
 }

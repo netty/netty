@@ -18,7 +18,8 @@ package io.netty.util.internal;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 
-import io.netty.util.UnsafeDetectUtil;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * This factory should be used to create the "optimal" {@link BlockingQueue}
@@ -26,7 +27,8 @@ import io.netty.util.UnsafeDetectUtil;
  */
 public final class QueueFactory {
     
-    private static final boolean useUnsafe = UnsafeDetectUtil.isUnsafeFound(QueueFactory.class.getClassLoader());
+    private static final boolean useUnsafe = DetectionUtil.hasUnsafe();
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QueueFactory.class);
     
     private QueueFactory() {
         // only use static methods!
@@ -40,11 +42,22 @@ public final class QueueFactory {
      * @return queue     the {@link BlockingQueue} implementation
      */
     public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
-        if (useUnsafe) {
-            return new LinkedTransferQueue<T>();
-        } else {
-            return new LegacyLinkedTransferQueue<T>();
+        try {
+            if (useUnsafe) {
+                return new LinkedTransferQueue<T>();
+            }
+        } catch (Throwable t) {
+            // For whatever reason an exception was thrown while loading the LinkedTransferQueue
+            //
+            // This mostly happens because of a custom classloader or security policy that did not allow us to access the
+            // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
+            }
         }
+        
+        return new LegacyLinkedTransferQueue<T>();
+       
     }
     
     /**
@@ -55,10 +68,21 @@ public final class QueueFactory {
      * @return queue      the {@link BlockingQueue} implementation
      */
     public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
-        if (useUnsafe) {
-            return new LinkedTransferQueue<T>(collection);
-        } else {
-            return new LegacyLinkedTransferQueue<T>(collection);
+        try {
+            if (useUnsafe) {
+                return new LinkedTransferQueue<T>(collection);
+            }
+        } catch (Throwable t) {
+            // For whatever reason an exception was thrown while loading the LinkedTransferQueue
+            //
+            // This mostly happens because of a custom classloader or security policy that did not allow us to access the
+            // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
+            }
         }
+         
+        return new LegacyLinkedTransferQueue<T>(collection);
+        
     }
 }

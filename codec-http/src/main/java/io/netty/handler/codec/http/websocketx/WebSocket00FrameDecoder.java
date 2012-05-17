@@ -35,7 +35,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
 
     private static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
-    private final int maxFrameSize;
+    private final long maxFrameSize;
     private boolean receivedClosingHandshake;
 
     public WebSocket00FrameDecoder() {
@@ -49,7 +49,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
      * @param maxFrameSize
      *            the maximum frame size to decode
      */
-    public WebSocket00FrameDecoder(int maxFrameSize) {
+    public WebSocket00FrameDecoder(long maxFrameSize) {
         this.maxFrameSize = maxFrameSize;
     }
 

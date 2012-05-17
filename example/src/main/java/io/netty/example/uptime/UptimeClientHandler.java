@@ -25,6 +25,8 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.handler.timeout.ReadTimeoutException;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
 import io.netty.util.TimerTask;
@@ -34,6 +36,9 @@ import io.netty.util.TimerTask;
  * connection attempt status.
  */
 public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(UptimeClientHandler.class);
 
     final ClientBootstrap bootstrap;
     private final Timer timer;
@@ -91,9 +96,9 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 
     void println(String msg) {
         if (startTime < 0) {
-            System.err.format("[SERVER IS DOWN] %s%n", msg);
+            logger.error(String.format("[SERVER IS DOWN] %s%n", msg));
         } else {
-            System.err.format("[UPTIME: %5ds] %s%n", (System.currentTimeMillis() - startTime) / 1000, msg);
+            logger.error(String.format("[UPTIME: %5ds] %s%n", (System.currentTimeMillis() - startTime) / 1000, msg));
         }
     }
 }

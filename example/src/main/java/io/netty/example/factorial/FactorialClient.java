@@ -22,12 +22,17 @@ import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Sends a sequence of integers to a {@link FactorialServer} to calculate
  * the factorial of the specified integer.
  */
 public class FactorialClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(FactorialClient.class);
 
     private final String host;
     private final int port;
@@ -43,7 +48,6 @@ public class FactorialClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
@@ -61,8 +65,7 @@ public class FactorialClient {
             (FactorialClientHandler) channel.getPipeline().getLast();
 
         // Print out the answer.
-        System.err.format(
-                "Factorial of %,d is: %,d", count, handler.getFactorial());
+        logger.info(String.format("Factorial of %,d is: %,d", count, handler.getFactorial()));
 
         // Shut down all thread pools to exit.
         bootstrap.releaseExternalResources();
@@ -71,7 +74,7 @@ public class FactorialClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 3) {
-            System.err.println(
+            logger.error(
                     "Usage: " + FactorialClient.class.getSimpleName() +
                     " <host> <port> <count>");
             return;

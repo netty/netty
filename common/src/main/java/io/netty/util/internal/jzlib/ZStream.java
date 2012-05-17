@@ -47,9 +47,14 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package io.netty.util.internal.jzlib;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.jzlib.JZlib.WrapperType;
 
 public final class ZStream {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(ZStream.class);
 
     public byte[] next_in; // next input byte
     public int next_in_index;
@@ -124,9 +129,13 @@ public final class ZStream {
         return deflateInit(level, bits, WrapperType.ZLIB);
     }
 
-    public int deflateInit(int level, int bits, @SuppressWarnings("rawtypes") Enum wrapperType) {
+    public int deflateInit(int level, int bits, Enum<?> wrapperType) {
+        return deflateInit(level, bits, JZlib.DEF_MEM_LEVEL, wrapperType);
+    }
+
+    public int deflateInit(int level, int bits, int memLevel, @SuppressWarnings("rawtypes") Enum wrapperType) {
         dstate = new Deflate();
-        return dstate.deflateInit(this, level, bits, (WrapperType) wrapperType);
+        return dstate.deflateInit(this, level, bits, memLevel, (WrapperType) wrapperType);
     }
 
     public int deflate(int flush) {
@@ -177,10 +186,10 @@ public final class ZStream {
                 next_out.length <= next_out_index ||
                 dstate.pending_buf.length < dstate.pending_out + len ||
                 next_out.length < next_out_index + len) {
-            System.out.println(dstate.pending_buf.length + ", " +
+            logger.info(dstate.pending_buf.length + ", " +
                     dstate.pending_out + ", " + next_out.length + ", " +
                     next_out_index + ", " + len);
-            System.out.println("avail_out=" + avail_out);
+            logger.info("avail_out=" + avail_out);
         }
 
         System.arraycopy(dstate.pending_buf, dstate.pending_out, next_out,

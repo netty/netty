@@ -286,8 +286,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        State state = new State();
-        ctx.setAttachment(state);
+        State state = state(ctx);
+
+        // Avoid the case where destroy() is called before scheduling timeouts.
+        // See: https://github.com/netty/netty/issues/143
+        if (state.destroyed) {
+            return;
+        }
 
         state.lastReadTime = state.lastWriteTime = System.currentTimeMillis();
         if (readerIdleTimeMillis > 0) {
@@ -308,25 +313,39 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     private void destroy(ChannelHandlerContext ctx) {
-        State state = (State) ctx.getAttachment();
-        // Check if the state was set before, it may not if the destroy method was called before the 
-        // channelOpen(...) method. 
-        //
-        // See #143
-        if (state != null) {
-            if (state.readerIdleTimeout != null) {
-                state.readerIdleTimeout.cancel();
-                state.readerIdleTimeout = null;
-            }
-            if (state.writerIdleTimeout != null) {
-                state.writerIdleTimeout.cancel();
-                state.writerIdleTimeout = null;
-            }
-            if (state.allIdleTimeout != null) {
-                state.allIdleTimeout.cancel();
-                state.allIdleTimeout = null;
-            }
+        State state;
+
+        synchronized (ctx) {
+            state = state(ctx);
+            state.destroyed = true;
         }
+
+        if (state.readerIdleTimeout != null) {
+            state.readerIdleTimeout.cancel();
+            state.readerIdleTimeout = null;
+        }
+        if (state.writerIdleTimeout != null) {
+            state.writerIdleTimeout.cancel();
+            state.writerIdleTimeout = null;
+        }
+        if (state.allIdleTimeout != null) {
+            state.allIdleTimeout.cancel();
+            state.allIdleTimeout = null;
+        }
+    }
+    
+    private State state(ChannelHandlerContext ctx) {
+        State state;
+        synchronized (ctx) {
+            // FIXME: It could have been better if there is setAttachmentIfAbsent().
+            state = (State) ctx.getAttachment();
+            if (state != null) {
+                return state;
+            }
+            state = new State();
+            ctx.setAttachment(state);
+        }
+        return state;
     }
 
     protected void channelIdle(
@@ -453,5 +472,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         volatile long lastWriteTime;
 
         volatile Timeout allIdleTimeout;
+
+        volatile boolean destroyed;
     }
 }

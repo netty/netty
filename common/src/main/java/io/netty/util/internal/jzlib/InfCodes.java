@@ -71,7 +71,7 @@ final class InfCodes {
     // mode dependent information
     private int len;
     private int[] tree; // pointer into tree
-    private int tree_index = 0;
+    private int tree_index;
     private int need; // bits needed
     private int lit;
     // if EXT or COPY, where and how much

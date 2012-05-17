@@ -15,22 +15,28 @@
  */
 package io.netty.example.objectecho;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.example.echo.EchoClient;
+import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
  */
 public class ObjectEchoClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(ObjectEchoClient.class);
 
     private final String host;
     private final int port;
@@ -46,15 +52,16 @@ public class ObjectEchoClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Set up the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new ObjectEncoder(),
-                        new ObjectDecoder(),
+                        new ObjectDecoder(
+                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEchoClientHandler(firstMessageSize));
             }
         });
@@ -66,7 +73,7 @@ public class ObjectEchoClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
-            System.err.println(
+            logger.error(
                     "Usage: " + ObjectEchoClient.class.getSimpleName() +
                     " <host> <port> [<first message size>]");
             return;

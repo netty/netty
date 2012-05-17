@@ -96,8 +96,7 @@ public class DefaultHttpMessage implements HttpMessage {
 
     @Override
     public String getHeader(final String name) {
-        List<String> values = getHeaders(name);
-        return values.size() > 0 ? values.get(0) : null;
+        return headers.getHeader(name);
     }
 
     @Override

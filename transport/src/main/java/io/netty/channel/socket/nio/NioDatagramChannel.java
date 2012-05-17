@@ -15,124 +15,87 @@
  */
 package io.netty.channel.socket.nio;
 
-import static io.netty.channel.Channels.*;
+import static io.netty.channel.Channels.fireChannelOpen;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.Channels;
+import io.netty.channel.socket.DatagramChannelConfig;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.channels.DatagramChannel;
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.AbstractChannel;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.socket.DatagramChannelConfig;
-import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import io.netty.util.internal.LegacyLinkedTransferQueue;
-import io.netty.util.internal.ThreadLocalBoolean;
+import java.nio.channels.MembershipKey;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-final class NioDatagramChannel extends AbstractChannel
-                                implements io.netty.channel.socket.DatagramChannel {
+public final class NioDatagramChannel extends AbstractNioChannel implements io.netty.channel.socket.DatagramChannel {
 
+    /**
+     * The supported ProtocolFamily by UDP
+     *
+     */
+    public enum ProtocolFamily {
+        INET,
+        INET6
+    }
     /**
      * The {@link DatagramChannelConfig}.
      */
     private final NioDatagramChannelConfig config;
-
-    /**
-     * The {@link NioDatagramWorker} for this NioDatagramChannnel.
-     */
-    final NioDatagramWorker worker;
-
-    /**
-     * The {@link DatagramChannel} that this channel uses.
-     */
-    private final java.nio.channels.DatagramChannel datagramChannel;
-
-    /**
-     * Monitor object to synchronize access to InterestedOps.
-     */
-    final Object interestOpsLock = new Object();
-
-    /**
-     * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
-     */
-    final Object writeLock = new Object();
-
-    /**
-     * WriteTask that performs write operations.
-     */
-    final Runnable writeTask = new WriteTask();
-
-    /**
-     * Indicates if there is a {@link WriteTask} in the task queue.
-     */
-    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
-
-    /**
-     * Queue of write {@link MessageEvent}s.
-     */
-    final Queue<MessageEvent> writeBufferQueue = new WriteRequestQueue();
-
-    /**
-     * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
-     * contains.
-     */
-    final AtomicInteger writeBufferSize = new AtomicInteger();
-
-    /**
-     * Keeps track of the highWaterMark.
-     */
-    final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-
-    /**
-     * The current write {@link MessageEvent}
-     */
-    MessageEvent currentWriteEvent;
-    SendBuffer currentWriteBuffer;
-
-    /**
-     * Boolean that indicates that write operation is in progress.
-     */
-    boolean inWriteNowLoop;
-    boolean writeSuspended;
-
-    private volatile InetSocketAddress localAddress;
-    volatile InetSocketAddress remoteAddress;
-
+    private Map<InetAddress, List<MembershipKey>> memberships;
+   
     static NioDatagramChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, NioDatagramWorker worker) {
+            ChannelPipeline pipeline, ChannelSink sink, NioDatagramWorker worker, ProtocolFamily family) {
         NioDatagramChannel instance =
-                new NioDatagramChannel(factory, pipeline, sink, worker);
+                new NioDatagramChannel(factory, pipeline, sink, worker, family);
         fireChannelOpen(instance);
         return instance;
     }
 
     private NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
-            final NioDatagramWorker worker) {
-        super(null, factory, pipeline, sink);
-        this.worker = worker;
-        datagramChannel = openNonBlockingChannel();
-        config = new DefaultNioDatagramChannelConfig(datagramChannel.socket());
+            final NioDatagramWorker worker, ProtocolFamily family) {
+        super(null, factory, pipeline, sink, worker, new NioDatagramJdkChannel(openNonBlockingChannel(family)));
+        config = new DefaultNioDatagramChannelConfig(getJdkChannel().getChannel());
     }
 
-    private DatagramChannel openNonBlockingChannel() {
+    private static DatagramChannel openNonBlockingChannel(ProtocolFamily family) {
         try {
-            final DatagramChannel channel = DatagramChannel.open();
+            final DatagramChannel channel;
+            
+            // check if we are on java 7 or if the family was not specified
+            if (DetectionUtil.javaVersion() < 7 || family == null) {
+                channel = DatagramChannel.open();
+            } else {
+                // This block only works on java7++, but we checked before if we have it
+                switch (family) {
+                case INET:
+                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET);
+                    break;
+
+                case INET6:
+                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET6);
+                    break;
+
+                default:
+                    throw new IllegalArgumentException();
+                }
+            }
+            
             channel.configureBlocking(false);
             return channel;
         } catch (final IOException e) {
@@ -140,44 +103,25 @@ final class NioDatagramChannel extends AbstractChannel
         }
     }
 
+
     @Override
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) datagramChannel.socket().getLocalSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
+    protected NioDatagramJdkChannel getJdkChannel() {
+        return (NioDatagramJdkChannel) super.getJdkChannel();
     }
 
     @Override
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) datagramChannel.socket().getRemoteSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
+    public NioDatagramWorker getWorker() {
+        return (NioDatagramWorker) super.getWorker();
     }
 
     @Override
     public boolean isBound() {
-        return isOpen() && datagramChannel.socket().isBound();
+        return isOpen() && getJdkChannel().isSocketBound();
     }
 
     @Override
     public boolean isConnected() {
-        return datagramChannel.isConnected();
+        return getJdkChannel().isConnected();
     }
 
     @Override
@@ -190,49 +134,173 @@ final class NioDatagramChannel extends AbstractChannel
         return config;
     }
 
-    DatagramChannel getDatagramChannel() {
-        return datagramChannel;
+    @Override
+    public ChannelFuture joinGroup(InetAddress multicastAddress) {
+       try {
+            return joinGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
+        } catch (SocketException e) {
+            return Channels.failedFuture(this, e);
+        }
     }
 
     @Override
-    public int getInterestOps() {
-        if (!isOpen()) {
-            return Channel.OP_WRITE;
-        }
+    public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        return joinGroup(multicastAddress.getAddress(), networkInterface, null);
+    }
 
-        int interestOps = getRawInterestOps();
-        int writeBufferSize = this.writeBufferSize.get();
-        if (writeBufferSize != 0) {
-            if (highWaterMarkCounter.get() > 0) {
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-                if (writeBufferSize >= lowWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
+    /**
+     * Joins the specified multicast group at the specified interface using the specified source.
+     */
+    public ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            if (multicastAddress == null) {
+                throw new NullPointerException("multicastAddress");
+            }
+            
+            if (networkInterface == null) {
+                throw new NullPointerException("networkInterface");
+            }
+            
+            try {
+                MembershipKey key;
+                if (source == null) {
+                    key = getJdkChannel().getChannel().join(multicastAddress, networkInterface);
                 } else {
-                    interestOps &= ~Channel.OP_WRITE;
+                    key = getJdkChannel().getChannel().join(multicastAddress, networkInterface, source);
                 }
-            } else {
-                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-                if (writeBufferSize >= highWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
+
+                synchronized (this) {
+                    if (memberships == null) {
+                        memberships = new HashMap<InetAddress, List<MembershipKey>>();
+                       
+                    } 
+                    List<MembershipKey> keys = memberships.get(multicastAddress);
+                    if (keys == null) {
+                        keys = new ArrayList<MembershipKey>();
+                        memberships.put(multicastAddress, keys);
+                    }
+                    keys.add(key);
+                }
+            } catch (Throwable e) {
+                return Channels.failedFuture(this, e);
+            }
+        }
+        return Channels.succeededFuture(this);
+    }
+    
+    @Override
+    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+        try {
+            return leaveGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
+        } catch (SocketException e) {
+            return Channels.failedFuture(this, e);
+        }
+        
+    }
+
+    @Override
+    public ChannelFuture leaveGroup(InetSocketAddress multicastAddress,
+            NetworkInterface networkInterface) {
+        return leaveGroup(multicastAddress.getAddress(), networkInterface, null);
+    }
+
+    /**
+     * Leave the specified multicast group at the specified interface using the specified source.
+     */
+    public ChannelFuture leaveGroup(InetAddress multicastAddress,
+            NetworkInterface networkInterface, InetAddress source) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            if (multicastAddress == null) {
+                throw new NullPointerException("multicastAddress");
+            }
+            
+            if (networkInterface == null) {
+                throw new NullPointerException("networkInterface");
+            }
+            
+            synchronized (this) {
+                if (memberships != null) {
+                    List<MembershipKey> keys = memberships.get(multicastAddress);
+                    if (keys != null) {
+                        Iterator<MembershipKey> keyIt = keys.iterator();
+                        
+                        while (keyIt.hasNext()) {
+                            MembershipKey key = keyIt.next();
+                            if (networkInterface.equals(key.networkInterface())) {
+                               if (source == null && key.sourceAddress() == null || (source != null && source.equals(key.sourceAddress()))) {
+                                   key.drop();
+                                   keyIt.remove();
+                               }
+                               
+                            }
+                        }
+                        if (keys.isEmpty()) {
+                            memberships.remove(multicastAddress);
+                        }
+                    }
                 }
             }
-        } else {
-            interestOps &= ~Channel.OP_WRITE;
+            return Channels.succeededFuture(this);
         }
-
-        return interestOps;
     }
-
-    int getRawInterestOps() {
-        return super.getInterestOps();
+    
+    /**
+     * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
+     * 
+     */
+    public ChannelFuture block(InetAddress multicastAddress,
+            NetworkInterface networkInterface, InetAddress sourceToBlock) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            if (multicastAddress == null) {
+                throw new NullPointerException("multicastAddress");
+            }
+            if (sourceToBlock == null) {
+                throw new NullPointerException("sourceToBlock");
+            }
+            
+            if (networkInterface == null) {
+                throw new NullPointerException("networkInterface");
+            }
+            synchronized (this) {
+                if (memberships != null) {
+                    List<MembershipKey> keys = memberships.get(multicastAddress);
+                    for (MembershipKey key: keys) {
+                        if (networkInterface.equals(key.networkInterface())) {
+                            try {
+                                key.block(sourceToBlock);
+                            } catch (IOException e) {
+                                return Channels.failedFuture(this, e);
+                            }
+                        }
+                    }
+                }
+            }
+            return Channels.succeededFuture(this);
+            
+            
+        }
     }
+    
+    /**
+     * Block the given sourceToBlock address for the given multicastAddress
+     * 
+     */
+    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        try {
+            block(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), sourceToBlock);
+        } catch (SocketException e) {
+            return Channels.failedFuture(this, e);
+        }
+        return Channels.succeededFuture(this);
 
-    void setRawInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
     }
-
+    
     @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {
         if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
@@ -240,112 +308,6 @@ final class NioDatagramChannel extends AbstractChannel
         } else {
             return super.write(message, remoteAddress);
         }
-    }
 
-    /**
-     * {@link WriteRequestQueue} is an extension of {@link AbstractWriteRequestQueue}
-     * that adds support for highWaterMark checking of the write buffer size.
-     */
-    private final class WriteRequestQueue extends
-            AbstractWriteRequestQueue {
-
-        private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
-
-       
-        /**
-         * This method first delegates to {@link LegacyLinkedTransferQueue#offer(Object)} and
-         * adds support for keeping track of the size of the this write buffer.
-         */
-        @Override
-        public boolean offer(MessageEvent e) {
-            boolean success = queue.offer(e);
-            assert success;
-
-            int messageSize = getMessageSize(e);
-            int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
-            int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-
-            if (newWriteBufferSize >= highWaterMark) {
-                if (newWriteBufferSize - messageSize < highWaterMark) {
-                    highWaterMarkCounter.incrementAndGet();
-                    if (!notifying.get()) {
-                        notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(NioDatagramChannel.this);
-                        notifying.set(Boolean.FALSE);
-                    }
-                }
-            }
-            return true;
-        }
-
-        /**
-         * This method first delegates to {@link LegacyLinkedTransferQueue#poll()} and
-         * adds support for keeping track of the size of the this writebuffers queue.
-         */
-        @Override
-        public MessageEvent poll() {
-            MessageEvent e = queue.poll();
-            if (e != null) {
-                int messageSize = getMessageSize(e);
-                int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-
-                if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-                    if (newWriteBufferSize + messageSize >= lowWaterMark) {
-                        highWaterMarkCounter.decrementAndGet();
-                        if (isBound() && !notifying.get()) {
-                            notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(NioDatagramChannel.this);
-                            notifying.set(Boolean.FALSE);
-                        }
-                    }
-                }
-            }
-            return e;
-        }
-
-        private int getMessageSize(MessageEvent e) {
-            Object m = e.getMessage();
-            if (m instanceof ChannelBuffer) {
-                return ((ChannelBuffer) m).readableBytes();
-            }
-            return 0;
-        }
-    }
-
-    /**
-     * WriteTask is a simple runnable performs writes by delegating the {@link NioDatagramWorker}.
-     */
-    private final class WriteTask implements Runnable {
-        WriteTask() {
-        }
-
-        @Override
-        public void run() {
-            writeTaskInTaskQueue.set(false);
-            worker.writeFromTaskLoop(NioDatagramChannel.this);
-        }
-    }
-
-    @Override
-    public void joinGroup(InetAddress multicastAddress) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void joinGroup(InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void leaveGroup(InetAddress multicastAddress) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void leaveGroup(InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface) {
-        throw new UnsupportedOperationException();
     }
 }

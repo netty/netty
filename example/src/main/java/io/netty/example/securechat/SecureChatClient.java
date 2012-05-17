@@ -26,11 +26,16 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.example.telnet.TelnetClient;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Simple SSL chat client modified from {@link TelnetClient}.
  */
 public class SecureChatClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(SecureChatClient.class);
 
     private final String host;
     private final int port;
@@ -44,7 +49,6 @@ public class SecureChatClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Configure the pipeline factory.
@@ -97,7 +101,7 @@ public class SecureChatClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 2) {
-            System.err.println(
+            logger.error(
                     "Usage: " + SecureChatClient.class.getSimpleName() +
                     " <host> <port>");
             return;

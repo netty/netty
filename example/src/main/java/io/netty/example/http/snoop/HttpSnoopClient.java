@@ -29,12 +29,17 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A simple HTTP client that prints out the content of the HTTP response to
  * {@link System#out} to test {@link HttpSnoopServer}.
  */
 public class HttpSnoopClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpSnoopClient.class);
 
     private final URI uri;
 
@@ -55,7 +60,7 @@ public class HttpSnoopClient {
         }
 
         if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
-            System.err.println("Only HTTP(S) is supported.");
+            logger.error("Only HTTP(S) is supported.");
             return;
         }
 
@@ -64,7 +69,6 @@ public class HttpSnoopClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
@@ -83,7 +87,7 @@ public class HttpSnoopClient {
 
         // Prepare the HTTP request.
         HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, uri.toASCIIString());
+                HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
         request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
@@ -106,7 +110,7 @@ public class HttpSnoopClient {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
-            System.err.println(
+            logger.error(
                     "Usage: " + HttpSnoopClient.class.getSimpleName() +
                     " <URL>");
             return;

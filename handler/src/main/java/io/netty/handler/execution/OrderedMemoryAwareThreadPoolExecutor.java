@@ -136,7 +136,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     // TODO Make OMATPE focus on the case where Channel is the key.
     //      Add a new less-efficient TPE that allows custom key.
 
-    private final ConcurrentMap<Object, Executor> childExecutors = newChildExecutorMap();
+    protected final ConcurrentMap<Object, Executor> childExecutors = newChildExecutorMap();
 
     /**
      * Creates a new instance.
@@ -242,7 +242,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         }
     }
 
-    private Executor getChildExecutor(ChannelEvent e) {
+    protected Executor getChildExecutor(ChannelEvent e) {
         Object key = getChildExecutorKey(e);
         Executor executor = childExecutors.get(key);
         if (executor == null) {
@@ -259,7 +259,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             ChannelStateEvent se = (ChannelStateEvent) e;
             if (se.getState() == ChannelState.OPEN &&
                 !channel.isOpen()) {
-                childExecutors.remove(channel);
+                removeChildExecutor(key);
             }
         }
         return executor;
@@ -278,7 +278,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         afterExecute(r, t);
     }
 
-    private final class ChildExecutor implements Executor, Runnable {
+    protected final class ChildExecutor implements Executor, Runnable {
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
         private final AtomicBoolean isRunning = new AtomicBoolean();
         
@@ -295,9 +295,12 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
 
         @Override
         public void run() {
+            boolean acquired = false;
+            
             // check if its already running by using CAS. If so just return here. So in the worst case the thread
             // is executed and do nothing
             if (isRunning.compareAndSet(false, true)) {
+                acquired = true;
                 try {
                     Thread thread = Thread.currentThread();
                     for (;;) {
@@ -323,6 +326,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                 } finally {
                     // set it back to not running
                     isRunning.set(false);
+                }
+                
+                if (acquired && !isRunning.get() && tasks.peek() != null) {
+                    doUnorderedExecute(this);
                 }
             }
         }

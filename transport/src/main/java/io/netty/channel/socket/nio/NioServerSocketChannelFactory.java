@@ -26,7 +26,8 @@ import io.netty.channel.ChannelSink;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelFactory;
-import io.netty.util.internal.ExecutorUtil;
+import io.netty.channel.socket.Worker;
+import io.netty.util.ExternalResourceReleasable;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side NIO-based
@@ -83,62 +84,119 @@ import io.netty.util.internal.ExecutorUtil;
  */
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
-    final Executor bossExecutor;
-    private final Executor workerExecutor;
+    private final WorkerPool<NioWorker> workerPool;
     private final ChannelSink sink;
+    private final WorkerPool<NioWorker> bossWorkerPool;
 
     /**
+     * Create a new {@link NioServerSocketChannelFactory} using
+     * {@link Executors#newCachedThreadPool()} for the workers.
+     * 
+     * See {@link #NioServerSocketChannelFactory(Executor, Executor)}
+     */
+    public NioServerSocketChannelFactory() {
+        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    }
+    
+    
+    /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with 2 *
-     * the number of available processors in the machine.  The number of
+     * {@link #NioServerSocketChannelFactory(Executor, Executor, int, int)} with 1 
+     * as boss count and 2 * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
      * @param bossExecutor
-     *        the {@link Executor} which will execute the boss threads
+     *        the {@link Executor} which will execute the I/O worker threads that handle the accepting of new connections
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
      */
-    public NioServerSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
+    public NioServerSocketChannelFactory(Executor bossExecutor, Executor workerExecutor) {
+        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_ACCEPTING_THREADS, SelectorUtil.DEFAULT_IO_THREADS);
+    }
+
+    /**
+     * Creates a new instance.
+     * 
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the I/O worker threads that handle the accepting of new connections
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param bossCount
+     *        the maximum number of I/O worker threads that handling the accepting of connections
+     * @param workerCount
+     *        the maximum number of I/O worker threads
+     */
+    public NioServerSocketChannelFactory(Executor bossExecutor, Executor workerExecutor, int bossCount,
+            int workerCount) {
+        this(new NioWorkerPool(bossExecutor, bossCount, true), new NioWorkerPool(workerExecutor, workerCount, true));
     }
 
     /**
      * Creates a new instance.
      *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss threads
-     * @param workerExecutor
-     *        the {@link Executor} which will execute the I/O worker threads
-     * @param workerCount
-     *        the maximum number of I/O worker threads
+     * @param bossWorkerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads that handle the accepting of new connections
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
      */
-    public NioServerSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor,
-            int workerCount) {
-        if (bossExecutor == null) {
-            throw new NullPointerException("bossExecutor");
+    public NioServerSocketChannelFactory(WorkerPool<NioWorker> bossWorkerPool, WorkerPool<NioWorker> workerPool) {
+        if (bossWorkerPool == null) {
+            throw new NullPointerException("bossWorkerPool");
         }
-        if (workerExecutor == null) {
-            throw new NullPointerException("workerExecutor");
+        if (workerPool == null) {
+            throw new NullPointerException("workerPool");
         }
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(
-                    "workerCount (" + workerCount + ") " +
-                    "must be a positive integer.");
-        }
-        this.bossExecutor = bossExecutor;
-        this.workerExecutor = workerExecutor;
-        sink = new NioServerSocketPipelineSink(workerExecutor, workerCount);
+        this.bossWorkerPool = bossWorkerPool;
+        this.workerPool = workerPool;
+        sink = new NioServerSocketPipelineSink();
     }
 
+    /**
+     * Creates a new instance which use the given {@link WorkerPool} for everything.
+     *
+     * @param genericExecutor
+     *        the {@link Executor} which will execute the I/O worker threads ( this also includes handle the accepting of new connections)
+     * @param workerCount
+     *        the maximum number of I/O worker threads
+     *        
+     */
+    public NioServerSocketChannelFactory(Executor genericExecutor, int workerCount) {
+        this(new NioWorkerPool(genericExecutor, workerCount, true));
+    }
+    
+    /**
+     * Creates a new instance which use the given {@link WorkerPool} for everything.
+     *
+     * @param genericExecutor
+     *        the {@link Executor} which will execute the I/O worker threads ( this also includes handle the accepting of new connections)
+     *        
+     */
+    public NioServerSocketChannelFactory(Executor genericExecutor) {
+        this(genericExecutor, SelectorUtil.DEFAULT_IO_ACCEPTING_THREADS + SelectorUtil.DEFAULT_IO_THREADS);
+    }
+    
+    
+    /**
+     * Creates a new instance which use the given {@link WorkerPool} for everything.
+     *
+     * @param genericWorkerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads (that included accepting of new connections)
+     */
+    public NioServerSocketChannelFactory(WorkerPool<NioWorker> genericWorkerPool) {
+        this(genericWorkerPool, genericWorkerPool);
+    }
+
+    
     @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return NioServerSocketChannel.create(this, pipeline, sink);
+        return NioServerSocketChannel.create(this, pipeline, sink, bossWorkerPool.nextWorker(), workerPool);
     }
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor, workerExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
+        
     }
 }

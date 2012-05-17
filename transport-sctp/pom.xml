@@ -23,7 +23,6 @@
     <version>4.0.0.Alpha1-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-transport-sctp</artifactId>
   <packaging>jar</packaging>
 
@@ -35,5 +34,30 @@
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <!-- Exclude the com.sun.nio stuff as this is included in the jdk if its supported by the running os -->
+            <exclude>**/com/**</exclude>
+          </excludes>
+          
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

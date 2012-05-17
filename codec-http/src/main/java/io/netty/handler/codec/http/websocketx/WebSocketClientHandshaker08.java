@@ -49,12 +49,10 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     private String expectedChallengeResponseString;
 
-    private static final String protocol = null;
-
     private final boolean allowExtensions;
 
     /**
-     * Constructor specifying the destination web socket location and version to initiate
+     * Constructor with default values
      * 
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -70,7 +68,29 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker08(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) {
-        super(webSocketURL, version, subprotocol, customHeaders);
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Constructor
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     */
+    public WebSocketClientHandshaker08(URI webSocketURL, WebSocketVersion version, String subprotocol,
+            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
 
@@ -122,10 +142,24 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
         request.addHeader(Names.HOST, wsURL.getHost());
-        request.addHeader(Names.ORIGIN, "http://" + wsURL.getHost());
-        if (protocol != null && !protocol.equals("")) {
-            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
+
+        int wsPort = wsURL.getPort();
+        String originValue = "http://" + wsURL.getHost();
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            originValue = originValue + ":" + wsPort;
         }
+
+        // Use Sec-WebSocket-Origin
+        // See https://github.com/netty/netty/issues/264
+        request.addHeader(Names.SEC_WEBSOCKET_ORIGIN, originValue);
+
+        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
+        }
+
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
 
         if (customHeaders != null) {
@@ -169,13 +203,17 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equals(Values.WEBSOCKET.toLowerCase())) {
+        // Upgrade header should be matched case-insensitive.
+        // See https://github.com/netty/netty/issues/278
+        if (upgrade == null || !upgrade.toLowerCase().equals(Values.WEBSOCKET.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
+        // Connection header should be matched case-insensitive.
+        // See https://github.com/netty/netty/issues/278
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equals(Values.UPGRADE)) {
+        if (connection == null || !connection.toLowerCase().equals(Values.UPGRADE.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }
@@ -186,8 +224,11 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
                     expectedChallengeResponseString));
         }
 
+        String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        setActualSubprotocol(subprotocol);
+
         channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
-                new WebSocket08FrameDecoder(false, allowExtensions));
+                new WebSocket08FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }

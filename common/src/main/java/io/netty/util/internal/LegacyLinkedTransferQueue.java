@@ -612,6 +612,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
     @SuppressWarnings("unchecked")
     static <E> E cast(Object item) {
         // assert item == null || item.getClass() != Node.class;
+        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
         return (E) item;
     }
 
@@ -625,6 +626,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
      * @return an item if matched, else e
      * @throws NullPointerException if haveData mode but e is null
      */
+    @SuppressWarnings("unchecked")
     private E xfer(E e, boolean haveData, int how, long nanos) {
         if (haveData && e == null) {
             throw new NullPointerException();
@@ -653,7 +655,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                             }
                         }
                         LockSupport.unpark(p.waiter);
-                        return LegacyLinkedTransferQueue.cast(item);
+                        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                        return (E) LegacyLinkedTransferQueue.cast(item);
                     }
                 }
                 Node n = p.next;
@@ -726,6 +729,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
      * @param nanos timeout in nanosecs, used only if timed is true
      * @return matched item, or e if unmatched on interrupt or timeout
      */
+    @SuppressWarnings("unchecked")
     private E awaitMatch(Node s, Node pred, E e, boolean timed, long nanos) {
         long lastTime = timed ? System.nanoTime() : 0L;
         Thread w = Thread.currentThread();
@@ -737,7 +741,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
             if (item != e) {                  // matched
                 // assert item != s;
                 s.forgetContents();           // avoid garbage
-                return LegacyLinkedTransferQueue.cast(item);
+                // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                return (E) LegacyLinkedTransferQueue.cast(item);
             }
             if ((w.isInterrupted() || timed && nanos <= 0) &&
                     s.casItem(e, s)) {        // cancel
@@ -820,12 +825,14 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
      * Returns the item in the first unmatched node with isData; or
      * null if none.  Used by peek.
      */
+    @SuppressWarnings("unchecked")
     private E firstDataItem() {
         for (Node p = head; p != null; p = succ(p)) {
             Object item = p.item;
             if (p.isData) {
                 if (item != null && item != p) {
-                    return LegacyLinkedTransferQueue.cast(item);
+                    // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                    return (E) LegacyLinkedTransferQueue.cast(item);
                 }
             }
             else if (item == null) {
@@ -870,6 +877,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
         /**
          * Moves to next node after prev, or first node if prev null.
          */
+        @SuppressWarnings("unchecked")
         private void advance(Node prev) {
             lastPred = lastRet;
             lastRet = prev;
@@ -878,7 +886,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                 Object item = p.item;
                 if (p.isData) {
                     if (item != null && item != p) {
-                        nextItem = LegacyLinkedTransferQueue.cast(item);
+                        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                        nextItem = (E) LegacyLinkedTransferQueue.cast(item);
                         nextNode = p;
                         return;
                     }
