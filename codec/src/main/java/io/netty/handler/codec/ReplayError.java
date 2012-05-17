@@ -13,16 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.codec;
 
-/**
- * Specialized variation of {@link io.netty.handler.codec.FrameDecoder}
- * which enables implementation of a non-blocking decoder in the blocking I/O
- * paradigm.
- *
- * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude \.SimpleChannelUpstreamHandler$
- * @apiviz.exclude \.VoidEnum$
- * @apiviz.exclude \.codec\.(?!replay)[a-z0-9]+\.
- */
-package io.netty.handler.codec.replay;
+final class ReplayError extends Error {
 
+    private static final long serialVersionUID = 2666698631187527681L;
+
+    @Override
+    public synchronized Throwable fillInStackTrace() {
+        return this;
+    }
+}

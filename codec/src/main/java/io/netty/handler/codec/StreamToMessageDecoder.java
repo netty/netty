@@ -23,7 +23,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
     @Override
     public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
         ChannelBuffer in = ctx.in().byteBuffer();
-        if (!in.readable()) {
+        if (in.readable()) {
             callDecode(ctx);
         }
 

@@ -59,8 +59,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.replay.ReplayingDecoder;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 

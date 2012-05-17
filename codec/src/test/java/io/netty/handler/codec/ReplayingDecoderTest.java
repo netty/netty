@@ -13,24 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.replay;
+package io.netty.handler.codec;
 
 import static org.junit.Assert.*;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
+
 import org.junit.Test;
 
 public class ReplayingDecoderTest {
 
     @Test
     public void testLineProtocol() {
-        DecoderEmbedder<ChannelBuffer> e = new DecoderEmbedder<ChannelBuffer>(
-                new LineDecoder());
+        DecoderEmbedder<ChannelBuffer> e = new DecoderEmbedder<ChannelBuffer>(new LineDecoder());
 
         // Ordinary input
         e.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
@@ -49,17 +47,16 @@ public class ReplayingDecoderTest {
         assertNull(e.poll());
     }
 
-    private static final class LineDecoder extends ReplayingDecoder<VoidEnum> {
+    private static final class LineDecoder extends ReplayingDecoder<ChannelBuffer, VoidEnum> {
 
         LineDecoder() {
         }
 
         @Override
-        protected Object decode(ChannelHandlerContext ctx, Channel channel,
-                ChannelBuffer buffer, VoidEnum state) throws Exception {
-            ChannelBuffer msg = buffer.readBytes(
-                    buffer.bytesBefore(ChannelBufferIndexFinder.LF));
-            buffer.skipBytes(1);
+        public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx,
+                ChannelBuffer in, VoidEnum state) throws Exception {
+            ChannelBuffer msg = in.readBytes(in.bytesBefore(ChannelBufferIndexFinder.LF));
+            in.skipBytes(1);
             return msg;
         }
     }

@@ -17,23 +17,23 @@ package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferIndexFinder;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.replay.ReplayingDecoder;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.VoidEnum;
 
 import java.io.IOException;
 
 /**
  * {@link ReplayingDecoder} which handles Redis protocol
- * 
+ *
  *
  */
-public class RedisDecoder extends ReplayingDecoder<State> {
+public class RedisDecoder extends ReplayingDecoder<Reply, VoidEnum> {
 
     private static final char CR = '\r';
     private static final char LF = '\n';
     private static final char ZERO = '0';
-    
+
     // We track the current multibulk reply in the case
     // where we do not get a complete reply in a single
     // decode invocation.
@@ -42,7 +42,7 @@ public class RedisDecoder extends ReplayingDecoder<State> {
     /**
      * Return a byte array which contains only the content of the request. The size of the content is read from the given {@link ChannelBuffer}
      * via the {@link #readInteger(ChannelBuffer)} method
-     * 
+     *
      * @param is the {@link ChannelBuffer} to read from
      * @throws IOException is thrown if the line-ending is not CRLF
      */
@@ -96,7 +96,7 @@ public class RedisDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext channelHandlerContext, Channel channel, ChannelBuffer channelBuffer, State anEnum) throws Exception {
+    public Reply decode(ChannelInboundHandlerContext<Byte> channelHandlerContext, ChannelBuffer channelBuffer, VoidEnum anEnum) throws Exception {
         if (reply != null) {
             reply.read(this, channelBuffer);
             Reply ret = reply;
@@ -137,8 +137,4 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         reply.read(this, is);
         return reply;
     }
-}
-
-enum State {
-
 }

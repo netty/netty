@@ -22,8 +22,8 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link HttpMessage}s and

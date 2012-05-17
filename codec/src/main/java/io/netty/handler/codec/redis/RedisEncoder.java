@@ -16,48 +16,34 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelDownstreamHandler;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToStreamEncoder;
 
 /**
  * {@link SimpleChannelDownstreamHandler} which encodes {@link Command}'s to {@link ChannelBuffer}'s
  */
 @Sharable
-public class RedisEncoder extends SimpleChannelDownstreamHandler {
+public class RedisEncoder extends MessageToStreamEncoder<Object> {
 
     @Override
-    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Object o = e.getMessage();
+    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+        Object o = msg;
         if (o instanceof Command) {
-            ChannelBuffer cb = ChannelBuffers.dynamicBuffer();
-            ChannelFuture future = e.getFuture();
-
             Command command = (Command) o;
-            command.write(cb);
-            Channels.write(ctx, future, cb);
-
+            command.write(out);
         } else if (o instanceof Iterable) {
-            ChannelBuffer cb = ChannelBuffers.dynamicBuffer();
-            ChannelFuture future = e.getFuture();
-
             // Useful for transactions and database select
             for (Object i : (Iterable<?>) o) {
                 if (i instanceof Command) {
                     Command command = (Command) i;
-                    command.write(cb);
+                    command.write(out);
                 } else {
-                    super.writeRequested(ctx, e);
-                    return;
+                    break;
                 }
             }
-            Channels.write(ctx, future, cb);
         } else {
-            super.writeRequested(ctx, e);
+            throw new IllegalArgumentException("unsupported message type: " + msg.getClass().getName());
         }
     }
 }

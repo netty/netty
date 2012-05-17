@@ -257,7 +257,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             throws Exception {
         if (evt instanceof ChannelStateEvent) {
             ChannelStateEvent e = (ChannelStateEvent) evt;
-            switch (e.getState()) {
+            switch (e.state()) {
             case OPEN:
             case CONNECTED:
             case BOUND:
