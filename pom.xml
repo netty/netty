@@ -227,6 +227,43 @@
   
   <build>
     <plugins>
+        <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <version>2.3.5</version>
+            <extensions>true</extensions>
+            <executions>
+                <execution>
+                    <id>bundle-manifest</id>
+                    <phase>process-classes</phase>
+                    <goals>
+                        <goal>manifest</goal>
+                    </goals>
+                </execution>
+            </executions>
+            <configuration>
+                <instructions>
+                    <Bundle-SymbolicName>${project.groupId}
+                    </Bundle-SymbolicName>
+                    <Bundle-DocURL>${project.url}</Bundle-DocURL>
+                    <Export-Package>
+                        !${project.groupId}.example.*,
+                        !${project.groupId}.util.internal.*,
+                        ${project.groupId}.*;version=${project.version}
+                    </Export-Package>
+                    <Private-Package>
+                        ${project.groupId}.example.*,
+                        ${project.groupId}.util.internal.*,
+                    </Private-Package>
+                    <Import-Package>
+                        *;resolution:=optional
+                    </Import-Package>
+                    <Eclipse-BuddyPolicy>registered</Eclipse-BuddyPolicy>
+                    <Bundle-BuddyPolicy>registered</Bundle-BuddyPolicy>
+                    <Main-Class>${project.groupId}.util.Version</Main-Class>
+                </instructions>
+            </configuration>
+        </plugin>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>1.0.1</version>
