@@ -45,7 +45,22 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         boolean decoded = false;
         for (;;) {
             try {
-                if (unfoldAndAdd(ctx, ctx.nextIn(), decode(ctx, in))) {
+                int oldInputLength = in.readableBytes();
+                O o = decode(ctx, in);
+                if (o == null) {
+                    if (oldInputLength == in.readableBytes()) {
+                        break;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    if (oldInputLength == in.readableBytes()) {
+                        throw new IllegalStateException(
+                                "decode() did not read anything but decoded a message.");
+                    }
+                }
+
+                if (unfoldAndAdd(ctx, ctx.nextIn(), o)) {
                     decoded = true;
                 } else {
                     break;

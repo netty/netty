@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.frame;
 
+import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -22,6 +23,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.embedder.CodecEmbedderException;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.util.CharsetUtil;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,9 +34,10 @@ public class LengthFieldBasedFrameDecoderTest {
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4, false));
 
         for (int i = 0; i < 2; i ++) {
-            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 }));
+            assertFalse(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
             try {
-                embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0 }));
+                assertTrue(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0 })));
+                embedder.poll();
                 Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
             } catch (CodecEmbedderException e) {
                 Assert.assertTrue(e.getCause() instanceof TooLongFrameException);
@@ -54,7 +57,8 @@ public class LengthFieldBasedFrameDecoderTest {
 
         for (int i = 0; i < 2; i ++) {
             try {
-                embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 }));
+                assertTrue(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
+                embedder.poll();
                 Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
             } catch (CodecEmbedderException e) {
                 Assert.assertTrue(e.getCause() instanceof TooLongFrameException);

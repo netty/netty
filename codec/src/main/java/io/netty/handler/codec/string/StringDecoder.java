@@ -15,18 +15,16 @@
  */
 package io.netty.handler.codec.string;
 
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
-import io.netty.handler.codec.FrameDecoder;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.handler.codec.MessageToMessageDecoder;
+
+import java.nio.charset.Charset;
 
 /**
  * Decodes a received {@link ChannelBuffer} into a {@link String}.  Please
@@ -55,7 +53,7 @@ import io.netty.handler.codec.oneone.OneToOneDecoder;
  * @apiviz.landmark
  */
 @Sharable
-public class StringDecoder extends OneToOneDecoder {
+public class StringDecoder extends MessageToMessageDecoder<ChannelBuffer, String> {
 
     // TODO Use CharsetDecoder instead.
     private final Charset charset;
@@ -78,11 +76,7 @@ public class StringDecoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-        return ((ChannelBuffer) msg).toString(charset);
+    public String decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
+        return msg.toString(charset);
     }
 }

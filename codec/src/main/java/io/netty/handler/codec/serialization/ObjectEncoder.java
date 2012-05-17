@@ -15,17 +15,14 @@
  */
 package io.netty.handler.codec.serialization;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToStreamEncoder;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * An encoder which serializes a Java object into a {@link ChannelBuffer}.
@@ -38,7 +35,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.has io.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */
 @Sharable
-public class ObjectEncoder extends OneToOneEncoder {
+public class ObjectEncoder extends MessageToStreamEncoder<Object> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
     private final int estimatedLength;
@@ -70,18 +67,18 @@ public class ObjectEncoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        ChannelBufferOutputStream bout =
-            new ChannelBufferOutputStream(dynamicBuffer(
-                    estimatedLength, ctx.channel().getConfig().getBufferFactory()));
+    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+        int startIdx = out.writerIndex();
+
+        ChannelBufferOutputStream bout = new ChannelBufferOutputStream(out);
         bout.write(LENGTH_PLACEHOLDER);
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(msg);
         oout.flush();
         oout.close();
 
-        ChannelBuffer encoded = bout.buffer();
-        encoded.setInt(0, encoded.writerIndex() - 4);
-        return encoded;
+        int endIdx = out.writerIndex();
+
+        out.setInt(startIdx, endIdx - startIdx - 4);
     }
 }

@@ -55,7 +55,7 @@ import io.netty.channel.ChannelInboundHandlerContext;
  * </pre>
  * @apiviz.uses io.netty.handler.codec.frame.Delimiters - - useful
  */
-public class DelimiterBasedFrameDecoder extends StreamToMessageDecoder<ChannelBuffer> {
+public class DelimiterBasedFrameDecoder extends StreamToMessageDecoder<Object> {
 
     private final ChannelBuffer[] delimiters;
     private final int maxFrameLength;
@@ -187,7 +187,7 @@ public class DelimiterBasedFrameDecoder extends StreamToMessageDecoder<ChannelBu
     }
 
     @Override
-    public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
         // Try all delimiters and choose the delimiter which yields the shortest frame.
         int minFrameLength = Integer.MAX_VALUE;
         ChannelBuffer minDelim = null;

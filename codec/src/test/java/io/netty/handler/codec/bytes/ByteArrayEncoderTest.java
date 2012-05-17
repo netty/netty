@@ -20,6 +20,7 @@ import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
+import io.netty.handler.codec.embedder.CodecEmbedderException;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
 
 import java.util.Random;
@@ -60,8 +61,9 @@ public class ByteArrayEncoderTest {
         try {
             embedder.poll();
             fail();
-        } catch (ClassCastException e) {
+        } catch (CodecEmbedderException e) {
             // Expected
+            assertTrue(e.getCause() instanceof ClassCastException);
         }
     }
 

@@ -18,7 +18,6 @@ package io.netty.handler.codec.embedder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
@@ -84,14 +83,11 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
     @SuppressWarnings("unchecked")
     private E product(Object p) {
+        if (p instanceof CodecEmbedderException) {
+            throw (CodecEmbedderException) p;
+        }
         if (p instanceof Throwable) {
-            if (p instanceof RuntimeException) {
-                throw (RuntimeException) p;
-            }
-            if (p instanceof Error) {
-                throw (Error) p;
-            }
-            throw new ChannelException((Throwable) p);
+            throw new CodecEmbedderException((Throwable) p);
         }
         return (E) p;
     }
@@ -155,6 +151,11 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         public ChannelBufferHolder<Object> newInboundBuffer(
                 ChannelInboundHandlerContext<Object> ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer(productQueue);
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            // NOOP
         }
 
         @Override

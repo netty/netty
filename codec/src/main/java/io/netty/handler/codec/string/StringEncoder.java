@@ -15,19 +15,17 @@
  */
 package io.netty.handler.codec.string;
 
-import static io.netty.buffer.ChannelBuffers.*;
-
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.nio.charset.Charset;
 
 /**
  * Encodes the requested {@link String} into a {@link ChannelBuffer}.
@@ -53,7 +51,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends OneToOneEncoder {
+public class StringEncoder extends MessageToMessageEncoder<String, ChannelBuffer> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -76,11 +74,7 @@ public class StringEncoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof String)) {
-            return msg;
-        }
-        return copiedBuffer((String) msg, charset);
+    public ChannelBuffer encode(ChannelOutboundHandlerContext<String> ctx, String msg) throws Exception {
+        return ChannelBuffers.copiedBuffer(msg, charset);
     }
 }

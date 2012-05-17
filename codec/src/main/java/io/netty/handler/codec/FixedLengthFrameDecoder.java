@@ -37,7 +37,7 @@ import io.netty.channel.ChannelInboundHandlerContext;
  * +-----+-----+-----+
  * </pre>
  */
-public class FixedLengthFrameDecoder extends StreamToMessageDecoder<ChannelBuffer> {
+public class FixedLengthFrameDecoder extends StreamToMessageDecoder<Object> {
 
     private final int frameLength;
     private final boolean allocateFullBuffer;
@@ -75,7 +75,7 @@ public class FixedLengthFrameDecoder extends StreamToMessageDecoder<ChannelBuffe
     }
 
     @Override
-    public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {
