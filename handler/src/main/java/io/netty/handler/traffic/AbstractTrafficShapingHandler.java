@@ -18,7 +18,6 @@ package io.netty.handler.traffic;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,11 +25,11 @@ import io.netty.channel.ChannelState;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelHandler;
+import io.netty.handler.execution.ObjectSizeEstimator;
+import io.netty.handler.execution.DefaultObjectSizeEstimator;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.DefaultObjectSizeEstimator;
 import io.netty.util.ExternalResourceReleasable;
-import io.netty.util.ObjectSizeEstimator;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
