@@ -28,7 +28,9 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelHandler;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.DefaultObjectSizeEstimator;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.ObjectSizeEstimator;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
@@ -73,6 +75,11 @@ public abstract class AbstractTrafficShapingHandler extends
     protected TrafficCounter trafficCounter;
 
     /**
+     * ObjectSizeEstimator
+     */
+    private ObjectSizeEstimator objectSizeEstimator;
+
+    /**
      * Executor to associated to any TrafficCounter
      */
     protected Executor executor;
@@ -99,8 +106,9 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     final AtomicBoolean release = new AtomicBoolean(false);
 
-    private void init(
+    private void init(ObjectSizeEstimator newObjectSizeEstimator,
             Executor newExecutor, long newWriteLimit, long newReadLimit, long newCheckInterval) {
+        objectSizeEstimator = newObjectSizeEstimator;
         executor = newExecutor;
         writeLimit = newWriteLimit;
         readLimit = newReadLimit;
@@ -117,6 +125,8 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
+     * Constructor using default {@link ObjectSizeEstimator}
+     *
      * @param executor
      *          created for instance like Executors.newCachedThreadPool
      * @param writeLimit
@@ -129,10 +139,36 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit, long checkInterval) {
-        init(executor, writeLimit, readLimit, checkInterval);
+        init(new DefaultObjectSizeEstimator(), executor, writeLimit, readLimit,
+                checkInterval);
     }
 
     /**
+     * Constructor using the specified ObjectSizeEstimator
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param executor
+     *          created for instance like Executors.newCachedThreadPool
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            long writeLimit, long readLimit, long checkInterval) {
+        init(objectSizeEstimator, executor, writeLimit, readLimit,
+                checkInterval);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator} and using default Check Interval
+     *
      * @param executor
      *          created for instance like Executors.newCachedThreadPool
      * @param writeLimit
@@ -142,7 +178,84 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit) {
-        init(executor, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        init(new DefaultObjectSizeEstimator(), executor, writeLimit, readLimit,
+                DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator and using default Check Interval
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param executor
+     *          created for instance like Executors.newCachedThreadPool
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            long writeLimit, long readLimit) {
+        init(objectSizeEstimator, executor, writeLimit, readLimit,
+                DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator} and using NO LIMIT and default Check Interval
+     *
+     * @param executor
+     *          created for instance like Executors.newCachedThreadPool
+     */
+    public AbstractTrafficShapingHandler(Executor executor) {
+        init(new DefaultObjectSizeEstimator(), executor, 0, 0,
+                DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator and using NO LIMIT and default Check Interval
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param executor
+     *          created for instance like Executors.newCachedThreadPool
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor) {
+        init(objectSizeEstimator, executor, 0, 0, DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator} and using NO LIMIT
+     *
+     * @param executor
+     *          created for instance like Executors.newCachedThreadPool
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public AbstractTrafficShapingHandler(Executor executor, long checkInterval) {
+        init(new DefaultObjectSizeEstimator(), executor, 0, 0, checkInterval);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator and using NO LIMIT
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param executor
+     *          created for instance like Executors.newCachedThreadPool
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            long checkInterval) {
+        init(objectSizeEstimator, executor, 0, 0, checkInterval);
     }
 
     /**
@@ -255,7 +368,7 @@ public abstract class AbstractTrafficShapingHandler extends
             throws Exception {
         try {
             long curtime = System.currentTimeMillis();
-            long size = ((ChannelBuffer) arg1.getMessage()).readableBytes();
+            long size = objectSizeEstimator.estimateSize(arg1.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesRecvFlowControl(arg0, size);
                 if (readLimit == 0) {
@@ -315,7 +428,7 @@ public abstract class AbstractTrafficShapingHandler extends
             throws Exception {
         try {
             long curtime = System.currentTimeMillis();
-            long size = ((ChannelBuffer) arg1.getMessage()).readableBytes();
+            long size = objectSizeEstimator.estimateSize(arg1.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesWriteFlowControl(size);
                 if (writeLimit == 0) {
