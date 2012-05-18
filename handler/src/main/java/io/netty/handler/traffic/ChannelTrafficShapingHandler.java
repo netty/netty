@@ -23,6 +23,7 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.handler.execution.ExecutionHandler;
 import io.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.util.ObjectSizeEstimator;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -79,6 +80,69 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             long readLimit) {
         super(executor, writeLimit, readLimit);
     }
+    
+    
+    /**
+     * @param executor
+     * @param checkInterval
+     */
+    public ChannelTrafficShapingHandler(Executor executor, long checkInterval) {
+        super(executor, checkInterval);
+    }
+
+    /**
+     * @param executor
+     */
+    public ChannelTrafficShapingHandler(Executor executor) {
+        super(executor);
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     * @param writeLimit
+     * @param readLimit
+     * @param checkInterval
+     */
+    public ChannelTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            long writeLimit, long readLimit, long checkInterval) {
+        super(objectSizeEstimator, executor, writeLimit, readLimit,
+                checkInterval);
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     * @param writeLimit
+     * @param readLimit
+     */
+    public ChannelTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            long writeLimit, long readLimit) {
+        super(objectSizeEstimator, executor, writeLimit, readLimit);
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     * @param checkInterval
+     */
+    public ChannelTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            long checkInterval) {
+        super(objectSizeEstimator, executor, checkInterval);
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     */
+    public ChannelTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Executor executor) {
+        super(objectSizeEstimator, executor);
+    }
+
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
