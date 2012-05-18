@@ -18,7 +18,7 @@ package io.netty.handler.codec.bytes;
 import static io.netty.buffer.ChannelBuffers.*;
 import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
-import io.netty.handler.codec.embedder.CodecEmbedderException;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 import java.util.Random;
@@ -59,7 +59,7 @@ public class ByteArrayDecoderTest {
         try {
             embedder.poll();
             fail();
-        } catch (CodecEmbedderException e) {
+        } catch (DecoderException e) {
             // Expected
             assertTrue(e.getCause() instanceof ClassCastException);
         }

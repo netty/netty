@@ -18,10 +18,10 @@ package io.netty.handler.codec.frame;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.embedder.CodecEmbedderException;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.util.CharsetUtil;
 
@@ -39,9 +39,8 @@ public class DelimiterBasedFrameDecoderTest {
             try {
                 assertTrue(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0 })));
                 embedder.poll();
-                Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
-            } catch (CodecEmbedderException e) {
-                Assert.assertTrue(e.getCause() instanceof TooLongFrameException);
+                Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
+            } catch (TooLongFrameException e) {
                 // Expected
             }
 
@@ -60,9 +59,8 @@ public class DelimiterBasedFrameDecoderTest {
             try {
                 assertTrue(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 })));
                 embedder.poll();
-                Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
-            } catch (CodecEmbedderException e) {
-                Assert.assertTrue(e.getCause() instanceof TooLongFrameException);
+                Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
+            } catch (TooLongFrameException e) {
                 // Expected
             }
 
