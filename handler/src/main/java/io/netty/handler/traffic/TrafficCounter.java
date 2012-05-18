@@ -117,7 +117,7 @@ public class TrafficCounter {
     /**
      * Class to implement monitoring at fix delay
  */
-    private class TrafficMonitoring implements Runnable {
+    private static class TrafficMonitoring implements Runnable {
         /**
          * The associated TrafficShapingHandler
          */
@@ -145,8 +145,8 @@ public class TrafficCounter {
         @Override
         public void run() {
             try {
-                Thread.currentThread().setName(name);
-                for (; monitorActive.get();) {
+                Thread.currentThread().setName(counter.name);
+                for (; counter.monitorActive.get();) {
                     long check = counter.checkInterval.get();
                     if (check > 0) {
                         Thread.sleep(check);

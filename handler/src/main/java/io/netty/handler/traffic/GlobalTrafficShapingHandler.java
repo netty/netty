@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.handler.execution.ExecutionHandler;
 import io.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import io.netty.util.ObjectSizeEstimator;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -89,6 +90,70 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     public GlobalTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit) {
         super(executor, writeLimit, readLimit);
+        createGlobalTrafficCounter();
+    }
+    /**
+     * @param executor
+     * @param checkInterval
+     */
+    public GlobalTrafficShapingHandler(Executor executor, long checkInterval) {
+        super(executor, checkInterval);
+        createGlobalTrafficCounter();
+    }
+
+    /**
+     * @param executor
+     */
+    public GlobalTrafficShapingHandler(Executor executor) {
+        super(executor);
+        createGlobalTrafficCounter();
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     * @param writeLimit
+     * @param readLimit
+     * @param checkInterval
+     */
+    public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
+            Executor executor, long writeLimit, long readLimit,
+            long checkInterval) {
+        super(objectSizeEstimator, executor, writeLimit, readLimit,
+                checkInterval);
+        createGlobalTrafficCounter();
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     * @param writeLimit
+     * @param readLimit
+     */
+    public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
+            Executor executor, long writeLimit, long readLimit) {
+        super(objectSizeEstimator, executor, writeLimit, readLimit);
+        createGlobalTrafficCounter();
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     * @param checkInterval
+     */
+    public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
+            Executor executor, long checkInterval) {
+        super(objectSizeEstimator, executor, checkInterval);
+        createGlobalTrafficCounter();
+    }
+
+    /**
+     * @param objectSizeEstimator
+     * @param executor
+     */
+    public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
+            Executor executor) {
+        super(objectSizeEstimator, executor);
         createGlobalTrafficCounter();
     }
 }
