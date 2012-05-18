@@ -89,6 +89,19 @@ public class SslBufferPool {
         return index * MAX_PACKET_SIZE;
     }
 
+    /**
+     * Acquire a new {@link ByteBuffer} out of the {@link SslBufferPool}
+     * 
+     */
+    public ByteBuffer acquireBuffer() {
+        return acquire();
+    }
+    
+    /**
+     * Will get removed. Please use {@link #acquireBuffer()}
+     * 
+     */
+    @Deprecated
     synchronized ByteBuffer acquire() {
         if (index == 0) {
             return ByteBuffer.allocate(MAX_PACKET_SIZE);
@@ -96,7 +109,24 @@ public class SslBufferPool {
             return (ByteBuffer) pool[-- index].clear();
         }
     }
+    
 
+    /**
+     * Release a previous acquired {@link ByteBuffer}
+     * 
+     * @param buffer
+     */
+    public void releaseBuffer(ByteBuffer buffer) {
+        release(buffer);
+    }
+
+    /**
+     * Will get removed. Please use {@link #releaseBuffer(ByteBuffer)}
+     * 
+     * @deprecated
+     * 
+     */
+    @Deprecated
     synchronized void release(ByteBuffer buffer) {
         if (index < maxBufferCount) {
             pool[index ++] = buffer;
