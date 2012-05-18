@@ -21,6 +21,7 @@ import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.util.VoidEnum;
 
 import org.junit.Test;
 

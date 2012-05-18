@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.VoidEnum;
+import io.netty.util.VoidEnum;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link WebSocketFrame}s.

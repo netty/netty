@@ -13,12 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec;
+package io.netty.util;
+
 
 /**
- * A placeholder {@link Enum} which could be specified as a type parameter of
- * {@link ReplayingDecoder} when a user wants to manage the decoder state or
- * there's no state to manage.
+ * A place holder {@link Enum} which has no constant.
  */
 public enum VoidEnum {
     // No state is defined.

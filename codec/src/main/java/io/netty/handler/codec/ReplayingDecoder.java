@@ -26,6 +26,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
+import io.netty.util.VoidEnum;
 
 /**
  * A specialized variation of {@link StreamToMessageDecoder} which enables implementation

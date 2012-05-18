@@ -19,7 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.VoidEnum;
+import io.netty.util.VoidEnum;
 
 import java.io.IOException;
 
