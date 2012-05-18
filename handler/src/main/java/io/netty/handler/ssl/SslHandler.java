@@ -160,7 +160,7 @@ public class SslHandler extends FrameDecoder
      */
     public static synchronized SslBufferPool getDefaultBufferPool() {
         if (defaultBufferPool == null) {
-            defaultBufferPool = new SslBufferPool();
+            defaultBufferPool = new DefaultSslBufferPool();
         }
         return defaultBufferPool;
     }
