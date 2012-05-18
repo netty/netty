@@ -56,7 +56,7 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
             buf.append(i);
             BYTE2HEX[i] = buf.toString();
         }
-        for (;i < 16; i ++) {
+        for (; i < 16; i ++) {
             StringBuilder buf = new StringBuilder(3);
             buf.append(" 0");
             buf.append((char) ('a' + i - 10));
