@@ -710,8 +710,14 @@ public class SslHandler extends FrameDecoder
 
                         if (result.bytesProduced() > 0) {
                             outNetBuf.flip();
-                            msg = ChannelBuffers.buffer(outNetBuf.remaining());
-                            msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
+                            int remaining = outNetBuf.remaining();
+                            msg = ChannelBuffers.buffer(remaining);
+                            
+                            // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                            // work with "non" heap buffers
+                            //
+                            // See https://github.com/netty/netty/issues/329
+                            msg.writeBytes(outNetBuf);
                             outNetBuf.clear();
 
                             if (pendingWrite.outAppBuf.hasRemaining()) {
@@ -850,7 +856,12 @@ public class SslHandler extends FrameDecoder
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
                     ChannelBuffer msg = ChannelBuffers.buffer(outNetBuf.remaining());
-                    msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
+                    
+                    // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                    // work with "non" heap buffers
+                    //
+                    // See https://github.com/netty/netty/issues/329
+                    msg.writeBytes(outNetBuf);
                     outNetBuf.clear();
 
                     future = future(channel);
@@ -993,7 +1004,12 @@ public class SslHandler extends FrameDecoder
 
             if (outAppBuf.hasRemaining()) {
                 ChannelBuffer frame = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
-                frame.writeBytes(outAppBuf.array(), 0, frame.capacity());
+                // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                // work with "non" heap buffers
+                //
+                // See https://github.com/netty/netty/issues/329
+                frame.writeBytes(outAppBuf);
+
                 return frame;
             } else {
                 return null;
