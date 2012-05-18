@@ -33,7 +33,11 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
                 ctx.fireInboundBufferUpdated();
             }
         } catch (Throwable t) {
-            ctx.fireExceptionCaught(t);
+            if (t instanceof CodecException) {
+                ctx.fireExceptionCaught(t);
+            } else {
+                ctx.fireExceptionCaught(new DecoderException(t));
+            }
         }
 
         ctx.fireChannelInactive();
@@ -66,7 +70,11 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
                     break;
                 }
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new DecoderException(t));
+                }
             }
         }
 

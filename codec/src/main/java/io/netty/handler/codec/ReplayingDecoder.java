@@ -373,7 +373,11 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
             // Ignore
             replay.expect(REPLAY);
         } catch (Throwable t) {
-            ctx.fireExceptionCaught(t);
+            if (t instanceof CodecException) {
+                ctx.fireExceptionCaught(t);
+            } else {
+                ctx.fireExceptionCaught(new DecoderException(t));
+            }
         }
 
         ctx.fireChannelInactive();
@@ -426,7 +430,11 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
                 // A successful decode
                 MessageToMessageEncoder.unfoldAndAdd(ctx, ctx.nextIn(), result);
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new DecoderException(t));
+                }
             }
         }
     }

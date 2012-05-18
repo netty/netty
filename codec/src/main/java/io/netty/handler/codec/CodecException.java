@@ -13,41 +13,41 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.embedder;
+package io.netty.handler.codec;
 
 /**
- * A {@link RuntimeException} which is thrown when a {@link CodecEmbedder}
- * failed to encode or decode the specified input.
- * @apiviz.exclude
+ * An {@link Exception} which is thrown by a codec.
+ *
+ * @apiviz.hidden
  */
-public class CodecEmbedderException extends RuntimeException {
+public class CodecException extends RuntimeException {
 
-    private static final long serialVersionUID = -6283302594160331474L;
+    private static final long serialVersionUID = -1464830400709348473L;
 
     /**
      * Creates a new instance.
      */
-    public CodecEmbedderException() {
+    public CodecException() {
     }
 
     /**
      * Creates a new instance.
      */
-    public CodecEmbedderException(String message, Throwable cause) {
+    public CodecException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public CodecEmbedderException(String message) {
+    public CodecException(String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public CodecEmbedderException(Throwable cause) {
+    public CodecException(Throwable cause) {
         super(cause);
     }
 }

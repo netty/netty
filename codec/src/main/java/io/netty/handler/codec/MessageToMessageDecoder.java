@@ -39,7 +39,11 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
                     decoded = true;
                 }
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new DecoderException(t));
+                }
             }
         }
         if (decoded) {

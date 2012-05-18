@@ -40,7 +40,11 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
                     encoded = true;
                 }
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new EncoderException(t));
+                }
             }
         }
 

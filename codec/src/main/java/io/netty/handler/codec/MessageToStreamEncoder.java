@@ -32,7 +32,11 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAd
             try {
                 encode(ctx, msg, out);
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new EncoderException(t));
+                }
             }
         }
 

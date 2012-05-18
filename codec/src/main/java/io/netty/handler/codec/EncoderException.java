@@ -16,38 +16,38 @@
 package io.netty.handler.codec;
 
 /**
- * An {@link Exception} which is thrown when the length of the frame
- * decoded by {@link DelimiterBasedFrameDecoder} is greater than the maximum.
+ * An {@link Exception} which is thrown by an encoder.
+ *
  * @apiviz.hidden
  */
-public class TooLongFrameException extends DecoderException {
+public class EncoderException extends CodecException {
 
-    private static final long serialVersionUID = -1995801950698951640L;
+    private static final long serialVersionUID = -5086121160476476774L;
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException() {
+    public EncoderException() {
     }
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException(String message, Throwable cause) {
+    public EncoderException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException(String message) {
+    public EncoderException(String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public TooLongFrameException(Throwable cause) {
+    public EncoderException(Throwable cause) {
         super(cause);
     }
 }

@@ -20,6 +20,8 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.base64.Base64Decoder;
 import io.netty.handler.codec.string.StringDecoder;
 
@@ -64,5 +66,10 @@ public class DecoderEmbedder<E> extends AbstractCodecEmbedder<E> {
 
         pipeline().fireInboundBufferUpdated();
         return !isEmpty();
+    }
+
+    @Override
+    protected CodecException newCodecException(Throwable t) {
+        return new DecoderException(t);
     }
 }

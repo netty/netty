@@ -31,7 +31,11 @@ public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter
         try {
             decodeLast(ctx, in, out);
         } catch (Throwable t) {
-            ctx.fireExceptionCaught(t);
+            if (t instanceof CodecException) {
+                ctx.fireExceptionCaught(t);
+            } else {
+                ctx.fireExceptionCaught(new DecoderException(t));
+            }
         }
 
         if (out.readableBytes() > oldOutSize) {
@@ -52,7 +56,11 @@ public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter
             try {
                 decode(ctx, in, out);
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new DecoderException(t));
+                }
             }
             if (oldInSize == in.readableBytes()) {
                 break;

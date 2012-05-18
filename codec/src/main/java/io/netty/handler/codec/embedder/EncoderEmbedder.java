@@ -18,6 +18,8 @@ package io.netty.handler.codec.embedder;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.base64.Base64Encoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
@@ -56,5 +58,10 @@ public class EncoderEmbedder<E> extends AbstractCodecEmbedder<E> {
     public boolean offer(Object input) {
         channel().write(input);
         return !isEmpty();
+    }
+
+    @Override
+    protected CodecException newCodecException(Throwable t) {
+        return new EncoderException(t);
     }
 }

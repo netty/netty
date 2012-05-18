@@ -26,7 +26,11 @@ public abstract class StreamToStreamEncoder extends ChannelOutboundHandlerAdapte
             try {
                 encode(ctx, in, out);
             } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new EncoderException(t));
+                }
             }
             if (oldInSize == in.readableBytes()) {
                 break;

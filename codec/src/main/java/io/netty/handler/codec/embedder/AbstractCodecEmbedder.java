@@ -23,6 +23,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.CodecException;
 
 import java.lang.reflect.Array;
 import java.util.ConcurrentModificationException;
@@ -83,14 +84,16 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
     @SuppressWarnings("unchecked")
     private E product(Object p) {
-        if (p instanceof CodecEmbedderException) {
-            throw (CodecEmbedderException) p;
+        if (p instanceof CodecException) {
+            throw (CodecException) p;
         }
         if (p instanceof Throwable) {
-            throw new CodecEmbedderException((Throwable) p);
+            throw newCodecException((Throwable) p);
         }
         return (E) p;
     }
+
+    protected abstract CodecException newCodecException(Throwable t);
 
     @Override
     public final Object[] pollAll() {
