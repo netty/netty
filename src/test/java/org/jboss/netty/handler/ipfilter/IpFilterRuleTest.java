@@ -280,16 +280,6 @@ public class IpFilterRuleTest extends TestCase
                 // TODO Auto-generated method stub
                 return 0;
             }
-
-            @Override
-            public Object getAttachment() {
-                return null;
-            }
-
-            @Override
-            public void setAttachment(Object attachment) {
-                
-            }
             
         }, h, addr), 
         addr);
