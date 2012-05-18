@@ -19,6 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 
 /**
  * {@link SimpleChannelDownstreamHandler} which encodes {@link Command}'s to {@link ChannelBuffer}'s
@@ -43,7 +44,7 @@ public class RedisEncoder extends MessageToStreamEncoder<Object> {
                 }
             }
         } else {
-            throw new IllegalArgumentException("unsupported message type: " + msg.getClass().getName());
+            throw new UnsupportedMessageTypeException(msg, Command.class, Iterable.class);
         }
     }
 }

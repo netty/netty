@@ -22,8 +22,7 @@ import io.netty.buffer.ChannelBuffer;
  * operation on a {@link ChannelBuffer} in a {@link ReplayingDecoder}
  * implementation.
  */
-public class UnreplayableOperationException extends
-        UnsupportedOperationException {
+public class UnreplayableOperationException extends UnsupportedOperationException {
 
     private static final long serialVersionUID = 8577363912862364021L;
 

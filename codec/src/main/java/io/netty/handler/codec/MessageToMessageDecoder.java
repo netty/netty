@@ -31,7 +31,7 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
                 O emsg = decode(ctx, msg);
                 if (emsg == null) {
                     // Decoder consumed a message but returned null.
-                    // Probably it needs more messages.
+                    // Probably it needs more messages because it's an aggregator.
                     continue;
                 }
 

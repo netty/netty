@@ -31,9 +31,9 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
 
                 O emsg = encode(ctx, msg);
                 if (emsg == null) {
-                    throw new IllegalArgumentException(
-                            "encode() returned null. unsupported message type? " +
-                            msg.getClass().getName());
+                    // encode() might be waiting for more inbound messages to generate
+                    // an aggregated message - keep polling.
+                    continue;
                 }
 
                 if (unfoldAndAdd(ctx, ctx.out(), emsg)) {
@@ -103,9 +103,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
             }
             dst.byteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
         } else {
-            throw new IllegalArgumentException(
-                    "message cannot be written to byte buffer if it is not " +
-                    ChannelBuffer.class.getSimpleName() + '.');
+            throw new UnsupportedMessageTypeException(msg, ChannelBuffer.class);
         }
 
         return true;
