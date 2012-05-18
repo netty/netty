@@ -686,7 +686,7 @@ public class SslHandler extends FrameDecoder
 
         ChannelFuture future = null;
         ChannelBuffer msg;
-        ByteBuffer outNetBuf = bufferPool.acquire();
+        ByteBuffer outNetBuf = bufferPool.acquireBuffer();
         boolean success = true;
         boolean offered = false;
         boolean needsUnwrap = false;
@@ -792,7 +792,7 @@ public class SslHandler extends FrameDecoder
             setHandshakeFailure(channel, e);
             throw e;
         } finally {
-            bufferPool.release(outNetBuf);
+            bufferPool.releaseBuffer(outNetBuf);
 
             if (offered) {
                 flushPendingEncryptedWrites(context);
@@ -860,7 +860,7 @@ public class SslHandler extends FrameDecoder
 
     private ChannelFuture wrapNonAppData(ChannelHandlerContext ctx, Channel channel) throws SSLException {
         ChannelFuture future = null;
-        ByteBuffer outNetBuf = bufferPool.acquire();
+        ByteBuffer outNetBuf = bufferPool.acquireBuffer();
 
         SSLEngineResult result;
         try {
@@ -930,7 +930,7 @@ public class SslHandler extends FrameDecoder
             setHandshakeFailure(channel, e);
             throw e;
         } finally {
-            bufferPool.release(outNetBuf);
+            bufferPool.releaseBuffer(outNetBuf);
         }
 
         if (future == null) {
@@ -943,7 +943,7 @@ public class SslHandler extends FrameDecoder
     private ChannelBuffer unwrap(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, int offset, int length) throws SSLException {
         ByteBuffer inNetBuf = buffer.toByteBuffer(offset, length);
-        ByteBuffer outAppBuf = bufferPool.acquire();
+        ByteBuffer outAppBuf = bufferPool.acquireBuffer();
 
         try {
             boolean needsWrap = false;
@@ -1035,7 +1035,7 @@ public class SslHandler extends FrameDecoder
             setHandshakeFailure(channel, e);
             throw e;
         } finally {
-            bufferPool.release(outAppBuf);
+            bufferPool.releaseBuffer(outAppBuf);
         }
     }
 
