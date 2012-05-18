@@ -54,8 +54,7 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx,
-                ChannelBuffer in, VoidEnum state) throws Exception {
+        public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
             ChannelBuffer msg = in.readBytes(in.bytesBefore(ChannelBufferIndexFinder.LF));
             in.skipBytes(1);
             return msg;

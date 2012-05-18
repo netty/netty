@@ -96,7 +96,7 @@ public class RedisDecoder extends ReplayingDecoder<Reply, VoidEnum> {
     }
 
     @Override
-    public Reply decode(ChannelInboundHandlerContext<Byte> channelHandlerContext, ChannelBuffer channelBuffer, VoidEnum anEnum) throws Exception {
+    public Reply decode(ChannelInboundHandlerContext<Byte> channelHandlerContext, ChannelBuffer channelBuffer) throws Exception {
         if (reply != null) {
             reply.read(this, channelBuffer);
             Reply ret = reply;
