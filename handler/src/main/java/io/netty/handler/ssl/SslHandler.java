@@ -702,11 +702,6 @@ public class SslHandler extends FrameDecoder
                             outNetBuf.flip();
                             int remaining = outNetBuf.remaining();
                             msg = ChannelBuffers.buffer(remaining);
-
-                            // Transfer the bytes to the new ChannelBuffer using some safe method that will also
-                            // work with "non" heap buffers
-                            //
-                            // See https://github.com/netty/netty/issues/329
                             msg.writeBytes(outNetBuf);
                             outNetBuf.clear();
 
@@ -845,8 +840,14 @@ public class SslHandler extends FrameDecoder
 
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
+<<<<<<< HEAD
                     ChannelBuffer msg = ChannelBuffers.buffer(outNetBuf.remaining());
 
+=======
+                    ChannelBuffer msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outNetBuf.remaining());
+
+
+>>>>>>> d2ec45e... Use the correct ChannelBufferFactory when creating new ChannelBuffers. See #335
                     // Transfer the bytes to the new ChannelBuffer using some safe method that will also
                     // work with "non" heap buffers
                     //
