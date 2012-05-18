@@ -81,17 +81,14 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         return this.pattern;
     }
 
-    @Override
     public boolean isAllowRule() {
         return isAllowRule;
     }
 
-    @Override
     public boolean isDenyRule() {
         return !isAllowRule;
     }
 
-    @Override
     public boolean contains(InetAddress inetAddress) {
         if (localhost) {
             if (isLocalhost(inetAddress)) {
@@ -178,7 +175,6 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
 
     }
 
-    @Override
     public int compareTo(Object o) {
         if (o == null) {
             return -1;

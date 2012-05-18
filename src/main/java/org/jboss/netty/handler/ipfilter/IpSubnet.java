@@ -110,7 +110,6 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
      * @return returns true if the given IP address is inside the currently
      *         set network.
      */
-    @Override
     public boolean contains(InetAddress inetAddress) {
         if (cidr == null) {
             // ANY
@@ -139,7 +138,6 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
     }
 
     /** Compare two IpSubnet */
-    @Override
     public int compareTo(IpSubnet o) {
         return cidr.toString().compareTo(o.cidr.toString());
     }

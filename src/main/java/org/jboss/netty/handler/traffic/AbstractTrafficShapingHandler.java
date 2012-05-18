@@ -325,7 +325,6 @@ public abstract class AbstractTrafficShapingHandler extends
         /**
          * Truly run the waken up of the channel
          */
-        @Override
         public void run() {
             try {
                 if (release.get()) {
@@ -481,7 +480,6 @@ public abstract class AbstractTrafficShapingHandler extends
         return trafficCounter;
     }
 
-    @Override
     public void releaseExternalResources() {
         if (trafficCounter != null) {
             trafficCounter.stop();

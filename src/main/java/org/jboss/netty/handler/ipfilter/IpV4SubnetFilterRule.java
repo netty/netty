@@ -50,12 +50,10 @@ public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule {
         isAllowRule = allow;
     }
 
-    @Override
     public boolean isAllowRule() {
         return isAllowRule;
     }
 
-    @Override
     public boolean isDenyRule() {
         return !isAllowRule;
     }

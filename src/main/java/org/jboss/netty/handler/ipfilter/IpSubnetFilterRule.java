@@ -55,12 +55,10 @@ public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule {
         isAllowRule = allow;
     }
 
-    @Override
     public boolean isAllowRule() {
         return isAllowRule;
     }
 
-    @Override
     public boolean isDenyRule() {
         return !isAllowRule;
     }

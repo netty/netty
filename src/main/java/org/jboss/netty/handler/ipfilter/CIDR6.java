@@ -53,7 +53,6 @@ public class CIDR6 extends CIDR {
         addressEndBigInt = addressBigInt.add(ipv6CidrMaskToBaseAddress(cidrMask)).subtract(BigInteger.ONE);
     }
 
-    @Override
     public InetAddress getEndAddress() {
         try {
             return bigIntToIPv6Address(addressEndBigInt);
@@ -65,7 +64,7 @@ public class CIDR6 extends CIDR {
         }
     }
 
-    @Override
+
     public int compareTo(CIDR arg) {
         if (arg instanceof CIDR4) {
             BigInteger net = ipv6AddressToBigInteger(arg.baseAddress);

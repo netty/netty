@@ -209,7 +209,6 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      * @return returns true if the given IP address is inside the currently
      *         set network.
      */
-    @Override
     public boolean contains(InetAddress inetAddress1) {
         if (mask == -1) {
             // ANY
@@ -238,7 +237,6 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
     }
 
     /** Compare two IpV4Subnet */
-    @Override
     public int compareTo(IpV4Subnet o) {
         if (o.subnet == subnet && o.cidrMask == cidrMask) {
             return 0;

@@ -142,7 +142,6 @@ public class TrafficCounter {
         /**
          * Default run
          */
-        @Override
         public void run() {
             try {
                 Thread.currentThread().setName(counter.name);

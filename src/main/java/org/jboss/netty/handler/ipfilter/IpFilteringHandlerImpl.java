@@ -95,7 +95,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
         }
     }
 
-    @Override
+    
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent evt = (ChannelStateEvent) e;
@@ -150,12 +150,12 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
         ctx.sendUpstream(e);
     }
 
-    @Override
+    
     public void setIpFilterListener(IpFilterListener listener) {
         this.listener = listener;
     }
 
-    @Override
+    
     public void removeIpFilterListener() {
         this.listener = null;
 

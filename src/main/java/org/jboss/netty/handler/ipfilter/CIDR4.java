@@ -56,7 +56,6 @@ public class CIDR4 extends CIDR {
         }
     }
 
-    @Override
     public int compareTo(CIDR arg) {
         if (arg instanceof CIDR6) {
             byte[] address = getIpV4FromIpV6((Inet6Address) arg.baseAddress);
