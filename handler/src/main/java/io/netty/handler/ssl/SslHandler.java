@@ -15,10 +15,22 @@
  */
 package io.netty.handler.ssl;
 
-import static io.netty.channel.Channels.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultChannelFuture;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.NonReentrantLock;
+import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -31,28 +43,6 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.Channels;
-import io.netty.channel.DefaultChannelFuture;
-import io.netty.channel.DownstreamMessageEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.LifeCycleAwareChannelHandler;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.FrameDecoder;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.NonReentrantLock;
-import io.netty.util.internal.QueueFactory;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -72,10 +62,10 @@ import io.netty.util.internal.QueueFactory;
  * <p>
  * If {@link #isIssueHandshake()} is {@code false}
  * (default) you will need to take care of calling {@link #handshake()} by your own. In most situations were {@link SslHandler} is used in 'client mode'
- * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to 
+ * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to
  * worry about this as the {@link SslHandler} will take care of it.
  * <p>
- * 
+ *
  * <h3>Renegotiation</h3>
  * <p>
  * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true}
@@ -196,7 +186,7 @@ public class SslHandler extends FrameDecoder
     private final Queue<MessageEvent> pendingEncryptedWrites = QueueFactory.createQueue(MessageEvent.class);
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
     private volatile boolean issueHandshake;
-    
+
     private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
 
         @Override
@@ -205,11 +195,11 @@ public class SslHandler extends FrameDecoder
                 Channels.fireExceptionCaught(future.channel(), future.cause());
             }
         }
-        
+
     };
-    
+
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
-    
+
     /**
      * Creates a new instance.
      *
@@ -413,29 +403,29 @@ public class SslHandler extends FrameDecoder
         this.enableRenegotiation = enableRenegotiation;
     }
 
-    
+
     /**
-     * Enables or disables the automatic handshake once the {@link Channel} is connected. The value will only have affect if its set before the 
+     * Enables or disables the automatic handshake once the {@link Channel} is connected. The value will only have affect if its set before the
      * {@link Channel} is connected.
      */
     public void setIssueHandshake(boolean issueHandshake) {
         this.issueHandshake = issueHandshake;
     }
-    
+
     /**
      * Returns <code>true</code> if the automatic handshake is enabled
      */
     public boolean isIssueHandshake() {
         return issueHandshake;
     }
-    
+
     /**
      * Return the {@link ChannelFuture} that will get notified if the inbound of the {@link SSLEngine} will get closed.
-     * 
+     *
      * This method will return the same {@link ChannelFuture} all the time.
-     * 
+     *
      * For more informations see the apidocs of {@link SSLEngine}
-     * 
+     *
      */
     public ChannelFuture getSSLEngineInboundCloseFuture() {
         return sslEngineCloseFuture;
@@ -535,7 +525,7 @@ public class SslHandler extends FrameDecoder
                                     "Swallowing an exception raised while " +
                                     "writing non-app data", cause);
                         }
-                       
+
                         return;
                     }
                 }
@@ -710,8 +700,14 @@ public class SslHandler extends FrameDecoder
 
                         if (result.bytesProduced() > 0) {
                             outNetBuf.flip();
-                            msg = ChannelBuffers.buffer(outNetBuf.remaining());
-                            msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
+                            int remaining = outNetBuf.remaining();
+                            msg = ChannelBuffers.buffer(remaining);
+
+                            // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                            // work with "non" heap buffers
+                            //
+                            // See https://github.com/netty/netty/issues/329
+                            msg.writeBytes(outNetBuf);
                             outNetBuf.clear();
 
                             if (pendingWrite.outAppBuf.hasRemaining()) {
@@ -850,7 +846,12 @@ public class SslHandler extends FrameDecoder
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
                     ChannelBuffer msg = ChannelBuffers.buffer(outNetBuf.remaining());
-                    msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
+
+                    // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                    // work with "non" heap buffers
+                    //
+                    // See https://github.com/netty/netty/issues/329
+                    msg.writeBytes(outNetBuf);
                     outNetBuf.clear();
 
                     future = future(channel);
@@ -929,7 +930,7 @@ public class SslHandler extends FrameDecoder
                         !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
                         needsHandshake = true;
-                        
+
                     }
                 }
                 if (needsHandshake) {
@@ -939,12 +940,12 @@ public class SslHandler extends FrameDecoder
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
                 }
-                
+
                 // notify about the CLOSED state of the SSLEngine. See #137
                 if (result.getStatus() == Status.CLOSED) {
                     sslEngineCloseFuture.setClosed();
                 }
-                
+
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 handleRenegotiation(handshakeStatus);
                 switch (handshakeStatus) {
@@ -971,7 +972,7 @@ public class SslHandler extends FrameDecoder
                     throw new IllegalStateException(
                             "Unknown handshake status: " + handshakeStatus);
                 }
-                
+
             }
 
             if (needsWrap) {
@@ -992,8 +993,12 @@ public class SslHandler extends FrameDecoder
             outAppBuf.flip();
 
             if (outAppBuf.hasRemaining()) {
-                ChannelBuffer frame = ctx.channel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
-                frame.writeBytes(outAppBuf.array(), 0, frame.capacity());
+                ChannelBuffer frame = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
+                // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                // work with "non" heap buffers
+                //
+                // See https://github.com/netty/netty/issues/329
+                frame.writeBytes(outAppBuf);
                 return frame;
             } else {
                 return null;
@@ -1108,7 +1113,7 @@ public class SslHandler extends FrameDecoder
             // is managing.
 
             engine.closeOutbound();
-            
+
             try {
                 engine.closeInbound();
             } catch (SSLException e) {
@@ -1120,7 +1125,7 @@ public class SslHandler extends FrameDecoder
 
             }
         }
-        
+
         handshakeFuture.setFailure(cause);
     }
 
@@ -1216,7 +1221,7 @@ public class SslHandler extends FrameDecoder
      */
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        
+
         // there is no need for synchronization here as we do not receive downstream events anymore
         Throwable cause = null;
         for (;;) {
@@ -1247,7 +1252,7 @@ public class SslHandler extends FrameDecoder
             fireExceptionCaughtLater(ctx, cause);
         }
     }
-    
+
 
     /**
      * Calls {@link #handshake()} once the {@link Channel} is connected
@@ -1259,9 +1264,9 @@ public class SslHandler extends FrameDecoder
             // while doing the handshake
             handshake().addListener(HANDSHAKE_LISTENER);
         }
-        super.channelConnected(ctx, e);     
-    } 
-    
+        super.channelConnected(ctx, e);
+    }
+
     /**
      * Loop over all the pending writes and fail them.
      *
@@ -1280,10 +1285,10 @@ public class SslHandler extends FrameDecoder
                     cause = new ClosedChannelException();
                 }
                 pw.future.setFailure(cause);
-                
+
             }
-            
-            
+
+
             for (;;) {
                 MessageEvent ev = pendingEncryptedWrites.poll();
                 if (ev == null) {
@@ -1293,26 +1298,26 @@ public class SslHandler extends FrameDecoder
                     cause = new ClosedChannelException();
                 }
                 ev.getFuture().setFailure(cause);
-                
+
             }
         }
-       
+
         if (cause != null) {
             fireExceptionCaught(ctx, cause);
         }
-        
+
         super.channelClosed(ctx, e);
     }
-    
+
     private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
         public SSLEngineInboundCloseFuture() {
             super(null, true);
         }
-        
+
         void setClosed() {
-            super.setSuccess();            
+            super.setSuccess();
         }
-        
+
         @Override
         public Channel getChannel() {
             if (ctx == null) {
@@ -1322,12 +1327,12 @@ public class SslHandler extends FrameDecoder
                 return ctx.getChannel();
             }
         }
-        
+
         @Override
         public boolean setSuccess() {
             return false;
         }
-        
+
         @Override
         public boolean setFailure(Throwable cause) {
             return false;
