@@ -22,7 +22,6 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
@@ -275,13 +274,13 @@ import io.netty.util.VoidEnum;
  *         }
  *     }
  * </pre>
- * @param <T>
+ * @param <S>
  *        the state type; use {@link VoidEnum} if state management is unused
  *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.UnreplayableOperationException oneway - - throws
  */
-public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInboundHandlerAdapter<Byte> {
+public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMessageDecoder<O> {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
@@ -352,11 +351,6 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        callDecode(ctx);
-    }
-
-    @Override
     public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
         replayable.terminate();
         ChannelBuffer in = cumulation;
@@ -365,7 +359,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
         }
 
         try {
-            if (unfoldAndAdd(ctx, ctx.nextIn(), decodeLast(ctx, replayable, state))) {
+            if (unfoldAndAdd(ctx, ctx.nextIn(), decodeLast(ctx, replayable))) {
                 in.discardReadBytes();
                 ctx.fireInboundBufferUpdated();
             }
@@ -391,7 +385,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
                 Object result = null;
                 S oldState = state;
                 try {
-                    result = decode(ctx, replayable, state);
+                    result = decode(ctx, replayable);
                     if (result == null) {
                         if (oldReaderIndex == in.readerIndex() && oldState == state) {
                             throw new IllegalStateException(
@@ -437,36 +431,5 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
                 }
             }
         }
-    }
-
-    /**
-     * Decodes the received packets so far into a frame.
-     *
-     * @param ctx      the context of this handler
-     * @param in       the cumulative buffer of received packets so far.
-     *                 Note that the buffer might be empty, which means you
-     *                 should not make an assumption that the buffer contains
-     *                 at least one byte in your decoder implementation.
-     * @param state    the current decoder state ({@code null} if unused)
-     *
-     * @return the decoded frame
-     */
-    public abstract O decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in, S state) throws Exception;
-
-    /**
-     * Decodes the received data so far into a frame when the channel is
-     * disconnected.
-     *
-     * @param ctx      the context of this handler
-     * @param in       the cumulative buffer of received packets so far.
-     *                 Note that the buffer might be empty, which means you
-     *                 should not make an assumption that the buffer contains
-     *                 at least one byte in your decoder implementation.
-     * @param state    the current decoder state ({@code null} if unused)
-     *
-     * @return the decoded frame
-     */
-    public O decodeLast(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in, S state) throws Exception {
-        return decode(ctx, in, state);
     }
 }
