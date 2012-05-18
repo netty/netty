@@ -15,6 +15,12 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ChannelBufferIndexFinder;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.util.Signal;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,14 +30,9 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.ChannelBufferIndexFinder;
-import io.netty.buffer.ChannelBuffers;
-
 class ReplayingDecoderBuffer implements ChannelBuffer {
 
-    private static final Error REPLAY = new ReplayError();
+    private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
     private final ChannelBuffer buffer;
     private boolean terminated;
@@ -119,7 +120,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public ChannelBuffer duplicate() {
         throw new UnreplayableOperationException();
     }
-    
+
     @Override
     public boolean getBoolean(int index) {
         checkIndex(index);
@@ -356,8 +357,8 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         } else {
             return Integer.MAX_VALUE - buffer.readerIndex();
         }
-    } 
-    
+    }
+
     @Override
     public boolean readBoolean() {
         checkReadableBytes(1);
@@ -511,7 +512,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public void resetWriterIndex() {
         throw new UnreplayableOperationException();
     }
-    
+
     @Override
     public void setBoolean(int index, boolean value) {
         throw new UnreplayableOperationException();
@@ -679,7 +680,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public int writableBytes() {
         return 0;
     }
-    
+
     @Override
     public void writeBoolean(boolean value) {
         throw new UnreplayableOperationException();

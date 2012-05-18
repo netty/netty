@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.util.Signal;
 
 /**
  * A specialized variation of {@link StreamToMessageDecoder} which enables implementation
@@ -281,6 +282,8 @@ import io.netty.channel.ChannelPipeline;
  */
 public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInboundHandlerAdapter<Byte> {
 
+    static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
+
     private final ChannelBufferHolder<Byte> in = ChannelBufferHolders.byteBuffer();
     private final ChannelBuffer cumulation = in.byteBuffer();
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(cumulation);
@@ -365,8 +368,9 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
                 in.discardReadBytes();
                 ctx.fireInboundBufferUpdated();
             }
-        } catch (ReplayError replay) {
+        } catch (Signal replay) {
             // Ignore
+            replay.expect(REPLAY);
         } catch (Throwable t) {
             ctx.fireExceptionCaught(t);
         }
@@ -393,7 +397,8 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ChannelInbo
                             continue;
                         }
                     }
-                } catch (ReplayError replay) {
+                } catch (Signal replay) {
+                    replay.expect(REPLAY);
                     // Return to the checkpoint (or oldPosition) and retry.
                     int checkpoint = this.checkpoint;
                     if (checkpoint >= 0) {

@@ -1,5 +1,7 @@
 package io.netty.channel;
 
+import io.netty.util.UniqueKey;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
@@ -7,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class ChannelOption<T> implements Comparable<ChannelOption<T>> {
+public class ChannelOption<T> extends UniqueKey<T> {
 
     private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
 
@@ -75,48 +77,13 @@ public class ChannelOption<T> implements Comparable<ChannelOption<T>> {
     public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
             new ChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR", SocketAddress.class);
 
-    private final String name;
-    private final Class<T> valueType;
-    private final String strVal;
-
     public ChannelOption(String name, Class<T> valueType) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        if (valueType == null) {
-            throw new NullPointerException("valueType");
-        }
-
-        if (names.putIfAbsent(name, Boolean.TRUE) != null) {
-            throw new IllegalArgumentException("option name already in use: " + name);
-        }
-
-        this.name = name;
-        this.valueType = valueType;
-        strVal = name + '[' + valueType.getSimpleName() + ']';
-    }
-
-    public String name() {
-        return name;
-    }
-
-    public Class<T> valueType() {
-        return valueType;
+        super(names, name, valueType);
     }
 
     public void validate(T value) {
         if (value == null) {
             throw new NullPointerException("value");
         }
-    }
-
-    @Override
-    public int compareTo(ChannelOption<T> o) {
-        return name().compareTo(o.name());
-    }
-
-    @Override
-    public String toString() {
-        return strVal;
     }
 }
