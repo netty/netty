@@ -711,7 +711,7 @@ public class SslHandler extends FrameDecoder
                         if (result.bytesProduced() > 0) {
                             outNetBuf.flip();
                             int remaining = outNetBuf.remaining();
-                            msg = ChannelBuffers.buffer(remaining);
+                            msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(remaining);
                             
                             // Transfer the bytes to the new ChannelBuffer using some safe method that will also
                             // work with "non" heap buffers
@@ -855,7 +855,8 @@ public class SslHandler extends FrameDecoder
 
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
-                    ChannelBuffer msg = ChannelBuffers.buffer(outNetBuf.remaining());
+                    ChannelBuffer msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outNetBuf.remaining());
+
                     
                     // Transfer the bytes to the new ChannelBuffer using some safe method that will also
                     // work with "non" heap buffers
