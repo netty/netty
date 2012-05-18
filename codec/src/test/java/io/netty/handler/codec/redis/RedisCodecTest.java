@@ -15,19 +15,17 @@
  */
 package io.netty.handler.codec.redis;
 
+import static io.netty.buffer.ChannelBuffers.*;
+import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.util.CharsetUtil;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.io.IOException;
 
-import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.Test;
 
 public class RedisCodecTest {
 
@@ -39,7 +37,7 @@ public class RedisCodecTest {
     }
 
     @Test
-    public void decodeReplies() throws IOException {
+    public void decodeReplies() {
         {
             Object receive = decode("+OK\r\n".getBytes());
             assertTrue(receive instanceof StatusReply);
