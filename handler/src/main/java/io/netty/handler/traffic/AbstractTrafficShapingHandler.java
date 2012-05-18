@@ -28,9 +28,9 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelHandler;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.DefaultObjectSizeEstimator;
-import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.ObjectSizeEstimator;
+import io.netty.util.DefaultObjectSizeEstimator;
+import io.netty.util.ExternalResourceReleasable;
+import io.netty.util.ObjectSizeEstimator;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
