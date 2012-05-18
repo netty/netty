@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.handler.execution.ExecutionHandler;
 import io.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.jboss.netty.util.ObjectSizeEstimator;
+import io.netty.util.ObjectSizeEstimator;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
