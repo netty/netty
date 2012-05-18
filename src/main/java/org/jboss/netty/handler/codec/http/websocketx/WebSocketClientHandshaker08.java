@@ -229,10 +229,11 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         setActualSubprotocol(subprotocol);
                
 
+        setHandshakeComplete();
+
         channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
                 new WebSocket08FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));
         
-        setHandshakeComplete();
 
     }
 }

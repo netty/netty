@@ -224,11 +224,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(subprotocol);
 
-        
+        setHandshakeComplete();
+
         channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
                 new WebSocket13FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));
         
-        setHandshakeComplete();
 
     }
 }
