@@ -248,9 +248,10 @@ public class TrafficCounter {
      * @param newcheckInterval
      */
     public void configure(long newcheckInterval) {
-        if (checkInterval.get() != newcheckInterval) {
-            checkInterval.set(newcheckInterval);
-            if (newcheckInterval <= 0) {
+        long newInterval = (newcheckInterval/10)*10;
+        if (checkInterval.get() != newInterval) {
+            checkInterval.set(newInterval);
+            if (newInterval <= 0) {
                 stop();
                 // No more active monitoring
                 lastTime.set(System.currentTimeMillis());
