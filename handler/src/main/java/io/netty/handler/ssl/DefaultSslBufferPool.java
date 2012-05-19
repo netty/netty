@@ -73,21 +73,17 @@ public class DefaultSslBufferPool implements SslBufferPool {
         return index * MAX_PACKET_SIZE;
     }
 
-    public ByteBuffer acquireBuffer() {
-        synchronized {
-            if (index == 0) {
-                return ByteBuffer.allocate(MAX_PACKET_SIZE);
-            } else {
-                return (ByteBuffer) pool[-- index].clear();
-            }
+    public synchronized ByteBuffer acquireBuffer() {
+        if (index == 0) {
+            return ByteBuffer.allocate(MAX_PACKET_SIZE);
+        } else {
+            return (ByteBuffer) pool[-- index].clear();
         }
     }
 
-    public void releaseBuffer(ByteBuffer buffer) {
-        synchronized {
-            if (index < maxBufferCount) {
-                pool[index ++] = buffer;
-            }
+    public synchronized void releaseBuffer(ByteBuffer buffer) {
+        if (index < maxBufferCount) {
+            pool[index ++] = buffer;
         }
     }
 }
