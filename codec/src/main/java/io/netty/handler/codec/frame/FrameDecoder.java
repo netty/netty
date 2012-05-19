@@ -28,9 +28,9 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ChannelUpstreamHandler;
 import io.netty.channel.Channels;
 import io.netty.channel.ExceptionEvent;
+import io.netty.channel.LifeCycleAwareChannelHandler;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -174,11 +174,12 @@ import io.netty.handler.codec.replay.ReplayingDecoder;
  * </pre>
  * @apiviz.landmark
  */
-public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
+public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
     private final boolean unfold;
-    private ChannelBuffer cumulation;
-
+    protected ChannelBuffer cumulation;
+    private volatile ChannelHandlerContext ctx;
+    
     protected FrameDecoder() {
         this(false);
     }
@@ -335,7 +336,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void unfoldAndFireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
+    protected final void unfoldAndFireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
         if (unfold) {
             if (result instanceof Object[]) {
                 for (Object r: (Object[]) result) {
@@ -353,7 +354,11 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
+    /**
+     * Gets called on {@link #channelDisconnected(ChannelHandlerContext, ChannelStateEvent)} and {@link #channelClosed(ChannelHandlerContext, ChannelStateEvent)}
+     * 
+     */
+    protected void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         try {
             ChannelBuffer cumulation = this.cumulation;
@@ -392,4 +397,76 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
         return factory.getBuffer(Math.max(minimumCapacity, 256));
     }
+    
+    /**
+     * Replace this {@link FrameDecoder} in the {@link ChannelPipeline} with the given {@link ChannelHandler}. All 
+     * remaining bytes in the {@link ChannelBuffer} will get send to the new {@link ChannelHandler} that was used
+     * as replacement
+     * 
+     */
+    public void replace(String handlerName, ChannelHandler handler) {
+        if (ctx == null) {
+            throw new IllegalStateException("Replace cann only be called once the FrameDecoder is added to the ChannelPipeline");
+        }
+        ChannelPipeline pipeline = ctx.getPipeline();
+        pipeline.addAfter(ctx.getName(), handlerName, handler);
+                
+        try {
+            if (cumulation != null) {
+                Channels.fireMessageReceived(ctx, cumulation.readBytes(actualReadableBytes()));
+            }
+        } finally {
+            pipeline.remove(this);
+        }
+        
+    }
+    
+    /**
+     * Returns the actual number of readable bytes in the internal cumulative
+     * buffer of this decoder.  You usually do not need to rely on this value
+     * to write a decoder.  Use it only when you muse use it at your own risk.
+     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
+     */
+    protected int actualReadableBytes() {
+        return internalBuffer().readableBytes();
+    }
+    
+
+
+    /**
+     * Returns the internal cumulative buffer of this decoder.  You usually
+     * do not need to access the internal buffer directly to write a decoder.
+     * Use it only when you must use it at your own risk.
+     */
+    protected ChannelBuffer internalBuffer() {
+        ChannelBuffer buf = this.cumulation;
+        if (buf == null) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+        return buf;
+    }
+
+    @Override
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    @Override
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // Nothing to do..
+        
+    }
+
+    @Override
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // Nothing to do..
+        
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        // Nothing to do..
+        
+    }
+
 }

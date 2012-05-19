@@ -15,21 +15,17 @@
  */
 package io.netty.handler.codec.replay;
 
-import java.net.SocketAddress;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.Channels;
-import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.handler.codec.frame.FrameDecoder;
+
+import java.net.SocketAddress;
 
 /**
  * A specialized variation of {@link FrameDecoder} which enables implementation
@@ -285,11 +281,9 @@ import io.netty.handler.codec.frame.FrameDecoder;
  * @apiviz.has io.netty.handler.codec.replay.UnreplayableOperationException oneway - - throws
  */
 public abstract class ReplayingDecoder<T extends Enum<T>>
-        extends SimpleChannelUpstreamHandler {
+        extends FrameDecoder {
 
 
-    private ChannelBuffer cumulation;
-    private final boolean unfold;
     private ReplayingDecoderBuffer replayable;
     private T state;
     private int checkpoint;
@@ -315,8 +309,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     }
 
     protected ReplayingDecoder(T initialState, boolean unfold) {
+        super(unfold);
         this.state = initialState;
-        this.unfold = unfold;
     }
 
     /**
@@ -359,29 +353,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     }
 
     /**
-     * Returns the actual number of readable bytes in the internal cumulative
-     * buffer of this decoder.  You usually do not need to rely on this value
-     * to write a decoder.  Use it only when you muse use it at your own risk.
-     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
-     */
-    protected int actualReadableBytes() {
-        return internalBuffer().readableBytes();
-    }
-
-    /**
-     * Returns the internal cumulative buffer of this decoder.  You usually
-     * do not need to access the internal buffer directly to write a decoder.
-     * Use it only when you must use it at your own risk.
-     */
-    protected ChannelBuffer internalBuffer() {
-        ChannelBuffer buf = this.cumulation;
-        if (buf == null) {
-            return ChannelBuffers.EMPTY_BUFFER;
-        }
-        return buf;
-    }
-
-    /**
      * Decodes the received packets so far into a frame.
      *
      * @param ctx      the context of this handler
@@ -414,6 +385,21 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     protected Object decodeLast(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, T state) throws Exception {
         return decode(ctx, channel, buffer, state);
+    }
+
+    /**
+     * Calls {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer, Enum)}. This method should be never used by {@link ReplayingDecoder} itself. 
+     * But to be safe we should handle it anyway
+     */
+    @Override
+    protected final Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+        return decode(ctx, channel, buffer, state);
+    }
+    
+    @Override
+    protected final Object decodeLast(
+            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+        return decodeLast(ctx, channel, buffer, state);
     }
 
     @Override
@@ -520,24 +506,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
     }
 
-    @Override
-    public void channelDisconnected(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
-        cleanup(ctx, e);
-    }
-
-    @Override
-    public void channelClosed(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
-        cleanup(ctx, e);
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-        ctx.sendUpstream(e);
-    }
-
     private void callDecode(ChannelHandlerContext context, Channel channel, ChannelBuffer input, ChannelBuffer replayableInput, SocketAddress remoteAddress) throws Exception {
         while (input.readable()) {
             int oldReaderIndex = checkpoint = input.readerIndex();
@@ -580,30 +548,12 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             }
 
             // A successful decode
-            unfoldAndFireMessageReceived(context, result, remoteAddress);
+            unfoldAndFireMessageReceived(context, remoteAddress, result);
         }
     }
 
-    private void unfoldAndFireMessageReceived(
-            ChannelHandlerContext context, Object result, SocketAddress remoteAddress) {
-        if (unfold) {
-            if (result instanceof Object[]) {
-                for (Object r: (Object[]) result) {
-                    Channels.fireMessageReceived(context, r, remoteAddress);
-                }
-            } else if (result instanceof Iterable<?>) {
-                for (Object r: (Iterable<?>) result) {
-                    Channels.fireMessageReceived(context, r, remoteAddress);
-                }
-            } else {
-                Channels.fireMessageReceived(context, result, remoteAddress);
-            }
-        } else {
-            Channels.fireMessageReceived(context, result, remoteAddress);
-        }
-    }
-
-    private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
+    @Override
+    protected void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         try {
             ChannelBuffer cumulation = this.cumulation;
@@ -626,7 +576,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             // notify a user that the connection was closed explicitly.
             Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
             if (partiallyDecoded != null) {
-                unfoldAndFireMessageReceived(ctx, partiallyDecoded, null);
+                unfoldAndFireMessageReceived(ctx, null, partiallyDecoded);
             }
         } catch (ReplayError replay) {
             // Ignore
@@ -635,17 +585,5 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             ctx.sendUpstream(e);
         }
     }
-
-    /**
-     * Create a new {@link ChannelBuffer} which is used for the cumulation.
-     * Sub-classes may override this.
-     *
-     * @param ctx {@link ChannelHandlerContext} for this handler
-     * @return buffer the {@link ChannelBuffer} which is used for cumulation
-     */
-    protected ChannelBuffer newCumulationBuffer(
-            ChannelHandlerContext ctx, int minimumCapacity) {
-        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-        return factory.getBuffer(Math.max(minimumCapacity, 256));
-    }
+    
 }
