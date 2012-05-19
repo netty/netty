@@ -32,191 +32,150 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.junit.Test;
 
-public class IpFilterRuleTest extends TestCase
-{
-    public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception
-    {
-        return h.accept(new ChannelHandlerContext()
-        {
+public class IpFilterRuleTest extends TestCase {
+    public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception {
+        return h.accept(new ChannelHandlerContext() {
 
-            public boolean canHandleDownstream()
-            {
+            public boolean canHandleDownstream() {
                 return false;
             }
 
-            public boolean canHandleUpstream()
-            {
+            public boolean canHandleUpstream() {
                 return false;
             }
 
-            public Object getAttachment()
-            {
+            public Object getAttachment() {
                 return null;
             }
 
-            public Channel getChannel()
-            {
+            public Channel getChannel() {
                 return null;
             }
 
-            public ChannelHandler getHandler()
-            {
+            public ChannelHandler getHandler() {
                 return null;
             }
 
-            public String getName()
-            {
+            public String getName() {
                 return null;
             }
 
-            public ChannelPipeline getPipeline()
-            {
+            public ChannelPipeline getPipeline() {
                 return null;
             }
 
-            public void sendDownstream(ChannelEvent e)
-            {                
+            public void sendDownstream(ChannelEvent e) {
             }
 
-            public void sendUpstream(ChannelEvent e)
-            {                
+            public void sendUpstream(ChannelEvent e) {
             }
 
-            public void setAttachment(Object attachment)
-            {                
+            public void setAttachment(Object attachment) {
             }
-            
-        }, 
-        new UpstreamMessageEvent(new Channel()
-        {
 
-            public ChannelFuture bind(SocketAddress localAddress)
-            {
+        }, new UpstreamMessageEvent(new Channel() {
+
+            public ChannelFuture bind(SocketAddress localAddress) {
                 return null;
             }
 
-            public ChannelFuture close()
-            {
+            public ChannelFuture close() {
                 return null;
             }
 
-            public ChannelFuture connect(SocketAddress remoteAddress)
-            {
+            public ChannelFuture connect(SocketAddress remoteAddress) {
                 return null;
             }
 
-            public ChannelFuture disconnect()
-            {
+            public ChannelFuture disconnect() {
                 return null;
             }
 
-            public ChannelFuture getCloseFuture()
-            {
+            public ChannelFuture getCloseFuture() {
                 return null;
             }
 
-            public ChannelConfig getConfig()
-            {
+            public ChannelConfig getConfig() {
                 return null;
             }
 
-            public ChannelFactory getFactory()
-            {
+            public ChannelFactory getFactory() {
                 return null;
             }
 
-            public Integer getId()
-            {
+            public Integer getId() {
                 return null;
             }
 
-            public int getInterestOps()
-            {
+            public int getInterestOps() {
                 return 0;
             }
 
-            public SocketAddress getLocalAddress()
-            {
+            public SocketAddress getLocalAddress() {
                 return null;
             }
 
-            public Channel getParent()
-            {
+            public Channel getParent() {
                 return null;
             }
 
-            public ChannelPipeline getPipeline()
-            {
+            public ChannelPipeline getPipeline() {
                 return null;
             }
 
-            public SocketAddress getRemoteAddress()
-            {
+            public SocketAddress getRemoteAddress() {
                 return null;
             }
 
-            public boolean isBound()
-            {
+            public boolean isBound() {
                 return false;
             }
 
-            public boolean isConnected()
-            {
+            public boolean isConnected() {
                 return false;
             }
 
-            public boolean isOpen()
-            {
+            public boolean isOpen() {
                 return false;
             }
 
-            public boolean isReadable()
-            {
+            public boolean isReadable() {
                 return false;
             }
 
-            public boolean isWritable()
-            {
+            public boolean isWritable() {
                 return false;
             }
 
-            public ChannelFuture setInterestOps(int interestOps)
-            {
+            public ChannelFuture setInterestOps(int interestOps) {
                 return null;
             }
 
-            public ChannelFuture setReadable(boolean readable)
-            {
+            public ChannelFuture setReadable(boolean readable) {
                 return null;
             }
 
-            public ChannelFuture unbind()
-            {
+            public ChannelFuture unbind() {
                 return null;
             }
 
-            public ChannelFuture write(Object message)
-            {
+            public ChannelFuture write(Object message) {
                 return null;
             }
 
-            public ChannelFuture write(Object message, SocketAddress remoteAddress)
-            {
+            public ChannelFuture write(Object message, SocketAddress remoteAddress) {
                 return null;
             }
 
-            public int compareTo(Channel o)
-            {
+            public int compareTo(Channel o) {
                 return 0;
             }
-            
-        }, h, addr), 
-        addr);
+
+        }, h, addr), addr);
     }
-    
+
     @Test
-    public void testIpFilterRule() throws Exception
-    {
+    public void testIpFilterRule() throws Exception {
         IpFilterRuleHandler h = new IpFilterRuleHandler();
         h.addAll(new IpFilterRuleList("+n:localhost, -n:*"));
         InetSocketAddress addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
@@ -225,9 +184,9 @@ public class IpFilterRuleTest extends TestCase
         assertFalse(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName(InetAddress.getLocalHost().getHostName()), 8080);
         assertTrue(accept(h, addr));
-        
+
         h.clear();
-        h.addAll(new IpFilterRuleList("+n:*"+InetAddress.getLocalHost().getHostName().substring(1)+", -n:*"));
+        h.addAll(new IpFilterRuleList("+n:*" + InetAddress.getLocalHost().getHostName().substring(1) + ", -n:*"));
         addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
         assertTrue(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName("127.0.0.2"), 8080);
@@ -236,7 +195,7 @@ public class IpFilterRuleTest extends TestCase
         assertTrue(accept(h, addr));
 
         h.clear();
-        h.addAll(new IpFilterRuleList("+c:"+InetAddress.getLocalHost().getHostAddress()+"/32, -n:*"));
+        h.addAll(new IpFilterRuleList("+c:" + InetAddress.getLocalHost().getHostAddress() + "/32, -n:*"));
         addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
         assertTrue(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName("127.0.0.2"), 8080);
