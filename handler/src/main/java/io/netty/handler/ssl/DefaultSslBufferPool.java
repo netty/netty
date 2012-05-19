@@ -17,8 +17,6 @@ package io.netty.handler.ssl;
 
 import java.nio.ByteBuffer;
 
-import javax.net.ssl.SSLEngine;
-
 public class DefaultSslBufferPool implements SslBufferPool {
 
     private static final int DEFAULT_POOL_SIZE = MAX_PACKET_SIZE * 1024;
@@ -73,6 +71,7 @@ public class DefaultSslBufferPool implements SslBufferPool {
         return index * MAX_PACKET_SIZE;
     }
 
+    @Override
     public synchronized ByteBuffer acquireBuffer() {
         if (index == 0) {
             return ByteBuffer.allocate(MAX_PACKET_SIZE);
@@ -81,6 +80,7 @@ public class DefaultSslBufferPool implements SslBufferPool {
         }
     }
 
+    @Override
     public synchronized void releaseBuffer(ByteBuffer buffer) {
         if (index < maxBufferCount) {
             pool[index ++] = buffer;
