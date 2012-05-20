@@ -85,6 +85,16 @@ public abstract class InternalLoggerFactory {
             public void error(String msg, Throwable cause) {
                 logger.error(msg, cause);
             }
+            
+            @Override
+            public void fatal(String msg) {
+                logger.fatal(msg);
+            }
+            
+            @Override
+            public void fatal(String msg, Throwable cause) {
+                logger.fatal(msg, cause);
+            }
 
             @Override
             public void info(String msg) {
@@ -114,6 +124,11 @@ public abstract class InternalLoggerFactory {
             @Override
             public boolean isWarnEnabled() {
                 return logger.isWarnEnabled();
+            }
+            
+            @Override
+            public boolean isFatalEnabled() {
+                return logger.isFatalEnabled();
             }
 
             @Override

@@ -60,6 +60,16 @@ class CommonsLogger extends AbstractInternalLogger {
     public void info(String msg, Throwable cause) {
         logger.info(msg, cause);
     }
+    
+    @Override
+    public void fatal(String msg) {
+        logger.fatal(msg);
+    }
+    
+    @Override
+    public void fatal(String msg, Throwable cause) {
+        logger.fatal(msg, cause);
+    }
 
     @Override
     public boolean isDebugEnabled() {
@@ -79,6 +89,11 @@ class CommonsLogger extends AbstractInternalLogger {
     @Override
     public boolean isWarnEnabled() {
         return logger.isWarnEnabled();
+    }
+    
+    @Override
+    public boolean isFatalEnabled() {
+        return logger.isFatalEnabled();
     }
 
     @Override

@@ -58,6 +58,16 @@ class JBossLogger extends AbstractInternalLogger {
     public void info(String msg, Throwable cause) {
         logger.info(msg, cause);
     }
+    
+    @Override
+    public void fatal(String msg) {
+        logger.fatal(msg);
+    }
+    
+    @Override
+    public void fatal(String msg, Throwable cause) {
+        logger.fatal(msg, cause);
+    }
 
     @Override
     @SuppressWarnings("deprecation")
@@ -78,6 +88,11 @@ class JBossLogger extends AbstractInternalLogger {
 
     @Override
     public boolean isWarnEnabled() {
+        return true;
+    }
+    
+    @Override
+    public boolean isFatalEnabled() {
         return true;
     }
 

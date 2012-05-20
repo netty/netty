@@ -39,6 +39,11 @@ public interface InternalLogger {
      * Returns {@code true} if an ERROR level message is logged.
      */
     boolean isErrorEnabled();
+    
+    /**
+     * Returns (@code true} if a FATAL error message is logged.
+     */
+    boolean isFatalEnabled();
 
     /**
      * Returns {@code true} if the specified log level message is logged.
@@ -84,6 +89,16 @@ public interface InternalLogger {
      * Logs an ERROR level message.
      */
     void error(String msg, Throwable cause);
+    
+    /**
+     * Logs a FATAL level message.
+     */
+    void fatal(String msg);
+    
+    /**
+     * Logs a FATAL level message.
+     */
+    void fatal(String msg, Throwable cause);
 
     /**
      * Logs a message.

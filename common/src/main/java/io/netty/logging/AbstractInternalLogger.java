@@ -39,6 +39,8 @@ public abstract class AbstractInternalLogger implements InternalLogger {
             return isWarnEnabled();
         case ERROR:
             return isErrorEnabled();
+        case FATAL:
+            return isFatalEnabled();
         default:
             throw new Error();
         }
@@ -59,6 +61,9 @@ public abstract class AbstractInternalLogger implements InternalLogger {
         case ERROR:
             error(msg, cause);
             break;
+        case FATAL:
+            fatal(msg, cause);
+            break;
         default:
             throw new Error();
         }
@@ -78,6 +83,9 @@ public abstract class AbstractInternalLogger implements InternalLogger {
             break;
         case ERROR:
             error(msg);
+            break;
+        case FATAL:
+            fatal(msg);
             break;
         default:
             throw new Error();
