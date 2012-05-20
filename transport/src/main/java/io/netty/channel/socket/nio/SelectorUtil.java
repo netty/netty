@@ -26,11 +26,6 @@ final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
 
-    public static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
-
-    public static final int DEFAULT_IO_ACCEPTING_THREADS = 1;
-
-
     // Workaround for JDK NIO bug.
     //
     // See:
@@ -52,6 +47,11 @@ final class SelectorUtil {
 
     static void select(Selector selector) throws IOException {
         try {
+            for (int i = 0; i < 32; i ++) {
+                if (selector.selectNow() > 0) {
+                    return;
+                }
+            }
             selector.select(10);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
@@ -60,7 +60,6 @@ final class SelectorUtil {
                         " raised by a Selector - JDK bug?", e);
             }
             // Harmless exception - log anyway
-
         }
     }
 
