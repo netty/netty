@@ -286,7 +286,7 @@ public abstract class AbstractTrafficShapingHandler extends
         writeLimit = newWriteLimit;
         readLimit = newReadLimit;
         if (trafficCounter != null) {
-            trafficCounter.resetAccounting(System.currentTimeMillis()+1);
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
         }
     }
 
