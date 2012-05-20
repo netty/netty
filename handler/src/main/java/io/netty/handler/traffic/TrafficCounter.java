@@ -15,11 +15,14 @@
  */
 package io.netty.handler.traffic;
 
-import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.Timeout;
+import io.netty.util.Timer;
+import io.netty.util.TimerTask;
 
 /**
  * TrafficCounter is associated with {@link AbstractTrafficShapingHandler}.<br>
@@ -97,12 +100,20 @@ public class TrafficCounter {
     /**
      * The associated TrafficShapingHandler
      */
-    private AbstractTrafficShapingHandler trafficShapingHandler;
+    private final AbstractTrafficShapingHandler trafficShapingHandler;
 
     /**
-     * Default Executor
+     * One Timer for all Counter
      */
-    private Executor executor;
+    private final Timer timer;  // replace executor
+    /**
+     * Monitor created once in start()
+     */
+    private TimerTask timerTask;
+    /**
+     * used in stop() to cancel the timer
+     */
+    volatile private Timeout timeout = null;
 
     /**
      * Is Monitor active
@@ -110,14 +121,10 @@ public class TrafficCounter {
     AtomicBoolean monitorActive = new AtomicBoolean();
 
     /**
-     * Monitor
-     */
-    private TrafficMonitoring trafficMonitoring;
-
-    /**
      * Class to implement monitoring at fix delay
- */
-    private static class TrafficMonitoring implements Runnable {
+     *
+     */
+    private static class TrafficMonitoringTask implements TimerTask {
         /**
          * The associated TrafficShapingHandler
          */
@@ -132,43 +139,30 @@ public class TrafficCounter {
          * @param trafficShapingHandler
          * @param counter
          */
-        protected TrafficMonitoring(
+        protected TrafficMonitoringTask(
                 AbstractTrafficShapingHandler trafficShapingHandler,
                 TrafficCounter counter) {
             trafficShapingHandler1 = trafficShapingHandler;
             this.counter = counter;
         }
 
-        /**
-         * Default run
-         */
-        @Override
-        public void run() {
-            try {
-                Thread.currentThread().setName(counter.name);
-                for (; counter.monitorActive.get();) {
-                    long check = counter.checkInterval.get();
-                    if (check > 0) {
-                        Thread.sleep(check);
-                    } else {
-                        // Delay goes to 0, so exit
-                        return;
-                    }
-                    long endTime = System.currentTimeMillis();
-                    counter.resetAccounting(endTime);
-                    if (trafficShapingHandler1 != null) {
-                        trafficShapingHandler1.doAccounting(counter);
-                    }
-                }
-            } catch (InterruptedException e) {
-                // End of computations
+        public void run(Timeout timeout) throws Exception {
+            if (!counter.monitorActive.get()) {
+                return;
             }
+            long endTime = System.currentTimeMillis();
+            counter.resetAccounting(endTime);
+            if (trafficShapingHandler1 != null) {
+                trafficShapingHandler1.doAccounting(counter);
+            }
+            timeout = 
+                counter.timer.newTimeout(this, counter.checkInterval.get(), TimeUnit.MILLISECONDS);                        
         }
     }
 
     /**
      * Start the monitoring process
- */
+     */
     public void start() {
         synchronized (lastTime) {
             if (monitorActive.get()) {
@@ -177,16 +171,16 @@ public class TrafficCounter {
             lastTime.set(System.currentTimeMillis());
             if (checkInterval.get() > 0) {
                 monitorActive.set(true);
-                trafficMonitoring = new TrafficMonitoring(
-                        trafficShapingHandler, this);
-                executor.execute(trafficMonitoring);
+                timerTask = new TrafficMonitoringTask(trafficShapingHandler, this);
+                timeout = 
+                    timer.newTimeout(timerTask, checkInterval.get(), TimeUnit.MILLISECONDS);
             }
         }
     }
 
     /**
      * Stop the monitoring process
- */
+     */
     public void stop() {
         synchronized (lastTime) {
             if (!monitorActive.get()) {
@@ -196,6 +190,9 @@ public class TrafficCounter {
             resetAccounting(System.currentTimeMillis());
             if (trafficShapingHandler != null) {
                 trafficShapingHandler.doAccounting(this);
+            }
+            if (timeout != null) {
+                timeout.cancel();
             }
         }
     }
@@ -222,20 +219,20 @@ public class TrafficCounter {
     }
 
     /**
-     * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the executorService to use, its
+     * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the Timer to use, its
      * name, the checkInterval between two computations in millisecond
      * @param trafficShapingHandler the associated AbstractTrafficShapingHandler
-     * @param executor
-     *            Should be a CachedThreadPool for efficiency
+     * @param timer
+     *            Could be a HashedWheelTimer
      * @param name
      *            the name given to this monitor
      * @param checkInterval
      *            the checkInterval in millisecond between two computations
      */
     public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler,
-            Executor executor, String name, long checkInterval) {
+            Timer timer, String name, long checkInterval) {
         this.trafficShapingHandler = trafficShapingHandler;
-        this.executor = executor;
+        this.timer = timer;
         this.name = name;
         lastCumulativeTime = System.currentTimeMillis();
         configure(checkInterval);
@@ -248,7 +245,7 @@ public class TrafficCounter {
      * @param newcheckInterval
      */
     public void configure(long newcheckInterval) {
-        long newInterval = (newcheckInterval/10)*10;
+        long newInterval = (newcheckInterval / 10) * 10;
         if (checkInterval.get() != newInterval) {
             checkInterval.set(newInterval);
             if (newInterval <= 0) {
