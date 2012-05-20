@@ -88,10 +88,11 @@ public abstract class AbstractTrafficShapingHandler extends
      * Timer to associated to any TrafficCounter
      */
     protected Timer timer;
+
     /**
      * used in releaseExternalResources() to cancel the timer
      */
-    volatile private Timeout timeout = null;
+    private volatile Timeout timeout;
     
     /**
      * Limit in B/s to apply to write
@@ -286,7 +287,7 @@ public abstract class AbstractTrafficShapingHandler extends
         writeLimit = newWriteLimit;
         readLimit = newReadLimit;
         if (trafficCounter != null) {
-            trafficCounter.resetAccounting(System.currentTimeMillis()+1);
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
         }
     }
 
