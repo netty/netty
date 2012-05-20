@@ -73,6 +73,26 @@ class OsgiLogger extends AbstractInternalLogger {
             fallback.error(msg, cause);
         }
     }
+    
+    @Override
+    public void fatal(String msg) {
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_ERROR, prefix + msg);
+        } else {
+            fallback.fatal(msg);
+        }
+    }
+
+    @Override
+    public void fatal(String msg, Throwable cause) {
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_ERROR, prefix + msg, cause);
+        } else {
+            fallback.fatal(msg, cause);
+        }
+    }
 
     @Override
     public void info(String msg) {
@@ -111,6 +131,11 @@ class OsgiLogger extends AbstractInternalLogger {
 
     @Override
     public boolean isWarnEnabled() {
+        return true;
+    }
+    
+    @Override
+    public boolean isFatalEnabled() {
         return true;
     }
 

@@ -93,6 +93,16 @@ public class InternalLoggerFactoryTest {
         assertTrue(logger.isErrorEnabled());
         verify(mock);
     }
+    
+    @Test
+    public void testIsFatalEnabled() {
+        expect(mock.isFatalEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        assertTrue(logger.isFatalEnabled());
+        verify(mock);
+    }
 
     @Test
     public void testDebug() {
@@ -171,6 +181,26 @@ public class InternalLoggerFactoryTest {
 
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         logger.error("a", e);
+        verify(mock);
+    }
+    
+    @Test
+    public void testFatal() {
+        mock.fatal("a");
+        replay(mock);
+
+        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        logger.fatal("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testFatalWithException() {
+        mock.fatal("a", e);
+        replay(mock);
+
+        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        logger.fatal("a", e);
         verify(mock);
     }
 }

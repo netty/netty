@@ -61,6 +61,16 @@ class JdkLogger extends AbstractInternalLogger {
     public void info(String msg, Throwable cause) {
         logger.logp(Level.INFO, loggerName, null, msg, cause);
     }
+    
+    @Override
+    public void fatal(String msg) {
+        logger.logp(Level.SEVERE, loggerName, null, msg);
+    }
+    
+    @Override
+    public void fatal(String msg, Throwable cause) {
+        logger.logp(Level.SEVERE, loggerName, null, msg, cause);
+    }
 
     @Override
     public boolean isDebugEnabled() {
@@ -80,6 +90,11 @@ class JdkLogger extends AbstractInternalLogger {
     @Override
     public boolean isWarnEnabled() {
         return logger.isLoggable(Level.WARNING);
+    }
+    
+    @Override
+    public boolean isFatalEnabled() {
+        return logger.isLoggable(Level.SEVERE);
     }
 
     @Override

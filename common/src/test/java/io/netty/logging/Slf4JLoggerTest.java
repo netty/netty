@@ -74,6 +74,19 @@ public class Slf4JLoggerTest {
         assertTrue(logger.isErrorEnabled());
         verify(mock);
     }
+    
+    @Test
+    public void testIsFatalEnabled() {
+        org.slf4j.Logger mock =
+            createStrictMock(org.slf4j.Logger.class);
+
+        expect(mock.isErrorEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new Slf4JLogger(mock);
+        assertTrue(logger.isFatalEnabled());
+        verify(mock);
+    }
 
     @Test
     public void testDebug() {
@@ -176,6 +189,32 @@ public class Slf4JLoggerTest {
 
         InternalLogger logger = new Slf4JLogger(mock);
         logger.error("a", e);
+        verify(mock);
+    }
+    
+    @Test
+    public void testFatal() {
+        org.slf4j.Logger mock =
+            createStrictMock(org.slf4j.Logger.class);
+
+        mock.error("a");
+        replay(mock);
+
+        InternalLogger logger = new Slf4JLogger(mock);
+        logger.fatal("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testFatalWithException() {
+        org.slf4j.Logger mock =
+            createStrictMock(org.slf4j.Logger.class);
+
+        mock.error("a", e);
+        replay(mock);
+
+        InternalLogger logger = new Slf4JLogger(mock);
+        logger.fatal("a", e);
         verify(mock);
     }
 }

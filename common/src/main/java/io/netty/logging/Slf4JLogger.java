@@ -57,6 +57,16 @@ class Slf4JLogger extends AbstractInternalLogger {
     public void info(String msg, Throwable cause) {
         logger.info(msg, cause);
     }
+    
+    @Override
+    public void fatal(String msg) {
+        logger.error(msg);
+    }
+    
+    @Override
+    public void fatal(String msg, Throwable cause) {
+        logger.error(msg, cause);
+    }
 
     @Override
     public boolean isDebugEnabled() {
@@ -76,6 +86,11 @@ class Slf4JLogger extends AbstractInternalLogger {
     @Override
     public boolean isWarnEnabled() {
         return logger.isWarnEnabled();
+    }
+    
+    @Override
+    public boolean isFatalEnabled() {
+        return logger.isErrorEnabled();
     }
 
     @Override

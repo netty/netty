@@ -74,6 +74,19 @@ public class CommonsLoggerTest {
         assertTrue(logger.isErrorEnabled());
         verify(mock);
     }
+    
+    @Test
+    public void testIsFatalEnabled() {
+        org.apache.commons.logging.Log mock =
+            createStrictMock(org.apache.commons.logging.Log.class);
+
+        expect(mock.isFatalEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new CommonsLogger(mock, "foo");
+        assertTrue(logger.isFatalEnabled());
+        verify(mock);
+    }
 
     @Test
     public void testDebug() {
@@ -176,6 +189,32 @@ public class CommonsLoggerTest {
 
         InternalLogger logger = new CommonsLogger(mock, "foo");
         logger.error("a", e);
+        verify(mock);
+    }
+    
+    @Test
+    public void testFatal() {
+        org.apache.commons.logging.Log mock =
+            createStrictMock(org.apache.commons.logging.Log.class);
+
+        mock.fatal("a");
+        replay(mock);
+
+        InternalLogger logger = new CommonsLogger(mock, "foo");
+        logger.fatal("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testFatalWithException() {
+        org.apache.commons.logging.Log mock =
+            createStrictMock(org.apache.commons.logging.Log.class);
+
+        mock.fatal("a", e);
+        replay(mock);
+
+        InternalLogger logger = new CommonsLogger(mock, "foo");
+        logger.fatal("a", e);
         verify(mock);
     }
 }

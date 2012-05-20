@@ -77,6 +77,19 @@ public class JdkLoggerTest {
         assertTrue(logger.isErrorEnabled());
         verify(mock);
     }
+    
+    @Test
+    public void testIsFatalEnabled() {
+        java.util.logging.Logger mock =
+            createStrictMock(java.util.logging.Logger.class);
+
+        expect(mock.isLoggable(Level.SEVERE)).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new JdkLogger(mock, "foo");
+        assertTrue(logger.isFatalEnabled());
+        verify(mock);
+    }
 
     @Test
     public void testDebug() {
@@ -179,6 +192,32 @@ public class JdkLoggerTest {
 
         InternalLogger logger = new JdkLogger(mock, "foo");
         logger.error("a", e);
+        verify(mock);
+    }
+    
+    @Test
+    public void testFatal() {
+        java.util.logging.Logger mock =
+            createStrictMock(java.util.logging.Logger.class);
+
+        mock.logp(Level.SEVERE, "foo", null, "a");
+        replay(mock);
+
+        InternalLogger logger = new JdkLogger(mock, "foo");
+        logger.fatal("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testFatalWithException() {
+        java.util.logging.Logger mock =
+            createStrictMock(java.util.logging.Logger.class);
+
+        mock.logp(Level.SEVERE, "foo", null, "a", e);
+        replay(mock);
+
+        InternalLogger logger = new JdkLogger(mock, "foo");
+        logger.fatal("a", e);
         verify(mock);
     }
 }

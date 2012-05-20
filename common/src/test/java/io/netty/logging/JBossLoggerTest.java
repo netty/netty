@@ -72,6 +72,17 @@ public class JBossLoggerTest {
         assertTrue(logger.isErrorEnabled());
         verify(mock);
     }
+    
+    @Test
+    public void testIsFatalEnabled() {
+        org.jboss.logging.Logger mock =
+            createStrictMock(org.jboss.logging.Logger.class);
+        replay(mock);
+
+        InternalLogger logger = new JBossLogger(mock);
+        assertTrue(logger.isFatalEnabled());
+        verify(mock);
+    }
 
     @Test
     public void testDebug() {
@@ -174,6 +185,32 @@ public class JBossLoggerTest {
 
         InternalLogger logger = new JBossLogger(mock);
         logger.error("a", e);
+        verify(mock);
+    }
+    
+    @Test
+    public void testFatal() {
+        org.jboss.logging.Logger mock =
+            createStrictMock(org.jboss.logging.Logger.class);
+
+        mock.fatal("a");
+        replay(mock);
+
+        InternalLogger logger = new JBossLogger(mock);
+        logger.fatal("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testFatalWithException() {
+        org.jboss.logging.Logger mock =
+            createStrictMock(org.jboss.logging.Logger.class);
+
+        mock.fatal("a", e);
+        replay(mock);
+
+        InternalLogger logger = new JBossLogger(mock);
+        logger.fatal("a", e);
         verify(mock);
     }
 }
