@@ -30,7 +30,7 @@ final class SelectorUtil {
 
     // Workaround for JDK NIO bug.
     //
-    // See: 
+    // See:
     // - http://bugs.sun.com/view_bug.do?bug_id=6427854
     // - https://github.com/netty/netty/issues/203
     static {
@@ -46,9 +46,14 @@ final class SelectorUtil {
             }
         }
     }
-    
+
     static void select(Selector selector) throws IOException {
         try {
+            for (int i = 0; i < 32; i ++) {
+                if (selector.selectNow() > 0) {
+                    return;
+                }
+            }
             selector.select(10);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
@@ -57,7 +62,6 @@ final class SelectorUtil {
                         " raised by a Selector - JDK bug?", e);
             }
             // Harmless exception - log anyway
-
         }
     }
 
