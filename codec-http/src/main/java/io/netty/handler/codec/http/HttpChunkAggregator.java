@@ -15,22 +15,18 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.channel.Channels.*;
 import static io.netty.handler.codec.http.HttpHeaders.*;
-
-import java.util.List;
-import java.util.Map.Entry;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -50,7 +46,7 @@ import io.netty.util.CharsetUtil;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
+public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
 
     private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
@@ -75,11 +71,9 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
         this.maxContentLength = maxContentLength;
     }
 
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
 
-        Object msg = e.getMessage();
+    @Override
+    public HttpMessage decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
@@ -91,7 +85,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                write(ctx, succeededFuture(ctx.channel()), CONTINUE.duplicate());
+                ctx.write(CONTINUE.duplicate());
             }
 
             if (m.isChunked()) {
@@ -103,12 +97,13 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(ChannelBuffers.dynamicBuffer(e.channel().getConfig().getBufferFactory()));
+                m.setContent(ChannelBuffers.dynamicBuffer());
                 this.currentMessage = m;
+                return null;
             } else {
                 // Not a chunked message - pass through.
                 this.currentMessage = null;
-                ctx.sendUpstream(e);
+                return m;
             }
         } else if (msg instanceof HttpChunk) {
             // Sanity check
@@ -149,12 +144,15 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                         HttpHeaders.Names.CONTENT_LENGTH,
                         String.valueOf(content.readableBytes()));
 
-                // All done - generate the event.
-                Channels.fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
+                // All done
+                return currentMessage;
+            } else {
+                return null;
             }
         } else {
-            // Neither HttpMessage or HttpChunk
-            ctx.sendUpstream(e);
+            throw new IllegalStateException(
+                    "Only " + HttpMessage.class.getSimpleName() + " and " +
+                    HttpChunk.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
         }
     }
 }

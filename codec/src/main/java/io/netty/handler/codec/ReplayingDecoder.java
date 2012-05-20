@@ -339,6 +339,25 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
         return oldState;
     }
 
+    /**
+     * Returns the actual number of readable bytes in the internal cumulative
+     * buffer of this decoder. You usually do not need to rely on this value
+     * to write a decoder. Use it only when you muse use it at your own risk.
+     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
+     */
+    protected int actualReadableBytes() {
+        return internalBuffer().readableBytes();
+    }
+
+    /**
+     * Returns the internal cumulative buffer of this decoder. You usually
+     * do not need to access the internal buffer directly to write a decoder.
+     * Use it only when you must use it at your own risk.
+     */
+    protected ChannelBuffer internalBuffer() {
+        return cumulation;
+    }
+
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(
             ChannelInboundHandlerContext<Byte> ctx) throws Exception {
@@ -360,8 +379,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
 
         try {
             if (unfoldAndAdd(ctx, ctx.nextIn(), decodeLast(ctx, replayable))) {
-                in.discardReadBytes();
-                ctx.fireInboundBufferUpdated();
+                fireInboundBufferUpdated(ctx, in);
             }
         } catch (Signal replay) {
             // Ignore
@@ -377,8 +395,10 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
         ctx.fireChannelInactive();
     }
 
-    private void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
+    @Override
+    protected void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
         ChannelBuffer in = cumulation;
+        boolean decoded = false;
         while (in.readable()) {
             try {
                 int oldReaderIndex = checkpoint = in.readerIndex();
@@ -422,8 +442,15 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
                 }
 
                 // A successful decode
-                MessageToMessageEncoder.unfoldAndAdd(ctx, ctx.nextIn(), result);
+                if (unfoldAndAdd(ctx, ctx.nextIn(), result)) {
+                    decoded = true;
+                }
             } catch (Throwable t) {
+                if (decoded) {
+                    decoded = false;
+                    fireInboundBufferUpdated(ctx, in);
+                }
+
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
                 } else {
@@ -431,5 +458,15 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
                 }
             }
         }
+
+        if (decoded) {
+            fireInboundBufferUpdated(ctx, in);
+        }
+    }
+
+    private void fireInboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
+        checkpoint -= in.readerIndex();
+        in.discardReadBytes();
+        ctx.fireInboundBufferUpdated();
     }
 }

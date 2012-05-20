@@ -15,20 +15,19 @@
  */
 package io.netty.example.http.snoop;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.channel.ChannelBootstrap;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.nio.SelectorEventLoop;
 import io.netty.handler.codec.http.CookieEncoder;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+
+import java.net.InetSocketAddress;
+import java.net.URI;
 
 /**
  * A simple HTTP client that prints out the content of the HTTP response to
@@ -42,7 +41,7 @@ public class HttpSnoopClient {
         this.uri = uri;
     }
 
-    public void run() {
+    public void run() throws Exception {
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
         String host = uri.getHost() == null? "localhost" : uri.getHost();
         int port = uri.getPort();
@@ -62,45 +61,38 @@ public class HttpSnoopClient {
         boolean ssl = scheme.equalsIgnoreCase("https");
 
         // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+        ChannelBootstrap b = new ChannelBootstrap();
+        try {
+            b.eventLoop(new SelectorEventLoop())
+             .channel(new NioSocketChannel())
+             .initializer(new HttpSnoopClientInitializer(ssl))
+             .remoteAddress(new InetSocketAddress(host, port));
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpSnoopClientPipelineFactory(ssl));
+            // Make the connection attempt.
+            Channel ch = b.connect().sync().channel();
 
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+            // Prepare the HTTP request.
+            HttpRequest request = new DefaultHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
+            request.setHeader(HttpHeaders.Names.HOST, host);
+            request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+            request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
 
-        // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().channel();
-        if (!future.isSuccess()) {
-            future.cause().printStackTrace();
-            bootstrap.releaseExternalResources();
-            return;
+            // Set some example cookies.
+            CookieEncoder httpCookieEncoder = new CookieEncoder(false);
+            httpCookieEncoder.addCookie("my-cookie", "foo");
+            httpCookieEncoder.addCookie("another-cookie", "bar");
+            request.setHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
+
+            // Send the HTTP request.
+            ch.write(request);
+
+            // Wait for the server to close the connection.
+            ch.closeFuture().sync();
+        } finally {
+            // Shut down executor threads to exit.
+            b.shutdown();
         }
-
-        // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
-        request.setHeader(HttpHeaders.Names.HOST, host);
-        request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
-
-        // Set some example cookies.
-        CookieEncoder httpCookieEncoder = new CookieEncoder(false);
-        httpCookieEncoder.addCookie("my-cookie", "foo");
-        httpCookieEncoder.addCookie("another-cookie", "bar");
-        request.setHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
-
-        // Send the HTTP request.
-        channel.write(request);
-
-        // Wait for the server to close the connection.
-        channel.getCloseFuture().awaitUninterruptibly();
-
-        // Shut down executor threads to exit.
-        bootstrap.releaseExternalResources();
     }
 
     public static void main(String[] args) throws Exception {

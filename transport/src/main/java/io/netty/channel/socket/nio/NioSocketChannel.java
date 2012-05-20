@@ -166,9 +166,9 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     @Override
-    protected int doRead() throws Exception {
-        ChannelBuffer buf = pipeline().nextIn().byteBuffer();
-        return buf.writeBytes(javaChannel(), buf.writableBytes());
+    protected int doRead(ChannelBufferHolder<Object> buf) throws Exception {
+        ChannelBuffer byteBuf = buf.byteBuffer();
+        return byteBuf.writeBytes(javaChannel(), byteBuf.writableBytes());
     }
 
     @Override

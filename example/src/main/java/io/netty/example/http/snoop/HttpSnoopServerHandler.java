@@ -19,20 +19,14 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.CookieEncoder;
@@ -45,7 +39,13 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
-public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.Set;
+
+public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter<Object> {
 
     private HttpRequest request;
     private boolean readingChunks;
@@ -53,12 +53,30 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
     private final StringBuilder buf = new StringBuilder();
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public ChannelBufferHolder<Object> newInboundBuffer(
+            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        return ChannelBufferHolders.messageBuffer();
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
+            throws Exception {
+        Queue<Object> in = ctx.in().messageBuffer();
+        while (handleMessage(ctx, in.poll())) {
+            continue;
+        }
+    }
+
+    private boolean handleMessage(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+        if (msg == null) {
+            return false;
+        }
+
         if (!readingChunks) {
-            HttpRequest request = this.request = (HttpRequest) e.getMessage();
+            HttpRequest request = this.request = (HttpRequest) msg;
 
             if (is100ContinueExpected(request)) {
-                send100Continue(e);
+                send100Continue(ctx);
             }
 
             buf.setLength(0);
@@ -94,10 +112,10 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
                 if (content.readable()) {
                     buf.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
                 }
-                writeResponse(e);
+                writeResponse(ctx);
             }
         } else {
-            HttpChunk chunk = (HttpChunk) e.getMessage();
+            HttpChunk chunk = (HttpChunk) msg;
             if (chunk.isLast()) {
                 readingChunks = false;
                 buf.append("END OF CONTENT\r\n");
@@ -113,14 +131,16 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
                     buf.append("\r\n");
                 }
 
-                writeResponse(e);
+                writeResponse(ctx);
             } else {
                 buf.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
             }
         }
+
+        return true;
     }
 
-    private void writeResponse(MessageEvent e) {
+    private void writeResponse(ChannelInboundHandlerContext<Object> ctx) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
 
@@ -152,7 +172,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Write the response.
-        ChannelFuture future = e.channel().write(response);
+        ChannelFuture future = ctx.write(response);
 
         // Close the non-keep-alive connection after the write operation is done.
         if (!keepAlive) {
@@ -160,15 +180,15 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void send100Continue(MessageEvent e) {
+    private static void send100Continue(ChannelInboundHandlerContext<Object> ctx) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
-        e.channel().write(response);
+        ctx.write(response);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-        e.cause().printStackTrace();
-        e.channel().close();
+    public void exceptionCaught(
+            ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 }

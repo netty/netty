@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
@@ -636,19 +637,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
+
+            final ChannelBufferHolder<Object> buf = pipeline().nextIn();
+            final boolean hasByteBuffer = buf.hasByteBuffer();
+
             long readAmount = 0;
             boolean closed = false;
             try {
                 for (;;) {
-                    int localReadAmount = doRead();
+                    int localReadAmount = doRead(buf);
                     if (localReadAmount > 0) {
                         readAmount += localReadAmount;
-                        continue;
-                    }
-                    if (localReadAmount == 0) {
-                        break;
-                    }
-                    if (localReadAmount < 0) {
+                        expandReadBuffer(buf, hasByteBuffer);
+                    } else if (localReadAmount == 0) {
+                        if (!expandReadBuffer(buf, hasByteBuffer)) {
+                            break;
+                        }
+                    } else if (localReadAmount < 0) {
                         closed = true;
                         break;
                     }
@@ -851,7 +856,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
 
-    protected abstract int doRead() throws Exception;
+    protected abstract int doRead(ChannelBufferHolder<Object> buf) throws Exception;
     protected abstract int doFlush(boolean lastSpin) throws Exception;
     protected abstract boolean inEventLoopDrivenFlush();
+
+    private static boolean expandReadBuffer(ChannelBufferHolder<Object> buf, boolean hasByteBuffer) {
+        if (!hasByteBuffer) {
+            return false;
+        }
+
+        ChannelBuffer byteBuf = buf.byteBuffer();
+        if (!byteBuf.writable()) {
+            // FIXME: Use a sensible value.
+            byteBuf.ensureWritableBytes(128);
+            return true;
+        }
+
+        return false;
+    }
 }

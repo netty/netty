@@ -15,15 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.Queue;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.CombinedChannelHandler;
 import io.netty.util.internal.QueueFactory;
+
+import java.util.Queue;
 
 /**
  * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
@@ -38,17 +36,13 @@ import io.netty.util.internal.QueueFactory;
  * @apiviz.has io.netty.handler.codec.http.HttpResponseDecoder
  * @apiviz.has io.netty.handler.codec.http.HttpRequestEncoder
  */
-public class HttpClientCodec implements ChannelUpstreamHandler,
-        ChannelDownstreamHandler {
+public class HttpClientCodec extends CombinedChannelHandler {
 
     /** A queue that is used for correlating a request and a response. */
     final Queue<HttpMethod> queue = QueueFactory.createQueue(HttpMethod.class);
 
     /** If true, decoding stops (i.e. pass-through) */
     volatile boolean done;
-
-    private final HttpRequestEncoder encoder = new Encoder();
-    private final HttpResponseDecoder decoder;
 
     /**
      * Creates a new instance with the default decoder options
@@ -64,33 +58,19 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
      */
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        decoder = new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
-    }
-
-    @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        decoder.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        encoder.handleDownstream(ctx, e);
+        init(
+                new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize),
+                new Encoder());
     }
 
     private final class Encoder extends HttpRequestEncoder {
-
-        Encoder() {
-        }
-
         @Override
-        protected Object encode(ChannelHandlerContext ctx, Channel channel,
-                Object msg) throws Exception {
+        public void encode(
+                ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
-            return super.encode(ctx, channel, msg);
+            super.encode(ctx, msg, out);
         }
     }
 
@@ -101,12 +81,12 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         }
 
         @Override
-        protected Object decode(ChannelHandlerContext ctx, Channel channel,
-                ChannelBuffer buffer, State state) throws Exception {
+        public Object decode(
+                ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
             if (done) {
                 return buffer.readBytes(actualReadableBytes());
             } else {
-                return super.decode(ctx, channel, buffer, state);
+                return super.decode(ctx, buffer);
             }
         }
 

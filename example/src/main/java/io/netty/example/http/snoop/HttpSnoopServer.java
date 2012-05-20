@@ -15,11 +15,12 @@
  */
 package io.netty.example.http.snoop;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
+import io.netty.channel.Channel;
+import io.netty.channel.ServerChannelBootstrap;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.SelectorEventLoop;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import java.net.InetSocketAddress;
 
 /**
  * An HTTP server that sends back the content of the received HTTP request
@@ -33,20 +34,24 @@ public class HttpSnoopServer {
         this.port = port;
     }
 
-    public void run() {
+    public void run() throws Exception {
         // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+        ServerChannelBootstrap b = new ServerChannelBootstrap();
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpSnoopServerPipelineFactory());
+        try {
+            b.eventLoop(new SelectorEventLoop(), new SelectorEventLoop())
+             .channel(new NioServerSocketChannel())
+             .childInitializer(new HttpSnoopServerInitializer())
+             .localAddress(new InetSocketAddress(port));
 
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+            Channel ch = b.bind().sync().channel();
+            ch.closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);

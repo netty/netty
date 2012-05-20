@@ -15,10 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.channel.CombinedChannelHandler;
 
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
@@ -28,11 +25,7 @@ import io.netty.channel.ChannelUpstreamHandler;
  * @apiviz.has io.netty.handler.codec.http.HttpRequestDecoder
  * @apiviz.has io.netty.handler.codec.http.HttpResponseEncoder
  */
-public class HttpServerCodec implements ChannelUpstreamHandler,
-        ChannelDownstreamHandler {
-
-    private final HttpRequestDecoder decoder;
-    private final HttpResponseEncoder encoder = new HttpResponseEncoder();
+public class HttpServerCodec extends CombinedChannelHandler {
 
     /**
      * Creates a new instance with the default decoder options
@@ -48,18 +41,8 @@ public class HttpServerCodec implements ChannelUpstreamHandler,
      */
     public HttpServerCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        decoder = new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
-    }
-
-    @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        decoder.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        encoder.handleDownstream(ctx, e);
+        super(
+                new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize),
+                new HttpResponseEncoder());
     }
 }

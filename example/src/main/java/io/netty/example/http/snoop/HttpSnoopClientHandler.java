@@ -16,21 +16,44 @@
 package io.netty.example.http.snoop;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 
-public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
+import java.util.Queue;
+
+public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter<Object> {
 
     private boolean readingChunks;
 
+
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public ChannelBufferHolder<Object> newInboundBuffer(
+            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        return ChannelBufferHolders.messageBuffer();
+    }
+
+
+    @Override
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
+            throws Exception {
+        Queue<Object> in = ctx.in().messageBuffer();
+        while (handleMessage(in.poll())) {
+            continue;
+        }
+    }
+
+    private boolean handleMessage(Object msg) throws Exception {
+        if (msg == null) {
+            return false;
+        }
+
         if (!readingChunks) {
-            HttpResponse response = (HttpResponse) e.getMessage();
+            HttpResponse response = (HttpResponse) msg;
 
             System.out.println("STATUS: " + response.getStatus());
             System.out.println("VERSION: " + response.getProtocolVersion());
@@ -57,7 +80,7 @@ public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
                 }
             }
         } else {
-            HttpChunk chunk = (HttpChunk) e.getMessage();
+            HttpChunk chunk = (HttpChunk) msg;
             if (chunk.isLast()) {
                 readingChunks = false;
                 System.out.println("} END OF CHUNKED CONTENT");
@@ -66,5 +89,14 @@ public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
                 System.out.flush();
             }
         }
+
+        return true;
+    }
+
+    @Override
+    public void exceptionCaught(
+            ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 }

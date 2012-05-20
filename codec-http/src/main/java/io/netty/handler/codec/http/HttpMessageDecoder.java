@@ -15,15 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.List;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+
+import java.util.List;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link HttpMessage}s and
@@ -98,7 +97,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
+public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMessageDecoder.State> {
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
@@ -143,7 +142,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected HttpMessageDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
 
-        super(State.SKIP_CONTROL_CHARS, true);
+        super(State.SKIP_CONTROL_CHARS);
 
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -166,8 +165,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
-        switch (state) {
+    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+        switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {
                 skipControlCharacters(buffer);
@@ -237,7 +236,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
             if (content == null) {
-                content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
+                content = ChannelBuffers.dynamicBuffer();
             }
             //this will cause a replay error until the channel is closed where this will read what's left in the buffer
             content.writeBytes(buffer.readBytes(buffer.readableBytes()));
@@ -368,10 +367,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             int code = res.getStatus().getCode();
-            
+
             // Correctly handle return codes of 1xx.
-            // 
-            // See: 
+            //
+            // See:
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
@@ -404,7 +403,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return message;
     }
 
-    private void skipControlCharacters(ChannelBuffer buffer) {
+    private static void skipControlCharacters(ChannelBuffer buffer) {
         for (;;) {
             char c = (char) buffer.readUnsignedByte();
             if (!Character.isISOControl(c) &&
@@ -556,7 +555,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected abstract boolean isDecodingRequest();
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
 
-    private int getChunkSize(String hex) {
+    private static int getChunkSize(String hex) {
         hex = hex.trim();
         for (int i = 0; i < hex.length(); i ++) {
             char c = hex.charAt(i);
@@ -569,7 +568,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return Integer.parseInt(hex, 16);
     }
 
-    private String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
+    private static String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int lineLength = 0;
         while (true) {
@@ -597,7 +596,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    private String[] splitInitialLine(String sb) {
+    private static String[] splitInitialLine(String sb) {
         int aStart;
         int aEnd;
         int bStart;
@@ -620,7 +619,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
-    private String[] splitHeader(String sb) {
+    private static String[] splitHeader(String sb) {
         final int length = sb.length();
         int nameStart;
         int nameEnd;
@@ -658,7 +657,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         };
     }
 
-    private int findNonWhitespace(String sb, int offset) {
+    private static int findNonWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (!Character.isWhitespace(sb.charAt(result))) {
@@ -668,7 +667,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return result;
     }
 
-    private int findWhitespace(String sb, int offset) {
+    private static int findWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (Character.isWhitespace(sb.charAt(result))) {
@@ -678,7 +677,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return result;
     }
 
-    private int findEndOfString(String sb) {
+    private static int findEndOfString(String sb) {
         int result;
         for (result = sb.length(); result > 0; result --) {
             if (!Character.isWhitespace(sb.charAt(result - 1))) {

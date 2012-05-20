@@ -48,7 +48,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         ctx.fireChannelInactive();
     }
 
-    private void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
+    protected void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
         ChannelBuffer in = ctx.in().byteBuffer();
 
         boolean decoded = false;
@@ -75,6 +75,12 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
                     break;
                 }
             } catch (Throwable t) {
+                if (decoded) {
+                    decoded = false;
+                    in.discardReadBytes();
+                    ctx.fireInboundBufferUpdated();
+                }
+
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
                 } else {

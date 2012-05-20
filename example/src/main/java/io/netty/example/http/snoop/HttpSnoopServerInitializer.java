@@ -15,32 +15,30 @@
  */
 package io.netty.example.http.snoop;
 
-import static io.netty.channel.Channels.*;
-
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 
-public class HttpSnoopServerPipelineFactory implements ChannelPipelineFactory {
+public class HttpSnoopServerInitializer extends ChannelInitializer {
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
+    public void initChannel(Channel ch) throws Exception {
         // Create a default pipeline implementation.
-        ChannelPipeline pipeline = pipeline();
+        ChannelPipeline p = ch.pipeline();
 
         // Uncomment the following line if you want HTTPS
         //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
         //engine.setUseClientMode(false);
-        //pipeline.addLast("ssl", new SslHandler(engine));
+        //p.addLast("ssl", new SslHandler(engine));
 
-        pipeline.addLast("decoder", new HttpRequestDecoder());
+        p.addLast("decoder", new HttpRequestDecoder());
         // Uncomment the following line if you don't want to handle HttpChunks.
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
-        pipeline.addLast("encoder", new HttpResponseEncoder());
+        p.addLast("encoder", new HttpResponseEncoder());
         // Remove the following line if you don't want automatic content compression.
-        pipeline.addLast("deflater", new HttpContentCompressor());
-        pipeline.addLast("handler", new HttpSnoopServerHandler());
-        return pipeline;
+        // FIXME: Port HttpContentCompressor to the new API
+        //p.addLast("deflater", new HttpContentCompressor());
+        p.addLast("handler", new HttpSnoopServerHandler());
     }
 }

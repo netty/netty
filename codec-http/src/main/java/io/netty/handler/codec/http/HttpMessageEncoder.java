@@ -17,18 +17,16 @@ package io.netty.handler.codec.http;
 
 import static io.netty.buffer.ChannelBuffers.*;
 import static io.netty.handler.codec.http.HttpCodecUtil.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaders.Values;
+import io.netty.util.CharsetUtil;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
-import io.netty.util.CharsetUtil;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpChunk} into
@@ -44,7 +42,7 @@ import io.netty.util.CharsetUtil;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageEncoder extends OneToOneEncoder {
+public abstract class HttpMessageEncoder extends MessageToStreamEncoder<Object> {
 
     private static final ChannelBuffer LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
@@ -58,7 +56,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
             boolean chunked;
@@ -72,70 +70,59 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             } else {
                 chunked = this.chunked = HttpCodecUtil.isTransferEncodingChunked(m);
             }
-            ChannelBuffer header = ChannelBuffers.dynamicBuffer(
-                    channel.getConfig().getBufferFactory());
-            encodeInitialLine(header, m);
-            encodeHeaders(header, m);
-            header.writeByte(CR);
-            header.writeByte(LF);
+            out.markWriterIndex();
+            encodeInitialLine(out, m);
+            encodeHeaders(out, m);
+            out.writeByte(CR);
+            out.writeByte(LF);
 
             ChannelBuffer content = m.getContent();
-            if (!content.readable()) {
-                return header; // no content
-            } else if (chunked) {
-                throw new IllegalArgumentException(
-                        "HttpMessage.content must be empty " +
-                        "if Transfer-Encoding is chunked.");
-            } else {
-                return wrappedBuffer(header, content);
+            if (content.readable()) {
+                if (chunked) {
+                    out.resetWriterIndex();
+                    throw new IllegalArgumentException(
+                            "HttpMessage.content must be empty " +
+                            "if Transfer-Encoding is chunked.");
+                } else {
+                    out.writeBytes(content, content.readerIndex(), content.readableBytes());
+                }
             }
-        }
-
-        if (msg instanceof HttpChunk) {
+        } else if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
             if (chunked) {
                 if (chunk.isLast()) {
                     chunked = false;
                     if (chunk instanceof HttpChunkTrailer) {
-                        ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
-                                channel.getConfig().getBufferFactory());
-                        trailer.writeByte((byte) '0');
-                        trailer.writeByte(CR);
-                        trailer.writeByte(LF);
-                        encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
-                        trailer.writeByte(CR);
-                        trailer.writeByte(LF);
-                        return trailer;
+                        out.writeByte((byte) '0');
+                        out.writeByte(CR);
+                        out.writeByte(LF);
+                        encodeTrailingHeaders(out, (HttpChunkTrailer) chunk);
+                        out.writeByte(CR);
+                        out.writeByte(LF);
                     } else {
-                        return LAST_CHUNK.duplicate();
+                        out.writeBytes(LAST_CHUNK, LAST_CHUNK.readerIndex(), LAST_CHUNK.readableBytes());
                     }
                 } else {
                     ChannelBuffer content = chunk.getContent();
                     int contentLength = content.readableBytes();
-
-                    return wrappedBuffer(
-                            copiedBuffer(
-                                    Integer.toHexString(contentLength),
-                                    CharsetUtil.US_ASCII),
-                            wrappedBuffer(CRLF),
-                            content.slice(content.readerIndex(), contentLength),
-                            wrappedBuffer(CRLF));
+                    out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
+                    out.writeBytes(CRLF);
+                    out.writeBytes(content, content.readerIndex(), contentLength);
+                    out.writeBytes(CRLF);
                 }
             } else {
-                if (chunk.isLast()) {
-                    return null;
-                } else {
-                    return chunk.getContent();
+                if (!chunk.isLast()) {
+                    ChannelBuffer chunkContent = chunk.getContent();
+                    out.writeBytes(chunkContent, chunkContent.readerIndex(), chunkContent.readableBytes());
                 }
             }
 
+        } else {
+            throw new UnsupportedMessageTypeException(msg, HttpMessage.class, HttpChunk.class);
         }
-
-        // Unknown message type.
-        return msg;
     }
 
-    private void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
+    private static void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
         try {
             for (Map.Entry<String, String> h: message.getHeaders()) {
                 encodeHeader(buf, h.getKey(), h.getValue());
@@ -145,7 +132,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         }
     }
 
-    private void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
+    private static void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
         try {
             for (Map.Entry<String, String> h: trailer.getHeaders()) {
                 encodeHeader(buf, h.getKey(), h.getValue());
@@ -155,7 +142,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         }
     }
 
-    private void encodeHeader(ChannelBuffer buf, String header, String value)
+    private static void encodeHeader(ChannelBuffer buf, String header, String value)
             throws UnsupportedEncodingException {
         buf.writeBytes(header.getBytes("ASCII"));
         buf.writeByte(COLON);
