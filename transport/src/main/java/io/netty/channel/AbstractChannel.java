@@ -648,7 +648,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     int localReadAmount = doRead(buf);
                     if (localReadAmount > 0) {
                         readAmount += localReadAmount;
-                        expandReadBuffer(buf, hasByteBuffer);
                     } else if (localReadAmount == 0) {
                         if (!expandReadBuffer(buf, hasByteBuffer)) {
                             break;
@@ -868,7 +867,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         ChannelBuffer byteBuf = buf.byteBuffer();
         if (!byteBuf.writable()) {
             // FIXME: Use a sensible value.
-            byteBuf.ensureWritableBytes(128);
+            byteBuf.ensureWritableBytes(4096);
             return true;
         }
 
