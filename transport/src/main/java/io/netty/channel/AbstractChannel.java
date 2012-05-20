@@ -639,17 +639,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assert eventLoop().inEventLoop();
 
             final ChannelBufferHolder<Object> buf = pipeline().nextIn();
-            final boolean hasByteBuffer = buf.hasByteBuffer();
-
-            long readAmount = 0;
             boolean closed = false;
+            boolean read = false;
             try {
                 for (;;) {
                     int localReadAmount = doRead(buf);
                     if (localReadAmount > 0) {
-                        readAmount += localReadAmount;
+                        expandReadBuffer(buf);
+                        read = true;
                     } else if (localReadAmount == 0) {
-                        if (!expandReadBuffer(buf, hasByteBuffer)) {
+                        if (!expandReadBuffer(buf)) {
                             break;
                         }
                     } else if (localReadAmount < 0) {
@@ -657,16 +656,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         break;
                     }
                 }
-
-                if (readAmount > 0) {
+            } catch (Throwable t) {
+                if (read) {
+                    read = false;
                     pipeline.fireInboundBufferUpdated();
                 }
-            } catch (Throwable t) {
                 pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
                     close(voidFuture());
                 }
             } finally {
+                if (read) {
+                    pipeline.fireInboundBufferUpdated();
+                }
                 if (closed && isOpen()) {
                     close(voidFuture());
                 }
@@ -859,8 +861,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract int doFlush(boolean lastSpin) throws Exception;
     protected abstract boolean inEventLoopDrivenFlush();
 
-    private static boolean expandReadBuffer(ChannelBufferHolder<Object> buf, boolean hasByteBuffer) {
-        if (!hasByteBuffer) {
+    private static boolean expandReadBuffer(ChannelBufferHolder<Object> buf) {
+        if (!buf.hasByteBuffer()) {
             return false;
         }
 
