@@ -15,8 +15,6 @@
  */
 package io.netty.handler.traffic;
 
-import java.util.concurrent.Executor;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.ChannelStateEvent;
@@ -24,6 +22,7 @@ import io.netty.handler.execution.ExecutionHandler;
 import io.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.ObjectSizeEstimator;
+import io.netty.util.Timer;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -33,8 +32,8 @@ import io.netty.handler.execution.ObjectSizeEstimator;
  * <ul>
  * <li>Add in your pipeline a new ChannelTrafficShapingHandler, before a recommended {@link ExecutionHandler} (like
  * {@link OrderedMemoryAwareThreadPoolExecutor} or {@link MemoryAwareThreadPoolExecutor}).<br>
- * <tt>ChannelTrafficShapingHandler myHandler = new ChannelTrafficShapingHandler(executor);</tt><br>
- * executor could be created using <tt>Executors.newCachedThreadPool();</tt><br>
+ * <tt>ChannelTrafficShapingHandler myHandler = new ChannelTrafficShapingHandler(timer);</tt><br>
+ * timer could be created using <tt>HashedWheelTimer<tt><br>
  * <tt>pipeline.addLast("CHANNEL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  *
  * <b>Note that this handler has a Pipeline Coverage of "one" which means a new handler must be created
@@ -52,7 +51,7 @@ import io.netty.handler.execution.ObjectSizeEstimator;
  * the less precise the traffic shaping will be. It is suggested as higher value something close
  * to 5 or 10 minutes.<br>
  * </li>
- * <li>When you shutdown your application, release all the external resources like the executor
+ * <li>When you shutdown your application, release all the external resources (except the timer internal itself)
  * by calling:<br>
  * <tt>myHandler.releaseExternalResources();</tt><br>
  * </li>
@@ -60,96 +59,53 @@ import io.netty.handler.execution.ObjectSizeEstimator;
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
-    /**
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     * @param checkInterval
-     */
-    public ChannelTrafficShapingHandler(Executor executor, long writeLimit,
+    public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit, long checkInterval) {
-        super(executor, writeLimit, readLimit, checkInterval);
+        super(timer, writeLimit, readLimit, checkInterval);
     }
 
-    /**
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     */
-    public ChannelTrafficShapingHandler(Executor executor, long writeLimit,
+    public ChannelTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit) {
-        super(executor, writeLimit, readLimit);
-    }
-    
-    
-    /**
-     * @param executor
-     * @param checkInterval
-     */
-    public ChannelTrafficShapingHandler(Executor executor, long checkInterval) {
-        super(executor, checkInterval);
+        super(timer, writeLimit, readLimit);
     }
 
-    /**
-     * @param executor
-     */
-    public ChannelTrafficShapingHandler(Executor executor) {
-        super(executor);
+    public ChannelTrafficShapingHandler(Timer timer, long checkInterval) {
+        super(timer, checkInterval);
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     * @param checkInterval
-     */
+    public ChannelTrafficShapingHandler(Timer timer) {
+        super(timer);
+    }
+
     public ChannelTrafficShapingHandler(
-            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval) {
-        super(objectSizeEstimator, executor, writeLimit, readLimit,
+        super(objectSizeEstimator, timer, writeLimit, readLimit,
                 checkInterval);
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     */
     public ChannelTrafficShapingHandler(
-            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
-        super(objectSizeEstimator, executor, writeLimit, readLimit);
+        super(objectSizeEstimator, timer, writeLimit, readLimit);
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     * @param checkInterval
-     */
     public ChannelTrafficShapingHandler(
-            ObjectSizeEstimator objectSizeEstimator, Executor executor,
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long checkInterval) {
-        super(objectSizeEstimator, executor, checkInterval);
+        super(objectSizeEstimator, timer, checkInterval);
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     */
     public ChannelTrafficShapingHandler(
-            ObjectSizeEstimator objectSizeEstimator, Executor executor) {
-        super(objectSizeEstimator, executor);
+            ObjectSizeEstimator objectSizeEstimator, Timer timer) {
+        super(objectSizeEstimator, timer);
     }
-
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         if (trafficCounter != null) {
             trafficCounter.stop();
-            trafficCounter = null;
         }
         super.channelClosed(ctx, e);
     }
@@ -162,8 +118,10 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         ctx.getChannel().setReadable(false);
         if (trafficCounter == null) {
             // create a new counter now
-            trafficCounter = new TrafficCounter(this, executor, "ChannelTC" +
-                    ctx.getChannel().getId(), checkInterval);
+            if (timer != null) {
+                trafficCounter = new TrafficCounter(this, timer, "ChannelTC" +
+                        ctx.getChannel().getId(), checkInterval);
+            }
         }
         if (trafficCounter != null) {
             trafficCounter.start();
