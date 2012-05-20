@@ -15,13 +15,12 @@
  */
 package io.netty.handler.traffic;
 
-import java.util.concurrent.Executor;
-
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.handler.execution.ExecutionHandler;
 import io.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.handler.execution.ObjectSizeEstimator;
+import io.netty.util.Timer;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -31,8 +30,8 @@ import io.netty.handler.execution.ObjectSizeEstimator;
  * The general use should be as follow:<br>
  * <ul>
  * <li>Create your unique GlobalTrafficShapingHandler like:<br><br>
- * <tt>GlobalTrafficShapingHandler myHandler = new GlobalTrafficShapingHandler(executor);</tt><br><br>
- * executor could be created using <tt>Executors.newCachedThreadPool();</tt><br>
+ * <tt>GlobalTrafficShapingHandler myHandler = new GlobalTrafficShapingHandler(timer);</tt><br><br>
+ * timer could be created using <tt>HashedWheelTimer<tt><br>
  * <tt>pipeline.addLast("GLOBAL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  *
  * <b>Note that this handler has a Pipeline Coverage of "all" which means only one such handler must be created
@@ -52,7 +51,7 @@ import io.netty.handler.execution.ObjectSizeEstimator;
  * {@link OrderedMemoryAwareThreadPoolExecutor} or {@link MemoryAwareThreadPoolExecutor}).<br>
  * <tt>pipeline.addLast("GLOBAL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  * </li>
- * <li>When you shutdown your application, release all the external resources like the executor
+ * <li>When you shutdown your application, release all the external resources (except the timer internal itself)
  * by calling:<br>
  * <tt>myHandler.releaseExternalResources();</tt><br>
  * </li>
@@ -64,96 +63,61 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create the global TrafficCounter
      */
     void createGlobalTrafficCounter() {
-        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC",
-                checkInterval);
-        setTrafficCounter(tc);
-        tc.start();
+        TrafficCounter tc;
+        if (timer != null) {
+            tc = new TrafficCounter(this, timer, "GlobalTC",
+                    checkInterval);
+            setTrafficCounter(tc);
+            tc.start();
+        }
     }
 
-    /**
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     * @param checkInterval
-     */
-    public GlobalTrafficShapingHandler(Executor executor, long writeLimit,
+    public GlobalTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit, long checkInterval) {
-        super(executor, writeLimit, readLimit, checkInterval);
+        super(timer, writeLimit, readLimit, checkInterval);
         createGlobalTrafficCounter();
     }
 
-    /**
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     */
-    public GlobalTrafficShapingHandler(Executor executor, long writeLimit,
+    public GlobalTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit) {
-        super(executor, writeLimit, readLimit);
-        createGlobalTrafficCounter();
-    }
-    /**
-     * @param executor
-     * @param checkInterval
-     */
-    public GlobalTrafficShapingHandler(Executor executor, long checkInterval) {
-        super(executor, checkInterval);
+        super(timer, writeLimit, readLimit);
         createGlobalTrafficCounter();
     }
 
-    /**
-     * @param executor
-     */
-    public GlobalTrafficShapingHandler(Executor executor) {
-        super(executor);
+    public GlobalTrafficShapingHandler(Timer timer, long checkInterval) {
+        super(timer, checkInterval);
         createGlobalTrafficCounter();
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     * @param checkInterval
-     */
+    public GlobalTrafficShapingHandler(Timer timer) {
+        super(timer);
+        createGlobalTrafficCounter();
+    }
+
     public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
-            Executor executor, long writeLimit, long readLimit,
+            Timer timer, long writeLimit, long readLimit,
             long checkInterval) {
-        super(objectSizeEstimator, executor, writeLimit, readLimit,
+        super(objectSizeEstimator, timer, writeLimit, readLimit,
                 checkInterval);
         createGlobalTrafficCounter();
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     * @param writeLimit
-     * @param readLimit
-     */
     public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
-            Executor executor, long writeLimit, long readLimit) {
-        super(objectSizeEstimator, executor, writeLimit, readLimit);
+            Timer timer, long writeLimit, long readLimit) {
+        super(objectSizeEstimator, timer, writeLimit, readLimit);
         createGlobalTrafficCounter();
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     * @param checkInterval
-     */
     public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
-            Executor executor, long checkInterval) {
-        super(objectSizeEstimator, executor, checkInterval);
+            Timer timer, long checkInterval) {
+        super(objectSizeEstimator, timer, checkInterval);
         createGlobalTrafficCounter();
     }
 
-    /**
-     * @param objectSizeEstimator
-     * @param executor
-     */
     public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
-            Executor executor) {
-        super(objectSizeEstimator, executor);
+            Timer timer) {
+        super(objectSizeEstimator, timer);
         createGlobalTrafficCounter();
     }
+
 }
