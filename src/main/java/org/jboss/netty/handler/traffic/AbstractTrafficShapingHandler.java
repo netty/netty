@@ -17,383 +17,490 @@ package org.jboss.netty.handler.traffic;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.DefaultObjectSizeEstimator;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
 /**
- * TrafficCounter is associated with {@link AbstractTrafficShapingHandler}.<br>
+ * AbstractTrafficShapingHandler allows to limit the global bandwidth
+ * (see {@link GlobalTrafficShapingHandler}) or per session
+ * bandwidth (see {@link ChannelTrafficShapingHandler}), as traffic shaping.
+ * It allows too to implement an almost real time monitoring of the bandwidth using
+ * the monitors from {@link TrafficCounter} that will call back every checkInterval
+ * the method doAccounting of this handler.<br>
  * <br>
- * A TrafficCounter has for goal to count the traffic in order to enable to limit the traffic or not,
- * globally or per channel. It compute statistics on read and written bytes at the specified
- * interval and call back the {@link AbstractTrafficShapingHandler} doAccounting method at every
- * specified interval. If this interval is set to 0, therefore no accounting will be done and only
- * statistics will be computed at each receive or write operations.
+ *
+ * An {@link ObjectSizeEstimator} can be passed at construction to specify what
+ * is the size of the object to be read or write accordingly to the type of
+ * object. If not specified, it will used the {@link DefaultObjectSizeEstimator} implementation.<br><br>
+ *
+ * If you want for any particular reasons to stop the monitoring (accounting) or to change
+ * the read/write limit or the check interval, several methods allow that for you:<br>
+ * <ul>
+ * <li><tt>configure</tt> allows you to change read or write limits, or the checkInterval</li>
+ * <li><tt>getTrafficCounter</tt> allows you to have access to the TrafficCounter and so to stop
+ * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
+ * <li></li>
+ * </ul>
  */
-public class TrafficCounter {
+public abstract class AbstractTrafficShapingHandler extends
+        SimpleChannelHandler implements ExternalResourceReleasable {
     /**
-     * Current written bytes
+     * Internal logger
      */
-    private final AtomicLong currentWrittenBytes = new AtomicLong();
+    static InternalLogger logger = InternalLoggerFactory
+            .getInstance(AbstractTrafficShapingHandler.class);
 
     /**
-     * Current read bytes
+     * Default delay between two checks: 1s
      */
-    private final AtomicLong currentReadBytes = new AtomicLong();
+    public static final long DEFAULT_CHECK_INTERVAL = 1000;
 
     /**
-     * Long life written bytes
+     * Default minimal time to wait
      */
-    private final AtomicLong cumulativeWrittenBytes = new AtomicLong();
+    private static final long MINIMAL_WAIT = 10;
 
     /**
-     * Long life read bytes
+     * Traffic Counter
      */
-    private final AtomicLong cumulativeReadBytes = new AtomicLong();
+    protected TrafficCounter trafficCounter;
 
     /**
-     * Last Time where cumulative bytes where reset to zero
+     * ObjectSizeEstimator
      */
-    private long lastCumulativeTime;
+    private ObjectSizeEstimator objectSizeEstimator;
 
     /**
-     * Last writing bandwidth
+     * Timer to associated to any TrafficCounter
      */
-    private long lastWriteThroughput;
-
+    protected Timer timer;
     /**
-     * Last reading bandwidth
-     */
-    private long lastReadThroughput;
-
-    /**
-     * Last Time Check taken
-     */
-    private final AtomicLong lastTime = new AtomicLong();
-
-    /**
-     * Last written bytes number during last check interval
-     */
-    private long lastWrittenBytes;
-
-    /**
-     * Last read bytes number during last check interval
-     */
-    private long lastReadBytes;
-
-    /**
-     * Delay between two captures
-     */
-    AtomicLong checkInterval = new AtomicLong(
-            AbstractTrafficShapingHandler.DEFAULT_CHECK_INTERVAL);
-
-    // default 1 s
-
-    /**
-     * Name of this Monitor
-     */
-    final String name;
-
-    /**
-     * The associated TrafficShapingHandler
-     */
-    private final AbstractTrafficShapingHandler trafficShapingHandler;
-
-    /**
-     * One Timer for all Counter
-     */
-    private final Timer timer;  // replace executor
-    /**
-     * Monitor created once in start()
-     */
-    private TimerTask timerTask;
-    /**
-     * used in stop() to cancel the timer
+     * used in releaseExternalResources() to cancel the timer
      */
     volatile private Timeout timeout = null;
-
+    
     /**
-     * Is Monitor active
+     * Limit in B/s to apply to write
      */
-    AtomicBoolean monitorActive = new AtomicBoolean();
+    private long writeLimit;
 
     /**
-     * Class to implement monitoring at fix delay
+     * Limit in B/s to apply to read
+     */
+    private long readLimit;
+
+    /**
+     * Delay between two performance snapshots
+     */
+    protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
+
+    /**
+     * Boolean associated with the release of this TrafficShapingHandler.
+     * It will be true only once when the releaseExternalRessources is called
+     * to prevent waiting when shutdown.
+     */
+    final AtomicBoolean release = new AtomicBoolean(false);
+
+     private void init(ObjectSizeEstimator newObjectSizeEstimator,
+             Timer newTimer, long newWriteLimit, long newReadLimit,
+             long newCheckInterval) {
+         objectSizeEstimator = newObjectSizeEstimator;
+         timer = newTimer;
+         writeLimit = newWriteLimit;
+         readLimit = newReadLimit;
+         checkInterval = newCheckInterval;
+         //logger.warn("TSH: "+writeLimit+":"+readLimit+":"+checkInterval);
+     }
+
+    /**
      *
+     * @param newTrafficCounter the TrafficCounter to set
      */
-    private static class TrafficMonitoringTask implements TimerTask {
-        /**
-         * The associated TrafficShapingHandler
-         */
-        private final AbstractTrafficShapingHandler trafficShapingHandler1;
-
-        /**
-         * The associated TrafficCounter
-         */
-        private final TrafficCounter counter;
-
-        /**
-         * @param trafficShapingHandler
-         * @param counter
-         */
-        protected TrafficMonitoringTask(
-                AbstractTrafficShapingHandler trafficShapingHandler,
-                TrafficCounter counter) {
-            trafficShapingHandler1 = trafficShapingHandler;
-            this.counter = counter;
-        }
-
-        public void run(Timeout timeout) throws Exception {
-            if (!counter.monitorActive.get()) {
-                return;
-            }
-            long endTime = System.currentTimeMillis();
-            counter.resetAccounting(endTime);
-            if (trafficShapingHandler1 != null) {
-                trafficShapingHandler1.doAccounting(counter);
-            }
-            timeout = 
-                counter.timer.newTimeout(this, counter.checkInterval.get(), TimeUnit.MILLISECONDS);                        
-        }
+    void setTrafficCounter(TrafficCounter newTrafficCounter) {
+        trafficCounter = newTrafficCounter;
     }
 
     /**
-     * Start the monitoring process
-     */
-    public void start() {
-        synchronized (lastTime) {
-            if (monitorActive.get()) {
-                return;
-            }
-            lastTime.set(System.currentTimeMillis());
-            if (checkInterval.get() > 0) {
-                monitorActive.set(true);
-                timerTask = new TrafficMonitoringTask(trafficShapingHandler, this);
-                timeout = 
-                    timer.newTimeout(timerTask, checkInterval.get(), TimeUnit.MILLISECONDS);
-            }
-        }
-    }
-
-    /**
-     * Stop the monitoring process
-     */
-    public void stop() {
-        synchronized (lastTime) {
-            if (!monitorActive.get()) {
-                return;
-            }
-            monitorActive.set(false);
-            resetAccounting(System.currentTimeMillis());
-            if (trafficShapingHandler != null) {
-                trafficShapingHandler.doAccounting(this);
-            }
-            if (timeout != null) {
-                timeout.cancel();
-            }
-        }
-    }
-
-    /**
-     * Reset the accounting on Read and Write
+     * Constructor using default {@link ObjectSizeEstimator}
      *
-     * @param newLastTime
-     */
-    void resetAccounting(long newLastTime) {
-        synchronized (lastTime) {
-            long interval = newLastTime - lastTime.getAndSet(newLastTime);
-            if (interval == 0) {
-                // nothing to do
-                return;
-            }
-            lastReadBytes = currentReadBytes.getAndSet(0);
-            lastWrittenBytes = currentWrittenBytes.getAndSet(0);
-            lastReadThroughput = lastReadBytes / interval * 1000;
-            // nb byte / checkInterval in ms * 1000 (1s)
-            lastWriteThroughput = lastWrittenBytes / interval * 1000;
-            // nb byte / checkInterval in ms * 1000 (1s)
-        }
-    }
-
-    /**
-     * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the Timer to use, its
-     * name, the checkInterval between two computations in millisecond
-     * @param trafficShapingHandler the associated AbstractTrafficShapingHandler
      * @param timer
-     *            Could be a HashedWheelTimer
-     * @param name
-     *            the name given to this monitor
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
      * @param checkInterval
-     *            the checkInterval in millisecond between two computations
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
      */
-    public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler,
-            Timer timer, String name, long checkInterval) {
-        this.trafficShapingHandler = trafficShapingHandler;
-        this.timer = timer;
-        this.name = name;
-        lastCumulativeTime = System.currentTimeMillis();
-        configure(checkInterval);
+    public AbstractTrafficShapingHandler(Timer timer, long writeLimit,
+            long readLimit, long checkInterval) {
+        super();
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval);
     }
 
     /**
-     * Change checkInterval between
-     * two computations in millisecond
+     * Constructor using the specified ObjectSizeEstimator
      *
-     * @param newcheckInterval
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
      */
-    public void configure(long newcheckInterval) {
-        long newInterval = (newcheckInterval/10)*10;
-        if (checkInterval.get() != newInterval) {
-            checkInterval.set(newInterval);
-            if (newInterval <= 0) {
-                stop();
-                // No more active monitoring
-                lastTime.set(System.currentTimeMillis());
-            } else {
-                // Start if necessary
-                start();
-            }
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long writeLimit, long readLimit, long checkInterval) {
+        super();
+        init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator} and using default Check Interval
+     *
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     */
+    public AbstractTrafficShapingHandler(Timer timer, long writeLimit,
+            long readLimit) {
+        super();
+        init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator and using default Check Interval
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long writeLimit, long readLimit) {
+        super();
+        init(objectSizeEstimator, timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator} and using NO LIMIT and default Check Interval
+     *
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     */
+    public AbstractTrafficShapingHandler(Timer timer) {
+        super();
+        init(new DefaultObjectSizeEstimator(), timer, 0, 0, DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator and using NO LIMIT and default Check Interval
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer) {
+        super();
+        init(objectSizeEstimator, timer, 0, 0, DEFAULT_CHECK_INTERVAL);
+    }
+
+    /**
+     * Constructor using default {@link ObjectSizeEstimator} and using NO LIMIT
+     *
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
+        super();
+        init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval);
+    }
+
+    /**
+     * Constructor using the specified ObjectSizeEstimator and using NO LIMIT
+     *
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute
+     *            the size of the message
+     * @param timer
+     *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public AbstractTrafficShapingHandler(
+            ObjectSizeEstimator objectSizeEstimator, Timer timer,
+            long checkInterval) {
+        super();
+        init(objectSizeEstimator, timer, 0, 0, checkInterval);
+    }
+
+    /**
+     * Change the underlying limitations and check interval.
+     *
+     * @param newWriteLimit
+     * @param newReadLimit
+     * @param newCheckInterval
+     */
+    public void configure(long newWriteLimit, long newReadLimit,
+            long newCheckInterval) {
+        this.configure(newWriteLimit, newReadLimit);
+        this.configure(newCheckInterval);
+    }
+
+    /**
+     * Change the underlying limitations.
+     *
+     * @param newWriteLimit
+     * @param newReadLimit
+     */
+    public void configure(long newWriteLimit, long newReadLimit) {
+        writeLimit = newWriteLimit;
+        readLimit = newReadLimit;
+        if (trafficCounter != null) {
+            trafficCounter.resetAccounting(System.currentTimeMillis()+1);
         }
     }
 
     /**
-     * Computes counters for Read.
+     * Change the check interval.
      *
-     * @param ctx
-     *            the associated channelHandlerContext
-     * @param recv
-     *            the size in bytes to read
+     * @param newCheckInterval
      */
-    void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv) {
-        currentReadBytes.addAndGet(recv);
-        cumulativeReadBytes.addAndGet(recv);
+    public void configure(long newCheckInterval) {
+        checkInterval = newCheckInterval;
+        if (trafficCounter != null) {
+            trafficCounter.configure(checkInterval);
+        }
     }
 
     /**
-     * Computes counters for Write.
+     * Called each time the accounting is computed from the TrafficCounters.
+     * This method could be used for instance to implement almost real time accounting.
      *
-     * @param write
-     *            the size in bytes to write
+     * @param counter
+     *            the TrafficCounter that computes its performance
      */
-    void bytesWriteFlowControl(long write) {
-        currentWrittenBytes.addAndGet(write);
-        cumulativeWrittenBytes.addAndGet(write);
+    protected void doAccounting(TrafficCounter counter) {
+        // NOOP by default
     }
 
     /**
-     *
-     * @return the current checkInterval between two computations of traffic counter
-     *         in millisecond
+     * Class to implement setReadable at fix time
      */
-    public long getCheckInterval() {
-        return checkInterval.get();
-    }
-
-    /**
-     *
-     * @return the Read Throughput in bytes/s computes in the last check interval
-     */
-    public long getLastReadThroughput() {
-        return lastReadThroughput;
-    }
-
-    /**
-     *
-     * @return the Write Throughput in bytes/s computes in the last check interval
-     */
-    public long getLastWriteThroughput() {
-        return lastWriteThroughput;
-    }
-
-    /**
-     *
-     * @return the number of bytes read during the last check Interval
-     */
-    public long getLastReadBytes() {
-        return lastReadBytes;
-    }
-
-    /**
-     *
-     * @return the number of bytes written during the last check Interval
-     */
-    public long getLastWrittenBytes() {
-        return lastWrittenBytes;
+    private class ReopenReadTimerTask implements TimerTask {
+        ChannelHandlerContext ctx;
+        ReopenReadTimerTask(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+        }
+        public void run(Timeout timeoutArg) throws Exception {
+            //logger.warn("Start RRTT: "+release.get());
+            if (release.get()) {
+                return;
+            }
+            /*
+            logger.warn("WAKEUP! "+
+                    (ctx != null && ctx.getChannel() != null &&
+                            ctx.getChannel().isConnected()));
+             */
+            if (ctx != null && ctx.getChannel() != null &&
+                    ctx.getChannel().isConnected()) {
+                //logger.warn(" setReadable TRUE: ");
+                // readSuspended = false;
+                ctx.setAttachment(null);
+                ctx.getChannel().setReadable(true);
+            }
+        }
     }
 
     /**
     *
-    * @return the current number of bytes read since the last checkInterval
+    * @return the time that should be necessary to wait to respect limit. Can
+    *         be negative time
     */
-    public long getCurrentReadBytes() {
-        return currentReadBytes.get();
+    private long getTimeToWait(long limit, long bytes, long lastTime,
+            long curtime) {
+        long interval = curtime - lastTime;
+        if (interval == 0) {
+            // Time is too short, so just lets continue
+            return 0;
+        }
+        return ((bytes * 1000 / limit - interval)/10)*10;
+    }
+
+    @Override
+    public void messageReceived(ChannelHandlerContext arg0, MessageEvent arg1)
+            throws Exception {
+        try {
+            long curtime = System.currentTimeMillis();
+            long size = objectSizeEstimator.estimateSize(arg1.getMessage());
+            if (trafficCounter != null) {
+                trafficCounter.bytesRecvFlowControl(arg0, size);
+                if (readLimit == 0) {
+                    // no action
+                    return;
+                }
+                // compute the number of ms to wait before reopening the channel
+                long wait = getTimeToWait(readLimit,
+                        trafficCounter.getCurrentReadBytes(),
+                        trafficCounter.getLastTime(), curtime);
+                if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
+                                            // time in order to
+                    Channel channel = arg0.getChannel();
+                    // try to limit the traffic
+                    if (channel != null && channel.isConnected()) {
+                        // Channel version
+                        if (timer == null) {
+                            // Sleep since no executor
+                            // logger.warn("Read sleep since no timer for "+wait+" ms for "+this);
+                            if (release.get()) {
+                                return;
+                            }
+                            Thread.sleep(wait);
+                            return;
+                        }
+                        if (arg0.getAttachment() == null) {
+                            // readSuspended = true;
+                            arg0.setAttachment(Boolean.TRUE);
+                            channel.setReadable(false);
+                            // logger.warn("Read will wakeup after "+wait+" ms "+this);
+                            TimerTask timerTask = new ReopenReadTimerTask(arg0);
+                            timeout = timer.newTimeout(timerTask, wait,
+                                    TimeUnit.MILLISECONDS);
+                        } else {
+                            // should be waiting: but can occurs sometime so as
+                            // a FIX
+                            // logger.warn("Read sleep ok but should not be here: "+wait+" "+this);
+                            if (release.get()) {
+                                return;
+                            }
+                            Thread.sleep(wait);
+                        }
+                    } else {
+                        // Not connected or no channel
+                        // logger.warn("Read sleep "+wait+" ms for "+this);
+                        if (release.get()) {
+                            return;
+                        }
+                        Thread.sleep(wait);
+                    }
+                }
+            }
+        } finally {
+            // The message is then just passed to the next handler
+            super.messageReceived(arg0, arg1);
+        }
+    }
+
+    @Override
+    public void writeRequested(ChannelHandlerContext arg0, MessageEvent arg1)
+            throws Exception {
+        try {
+            long curtime = System.currentTimeMillis();
+            long size = objectSizeEstimator.estimateSize(arg1.getMessage());
+            if (trafficCounter != null) {
+                trafficCounter.bytesWriteFlowControl(size);
+                if (writeLimit == 0) {
+                    return;
+                }
+                // compute the number of ms to wait before continue with the
+                // channel
+                long wait = getTimeToWait(writeLimit,
+                        trafficCounter.getCurrentWrittenBytes(),
+                        trafficCounter.getLastTime(), curtime);
+                if (wait >= MINIMAL_WAIT) {
+                    // Global or Channel
+                    if (release.get()) {
+                        return;
+                    }
+                    Thread.sleep(wait);
+                }
+            }
+        } finally {
+            // The message is then just passed to the next handler
+            super.writeRequested(arg0, arg1);
+        }
+    }
+    @Override
+    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent cse = (ChannelStateEvent) e;
+            if (cse.getState() == ChannelState.INTEREST_OPS &&
+                    (((Integer) cse.getValue()).intValue() & Channel.OP_READ) != 0) {
+
+                // setReadable(true) requested
+                boolean readSuspended = ctx.getAttachment() != null;
+                if (readSuspended) {
+                    // Drop the request silently if this handler has
+                    // set the flag.
+                    e.getFuture().setSuccess();
+                    return;
+                }
+            }
+        }
+        super.handleDownstream(ctx, e);
     }
 
     /**
      *
-     * @return the current number of bytes written since the last check Interval
+     * @return the current TrafficCounter (if
+     *         channel is still connected)
      */
-    public long getCurrentWrittenBytes() {
-        return currentWrittenBytes.get();
+    public TrafficCounter getTrafficCounter() {
+        return trafficCounter;
     }
 
-    /**
-     * @return the Time in millisecond of the last check as of System.currentTimeMillis()
-     */
-    public long getLastTime() {
-        return lastTime.get();
+    public void releaseExternalResources() {
+        if (trafficCounter != null) {
+            trafficCounter.stop();
+        }
+        release.set(true);
+        if (timeout != null) {
+            timeout.cancel();
+        }
     }
 
-    /**
-     * @return the cumulativeWrittenBytes
-     */
-    public long getCumulativeWrittenBytes() {
-        return cumulativeWrittenBytes.get();
-    }
-
-    /**
-     * @return the cumulativeReadBytes
-     */
-    public long getCumulativeReadBytes() {
-        return cumulativeReadBytes.get();
-    }
-
-    /**
-     * @return the lastCumulativeTime in millisecond as of System.currentTimeMillis()
-     * when the cumulative counters were reset to 0.
-     */
-    public long getLastCumulativeTime() {
-        return lastCumulativeTime;
-    }
-
-    /**
-     * Reset both read and written cumulative bytes counters and the associated time.
-     */
-    public void resetCumulativeTime() {
-        lastCumulativeTime = System.currentTimeMillis();
-        cumulativeReadBytes.set(0);
-        cumulativeWrittenBytes.set(0);
-    }
-
-    /**
-     * @return the name
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * String information
-     */
     @Override
     public String toString() {
-        return "Monitor " + name + " Current Speed Read: " +
-                (lastReadThroughput >> 10) + " KB/s, Write: " +
-                (lastWriteThroughput >> 10) + " KB/s Current Read: " +
-                (currentReadBytes.get() >> 10) + " KB Current Write: " +
-                (currentWrittenBytes.get() >> 10) + " KB";
+        return "TrafficShaping with Write Limit: " + writeLimit +
+                " Read Limit: " + readLimit + " and Counter: " +
+                (trafficCounter != null? trafficCounter.toString() : "none");
     }
 }
