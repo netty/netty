@@ -245,7 +245,7 @@ public class TrafficCounter {
      * @param newcheckInterval
      */
     public void configure(long newcheckInterval) {
-        long newInterval = (newcheckInterval/10)*10;
+        long newInterval = (newcheckInterval / 10) * 10;
         if (checkInterval.get() != newInterval) {
             checkInterval.set(newInterval);
             if (newInterval <= 0) {
