@@ -149,7 +149,6 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit, long checkInterval) {
-        super();
         init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval);
     }
 
@@ -172,7 +171,6 @@ public abstract class AbstractTrafficShapingHandler extends
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval) {
-        super();
         init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval);
     }
 
@@ -188,7 +186,6 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Timer timer, long writeLimit,
             long readLimit) {
-        super();
         init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
     }
 
@@ -208,7 +205,6 @@ public abstract class AbstractTrafficShapingHandler extends
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
-        super();
         init(objectSizeEstimator, timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
     }
 
@@ -219,7 +215,6 @@ public abstract class AbstractTrafficShapingHandler extends
      *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
      */
     public AbstractTrafficShapingHandler(Timer timer) {
-        super();
         init(new DefaultObjectSizeEstimator(), timer, 0, 0, DEFAULT_CHECK_INTERVAL);
     }
 
@@ -234,7 +229,6 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer) {
-        super();
         init(objectSizeEstimator, timer, 0, 0, DEFAULT_CHECK_INTERVAL);
     }
 
@@ -248,7 +242,6 @@ public abstract class AbstractTrafficShapingHandler extends
      *            channels or 0 if no stats are to be computed
      */
     public AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
-        super();
         init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval);
     }
 
@@ -267,7 +260,6 @@ public abstract class AbstractTrafficShapingHandler extends
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long checkInterval) {
-        super();
         init(objectSizeEstimator, timer, 0, 0, checkInterval);
     }
 
