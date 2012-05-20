@@ -8,7 +8,7 @@ public class CombinedChannelHandler implements ChannelInboundHandler<Object>,
     private ChannelOutboundHandler<Object> out;
     private ChannelInboundHandler<Object> in;
 
-    public CombinedChannelHandler() {
+    protected CombinedChannelHandler() {
         // User will call init in the subclass constructor.
     }
 
