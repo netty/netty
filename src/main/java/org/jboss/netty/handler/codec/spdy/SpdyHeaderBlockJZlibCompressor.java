@@ -26,7 +26,12 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
 
     private final ZStream z = new ZStream();
 
-    public SpdyHeaderBlockJZlibCompressor(int compressionLevel, int windowBits, int memLevel) {
+    public SpdyHeaderBlockJZlibCompressor(
+            int version, int compressionLevel, int windowBits, int memLevel) {
+        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+            throw new IllegalArgumentException(
+                    "unsupported version: " + version);
+        }
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -46,7 +51,11 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
             throw new CompressionException(
                     "failed to initialize an SPDY header block deflater: " + resultCode);
         } else {
-            resultCode = z.deflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
+            if (version < 3) {
+                resultCode = z.deflateSetDictionary(SPDY2_DICT, SPDY2_DICT.length);
+            } else {
+                resultCode = z.deflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
+            }
             if (resultCode != JZlib.Z_OK) {
                 throw new CompressionException(
                         "failed to set the SPDY dictionary: " + resultCode);

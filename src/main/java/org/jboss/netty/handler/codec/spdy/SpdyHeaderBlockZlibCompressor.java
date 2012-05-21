@@ -26,13 +26,21 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
     private final byte[] out = new byte[8192];
     private final Deflater compressor;
 
-    public SpdyHeaderBlockZlibCompressor(int compressionLevel) {
+    public SpdyHeaderBlockZlibCompressor(int version, int compressionLevel) {
+        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+            throw new IllegalArgumentException(
+                    "unsupported version: " + version);
+        }
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         compressor = new Deflater(compressionLevel);
-        compressor.setDictionary(SPDY_DICT);
+        if (version < 3) {
+            compressor.setDictionary(SPDY2_DICT);
+        } else {
+            compressor.setDictionary(SPDY_DICT);
+        }
     }
 
     @Override

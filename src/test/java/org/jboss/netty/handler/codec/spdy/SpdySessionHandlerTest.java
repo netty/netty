@@ -132,7 +132,7 @@ public class SpdySessionHandlerTest {
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamID));
         Assert.assertNull(sessionHandler.peek());
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamID));
-        assertRstStream(sessionHandler.poll(), remoteStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
+        assertRstStream(sessionHandler.poll(), remoteStreamID, SpdyStreamStatus.STREAM_IN_USE);
         Assert.assertNull(sessionHandler.peek());
         remoteStreamID += 2;
 
