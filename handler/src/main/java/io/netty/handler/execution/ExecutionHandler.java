@@ -31,6 +31,7 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ChannelUpstreamHandler;
 import io.netty.channel.Channels;
 import io.netty.util.ExternalResourceReleasable;
+import io.netty.util.internal.DeadLockProofWorker;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
@@ -170,7 +171,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     public void handleUpstream(
             ChannelHandlerContext context, ChannelEvent e) throws Exception {
         if (handleUpstream) {
-            executor.execute(new ChannelUpstreamEventRunnable(context, e));
+            DeadLockProofWorker.start(executor, new ChannelUpstreamEventRunnable(context, e));
         } else {
             context.sendUpstream(e);
         }
@@ -182,7 +183,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
         // check if the read was suspend
         if (!handleReadSuspend(ctx, e)) {
             if (handleDownstream) {
-                executor.execute(new ChannelDownstreamEventRunnable(ctx, e));
+                DeadLockProofWorker.start(executor, new ChannelDownstreamEventRunnable(ctx, e));
             } else {
                 ctx.sendDownstream(e);
             }
