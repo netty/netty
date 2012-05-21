@@ -27,7 +27,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.socket.SocketChannels;
-import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -167,11 +166,6 @@ public class NioWorker extends AbstractNioWorker {
         boolean bound = channel.isBound();
         try {
             
-            // Only supported on java7+ so throw an exception here if we detect a lower version
-            if (DetectionUtil.javaVersion() < 7) {
-                throw new UnsupportedOperationException("Not supported in java version < 7");
-            }
-            
             if (channel.getJdkChannel().isOpen()) {
                 channel.getJdkChannel().getChannel().socket().shutdownInput();
                 
@@ -213,8 +207,10 @@ public class NioWorker extends AbstractNioWorker {
     @Override
     public void setInterestOps(AbstractNioChannel channel, ChannelFuture future, int interestOps) {
         if (channel instanceof NioSocketChannel) {
+           
             NioSocketChannel ch = (NioSocketChannel) channel;
             if (!ch.isInputOpen()) {
+                // remove the OP_READ from the channel if the input was closed
                 interestOps &= ~SelectionKey.OP_READ;
             }
         }
