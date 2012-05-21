@@ -36,7 +36,7 @@
  *
  * The insertion in the pipeline of one of those handlers can be wherever you want, but
  * <b>it must be placed before any <tt>{@link MemoryAwareThreadPoolExecutor}</tt>
- * in your pipeline</b>.</li><br>
+ * in your pipeline</b>.<br>
  * <b><i>It is really recommended to have such a</i> <tt>{@link MemoryAwareThreadPoolExecutor}</tt>
  * <i>(either non ordered or </i> <tt>{@link OrderedMemoryAwareThreadPoolExecutor}</tt>
  * <i>) in your pipeline</i></b>
@@ -76,7 +76,7 @@
  *
  * <P>So in your application you will create your own TrafficShapingHandler and set the values to fit your needs.</P>
  * <tt>XXXXXTrafficShapingHandler myHandler = new XXXXXTrafficShapingHandler(timer);</tt><br><br>
- * timer could be created using <tt>HashedWheelTimer<tt> and XXXXX could be either
+ * timer could be created using <tt>HashedWheelTimer</tt> and XXXXX could be either
  * Global or Channel<br>
  * <tt>pipeline.addLast("XXXXX_TRAFFIC_SHAPING", myHandler);</tt><br>
  * <tt>...</tt><br>

@@ -91,7 +91,7 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * used in releaseExternalResources() to cancel the timer
      */
-    volatile private Timeout timeout = null;
+    private volatile Timeout timeout;
     
     /**
      * Limit in B/s to apply to write

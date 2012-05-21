@@ -113,7 +113,7 @@ public class TrafficCounter {
     /**
      * used in stop() to cancel the timer
      */
-    volatile private Timeout timeout = null;
+    private volatile Timeout timeout;
 
     /**
      * Is Monitor active

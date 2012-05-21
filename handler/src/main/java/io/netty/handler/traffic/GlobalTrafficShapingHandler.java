@@ -31,7 +31,7 @@ import io.netty.util.Timer;
  * <ul>
  * <li>Create your unique GlobalTrafficShapingHandler like:<br><br>
  * <tt>GlobalTrafficShapingHandler myHandler = new GlobalTrafficShapingHandler(timer);</tt><br><br>
- * timer could be created using <tt>HashedWheelTimer<tt><br>
+ * timer could be created using <tt>HashedWheelTimer</tt><br>
  * <tt>pipeline.addLast("GLOBAL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  *
  * <b>Note that this handler has a Pipeline Coverage of "all" which means only one such handler must be created

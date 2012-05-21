@@ -33,7 +33,7 @@ import io.netty.util.Timer;
  * <li>Add in your pipeline a new ChannelTrafficShapingHandler, before a recommended {@link ExecutionHandler} (like
  * {@link OrderedMemoryAwareThreadPoolExecutor} or {@link MemoryAwareThreadPoolExecutor}).<br>
  * <tt>ChannelTrafficShapingHandler myHandler = new ChannelTrafficShapingHandler(timer);</tt><br>
- * timer could be created using <tt>HashedWheelTimer<tt><br>
+ * timer could be created using <tt>HashedWheelTimer</tt><br>
  * <tt>pipeline.addLast("CHANNEL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  *
  * <b>Note that this handler has a Pipeline Coverage of "one" which means a new handler must be created
