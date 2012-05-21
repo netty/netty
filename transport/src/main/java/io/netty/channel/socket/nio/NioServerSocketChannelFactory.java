@@ -194,9 +194,13 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     @Override
     public void releaseExternalResources() {
+        if (bossWorkerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) bossWorkerPool).releaseExternalResources();
+        }
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }
+        
         
     }
 }
