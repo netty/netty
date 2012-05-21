@@ -99,7 +99,9 @@ public class NioWorker extends AbstractNioWorker {
         }
 
         if (ret < 0 || failure) {
+
             k.cancel(); // Some JDK implementations run into an infinite loop without this.
+
             close(channel, succeededFuture(channel));
             return false;
         }
@@ -207,7 +209,19 @@ public class NioWorker extends AbstractNioWorker {
             }
         }
     }
-    
+
+    @Override
+    public void setInterestOps(AbstractNioChannel channel, ChannelFuture future, int interestOps) {
+        if (channel instanceof NioSocketChannel) {
+            NioSocketChannel ch = (NioSocketChannel) channel;
+            if (!ch.isInputOpen()) {
+                interestOps &= ~SelectionKey.OP_READ;
+            }
+        }
+
+        super.setInterestOps(channel, future, interestOps);
+    }
+
     void closeOutput(NioSocketChannel channel, ChannelFuture future) {
         boolean isIoThread = isIoThread();
         

@@ -62,7 +62,7 @@ public abstract class AbstractHalfClosedSocketTest {
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
-    @Test(timeout = 10000)
+    @Test
     public void testCloseInputClient() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
@@ -102,15 +102,13 @@ public abstract class AbstractHalfClosedSocketTest {
 
 
         // Write something to the server
-        ChannelFuture wf = cc.write(ChannelBuffers.wrappedBuffer("TEST".getBytes())).awaitUninterruptibly();
-        assertTrue(wf.isSuccess());
+        cc.write(ChannelBuffers.wrappedBuffer("TEST".getBytes())).awaitUninterruptibly();
 
         // Check if the input closed event was fired
         assertTrue(clientHandler.isInputClosedFired());
-
         
         //assertFalse(clientHandler.messageReceived);
-        serverHandler.await().getChannel().close().awaitUninterruptibly();
+        serverHandler.await().close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
 
@@ -275,7 +273,7 @@ public abstract class AbstractHalfClosedSocketTest {
     
     
     
-    private final class ServerOutputCloseTestHandler extends CloseTestHandler {
+    private static final class ServerOutputCloseTestHandler extends CloseTestHandler {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private SocketChannel channel;
@@ -294,10 +292,10 @@ public abstract class AbstractHalfClosedSocketTest {
 
     }
     
-    private final class ServerInputCloseTestHandler extends SimpleChannelUpstreamHandler {
+    private static final class ServerInputCloseTestHandler extends SimpleChannelUpstreamHandler {
 
         private final CountDownLatch latch = new CountDownLatch(1);
-        private ChannelFuture future;
+        private Channel channel;
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
@@ -307,18 +305,25 @@ public abstract class AbstractHalfClosedSocketTest {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     latch.countDown();
-                    ServerInputCloseTestHandler.this.future = future;
+                    ServerInputCloseTestHandler.this.channel = future.getChannel();
                 }
             });
         }
-        
-        public ChannelFuture await() throws InterruptedException {
+
+        @Override
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            latch.countDown();
+            channel = ctx.getChannel();
+            super.channelClosed(ctx, e);
+        }
+
+        public Channel await() throws InterruptedException {
             latch.await();
-            return future;
+            return channel;
         }
     }
-    
-    private class CloseTestHandler extends SimpleSocketChannelUpstreamHandler {
+
+    private static class CloseTestHandler extends SimpleSocketChannelUpstreamHandler {
 
         private CountDownLatch inputClosedLatch = new CountDownLatch(1);
         private CountDownLatch outputClosedLatch = new CountDownLatch(1);
