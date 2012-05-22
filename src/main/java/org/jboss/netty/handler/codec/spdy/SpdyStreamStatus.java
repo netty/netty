@@ -64,6 +64,30 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
         new SpdyStreamStatus(7, "FLOW_CONTROL_ERROR");
 
     /**
+     * 8 Stream In Use
+     */
+    public static final SpdyStreamStatus STREAM_IN_USE =
+        new SpdyStreamStatus(8, "STREAM_IN_USE");
+
+    /**
+     * 9 Stream Already Closed
+     */
+    public static final SpdyStreamStatus STREAM_ALREADY_CLOSED =
+        new SpdyStreamStatus(9, "STREAM_ALREADY_CLOSED");
+
+    /**
+     * 10 Invalid Credentials
+     */
+    public static final SpdyStreamStatus INVALID_CREDENTIALS =
+        new SpdyStreamStatus(10, "INVALID_CREDENTIALS");
+
+    /**
+     * 11 Frame Too Large
+     */
+    public static final SpdyStreamStatus FRAME_TOO_LARGE =
+        new SpdyStreamStatus(11, "FRAME_TOO_LARGE");
+
+    /**
      * Returns the {@link SpdyStreamStatus} represented by the specified code.
      * If the specified code is a defined SPDY status code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
@@ -89,6 +113,14 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
             return INTERNAL_ERROR;
         case 7:
             return FLOW_CONTROL_ERROR;
+        case 8:
+            return STREAM_IN_USE;
+        case 9:
+            return STREAM_ALREADY_CLOSED;
+        case 10:
+            return INVALID_CREDENTIALS;
+        case 11:
+            return FRAME_TOO_LARGE;
         }
 
         return new SpdyStreamStatus(code, "UNKNOWN (" + code + ')');

@@ -19,8 +19,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 abstract class SpdyHeaderBlockDecompressor {
 
-    static SpdyHeaderBlockDecompressor newInstance() {
-        return new SpdyHeaderBlockZlibDecompressor();
+    static SpdyHeaderBlockDecompressor newInstance(int version) {
+        return new SpdyHeaderBlockZlibDecompressor(version);
     }
 
     abstract void setInput(ChannelBuffer compressed);
