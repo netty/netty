@@ -447,10 +447,7 @@ public class HashedWheelTimer implements Timer {
             for (;;) {
                 final long currentTime = System.currentTimeMillis();
                 long sleepTime = tickDuration * tick - (currentTime - startTime);
-                
-                if (sleepTime <= 0) {
-                    break;
-                }
+
                 // Check if we run on windows, as if thats the case we will need
                 // to round the sleepTime as workaround for a bug that only affect
                 // the JVM if it runs on windows.
@@ -459,7 +456,10 @@ public class HashedWheelTimer implements Timer {
                 if (DetectionUtil.isWindows()) {
                     sleepTime = (sleepTime / 10) * 10;
                 }
-
+                
+                if (sleepTime <= 0) {
+                    break;
+                }
                 try {
                     Thread.sleep(sleepTime);
                 } catch (InterruptedException e) {
