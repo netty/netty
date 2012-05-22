@@ -30,4 +30,14 @@ public interface SpdyGoAwayFrame {
      * cannot be negative.
      */
     void setLastGoodStreamID(int lastGoodStreamID);
+
+    /**
+     * Returns the status of this frame.
+     */
+    SpdySessionStatus getStatus();
+
+    /**
+     * Sets the status of this frame.
+     */
+    void setStatus(SpdySessionStatus status);
 }

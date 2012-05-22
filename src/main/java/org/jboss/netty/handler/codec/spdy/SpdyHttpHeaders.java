@@ -46,6 +46,10 @@ public final class SpdyHttpHeaders {
          * {@code "X-SPDY-URL"}
          */
         public static final String URL = "X-SPDY-URL";
+        /**
+         * {@code "X-SPDY-Scheme"}
+         */
+        public static final String SCHEME = "X-SPDY-Scheme";
 
         private Names() {
             super();
@@ -143,5 +147,26 @@ public final class SpdyHttpHeaders {
      */
     public static void setUrl(HttpMessage message, String url) {
         message.setHeader(Names.URL, url);
+    }
+
+    /**
+     * Removes the {@code "X-SPDY-Scheme"} header.
+     */
+    public static void removeScheme(HttpMessage message) {
+        message.removeHeader(Names.SCHEME);
+    }
+
+    /**
+     * Returns the value of the {@code "X-SPDY-Scheme"} header.
+     */
+    public static String getScheme(HttpMessage message) {
+        return message.getHeader(Names.SCHEME);
+    }
+
+    /**
+     * Sets the {@code "X-SPDY-Scheme"} header.
+     */
+    public static void setScheme(HttpMessage message, String scheme) {
+        message.setHeader(Names.URL, scheme);
     }
 }
