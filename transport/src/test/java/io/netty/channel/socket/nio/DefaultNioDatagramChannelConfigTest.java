@@ -18,10 +18,12 @@ package io.netty.channel.socket.nio;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.StandardProtocolFamily;
 import java.nio.channels.DatagramChannel;
+import java.util.Enumeration;
 
 import junit.framework.Assert;
 
@@ -34,20 +36,45 @@ public class DefaultNioDatagramChannelConfigTest {
         if (DetectionUtil.javaVersion() < 7) {
             return;
         }
-        DefaultNioDatagramChannelConfig config = new DefaultNioDatagramChannelConfig(DatagramChannel.open(StandardProtocolFamily.INET));
-        NetworkInterface inf = NetworkInterface.getNetworkInterfaces().nextElement();
+        
+        StandardProtocolFamily family = null;
+        NetworkInterface inf = null;
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            inf = interfaces.nextElement();
+            Enumeration<InetAddress> addresses = inf.getInetAddresses();
+            while(addresses.hasMoreElements()) {
+                InetAddress addr = addresses.nextElement();
+                if (addr instanceof Inet4Address) {
+                    family = StandardProtocolFamily.INET;
+                    break;
+                } else {
+                    family = StandardProtocolFamily.INET6;
+                }
+            }
+        }
+        if (inf == null) {
+            // No usable interface found so just skip the test
+            return;
+        }
+        
+        DefaultNioDatagramChannelConfig config = new DefaultNioDatagramChannelConfig(DatagramChannel.open(family));
+
         config.setNetworkInterface(inf);
         Assert.assertEquals(inf, config.getNetworkInterface());
-        
+            
         InetAddress localhost = inf.getInetAddresses().nextElement();
         config.setInterface(localhost);
         Assert.assertEquals(localhost, config.getInterface());
-        
+            
         config.setTimeToLive(100);
         Assert.assertEquals(100, config.getTimeToLive());
-        
+            
         config.setLoopbackModeDisabled(false);
         Assert.assertEquals(false, config.isLoopbackModeDisabled());
+        
+        
+        
 
     }
 }
