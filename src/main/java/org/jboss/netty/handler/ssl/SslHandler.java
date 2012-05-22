@@ -198,15 +198,6 @@ public class SslHandler extends FrameDecoder
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
     private volatile boolean issueHandshake;
-    
-    private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()) {
-                Channels.fireExceptionCaught(future.getChannel(), future.getCause());
-            }
-        }
-    };
-       
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
     
     /**
@@ -1280,12 +1271,26 @@ public class SslHandler extends FrameDecoder
      * Calls {@link #handshake()} once the {@link Channel} is connected
      */
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelConnected(final ChannelHandlerContext ctx, final ChannelStateEvent e) throws Exception {
         if (issueHandshake) {
             // issue and handshake and add a listener to it which will fire an exception event if an exception was thrown while doing the handshake
-            handshake().addListener(HANDSHAKE_LISTENER);
+            handshake().addListener(new ChannelFutureListener() {
+
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        Channels.fireExceptionCaught(future.getChannel(), future.getCause());
+                    } else {
+                        // Send the event upstream after the handshake was completed without an error. 
+                        //
+                        // See https://github.com/netty/netty/issues/358
+                        ctx.sendUpstream(e);
+                    }
+                    
+                }
+            });
+        } else {
+            super.channelConnected(ctx, e);
         }
-        super.channelConnected(ctx, e);
     }
     
     /**
