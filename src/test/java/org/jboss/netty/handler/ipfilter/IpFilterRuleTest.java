@@ -171,6 +171,14 @@ public class IpFilterRuleTest extends TestCase {
                 return 0;
             }
 
+            public Object getAttachment() {
+                return null;
+            }
+
+            public void setAttachment(Object attachment) {
+                
+            }
+
         }, h, addr), addr);
     }
 
