@@ -241,10 +241,10 @@ public class ClientBootstrap extends Bootstrap {
      * For example:
      *
      * <pre>
-     *  ChannelFuture bindFuture = boostrap.bind(new InetSocketAddress("192.168.0.15", 0));
+     *  ChannelFuture bindFuture = bootstrap.bind(new InetSocketAddress("192.168.0.15", 0));
      *  Channel channel = bindFuture.getChannel();
      *  channel.setAttachment(dataObj);
-     *  boostrap.connect(new InetSocketAddress("192.168.0.30", 8080));
+     *  bootstrap.connect(new InetSocketAddress("192.168.0.30", 8080));
      * </pre>
      * <br>
      * 
@@ -253,7 +253,7 @@ public class ClientBootstrap extends Bootstrap {
      * <pre>
      *  public class YourHandler extends SimpleChannelUpstreamHandler {
      *      public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-     *          Object dataObject = ctx.getChannel().getAttachement();
+     *          Object dataObject = ctx.getChannel().getAttachment();
      *      }
      *  }
      *  
