@@ -32,6 +32,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.internal.DetectionUtil;
 import org.jboss.netty.util.internal.ReusableIterator;
 import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
@@ -445,10 +446,18 @@ public class HashedWheelTimer implements Timer {
 
             for (;;) {
                 final long currentTime = System.currentTimeMillis();
-                final long sleepTime = tickDuration * tick - (currentTime - startTime);
-
+                long sleepTime = tickDuration * tick - (currentTime - startTime);
+                
                 if (sleepTime <= 0) {
                     break;
+                }
+                // Check if we run on windows, as if thats the case we will need
+                // to round the sleepTime as workaround for a bug that only affect
+                // the JVM if it runs on windows.
+                //
+                // See https://github.com/netty/netty/issues/356
+                if (DetectionUtil.isWindows()) {
+                    sleepTime = (sleepTime / 10) * 10;
                 }
 
                 try {
