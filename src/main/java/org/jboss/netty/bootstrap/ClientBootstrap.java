@@ -229,4 +229,69 @@ public class ClientBootstrap extends Bootstrap {
         // Connect.
         return ch.connect(remoteAddress);
     }
+    
+    /**
+     * Attempts to bind a channel with the specified {@code localAddress}. later the channel can be connected
+     * to a remoteAddress by calling {@link Channel#connect(SocketAddress)}.This method is useful where bind and connect
+     * need to be done in separate steps. 
+     * 
+     * This can also be useful if you want to set and attachment to the {@link Channel} via
+     * {@link Channel#setAttachment(Object)} so you can use it after the {@link #bind(SocketAddress)} was done.
+     * <br>
+     * For example:
+     *
+     * <pre>
+     *  ChannelFuture bindFuture = boostrap.bind(new InetSocketAddress("192.168.0.15", 0));
+     *  Channel channel = bindFuture.getChannel();
+     *  channel.setAttachment(dataObj);
+     *  boostrap.connect(new InetSocketAddress("192.168.0.30", 8080));
+     * </pre>
+     * <br>
+     * 
+     * You can use it then in your handlers like this:
+     *
+     * <pre>
+     *  public class YourHandler extends SimpleChannelUpstreamHandler {
+     *      public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+     *          Object dataObject = ctx.getChannel().getAttachement();
+     *      }
+     *  }
+     *  
+     * </pre>
+     *
+     * @return a future object which notifies when this bind attempt
+     *         succeeds or fails
+     *
+     * @throws ChannelPipelineException
+     *         if this bootstrap's {@link #setPipelineFactory(ChannelPipelineFactory) pipelineFactory}
+     *            failed to create a new {@link ChannelPipeline}
+     */
+    public ChannelFuture bind(final SocketAddress localAddress) {
+
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
+
+        ChannelPipeline pipeline;
+        try {
+            pipeline = getPipelineFactory().getPipeline();
+        } catch (Exception e) {
+            throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
+        }
+
+        // Set the options.
+        Channel ch = getFactory().newChannel(pipeline);
+        boolean success = false;
+        try {
+            ch.getConfig().setOptions(getOptions());
+            success = true;
+        } finally {
+            if (!success) {
+                ch.close();
+            }
+        }
+
+        // Bind.
+        return ch.bind(localAddress);
+    }
 }
