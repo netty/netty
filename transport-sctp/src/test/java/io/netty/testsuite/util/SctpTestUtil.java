@@ -15,7 +15,10 @@
  */
 package io.netty.testsuite.util;
 
+import java.io.IOException;
 import java.util.Locale;
+
+import com.sun.nio.sctp.SctpChannel;
 
 public class SctpTestUtil {
     //io.netty.util.SocketAddresses.LOCALHOST interface has MTU SIZE issues with SCTP, we have  to use local loop back interface for testing
@@ -29,6 +32,18 @@ public class SctpTestUtil {
     public static boolean isSctpSupported() {
         String os = System.getProperty("os.name").toLowerCase(Locale.UK);
         if (os.equals("unix") || os.equals("linux") || os.equals("sun") || os.equals("solaris")) {
+            try {
+                SctpChannel.open();
+            } catch (IOException e) {
+                // ignore
+            } catch (UnsupportedOperationException e) {
+                // This exception may get thrown if the OS does not have
+                // the shared libs installed.
+                System.out.print("Not supported: " + e.getMessage());
+                return false;
+                
+            }
+
             return true;
         }
         return false;
