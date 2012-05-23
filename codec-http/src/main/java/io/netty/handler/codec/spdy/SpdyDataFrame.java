@@ -45,16 +45,6 @@ public interface SpdyDataFrame {
     void setLast(boolean last);
 
     /**
-     * Returns {@code true} if the data in this frame has been compressed.
-     */
-    boolean isCompressed();
-
-    /**
-     * Sets if the data in this frame has been compressed.
-     */
-    void setCompressed(boolean compressed);
-
-    /**
      * Returns the data payload of this frame.  If there is no data payload
      * {@link ChannelBuffers#EMPTY_BUFFER} is returned.
      */

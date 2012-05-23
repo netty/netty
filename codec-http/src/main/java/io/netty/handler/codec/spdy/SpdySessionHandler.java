@@ -27,13 +27,14 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.Channels;
+import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Manages streams within a SPDY session.
  */
-public class SpdySessionHandler extends SimpleChannelUpstreamHandler 
+public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         implements ChannelDownstreamHandler {
 
     private static final SpdyProtocolException PROTOCOL_EXCEPTION = new SpdyProtocolException();
@@ -217,12 +218,12 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            
+
             if (isRemoteInitiatedID(spdyPingFrame.getID())) {
                 Channels.write(ctx, Channels.future(e.getChannel()), spdyPingFrame, e.getRemoteAddress());
                 return;
             }
-            
+
             // Note: only checks that there are outstanding pings since uniqueness is not inforced
             if (pings.get() == 0) {
                 return;
@@ -251,6 +252,18 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         }
 
         super.messageReceived(ctx, e);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+            throws Exception {
+
+        Throwable cause = e.getCause();
+        if (cause instanceof SpdyProtocolException) {
+            issueSessionError(ctx, e.getChannel(), null);
+        }
+
+        super.exceptionCaught(ctx, e);
     }
 
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
@@ -380,7 +393,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
     private boolean isRemoteInitiatedID(int ID) {
         boolean serverID = SpdyCodecUtil.isServerID(ID);
-        return (server && !serverID) || (!server && serverID);
+        return server && !serverID || !server && serverID;
     }
 
     private synchronized void updateConcurrentStreams(SpdySettingsFrame settings, boolean remote) {
@@ -416,8 +429,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         if (receivedGoAwayFrame || sentGoAwayFrame) {
             return false;
         }
-        if ((maxConcurrentStreams != 0) &&
-           (spdySession.numActiveStreams() >= maxConcurrentStreams)) {
+        if (maxConcurrentStreams != 0 &&
+           spdySession.numActiveStreams() >= maxConcurrentStreams) {
             return false;
         }
         spdySession.acceptStream(streamID, remoteSideClosed, localSideClosed);
@@ -433,14 +446,14 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else {
             spdySession.closeLocalSide(streamID);
         }
-        if ((closeSessionFuture != null) && spdySession.noActiveStreams()) {
+        if (closeSessionFuture != null && spdySession.noActiveStreams()) {
             closeSessionFuture.setSuccess();
         }
     }
 
     private void removeStream(int streamID) {
         spdySession.removeStream(streamID);
-        if ((closeSessionFuture != null) && spdySession.noActiveStreams()) {
+        if (closeSessionFuture != null && spdySession.noActiveStreams()) {
             closeSessionFuture.setSuccess();
         }
     }
@@ -466,7 +479,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         if (!sentGoAwayFrame) {
             sentGoAwayFrame = true;
             ChannelFuture future = Channels.future(channel);
-            Channels.write(ctx, future, new DefaultSpdyGoAwayFrame(lastGoodStreamID));
+            Channels.write(ctx, future, new DefaultSpdyGoAwayFrame(lastGoodStreamID), remoteAddress);
             return future;
         }
         return Channels.succeededFuture(channel);

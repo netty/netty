@@ -220,7 +220,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         return null;
     }
 
-    private HttpRequest createHttpRequest(SpdyHeaderBlock requestFrame)
+    private static HttpRequest createHttpRequest(SpdyHeaderBlock requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
         HttpMethod  method  = SpdyHeaders.getMethod(requestFrame);
@@ -250,7 +250,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         return httpRequest;
     }
 
-    private HttpResponse createHttpResponse(SpdyHeaderBlock responseFrame)
+    private static HttpResponse createHttpResponse(SpdyHeaderBlock responseFrame)
             throws Exception {
         // Create the first line of the response from the name/value pairs
         HttpResponseStatus status = SpdyHeaders.getStatus(responseFrame);
