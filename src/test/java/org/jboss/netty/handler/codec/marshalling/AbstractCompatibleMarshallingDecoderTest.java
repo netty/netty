@@ -44,7 +44,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(0));
+        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(Integer.MAX_VALUE));
         
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -55,7 +55,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         
         byte[] testBytes = bout.toByteArray();
         
-        decoder.offer(ChannelBuffers.wrappedBuffer(testBytes));
+        decoder.offer(input(testBytes));
         assertTrue(decoder.finish());
         
         String unmarshalled = (String) decoder.poll();
@@ -65,13 +65,16 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         Assert.assertNull(decoder.poll());
     }
     
-
+    protected ChannelBuffer input(byte[] input) {
+        return ChannelBuffers.wrappedBuffer(input);
+    }
+    
     @Test
     public void testFragmentedUnmarshalling() throws IOException {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(0));
+        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(Integer.MAX_VALUE));
         
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -82,7 +85,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         
         byte[] testBytes = bout.toByteArray();
         
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(testBytes);
+        ChannelBuffer buffer = input(testBytes);
         ChannelBuffer slice = buffer.readSlice(2);
         
         decoder.offer(slice);
@@ -102,7 +105,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        ChannelUpstreamHandler mDecoder = createDecoder(1);
+        ChannelUpstreamHandler mDecoder = createDecoder(4);
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(mDecoder);
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -115,7 +118,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         byte[] testBytes = bout.toByteArray();
 
         try {
-            decoder.offer(ChannelBuffers.wrappedBuffer(testBytes));
+            decoder.offer(input(testBytes));
             fail();
         } catch (CodecEmbedderException e) {
             assertEquals(TooLongFrameException.class, e.getCause().getClass());
@@ -125,7 +128,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
 
     }
     
-    private ChannelUpstreamHandler createDecoder(long maxObjectSize) {
+    protected ChannelUpstreamHandler createDecoder(int maxObjectSize) {
         return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
     

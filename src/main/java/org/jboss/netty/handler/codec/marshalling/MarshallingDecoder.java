@@ -69,7 +69,7 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
         }
 
         Unmarshaller unmarshaller = provider.getUnmarshaller(channel);
-        ByteInput input = new ChannelBufferByteInput(buffer);
+        ByteInput input = new ChannelBufferByteInput(frame);
         
         try {
             unmarshaller.start(input);

@@ -37,19 +37,19 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  */
 public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     protected final UnmarshallerProvider provider;
-    protected final long maxObjectSize;
+    protected final int maxObjectSize;
     
     /**
      * Create a new instance of {@link CompatibleMarshallingDecoder}. 
      * 
      * @param provider      the {@link UnmarshallerProvider} which is used to obtain the {@link Unmarshaller} for the {@link Channel}
      * @param maxObjectSize the maximal size (in bytes) of the {@link Object} to unmarshal. Once the size is exceeded
-     *                      the {@link Channel} will get closed. Use a a maxObjectSize of <= 0 to disable this. 
+     *                      the {@link Channel} will get closed. Use a a maxObjectSize of {@link Integer#MAX_VALUE} to disable this. 
      *                      You should only do this if you are sure that the received Objects will never be big and the
      *                      sending side are trusted, as this opens the possibility for a DOS-Attack due an {@link OutOfMemoryError}.
      *                      
      */
-    public CompatibleMarshallingDecoder(UnmarshallerProvider provider, long maxObjectSize) {
+    public CompatibleMarshallingDecoder(UnmarshallerProvider provider, int maxObjectSize) {
         this.provider = provider;
         this.maxObjectSize = maxObjectSize;
     }
@@ -58,7 +58,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state) throws Exception {
         Unmarshaller unmarshaller = provider.getUnmarshaller(channel);
         ByteInput input = new ChannelBufferByteInput(buffer);
-        if (maxObjectSize > 0) {
+        if (maxObjectSize != Integer.MAX_VALUE) {
             input = new LimitingByteInput(input, maxObjectSize);
         } 
         try {

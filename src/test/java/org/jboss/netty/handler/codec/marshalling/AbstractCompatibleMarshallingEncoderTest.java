@@ -45,7 +45,7 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         ChannelBuffer buffer = encoder.poll();
         
         Unmarshaller unmarshaller = marshallerFactory.createUnmarshaller(configuration);
-        unmarshaller.start(Marshalling.createByteInput(buffer.toByteBuffer()));
+        unmarshaller.start(Marshalling.createByteInput(truncate(buffer).toByteBuffer()));
         String read = (String) unmarshaller.readObject();
         Assert.assertEquals(testObject, read);
         
@@ -55,6 +55,9 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         
         unmarshaller.finish();
         unmarshaller.close();
+    }
+    protected ChannelBuffer truncate(ChannelBuffer buf) {
+        return buf;
     }
 
     protected ChannelDownstreamHandler createEncoder() {
