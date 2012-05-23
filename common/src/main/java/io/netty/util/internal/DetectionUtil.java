@@ -34,6 +34,20 @@ public final class DetectionUtil {
 
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
+    private static final boolean IS_WINDOWS;
+
+    static {
+        String os = System.getProperty("os.name").toLowerCase();
+        // windows
+        IS_WINDOWS = os.indexOf("win") >= 0;
+    }
+
+    /**
+     * Return <code>true</code> if the JVM is running on Windows
+     */
+    public static boolean isWindows() {
+        return IS_WINDOWS;
+    }
 
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;

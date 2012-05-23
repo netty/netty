@@ -17,6 +17,7 @@ package io.netty.util;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DetectionUtil;
 import io.netty.util.internal.ReusableIterator;
 import io.netty.util.internal.SharedResourceMisuseDetector;
 
@@ -442,7 +443,16 @@ public class HashedWheelTimer implements Timer {
 
             for (;;) {
                 final long currentTime = System.currentTimeMillis();
-                final long sleepTime = tickDuration * tick - (currentTime - startTime);
+                long sleepTime = tickDuration * tick - (currentTime - startTime);
+
+                // Check if we run on windows, as if thats the case we will need
+                // to round the sleepTime as workaround for a bug that only affect
+                // the JVM if it runs on windows.
+                //
+                // See https://github.com/netty/netty/issues/356
+                if (DetectionUtil.isWindows()) {
+                    sleepTime = sleepTime / 10 * 10;
+                }
 
                 if (sleepTime <= 0) {
                     break;
