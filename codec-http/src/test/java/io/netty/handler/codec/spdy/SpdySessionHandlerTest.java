@@ -18,9 +18,9 @@ package io.netty.handler.codec.spdy;
 import java.util.List;
 import java.util.Map;
 
-import io.netty.channel.Channels;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.Channels;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
@@ -36,7 +36,7 @@ public class SpdySessionHandlerTest {
         closeMessage.setValue(closeSignal, 0);
     }
 
-    private void assertHeaderBlock(SpdyHeaderBlock received, SpdyHeaderBlock expected) {
+    private static void assertHeaderBlock(SpdyHeaderBlock received, SpdyHeaderBlock expected) {
         for (String name: expected.getHeaderNames()) {
             List<String> expectedValues = expected.getHeaders(name);
             List<String> receivedValues = received.getHeaders(name);
@@ -48,7 +48,7 @@ public class SpdySessionHandlerTest {
         Assert.assertTrue(received.getHeaders().isEmpty());
     }
 
-    private void assertDataFrame(Object msg, int streamID, boolean last) {
+    private static void assertDataFrame(Object msg, int streamID, boolean last) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyDataFrame);
         SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -56,7 +56,7 @@ public class SpdySessionHandlerTest {
         Assert.assertTrue(spdyDataFrame.isLast() == last);
     }
 
-    private void assertSynReply(Object msg, int streamID, boolean last, SpdyHeaderBlock headers) {
+    private static void assertSynReply(Object msg, int streamID, boolean last, SpdyHeaderBlock headers) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdySynReplyFrame);
         SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
@@ -65,7 +65,7 @@ public class SpdySessionHandlerTest {
         assertHeaderBlock(spdySynReplyFrame, headers);
     }
 
-    private void assertRstStream(Object msg, int streamID, SpdyStreamStatus status) {
+    private static void assertRstStream(Object msg, int streamID, SpdyStreamStatus status) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyRstStreamFrame);
         SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
@@ -73,21 +73,21 @@ public class SpdySessionHandlerTest {
         Assert.assertTrue(spdyRstStreamFrame.getStatus().equals(status));
     }
 
-    private void assertPing(Object msg, int ID) {
+    private static void assertPing(Object msg, int ID) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyPingFrame);
         SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
         Assert.assertTrue(spdyPingFrame.getID() == ID);
     }
 
-    private void assertGoAway(Object msg, int lastGoodStreamID) {
+    private static void assertGoAway(Object msg, int lastGoodStreamID) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyGoAwayFrame);
         SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
         Assert.assertTrue(spdyGoAwayFrame.getLastGoodStreamID() == lastGoodStreamID);
     }
 
-    private void assertHeaders(Object msg, int streamID, SpdyHeaderBlock headers) {
+    private static void assertHeaders(Object msg, int streamID, SpdyHeaderBlock headers) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyHeadersFrame);
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
@@ -95,10 +95,10 @@ public class SpdySessionHandlerTest {
         assertHeaderBlock(spdyHeadersFrame, headers);
     }
 
-    private void testSpdySessionHandler(boolean server) {
+    private void testSpdySessionHandler(int version, boolean server) {
         DecoderEmbedder<Object> sessionHandler =
             new DecoderEmbedder<Object>(
-                    new SpdySessionHandler(server), new EchoHandler(closeSignal, server));
+                    new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
         sessionHandler.pollAll();
 
         int localStreamID = server ? 1 : 2;
@@ -132,7 +132,7 @@ public class SpdySessionHandlerTest {
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamID));
         Assert.assertNull(sessionHandler.peek());
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamID));
-        assertRstStream(sessionHandler.poll(), remoteStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
+        assertRstStream(sessionHandler.poll(), remoteStreamID, SpdyStreamStatus.STREAM_IN_USE);
         Assert.assertNull(sessionHandler.peek());
         remoteStreamID += 2;
 
@@ -252,19 +252,19 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        testSpdySessionHandler(false);
+        testSpdySessionHandler(2, false);
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        testSpdySessionHandler(true);
+        testSpdySessionHandler(2, true);
     }
 
     // Echo Handler opens 4 half-closed streams on session connection
     // and then sets the number of concurrent streams to 3
     private class EchoHandler extends SimpleChannelUpstreamHandler {
-        private int closeSignal;
-        private boolean server;
+        private final int closeSignal;
+        private final boolean server;
 
         EchoHandler(int closeSignal, boolean server) {
             super();
@@ -299,9 +299,9 @@ public class SpdySessionHandlerTest {
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
                 throws Exception {
             Object msg = e.getMessage();
-            if ((msg instanceof SpdyDataFrame) ||
-                (msg instanceof SpdyPingFrame) ||
-                (msg instanceof SpdyHeadersFrame)) {
+            if (msg instanceof SpdyDataFrame ||
+                msg instanceof SpdyPingFrame ||
+                msg instanceof SpdyHeadersFrame) {
 
                 Channels.write(e.getChannel(), msg, e.getRemoteAddress());
                 return;

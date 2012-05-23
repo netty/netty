@@ -22,13 +22,14 @@ import java.util.Set;
  */
 public interface SpdySettingsFrame {
 
-    int SETTINGS_UPLOAD_BANDWIDTH       = 1;
-    int SETTINGS_DOWNLOAD_BANDWIDTH     = 2;
-    int SETTINGS_ROUND_TRIP_TIME        = 3;
-    int SETTINGS_MAX_CONCURRENT_STREAMS = 4;
-    int SETTINGS_CURRENT_CWND           = 5;
-    int SETTINGS_DOWNLOAD_RETRANS_RATE  = 6;
-    int SETTINGS_INITIAL_WINDOW_SIZE    = 7;
+    int SETTINGS_UPLOAD_BANDWIDTH               = 1;
+    int SETTINGS_DOWNLOAD_BANDWIDTH             = 2;
+    int SETTINGS_ROUND_TRIP_TIME                = 3;
+    int SETTINGS_MAX_CONCURRENT_STREAMS         = 4;
+    int SETTINGS_CURRENT_CWND                   = 5;
+    int SETTINGS_DOWNLOAD_RETRANS_RATE          = 6;
+    int SETTINGS_INITIAL_WINDOW_SIZE            = 7;
+    int SETTINGS_CLIENT_CERTIFICATE_VECTOR_SIZE = 8;
 
     /**
      * Returns a {@code Set} of the setting IDs.
@@ -49,7 +50,7 @@ public interface SpdySettingsFrame {
 
     /**
      * Sets the value of the setting ID.
-     * The ID must be positive and cannot exceeed 16777215.
+     * The ID must be positive and cannot exceed 16777215.
      */
     void setValue(int ID, int value);
 

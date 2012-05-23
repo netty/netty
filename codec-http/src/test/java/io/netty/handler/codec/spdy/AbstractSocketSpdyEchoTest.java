@@ -17,6 +17,8 @@ package io.netty.handler.codec.spdy;
 
 import static org.junit.Assert.*;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -47,15 +49,17 @@ import org.junit.Test;
 public abstract class AbstractSocketSpdyEchoTest {
 
     private static final Random random = new Random();
-    static final ChannelBuffer frames = ChannelBuffers.buffer(1160);
     static final int ignoredBytes = 20;
 
     private static ExecutorService executor;
 
-    static {
+    private static ChannelBuffer createFrames(int version) {
+        int length = version < 3 ? 1176 : 1174;
+        ChannelBuffer frames = ChannelBuffers.buffer(length);
+
         // SPDY UNKNOWN Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(0xFFFF);
         frames.writeByte(0xFF);
         frames.writeMedium(4);
@@ -63,12 +67,12 @@ public abstract class AbstractSocketSpdyEchoTest {
 
         // SPDY NOOP Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(5);
         frames.writeInt(0);
 
         // SPDY Data Frame
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeByte(0x01);
         frames.writeMedium(1024);
         for (int i = 0; i < 256; i ++) {
@@ -77,63 +81,98 @@ public abstract class AbstractSocketSpdyEchoTest {
 
         // SPDY SYN_STREAM Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(1);
         frames.writeByte(0x03);
-        frames.writeMedium(12);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        if (version < 3) {
+            frames.writeMedium(12);
+        } else {
+            frames.writeMedium(10);
+        }
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
         frames.writeShort(0x8000);
-        frames.writeShort(0);
+        if (version < 3) {
+            frames.writeShort(0);
+        }
 
         // SPDY SYN_REPLY Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(2);
         frames.writeByte(0x01);
-        frames.writeMedium(8);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
-        frames.writeInt(0);
+        if (version < 3) {
+            frames.writeMedium(8);
+        } else {
+            frames.writeMedium(4);
+        }
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
+        if (version < 3) {
+            frames.writeInt(0);
+        }
 
         // SPDY RST_STREAM Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(3);
         frames.writeInt(8);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
         frames.writeInt(random.nextInt() | 0x01);
 
         // SPDY SETTINGS Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(4);
         frames.writeByte(0x01);
         frames.writeMedium(12);
         frames.writeInt(1);
-        frames.writeMedium(random.nextInt());
-        frames.writeByte(0x03);
+        if (version < 3) {
+            frames.writeMedium(random.nextInt());
+            frames.writeByte(0x03);
+        } else {
+            frames.writeByte(0x03);
+            frames.writeMedium(random.nextInt());
+        }
         frames.writeInt(random.nextInt());
 
         // SPDY PING Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(6);
         frames.writeInt(4);
         frames.writeInt(random.nextInt());
 
         // SPDY GOAWAY Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(7);
-        frames.writeInt(4);
+        if (version < 3) {
+            frames.writeInt(4);
+        } else {
+            frames.writeInt(8);
+        }
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        if (version >= 3) {
+            frames.writeInt(random.nextInt() | 0x01);
+        }
 
         // SPDY HEADERS Frame
         frames.writeByte(0x80);
-        frames.writeByte(2);
+        frames.writeByte(version);
         frames.writeShort(8);
-        frames.writeInt(4);
-        frames.writeInt(random.nextInt() & 0x7FFFFFFF);
+        frames.writeByte(0x01);
+        frames.writeMedium(4);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
+
+        // SPDY WINDOW_UPDATE Frame
+        frames.writeByte(0x80);
+        frames.writeByte(version);
+        frames.writeShort(9);
+        frames.writeInt(8);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
+        frames.writeInt(random.nextInt() & 0x7FFFFFFF | 0x01);
+
+        return frames;
     }
 
     @BeforeClass
@@ -151,14 +190,22 @@ public abstract class AbstractSocketSpdyEchoTest {
 
     @Test(timeout = 10000)
     public void testSpdyEcho() throws Throwable {
+        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+            testSpdyEcho(version);
+        }
+    }
+
+    private void testSpdyEcho(int version) throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
-        EchoHandler sh = new EchoHandler(true);
-        EchoHandler ch = new EchoHandler(false);
+        ChannelBuffer frames = createFrames(version);
 
-        sb.getPipeline().addLast("decoder", new SpdyFrameDecoder());
-        sb.getPipeline().addLast("encoder", new SpdyFrameEncoder());
+        EchoHandler sh = new EchoHandler(frames, true);
+        EchoHandler ch = new EchoHandler(frames, false);
+
+        sb.getPipeline().addLast("decoder", new SpdyFrameDecoder(version));
+        sb.getPipeline().addLast("encoder", new SpdyFrameEncoder(version));
         sb.getPipeline().addLast("handler", sh);
 
         cb.getPipeline().addLast("handler", ch);
@@ -208,11 +255,13 @@ public abstract class AbstractSocketSpdyEchoTest {
     private class EchoHandler extends SimpleChannelUpstreamHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final ChannelBuffer frames;
         volatile int counter;
         final boolean server;
 
-        EchoHandler(boolean server) {
+        EchoHandler(ChannelBuffer frames, boolean server) {
             super();
+            this.frames = frames;
             this.server = server;
         }
 

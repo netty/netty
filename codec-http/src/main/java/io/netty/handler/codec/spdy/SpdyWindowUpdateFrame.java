@@ -16,28 +16,28 @@
 package io.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol GOAWAY Control Frame
+ * A SPDY Protocol WINDOW_UPDATE Control Frame
  */
-public interface SpdyGoAwayFrame {
+public interface SpdyWindowUpdateFrame {
 
     /**
-     * Returns the Last-good-stream-ID of this frame.
+     * Returns the Stream-ID of this frame.
      */
-    int getLastGoodStreamID();
+    int getStreamID();
 
     /**
-     * Sets the Last-good-stream-ID of this frame.  The Last-good-stream-ID
-     * cannot be negative.
+     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setLastGoodStreamID(int lastGoodStreamID);
+    void setStreamID(int streamID);
 
     /**
-     * Returns the status of this frame.
+     * Returns the Delta-Window-Size of this frame.
      */
-    SpdySessionStatus getStatus();
+    int getDeltaWindowSize();
 
     /**
-     * Sets the status of this frame.
+     * Sets the Delta-Window-Size of this frame.
+     * The Delta-Window-Size must be positive.
      */
-    void setStatus(SpdySessionStatus status);
+    void setDeltaWindowSize(int deltaWindowSize);
 }

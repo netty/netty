@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import java.util.List;
 import java.util.Map;
 
@@ -51,8 +53,8 @@ import io.netty.handler.codec.http.HttpResponse;
  * <tr>
  * <td>{@code "X-SPDY-Priority"}</td>
  * <td>The priority value for this request.
- * The priority should be between 0 and 3 inclusive.
- * 0 represents the highest priority and 3 represents the lowest.
+ * The priority should be between 0 and 7 inclusive.
+ * 0 represents the highest priority and 7 represents the lowest.
  * This header is optional and defaults to 0.</td>
  * </tr>
  * </table>
@@ -84,20 +86,31 @@ import io.netty.handler.codec.http.HttpResponse;
  * </tr>
  * <tr>
  * <td>{@code "X-SPDY-Associated-To-Stream-ID"}</td>
- * <td>The Stream-ID of the request that inititated this pushed resource.</td>
+ * <td>The Stream-ID of the request that initiated this pushed resource.</td>
  * </tr>
  * <tr>
  * <td>{@code "X-SPDY-Priority"}</td>
  * <td>The priority value for this resource.
- * The priority should be between 0 and 3 inclusive.
- * 0 represents the highest priority and 3 represents the lowest.
+ * The priority should be between 0 and 7 inclusive.
+ * 0 represents the highest priority and 7 represents the lowest.
  * This header is optional and defaults to 0.</td>
  * </tr>
  * <tr>
  * <td>{@code "X-SPDY-URL"}</td>
- * <td>The full URL for the resource being pushed.</td>
+ * <td>The absolute path for the resource being pushed.</td>
  * </tr>
  * </table>
+ *
+ * <h3>Required Annotations</h3>
+ *
+ * SPDY requires that all Requests and Pushed Resources contain
+ * an HTTP "Host" header.
+ *
+ * <h3>Optional Annotations</h3>
+ *
+ * Requests and Pushed Resources must contain a SPDY scheme header.
+ * This can be set via the {@code "X-SPDY-Scheme"} header but otherwise
+ * defaults to "https" as that is the most common SPDY deployment.
  *
  * <h3>Chunked Content</h3>
  *
@@ -112,9 +125,20 @@ import io.netty.handler.codec.http.HttpResponse;
  */
 public class SpdyHttpEncoder implements ChannelDownstreamHandler {
 
+    private final int spdyVersion;
     private volatile int currentStreamID;
 
-    public SpdyHttpEncoder() {
+    /**
+     * Creates a new instance.
+     *
+     * @param version the protocol version
+     */
+    public SpdyHttpEncoder(int version) {
+        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+            throw new IllegalArgumentException(
+                    "unsupported version: " + version);
+        }
+        spdyVersion = version;
     }
 
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
@@ -228,15 +252,17 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
             throws Exception {
         boolean chunked = httpMessage.isChunked();
 
-        // Get the Stream-ID, Associated-To-Stream-ID, Priority, and URL from the headers
+        // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
         int streamID = SpdyHttpHeaders.getStreamID(httpMessage);
         int associatedToStreamID = SpdyHttpHeaders.getAssociatedToStreamID(httpMessage);
         byte priority = SpdyHttpHeaders.getPriority(httpMessage);
         String URL = SpdyHttpHeaders.getUrl(httpMessage);
+        String scheme = SpdyHttpHeaders.getScheme(httpMessage);
         SpdyHttpHeaders.removeStreamID(httpMessage);
         SpdyHttpHeaders.removeAssociatedToStreamID(httpMessage);
         SpdyHttpHeaders.removePriority(httpMessage);
         SpdyHttpHeaders.removeUrl(httpMessage);
+        SpdyHttpHeaders.removeScheme(httpMessage);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
@@ -246,22 +272,37 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         httpMessage.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(streamID, associatedToStreamID, priority);
-        for (Map.Entry<String, String> entry: httpMessage.getHeaders()) {
-            spdySynStreamFrame.addHeader(entry.getKey(), entry.getValue());
-        }
 
         // Unfold the first line of the message into name/value pairs
-        SpdyHeaders.setVersion(spdySynStreamFrame, httpMessage.getProtocolVersion());
         if (httpMessage instanceof HttpRequest) {
             HttpRequest httpRequest = (HttpRequest) httpMessage;
-            SpdyHeaders.setMethod(spdySynStreamFrame, httpRequest.getMethod());
-            SpdyHeaders.setUrl(spdySynStreamFrame, httpRequest.getUri());
+            SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.getMethod());
+            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.getUri());
+            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
         }
         if (httpMessage instanceof HttpResponse) {
             HttpResponse httpResponse = (HttpResponse) httpMessage;
-            SpdyHeaders.setStatus(spdySynStreamFrame, httpResponse.getStatus());
-            SpdyHeaders.setUrl(spdySynStreamFrame, URL);
+            SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.getStatus());
+            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
             spdySynStreamFrame.setUnidirectional(true);
+        }
+
+        // Replace the HTTP host header with the SPDY host header
+        if (spdyVersion >= 3) {
+            String host = HttpHeaders.getHost(httpMessage);
+            httpMessage.removeHeader(HttpHeaders.Names.HOST);
+            SpdyHeaders.setHost(spdySynStreamFrame, host);
+        }
+
+        // Set the SPDY scheme header
+        if (scheme == null) {
+            scheme = "https";
+        }
+        SpdyHeaders.setScheme(spdyVersion, spdySynStreamFrame, scheme);
+
+        // Transfer the remaining HTTP headers
+        for (Map.Entry<String, String> entry: httpMessage.getHeaders()) {
+            spdySynStreamFrame.addHeader(entry.getKey(), entry.getValue());
         }
 
         if (chunked) {
@@ -290,13 +331,15 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         httpResponse.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
+
+        // Unfold the first line of the response into name/value pairs
+        SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, httpResponse.getStatus());
+        SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, httpResponse.getProtocolVersion());
+
+        // Transfer the remaining HTTP headers
         for (Map.Entry<String, String> entry: httpResponse.getHeaders()) {
             spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
         }
-
-        // Unfold the first line of the repsonse into name/value pairs
-        SpdyHeaders.setStatus(spdySynReplyFrame, httpResponse.getStatus());
-        SpdyHeaders.setVersion(spdySynReplyFrame, httpResponse.getProtocolVersion());
 
         if (chunked) {
             currentStreamID = streamID;

@@ -74,9 +74,9 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     public void setPriority(byte priority) {
-        if (priority < 0 || priority > 3) {
+        if (priority < 0 || priority > 7) {
             throw new IllegalArgumentException(
-                    "Priortiy must be between 0 and 3 inclusive: " + priority);
+                    "Priority must be between 0 and 7 inclusive: " + priority);
         }
         this.priority = priority;
     }

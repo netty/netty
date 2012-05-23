@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,22 +44,29 @@ import io.netty.handler.codec.oneone.OneToOneDecoder;
  */
 public class SpdyHttpDecoder extends OneToOneDecoder {
 
+    private final int spdyVersion;
     private final int maxContentLength;
     private final Map<Integer, HttpMessage> messageMap = new HashMap<Integer, HttpMessage>();
 
     /**
      * Creates a new instance.
      *
+     * @param version the protocol version
      * @param maxContentLength the maximum length of the message content.
      *        If the length of the message content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
-    public SpdyHttpDecoder(int maxContentLength) {
+    public SpdyHttpDecoder(int version, int maxContentLength) {
         super();
+        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+            throw new IllegalArgumentException(
+                    "unsupported version: " + version);
+        }
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " + maxContentLength);
         }
+        spdyVersion = version;
         this.maxContentLength = maxContentLength;
     }
 
@@ -72,7 +81,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             int streamID = spdySynStreamFrame.getStreamID();
 
             if (SpdyCodecUtil.isServerID(streamID)) {
-                // SYN_STREAM frames inititated by the server are pushed resources
+                // SYN_STREAM frames initiated by the server are pushed resources
                 int associatedToStreamID = spdySynStreamFrame.getAssociatedToStreamID();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
@@ -83,7 +92,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
                 }
 
-                String URL = SpdyHeaders.getUrl(spdySynStreamFrame);
+                String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
 
                 // If a client receives a SYN_STREAM without a 'url' header
                 // it must reply with a RST_STREAM with error code PROTOCOL_ERROR
@@ -94,7 +103,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 }
 
                 try {
-                    HttpResponse httpResponse = createHttpResponse(spdySynStreamFrame);
+                    HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
                     SpdyHttpHeaders.setStreamID(httpResponse, streamID);
@@ -118,7 +127,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             } else {
                 // SYN_STREAM frames initiated by the client are HTTP requests
                 try {
-                    HttpRequest httpRequest = createHttpRequest(spdySynStreamFrame);
+                    HttpRequest httpRequest = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID as a header
                     SpdyHttpHeaders.setStreamID(httpRequest, streamID);
@@ -130,13 +139,13 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                         messageMap.put(new Integer(streamID), httpRequest);
                     }
                 } catch (Exception e) {
-                    // If a client sends a SYN_STREAM without method, url, and version headers
-                    // the server must reply with a HTTP 400 BAD REQUEST reply
+                    // If a client sends a SYN_STREAM without all of the method, url (host and path),
+                    // scheme, and version headers the server must reply with a HTTP 400 BAD REQUEST reply.
                     // Also sends HTTP 400 BAD REQUEST reply if header name/value pairs are invalid
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
                     spdySynReplyFrame.setLast(true);
-                    SpdyHeaders.setStatus(spdySynReplyFrame, HttpResponseStatus.BAD_REQUEST);
-                    SpdyHeaders.setVersion(spdySynReplyFrame, HttpVersion.HTTP_1_0);
+                    SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, HttpResponseStatus.BAD_REQUEST);
+                    SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
                     Channels.write(ctx, Channels.future(channel), spdySynReplyFrame);
                 }
             }
@@ -147,7 +156,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             int streamID = spdySynReplyFrame.getStreamID();
 
             try {
-                HttpResponse httpResponse = createHttpResponse(spdySynReplyFrame);
+                HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynReplyFrame);
 
                 // Set the Stream-ID as a header
                 SpdyHttpHeaders.setStreamID(httpResponse, streamID);
@@ -215,66 +224,71 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 messageMap.remove(streamID);
                 return httpMessage;
             }
+
+        } else if (msg instanceof SpdyRstStreamFrame) {
+
+            SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
+            Integer streamID = new Integer(spdyRstStreamFrame.getStreamID());
+            messageMap.remove(streamID);
         }
 
         return null;
     }
 
-    private HttpRequest createHttpRequest(SpdyHeaderBlock requestFrame)
+    private static HttpRequest createHttpRequest(int spdyVersion, SpdyHeaderBlock requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
-        HttpMethod  method  = SpdyHeaders.getMethod(requestFrame);
-        String      url     = SpdyHeaders.getUrl(requestFrame);
-        HttpVersion version = SpdyHeaders.getVersion(requestFrame);
-        SpdyHeaders.removeMethod(requestFrame);
-        SpdyHeaders.removeUrl(requestFrame);
-        SpdyHeaders.removeVersion(requestFrame);
+        HttpMethod  method      = SpdyHeaders.getMethod(spdyVersion, requestFrame);
+        String      url         = SpdyHeaders.getUrl(spdyVersion, requestFrame);
+        HttpVersion httpVersion = SpdyHeaders.getVersion(spdyVersion, requestFrame);
+        SpdyHeaders.removeMethod(spdyVersion, requestFrame);
+        SpdyHeaders.removeUrl(spdyVersion, requestFrame);
+        SpdyHeaders.removeVersion(spdyVersion, requestFrame);
 
-        HttpRequest httpRequest = new DefaultHttpRequest(version, method, url);
-        for (Map.Entry<String, String> e: requestFrame.getHeaders()) {
-            httpRequest.addHeader(e.getKey(), e.getValue());
+        HttpRequest httpRequest = new DefaultHttpRequest(httpVersion, method, url);
+
+        // Remove the scheme header
+        SpdyHeaders.removeScheme(spdyVersion, requestFrame);
+
+        if (spdyVersion >= 3) {
+            // Replace the SPDY host header with the HTTP host header
+            String host = SpdyHeaders.getHost(requestFrame);
+            SpdyHeaders.removeHost(requestFrame);
+            HttpHeaders.setHost(httpRequest, host);
         }
 
-        // Chunked encoding is no longer valid
-        List<String> encodings = httpRequest.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-        encodings.remove(HttpHeaders.Values.CHUNKED);
-        if (encodings.isEmpty()) {
-            httpRequest.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-        } else {
-            httpRequest.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, encodings);
+        for (Map.Entry<String, String> e: requestFrame.getHeaders()) {
+            httpRequest.addHeader(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
         HttpHeaders.setKeepAlive(httpRequest, true);
 
+        // Transfer-Encoding header is not valid
+        httpRequest.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+
         return httpRequest;
     }
 
-    private HttpResponse createHttpResponse(SpdyHeaderBlock responseFrame)
+    private static HttpResponse createHttpResponse(int spdyVersion, SpdyHeaderBlock responseFrame)
             throws Exception {
         // Create the first line of the response from the name/value pairs
-        HttpResponseStatus status = SpdyHeaders.getStatus(responseFrame);
-        HttpVersion version = SpdyHeaders.getVersion(responseFrame);
-        SpdyHeaders.removeStatus(responseFrame);
-        SpdyHeaders.removeVersion(responseFrame);
+        HttpResponseStatus status = SpdyHeaders.getStatus(spdyVersion, responseFrame);
+        HttpVersion version = SpdyHeaders.getVersion(spdyVersion, responseFrame);
+        SpdyHeaders.removeStatus(spdyVersion, responseFrame);
+        SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
         HttpResponse httpResponse = new DefaultHttpResponse(version, status);
         for (Map.Entry<String, String> e: responseFrame.getHeaders()) {
             httpResponse.addHeader(e.getKey(), e.getValue());
         }
 
-        // Chunked encoding is no longer valid
-        List<String> encodings = httpResponse.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-        encodings.remove(HttpHeaders.Values.CHUNKED);
-        if (encodings.isEmpty()) {
-            httpResponse.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-        } else {
-            httpResponse.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, encodings);
-        }
-        httpResponse.removeHeader(HttpHeaders.Names.TRAILER);
-
         // The Connection and Keep-Alive headers are no longer valid
         HttpHeaders.setKeepAlive(httpResponse, true);
+
+        // Transfer-Encoding header is not valid
+        httpResponse.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpResponse.removeHeader(HttpHeaders.Names.TRAILER);
 
         return httpResponse;
     }
