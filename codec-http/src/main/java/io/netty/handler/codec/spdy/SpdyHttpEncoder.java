@@ -15,22 +15,18 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.List;
-import java.util.Map;
-
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpChunkTrailer;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Encodes {@link HttpRequest}s, {@link HttpResponse}s, and {@link HttpChunk}s
@@ -110,44 +106,31 @@ import io.netty.handler.codec.http.HttpResponse;
  * All pushed resources should be sent before sending the response
  * that corresponds to the initial request.
  */
-public class SpdyHttpEncoder implements ChannelDownstreamHandler {
+public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
 
     private volatile int currentStreamID;
 
-    public SpdyHttpEncoder() {
-    }
 
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
+    @Override
+    public Object encode(ChannelOutboundHandlerContext<Object> ctx, Object msg)
             throws Exception {
-        if (!(evt instanceof MessageEvent)) {
-            ctx.sendDownstream(evt);
-            return;
-        }
-
-        MessageEvent e = (MessageEvent) evt;
-        Object msg = e.getMessage();
-
         if (msg instanceof HttpRequest) {
 
             HttpRequest httpRequest = (HttpRequest) msg;
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
             int streamID = spdySynStreamFrame.getStreamID();
-            ChannelFuture future = getContentFuture(ctx, e, streamID, httpRequest);
-            Channels.write(ctx, future, spdySynStreamFrame, e.getRemoteAddress());
-
+            return new Object[] { spdySynStreamFrame, dataFrame(streamID, httpRequest) };
         } else if (msg instanceof HttpResponse) {
 
             HttpResponse httpResponse = (HttpResponse) msg;
             if (httpResponse.containsHeader(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
                 int streamID = spdySynStreamFrame.getStreamID();
-                ChannelFuture future = getContentFuture(ctx, e, streamID, httpResponse);
-                Channels.write(ctx, future, spdySynStreamFrame, e.getRemoteAddress());
+                return new Object[] { spdySynStreamFrame, dataFrame(streamID, httpResponse) };
             } else {
                 SpdySynReplyFrame spdySynReplyFrame = createSynReplyFrame(httpResponse);
                 int streamID = spdySynReplyFrame.getStreamID();
-                ChannelFuture future = getContentFuture(ctx, e, streamID, httpResponse);
-                Channels.write(ctx, future, spdySynReplyFrame, e.getRemoteAddress());
+                return new Object[] { spdySynReplyFrame, dataFrame(streamID, httpResponse) };
             }
 
         } else if (msg instanceof HttpChunk) {
@@ -161,7 +144,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
                 HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
                 List<Map.Entry<String, String>> trailers = trailer.getHeaders();
                 if (trailers.isEmpty()) {
-                    Channels.write(ctx, e.getFuture(), spdyDataFrame, e.getRemoteAddress());
+                    return spdyDataFrame;
                 } else {
                     // Create SPDY HEADERS frame out of trailers
                     SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamID);
@@ -170,23 +153,20 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
                     }
 
                     // Write HEADERS frame and append Data Frame
-                    ChannelFuture future = Channels.future(e.channel());
-                    future.addListener(new SpdyFrameWriter(ctx, e, spdyDataFrame));
-                    Channels.write(ctx, future, spdyHeadersFrame, e.getRemoteAddress());
+                    return new Object[] { spdyHeadersFrame, spdyDataFrame };
                 }
             } else {
-                Channels.write(ctx, e.getFuture(), spdyDataFrame, e.getRemoteAddress());
+                return spdyDataFrame;
             }
         } else {
             // Unknown message type
-            ctx.sendDownstream(evt);
+            throw new UnsupportedMessageTypeException();
         }
     }
 
-    private ChannelFuture getContentFuture(
-            ChannelHandlerContext ctx, MessageEvent e, int streamID, HttpMessage httpMessage) {
+    private static SpdyDataFrame dataFrame(int streamID, HttpMessage httpMessage) {
         if (httpMessage.getContent().readableBytes() == 0) {
-            return e.getFuture();
+            return null;
         }
 
         // Create SPDY Data Frame out of message content
@@ -194,34 +174,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         spdyDataFrame.setData(httpMessage.getContent());
         spdyDataFrame.setLast(true);
 
-        // Create new future and add listener
-        ChannelFuture future = Channels.future(e.channel());
-        future.addListener(new SpdyFrameWriter(ctx, e, spdyDataFrame));
-
-        return future;
-    }
-
-    private class SpdyFrameWriter implements ChannelFutureListener {
-
-        private final ChannelHandlerContext ctx;
-        private final MessageEvent e;
-        private final Object spdyFrame;
-
-        SpdyFrameWriter(ChannelHandlerContext ctx, MessageEvent e, Object spdyFrame) {
-            this.ctx = ctx;
-            this.e = e;
-            this.spdyFrame = spdyFrame;
-        }
-
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (future.isSuccess()) {
-                Channels.write(ctx, e.getFuture(), spdyFrame, e.getRemoteAddress());
-            } else if (future.isCancelled()) {
-                e.getFuture().cancel();
-            } else {
-                e.getFuture().setFailure(future.cause());
-            }
-        }
+        return spdyDataFrame;
     }
 
     private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage)

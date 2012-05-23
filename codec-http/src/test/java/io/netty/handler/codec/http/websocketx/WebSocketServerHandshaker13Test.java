@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.replay;
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+import static org.easymock.EasyMock.*;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.channel.DefaultChannelPipeline;
@@ -38,8 +37,8 @@ import org.junit.Test;
 
 public class WebSocketServerHandshaker13Test {
 
-    private DefaultChannelPipeline createPipeline() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
+    private static DefaultChannelPipeline createPipeline(Channel ch) {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(ch);
         pipeline.addLast("chunkAggregator", new HttpChunkAggregator(42));
         pipeline.addLast("requestDecoder", new HttpRequestDecoder());
         pipeline.addLast("responseEncoder", new HttpResponseEncoder());
@@ -50,7 +49,7 @@ public class WebSocketServerHandshaker13Test {
     public void testPerformOpeningHandshake() {
         Channel channelMock = EasyMock.createMock(Channel.class);
 
-        DefaultChannelPipeline pipeline = createPipeline();
+        DefaultChannelPipeline pipeline = createPipeline(channelMock);
         EasyMock.expect(channelMock.pipeline()).andReturn(pipeline);
 
         // capture the http response in order to verify the headers

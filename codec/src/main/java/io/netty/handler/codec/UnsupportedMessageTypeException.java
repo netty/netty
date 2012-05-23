@@ -5,10 +5,9 @@ public class UnsupportedMessageTypeException extends CodecException {
     private static final long serialVersionUID = 2799598826487038726L;
 
     public UnsupportedMessageTypeException(
-            Object message, Class<?> expectedType, Class<?>... otherExpectedTypes) {
+            Object message, Class<?>... expectedTypes) {
         super(message(
-                message == null? "null" : message.getClass().getName(),
-                expectedType, otherExpectedTypes));
+                message == null? "null" : message.getClass().getName(), expectedTypes));
     }
 
     public UnsupportedMessageTypeException() {
@@ -28,23 +27,21 @@ public class UnsupportedMessageTypeException extends CodecException {
     }
 
     private static String message(
-            String actualType, Class<?> expectedType, Class<?>... otherExpectedTypes) {
-        if (expectedType == null) {
-            throw new NullPointerException("expectedType");
-        }
-
+            String actualType, Class<?>... expectedTypes) {
         StringBuilder buf = new StringBuilder(actualType);
-        buf.append(" (expected: ").append(expectedType.getName());
 
-        if (otherExpectedTypes != null) {
-            for (Class<?> t: otherExpectedTypes) {
+        if (expectedTypes != null && expectedTypes.length > 0) {
+            buf.append(" (expected: ").append(expectedTypes[0].getName());
+            for (int i = 1; i < expectedTypes.length; i ++) {
+                Class<?> t = expectedTypes[i];
                 if (t == null) {
                     break;
                 }
                 buf.append(", ").append(t.getName());
             }
+            buf.append(')');
         }
 
-        return buf.append(')').toString();
+        return buf.toString();
     }
 }

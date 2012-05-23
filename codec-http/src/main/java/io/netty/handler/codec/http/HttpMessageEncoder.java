@@ -116,7 +116,6 @@ public abstract class HttpMessageEncoder extends MessageToStreamEncoder<Object> 
                     out.writeBytes(chunkContent, chunkContent.readerIndex(), chunkContent.readableBytes());
                 }
             }
-
         } else {
             throw new UnsupportedMessageTypeException(msg, HttpMessage.class, HttpChunk.class);
         }

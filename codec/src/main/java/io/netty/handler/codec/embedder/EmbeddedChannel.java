@@ -16,6 +16,7 @@
 package io.netty.handler.codec.embedder;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -30,7 +31,7 @@ import java.util.Queue;
 class EmbeddedChannel extends AbstractChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig();
-    private final ChannelBufferHolder<?> firstOut = ChannelBufferHolders.byteBuffer();
+    private final ChannelBufferHolder<?> firstOut;
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> productQueue;
@@ -50,6 +51,7 @@ class EmbeddedChannel extends AbstractChannel {
     EmbeddedChannel(Queue<Object> productQueue) {
         super(null, null);
         this.productQueue = productQueue;
+        firstOut = ChannelBufferHolders.catchAllBuffer(productQueue, ChannelBuffers.dynamicBuffer());
     }
 
     @Override

@@ -15,12 +15,14 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.handler.codec.CodecException;
+
 /**
  * An {@link Exception} which is thrown when the received frame cannot
  * be decoded by the {@link SpdyFrameDecoder}.
  * @apiviz.exclude
  */
-public class SpdyProtocolException extends Exception {
+public class SpdyProtocolException extends CodecException {
 
     private static final long serialVersionUID = -1097979786367505658L;
 

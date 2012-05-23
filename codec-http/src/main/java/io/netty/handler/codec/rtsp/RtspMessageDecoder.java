@@ -16,8 +16,7 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.handler.codec.http.HttpChunkAggregator;
@@ -74,10 +73,10 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
         aggregator = new DecoderEmbedder<HttpMessage>(new HttpChunkAggregator(maxContentLength));
     }
 
+
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel,
-            ChannelBuffer buffer, State state) throws Exception {
-        Object o = super.decode(ctx, channel, buffer, state);
+    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+        Object o = super.decode(ctx, buffer);
         if (o != null && aggregator.offer(o)) {
             return aggregator.poll();
         } else {

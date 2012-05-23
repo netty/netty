@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.replay;
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+import static org.easymock.EasyMock.*;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.channel.DefaultChannelPipeline;
@@ -37,28 +36,28 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class WebSocketServerHandshaker08Test {
-    
-    private DefaultChannelPipeline createPipeline() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
+
+    private static DefaultChannelPipeline createPipeline(Channel ch) {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(ch);
         pipeline.addLast("chunkAggregator", new HttpChunkAggregator(42));
         pipeline.addLast("requestDecoder", new HttpRequestDecoder());
         pipeline.addLast("responseEncoder", new HttpResponseEncoder());
         return pipeline;
     }
-    
+
     @Test
     public void testPerformOpeningHandshake() {
         Channel channelMock = EasyMock.createMock(Channel.class);
-        
-        DefaultChannelPipeline pipeline = createPipeline();
+
+        DefaultChannelPipeline pipeline = createPipeline(channelMock);
         EasyMock.expect(channelMock.pipeline()).andReturn(pipeline);
-        
+
         // capture the http response in order to verify the headers
         Capture<HttpResponse> res = new Capture<HttpResponse>();
         EasyMock.expect(channelMock.write(capture(res))).andReturn(new DefaultChannelFuture(channelMock, true));
-        
+
         replay(channelMock);
-        
+
         HttpRequest req = new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
         req.setHeader(Names.HOST, "server.example.com");
         req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
@@ -67,10 +66,10 @@ public class WebSocketServerHandshaker08Test {
         req.setHeader(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
         req.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
-        
+
         WebSocketServerHandshaker08 handsaker = new WebSocketServerHandshaker08("ws://example.com/chat", "chat", false);
         handsaker.handshake(channelMock, req);
-        
+
         Assert.assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getValue().getHeader(Names.SEC_WEBSOCKET_ACCEPT));
         Assert.assertEquals("chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
     }

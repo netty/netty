@@ -15,22 +15,29 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.concurrent.Executor;
 
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.ChannelBootstrap;
+import io.netty.channel.ServerChannelBootstrap;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.nio.SelectorEventLoop;
 
 public class NioNioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
 
     @Override
-    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioClientSocketChannelFactory(executor);
+    protected ChannelBootstrap newClientBootstrap() {
+        ChannelBootstrap b = new ChannelBootstrap();
+        b.eventLoop(new SelectorEventLoop());
+        b.channel(new NioSocketChannel());
+        return b;
     }
 
     @Override
-    protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioServerSocketChannelFactory(executor);
+    protected ServerChannelBootstrap newServerBootstrap() {
+        ServerChannelBootstrap b = new ServerChannelBootstrap();
+        b.eventLoop(new SelectorEventLoop(), new SelectorEventLoop());
+        b.channel(new NioServerSocketChannel());
+        return b;
     }
 
 }

@@ -43,6 +43,13 @@ public final class ChannelBufferHolder<E> {
         this.byteBuf = byteBuf;
     }
 
+    ChannelBufferHolder(Queue<E> msgBuf, ChannelBuffer byteBuf) {
+        ctx = null;
+        bypassDirection = 0;
+        this.msgBuf = msgBuf;
+        this.byteBuf = byteBuf;
+    }
+
     public boolean isBypass() {
         return bypassDirection != 0;
     }

@@ -17,10 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 /**
@@ -42,7 +40,7 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
  * converts {@link ChannelBuffer}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
 
     private DecoderEmbedder<ChannelBuffer> decoder;
 
@@ -53,11 +51,10 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Object msg = e.getMessage();
+    public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
-            ctx.sendUpstream(e);
+            return msg;
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
@@ -94,9 +91,6 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                     }
                 }
             }
-
-            // Because HttpMessage is a mutable object, we can simply forward the received event.
-            ctx.sendUpstream(e);
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
             ChannelBuffer content = c.getContent();
@@ -107,7 +101,6 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                     content = decode(content);
                     if (content.readable()) {
                         c.setContent(content);
-                        ctx.sendUpstream(e);
                     }
                 } else {
                     ChannelBuffer lastProduct = finishDecode();
@@ -115,19 +108,14 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
                     if (lastProduct.readable()) {
-                        Channels.fireMessageReceived(
-                                ctx, new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
+                        return new Object[] { new DefaultHttpChunk(lastProduct), c };
                     }
-
-                    // Emit the last chunk.
-                    ctx.sendUpstream(e);
                 }
-            } else {
-                ctx.sendUpstream(e);
             }
-        } else {
-            ctx.sendUpstream(e);
         }
+
+        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
+        return msg;
     }
 
     /**

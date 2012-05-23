@@ -16,82 +16,72 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToStreamEncoder;
 
 /**
  * Encodes a {@link WebSocketFrame} into a {@link ChannelBuffer}.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
- * 
+ *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
 @Sharable
-public class WebSocket00FrameEncoder extends OneToOneEncoder {
+public class WebSocket00FrameEncoder extends MessageToStreamEncoder<WebSocketFrame> {
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (msg instanceof WebSocketFrame) {
-            WebSocketFrame frame = (WebSocketFrame) msg;
-            if (frame instanceof TextWebSocketFrame) {
-                // Text frame
-                ChannelBuffer data = frame.getBinaryData();
-                ChannelBuffer encoded = channel.getConfig().getBufferFactory()
-                        .getBuffer(data.order(), data.readableBytes() + 2);
-                encoded.writeByte((byte) 0x00);
-                encoded.writeBytes(data, data.readerIndex(), data.readableBytes());
-                encoded.writeByte((byte) 0xFF);
-                return encoded;
-            } else if (frame instanceof CloseWebSocketFrame) {
-                // Close frame
-                ChannelBuffer data = frame.getBinaryData();
-                ChannelBuffer encoded = channel.getConfig().getBufferFactory().getBuffer(data.order(), 2);
-                encoded.writeByte((byte) 0xFF);
-                encoded.writeByte((byte) 0x00);
-                return encoded;
-            } else {
-                // Binary frame
-                ChannelBuffer data = frame.getBinaryData();
-                int dataLen = data.readableBytes();
-                ChannelBuffer encoded = channel.getConfig().getBufferFactory().getBuffer(data.order(), dataLen + 5);
+    public void encode(
+            ChannelOutboundHandlerContext<WebSocketFrame> ctx,
+            WebSocketFrame msg, ChannelBuffer out) throws Exception {
+        if (msg instanceof TextWebSocketFrame) {
+            // Text frame
+            ChannelBuffer data = msg.getBinaryData();
+            out.writeByte((byte) 0x00);
+            out.writeBytes(data, data.readerIndex(), data.readableBytes());
+            out.writeByte((byte) 0xFF);
+        } else if (msg instanceof CloseWebSocketFrame) {
+            // Close frame
+            out.writeByte((byte) 0xFF);
+            out.writeByte((byte) 0x00);
+        } else {
+            // Binary frame
+            ChannelBuffer data = msg.getBinaryData();
+            int dataLen = data.readableBytes();
+            out.ensureWritableBytes(dataLen + 5);
 
-                // Encode type.
-                encoded.writeByte((byte) 0x80);
+            // Encode type.
+            out.writeByte((byte) 0x80);
 
-                // Encode length.
-                int b1 = dataLen >>> 28 & 0x7F;
-                int b2 = dataLen >>> 14 & 0x7F;
-                int b3 = dataLen >>> 7 & 0x7F;
-                int b4 = dataLen & 0x7F;
-                if (b1 == 0) {
-                    if (b2 == 0) {
-                        if (b3 == 0) {
-                            encoded.writeByte(b4);
-                        } else {
-                            encoded.writeByte(b3 | 0x80);
-                            encoded.writeByte(b4);
-                        }
+            // Encode length.
+            int b1 = dataLen >>> 28 & 0x7F;
+            int b2 = dataLen >>> 14 & 0x7F;
+            int b3 = dataLen >>> 7 & 0x7F;
+            int b4 = dataLen & 0x7F;
+            if (b1 == 0) {
+                if (b2 == 0) {
+                    if (b3 == 0) {
+                        out.writeByte(b4);
                     } else {
-                        encoded.writeByte(b2 | 0x80);
-                        encoded.writeByte(b3 | 0x80);
-                        encoded.writeByte(b4);
+                        out.writeByte(b3 | 0x80);
+                        out.writeByte(b4);
                     }
                 } else {
-                    encoded.writeByte(b1 | 0x80);
-                    encoded.writeByte(b2 | 0x80);
-                    encoded.writeByte(b3 | 0x80);
-                    encoded.writeByte(b4);
+                    out.writeByte(b2 | 0x80);
+                    out.writeByte(b3 | 0x80);
+                    out.writeByte(b4);
                 }
-
-                // Encode binary data.
-                encoded.writeBytes(data, data.readerIndex(), dataLen);
-                return encoded;
+            } else {
+                out.writeByte(b1 | 0x80);
+                out.writeByte(b2 | 0x80);
+                out.writeByte(b3 | 0x80);
+                out.writeByte(b4);
             }
+
+            // Encode binary data.
+            out.writeBytes(data, data.readerIndex(), dataLen);
         }
-        return msg;
     }
 }

@@ -15,21 +15,14 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.channel.CombinedChannelHandler;
 
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
  * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameDecoder
  * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameEncoder
  */
-public class SpdyFrameCodec implements ChannelUpstreamHandler,
-       ChannelDownstreamHandler {
-
-    private final SpdyFrameDecoder decoder;
-    private final SpdyFrameEncoder encoder;
+public class SpdyFrameCodec extends CombinedChannelHandler {
 
     /**
      * Creates a new instance with the default decoder and encoder options
@@ -47,17 +40,8 @@ public class SpdyFrameCodec implements ChannelUpstreamHandler,
     public SpdyFrameCodec(
             int maxChunkSize, int maxFrameSize, int maxHeaderSize,
             int compressionLevel, int windowBits, int memLevel) {
-        decoder = new SpdyFrameDecoder(maxChunkSize, maxFrameSize, maxHeaderSize);
-        encoder = new SpdyFrameEncoder(compressionLevel, windowBits, memLevel);
-    }
-
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        decoder.handleUpstream(ctx, e);
-    }
-
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        encoder.handleDownstream(ctx, e);
+        super(
+                new SpdyFrameDecoder(maxChunkSize, maxFrameSize, maxHeaderSize),
+                new SpdyFrameEncoder(compressionLevel, windowBits, memLevel));
     }
 }

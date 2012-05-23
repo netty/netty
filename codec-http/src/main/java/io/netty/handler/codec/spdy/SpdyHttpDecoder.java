@@ -15,15 +15,10 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -34,13 +29,16 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Decodes {@link SpdySynStreamFrame}s, {@link SpdySynReplyFrame}s,
  * and {@link SpdyDataFrame}s into {@link HttpRequest}s and {@link HttpResponse}s.
  */
-public class SpdyHttpDecoder extends OneToOneDecoder {
+public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, Object> {
 
     private final int maxContentLength;
     private final Map<Integer, HttpMessage> messageMap = new HashMap<Integer, HttpMessage>();
@@ -61,8 +59,9 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         this.maxContentLength = maxContentLength;
     }
 
+
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg)
+    public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg)
             throws Exception {
 
         if (msg instanceof SpdySynStreamFrame) {
@@ -80,7 +79,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 if (associatedToStreamID == 0) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.INVALID_STREAM);
-                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    ctx.write(spdyRstStreamFrame);
                 }
 
                 String URL = SpdyHeaders.getUrl(spdySynStreamFrame);
@@ -90,7 +89,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 if (URL == null) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
-                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    ctx.write(spdyRstStreamFrame);
                 }
 
                 try {
@@ -112,7 +111,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 } catch (Exception e) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
-                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    ctx.write(spdyRstStreamFrame);
                 }
 
             } else {
@@ -137,7 +136,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     spdySynReplyFrame.setLast(true);
                     SpdyHeaders.setStatus(spdySynReplyFrame, HttpResponseStatus.BAD_REQUEST);
                     SpdyHeaders.setVersion(spdySynReplyFrame, HttpVersion.HTTP_1_0);
-                    Channels.write(ctx, Channels.future(channel), spdySynReplyFrame);
+                    ctx.write(spdySynReplyFrame);
                 }
             }
 
@@ -164,7 +163,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 // the client must reply with a RST_STREAM frame indicating a PROTOCOL_ERROR
                 SpdyRstStreamFrame spdyRstStreamFrame =
                     new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
-                Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                ctx.write(spdyRstStreamFrame);
             }
 
         } else if (msg instanceof SpdyHeadersFrame) {
@@ -203,8 +202,9 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             }
 
             if (content == ChannelBuffers.EMPTY_BUFFER) {
-                content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
-                content.writeBytes(spdyDataFrame.getData());
+                ChannelBuffer data = spdyDataFrame.getData();
+                content = ChannelBuffers.dynamicBuffer(data.readableBytes());
+                content.writeBytes(data, data.readerIndex(), data.readableBytes());
                 httpMessage.setContent(content);
             } else {
                 content.writeBytes(spdyDataFrame.getData());
@@ -220,7 +220,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         return null;
     }
 
-    private HttpRequest createHttpRequest(SpdyHeaderBlock requestFrame)
+    private static HttpRequest createHttpRequest(SpdyHeaderBlock requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
         HttpMethod  method  = SpdyHeaders.getMethod(requestFrame);
@@ -250,7 +250,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         return httpRequest;
     }
 
-    private HttpResponse createHttpResponse(SpdyHeaderBlock responseFrame)
+    private static HttpResponse createHttpResponse(SpdyHeaderBlock responseFrame)
             throws Exception {
         // Create the first line of the response from the name/value pairs
         HttpResponseStatus status = SpdyHeaders.getStatus(responseFrame);

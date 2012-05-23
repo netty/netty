@@ -15,8 +15,6 @@ public class ChannelInboundMessageHandlerAdapter<I> extends
     public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx)
             throws Exception {
         Queue<I> in = ctx.in().messageBuffer();
-        Queue<Object> out = ctx.nextIn().messageBuffer();
-        int oldOutSize = out.size();
         for (;;) {
             I msg = in.poll();
             if (msg == null) {
@@ -24,13 +22,10 @@ public class ChannelInboundMessageHandlerAdapter<I> extends
             }
             try {
                 messageReceived(ctx, msg);
+                ctx.fireInboundBufferUpdated();
             } catch (Throwable t) {
                 ctx.fireExceptionCaught(t);
             }
-        }
-
-        if (out.size() != oldOutSize) {
-            ctx.fireInboundBufferUpdated();
         }
     }
 

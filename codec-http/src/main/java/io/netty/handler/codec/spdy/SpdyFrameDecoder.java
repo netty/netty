@@ -15,18 +15,16 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.FrameDecoder;
-
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.handler.codec.StreamToMessageDecoder;
 
 /**
  * Decodes {@link ChannelBuffer}s into SPDY Data and Control Frames.
  */
-public class SpdyFrameDecoder extends FrameDecoder {
+public class SpdyFrameDecoder extends StreamToMessageDecoder<Object> {
 
     private final int maxChunkSize;
     private final int maxFrameSize;
@@ -48,7 +46,6 @@ public class SpdyFrameDecoder extends FrameDecoder {
      */
     public SpdyFrameDecoder(
             int maxChunkSize, int maxFrameSize, int maxHeaderSize) {
-        super(true); // Enable unfold for data frames
         if (maxChunkSize <= 0) {
             throw new IllegalArgumentException(
                     "maxChunkSize must be a positive integer: " + maxChunkSize);
@@ -67,32 +64,27 @@ public class SpdyFrameDecoder extends FrameDecoder {
     }
 
     @Override
-    protected Object decodeLast(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
-            throws Exception {
+    public Object decodeLast(ChannelInboundHandlerContext<Byte> ctx,
+            ChannelBuffer in) throws Exception {
         try {
-            Object frame = decode(ctx, channel, buffer);
-            return frame;
+            return decode(ctx, in);
         } finally {
             headerBlockDecompressor.end();
         }
     }
 
-
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
-            throws Exception {
-
+    public Object decode(ChannelInboundHandlerContext<Byte> ctx,
+            ChannelBuffer in) throws Exception {
         // Must read common header to determine frame length
-        if (buffer.readableBytes() < SPDY_HEADER_SIZE) {
+        if (in.readableBytes() < SPDY_HEADER_SIZE) {
             return null;
         }
 
         // Get frame length from common header
-        int frameOffset  = buffer.readerIndex();
+        int frameOffset  = in.readerIndex();
         int lengthOffset = frameOffset + SPDY_HEADER_LENGTH_OFFSET;
-        int dataLength   = getUnsignedMedium(buffer, lengthOffset);
+        int dataLength   = getUnsignedMedium(in, lengthOffset);
         int frameLength  = SPDY_HEADER_SIZE + dataLength;
 
         // Throw exception if frameLength exceeds maxFrameSize
@@ -102,37 +94,37 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
 
         // Wait until entire frame is readable
-        if (buffer.readableBytes() < frameLength) {
+        if (in.readableBytes() < frameLength) {
             return null;
         }
 
         // Read common header fields
-        boolean control = (buffer.getByte(frameOffset) & 0x80) != 0;
+        boolean control = (in.getByte(frameOffset) & 0x80) != 0;
         int flagsOffset = frameOffset + SPDY_HEADER_FLAGS_OFFSET;
-        byte flags = buffer.getByte(flagsOffset);
+        byte flags = in.getByte(flagsOffset);
 
         if (control) {
             // Decode control frame common header
-            int version = getUnsignedShort(buffer, frameOffset) & 0x7FFF;
+            int version = getUnsignedShort(in, frameOffset) & 0x7FFF;
 
             // Spdy versioning spec is broken
             if (version != SPDY_VERSION) {
-                buffer.skipBytes(frameLength);
+                in.skipBytes(frameLength);
                 throw new SpdyProtocolException(
                         "Unsupported version: " + version);
             }
 
             int typeOffset = frameOffset + SPDY_HEADER_TYPE_OFFSET;
-            int type = getUnsignedShort(buffer, typeOffset);
-            buffer.skipBytes(SPDY_HEADER_SIZE);
+            int type = getUnsignedShort(in, typeOffset);
+            in.skipBytes(SPDY_HEADER_SIZE);
 
-            int readerIndex = buffer.readerIndex();
-            buffer.skipBytes(dataLength);
-            return decodeControlFrame(type, flags, buffer.slice(readerIndex, dataLength));
+            int readerIndex = in.readerIndex();
+            in.skipBytes(dataLength);
+            return decodeControlFrame(type, flags, in.slice(readerIndex, dataLength));
         } else {
             // Decode data frame common header
-            int streamID = getUnsignedInt(buffer, frameOffset);
-            buffer.skipBytes(SPDY_HEADER_SIZE);
+            int streamID = getUnsignedInt(in, frameOffset);
+            in.skipBytes(SPDY_HEADER_SIZE);
 
             // Generate data frames that do not exceed maxChunkSize
             int numFrames = dataLength / maxChunkSize;
@@ -144,7 +136,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 int chunkSize = Math.min(maxChunkSize, dataLength);
                 SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
                 spdyDataFrame.setCompressed((flags & SPDY_DATA_FLAG_COMPRESS) != 0);
-                spdyDataFrame.setData(buffer.readBytes(chunkSize));
+                spdyDataFrame.setData(in.readBytes(chunkSize));
                 dataLength -= chunkSize;
                 if (dataLength == 0) {
                     spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
@@ -224,8 +216,8 @@ public class SpdyFrameDecoder extends FrameDecoder {
             // Each ID/Value entry is 8 bytes
             // The number of entries cannot exceed SPDY_MAX_LENGTH / 8;
             int numEntries = getUnsignedInt(data, data.readerIndex());
-            if ((numEntries > (SPDY_MAX_LENGTH - 4) / 8) ||
-                (data.readableBytes() != numEntries * 8 + 4)) {
+            if (numEntries > (SPDY_MAX_LENGTH - 4) / 8 ||
+                data.readableBytes() != numEntries * 8 + 4) {
                 throw new SpdyProtocolException(
                         "Received invalid SETTINGS control frame");
             }
@@ -240,14 +232,14 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 // Chromium Issue 79156
                 // SPDY setting ids are not written in network byte order
                 // Read id assuming the architecture is little endian
-                int ID = (data.readByte() & 0xFF) |
+                int ID = data.readByte() & 0xFF |
                          (data.readByte() & 0xFF) << 8 |
                          (data.readByte() & 0xFF) << 16;
                 byte ID_flags = data.readByte();
                 int value = getSignedInt(data, data.readerIndex());
                 data.skipBytes(4);
 
-                if (!(spdySettingsFrame.isSet(ID))) {
+                if (!spdySettingsFrame.isSet(ID)) {
                     boolean persistVal = (ID_flags & SPDY_SETTINGS_PERSIST_VALUE) != 0;
                     boolean persisted  = (ID_flags & SPDY_SETTINGS_PERSISTED) != 0;
                     spdySettingsFrame.setValue(ID, value, persistVal, persisted);
@@ -321,8 +313,8 @@ public class SpdyFrameDecoder extends FrameDecoder {
 
     private void decodeHeaderBlock(SpdyHeaderBlock headerFrame, ChannelBuffer headerBlock)
             throws Exception {
-        if ((headerBlock.readableBytes() == 2) &&
-            (headerBlock.getShort(headerBlock.readerIndex()) == 0)) {
+        if (headerBlock.readableBytes() == 2 &&
+            headerBlock.getShort(headerBlock.readerIndex()) == 0) {
             return;
         }
 

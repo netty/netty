@@ -33,6 +33,14 @@ public final class ChannelBufferHolders {
         return new ChannelBufferHolder<E>(ctx, false);
     }
 
+    public static <E> ChannelBufferHolder<E> catchAllBuffer() {
+        return catchAllBuffer(new ArrayDeque<E>(), ChannelBuffers.dynamicBuffer());
+    }
+
+    public static <E> ChannelBufferHolder<E> catchAllBuffer(Queue<E> msgBuf, ChannelBuffer byteBuf) {
+        return new ChannelBufferHolder<E>(msgBuf, byteBuf);
+    }
+
     private ChannelBufferHolders() {
         // Utility class
     }

@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -51,7 +50,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -71,11 +70,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi version 8 to 10</a>. Version 8, 9 and
      * 10 share the same wire protocol.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -86,11 +85,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 8
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -98,7 +97,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -108,7 +107,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.getId()));
+            logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.id()));
         }
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
@@ -150,7 +149,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame and close the connection
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

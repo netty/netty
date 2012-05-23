@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.concurrent.Executor;
 
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.socket.oio.OioClientSocketChannelFactory;
@@ -24,12 +23,12 @@ import io.netty.channel.socket.oio.OioServerSocketChannelFactory;
 public class OioOioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
 
     @Override
-    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
+    protected ChannelFactory newClientBootstrap() {
         return new OioClientSocketChannelFactory(executor);
     }
 
     @Override
-    protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
+    protected ChannelFactory newServerBootstrap() {
         return new OioServerSocketChannelFactory(executor, executor);
     }
 

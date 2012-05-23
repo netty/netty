@@ -18,7 +18,6 @@ package io.netty.handler.codec.http.websocketx;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
@@ -52,7 +51,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -70,11 +69,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * is really a rehash of <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76" >hixie-76</a> and
      * <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75" >hixie-75</a>.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -84,14 +83,14 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, sample
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -99,10 +98,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -112,7 +111,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.getId()));
+            logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
         }
 
         // Serve the WebSocket handshake request.
@@ -178,7 +177,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

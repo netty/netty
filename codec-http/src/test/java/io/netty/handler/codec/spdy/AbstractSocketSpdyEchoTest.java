@@ -16,30 +16,26 @@
 package io.netty.handler.codec.spdy;
 
 import static org.junit.Assert.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelBootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ServerChannelBootstrap;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Random;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.Channels;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -146,27 +142,38 @@ public abstract class AbstractSocketSpdyEchoTest {
         ExecutorUtil.terminate(executor);
     }
 
-    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
-    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
+    protected abstract ServerChannelBootstrap newServerBootstrap();
+    protected abstract ChannelBootstrap newClientBootstrap();
 
     @Test(timeout = 10000)
     public void testSpdyEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        ServerChannelBootstrap sb = newServerBootstrap();
+        ChannelBootstrap cb = newClientBootstrap();
 
-        EchoHandler sh = new EchoHandler(true);
-        EchoHandler ch = new EchoHandler(false);
+        final ServerHandler sh = new ServerHandler();
+        final ClientHandler ch = new ClientHandler();
 
-        sb.pipeline().addLast("decoder", new SpdyFrameDecoder());
-        sb.pipeline().addLast("encoder", new SpdyFrameEncoder());
-        sb.pipeline().addLast("handler", sh);
+        sb.childInitializer(new ChannelInitializer() {
+            @Override
+            public void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(
+                        new SpdyFrameDecoder(),
+                        new SpdyFrameEncoder(),
+                        sh);
+            }
+        });
 
-        cb.pipeline().addLast("handler", ch);
+        cb.initializer(new ChannelInitializer() {
+            @Override
+            public void initChannel(Channel channel) throws Exception {
+                channel.pipeline().addLast(ch);
+            }
+        });
 
-        Channel sc = sb.bind(new InetSocketAddress(0));
-        int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
+        Channel sc = sb.localAddress(new InetSocketAddress(0)).bind().sync().channel();
+        int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(InetAddress.getLocalHost(), port));
+        ChannelFuture ccf = cb.remoteAddress(new InetSocketAddress(InetAddress.getLocalHost(), port)).connect();
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.channel();
@@ -205,47 +212,62 @@ public abstract class AbstractSocketSpdyEchoTest {
         }
     }
 
-    private class EchoHandler extends SimpleChannelUpstreamHandler {
+    private class ServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+        volatile Channel channel;
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+
+        @Override
+        public void channelRegistered(ChannelInboundHandlerContext<Object> ctx)
+                throws Exception {
+            channel = ctx.channel();
+        }
+
+        @Override
+        public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg)
+                throws Exception {
+            ctx.write(msg);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
+                Throwable cause) throws Exception {
+            if (exception.compareAndSet(null, cause)) {
+                ctx.close();
+            }
+        }
+    }
+
+    private class ClientHandler extends ChannelInboundStreamHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
-        final boolean server;
 
-        EchoHandler(boolean server) {
-            super();
-            this.server = server;
+        @Override
+        public void channelRegistered(ChannelInboundHandlerContext<Byte> ctx)
+                throws Exception {
+            channel = ctx.channel();
         }
 
         @Override
-        public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+        public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
                 throws Exception {
-            channel = e.channel();
-        }
+            ChannelBuffer m = ctx.in().byteBuffer().readBytes(ctx.in().byteBuffer().readableBytes());
+            byte[] actual = new byte[m.readableBytes()];
+            m.getBytes(0, actual);
 
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-                throws Exception {
-            if (server) {
-                Channels.write(channel, e.getMessage(), e.getRemoteAddress());
-            } else {
-                ChannelBuffer m = (ChannelBuffer) e.getMessage();
-                byte[] actual = new byte[m.readableBytes()];
-                m.getBytes(0, actual);
-
-                int lastIdx = counter;
-                for (int i = 0; i < actual.length; i ++) {
-                    assertEquals(frames.getByte(ignoredBytes + i + lastIdx), actual[i]);
-                }
-
-                counter += actual.length;
+            int lastIdx = counter;
+            for (int i = 0; i < actual.length; i ++) {
+                assertEquals(frames.getByte(ignoredBytes + i + lastIdx), actual[i]);
             }
+
+            counter += actual.length;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
-            if (exception.compareAndSet(null, e.cause())) {
-                e.channel().close();
+        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+                Throwable cause) throws Exception {
+            if (exception.compareAndSet(null, cause)) {
+                ctx.close();
             }
         }
     }

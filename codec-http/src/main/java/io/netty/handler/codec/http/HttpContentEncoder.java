@@ -15,16 +15,15 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.Queue;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
 import io.netty.util.internal.QueueFactory;
+
+import java.util.Queue;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
@@ -48,7 +47,7 @@ import io.netty.util.internal.QueueFactory;
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
  * converts them into {@link ChannelBuffer}s.
  */
-public abstract class HttpContentEncoder extends SimpleChannelHandler {
+public abstract class HttpContentEncoder extends MessageToMessageCodec<Object, Object, Object, Object> {
 
     private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue(String.class);
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
@@ -60,12 +59,10 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg)
             throws Exception {
-        Object msg = e.getMessage();
         if (!(msg instanceof HttpMessage)) {
-            ctx.sendUpstream(e);
-            return;
+            return msg;
         }
 
         HttpMessage m = (HttpMessage) msg;
@@ -75,18 +72,15 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         }
         boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
         assert offered;
-
-        ctx.sendUpstream(e);
+        return m;
     }
 
     @Override
-    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e)
+    public Object encode(ChannelOutboundHandlerContext<Object> ctx, Object msg)
             throws Exception {
-
-        Object msg = e.getMessage();
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
-            ctx.sendDownstream(e);
+            return msg;
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
@@ -100,14 +94,12 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
 
             boolean hasContent = m.isChunked() || m.getContent().readable();
             if (!hasContent) {
-                ctx.sendDownstream(e);
-                return;
+                return m;
             }
 
             Result result = beginEncode(m, acceptEncoding);
             if (result == null) {
-                ctx.sendDownstream(e);
-                return;
+                return m;
             }
 
             encoder = result.getContentEncoder();
@@ -132,9 +124,6 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                             Integer.toString(content.readableBytes()));
                 }
             }
-
-            // Because HttpMessage is a mutable object, we can simply forward the write request.
-            ctx.sendDownstream(e);
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
             ChannelBuffer content = c.getContent();
@@ -145,7 +134,6 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                     content = encode(content);
                     if (content.readable()) {
                         c.setContent(content);
-                        ctx.sendDownstream(e);
                     }
                 } else {
                     ChannelBuffer lastProduct = finishEncode();
@@ -153,19 +141,14 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
                     if (lastProduct.readable()) {
-                        Channels.write(
-                                ctx, Channels.succeededFuture(e.channel()), new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
+                        return new Object[] { new DefaultHttpChunk(lastProduct), c };
                     }
-
-                    // Emit the last chunk.
-                    ctx.sendDownstream(e);
                 }
-            } else {
-                ctx.sendDownstream(e);
             }
-        } else {
-            ctx.sendDownstream(e);
         }
+
+        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
+        return msg;
     }
 
     /**

@@ -16,8 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.VoidEnum;
@@ -27,11 +26,11 @@ import io.netty.util.VoidEnum;
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
- * 
+ *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
-public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
+public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, VoidEnum> {
 
     private static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
@@ -45,7 +44,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
     /**
      * Creates a new instance of {@code WebSocketFrameDecoder} with the specified {@code maxFrameSize}. If the client
      * sends a frame size larger than {@code maxFrameSize}, the channel will be closed.
-     * 
+     *
      * @param maxFrameSize
      *            the maximum frame size to decode
      */
@@ -54,23 +53,21 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state)
-            throws Exception {
-
+    public WebSocketFrame decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
-            buffer.skipBytes(actualReadableBytes());
+            in.skipBytes(actualReadableBytes());
             return null;
         }
 
         // Decode a frame otherwise.
-        byte type = buffer.readByte();
+        byte type = in.readByte();
         if ((type & 0x80) == 0x80) {
             // If the MSB on type is set, decode the frame length
-            return decodeBinaryFrame(type, buffer);
+            return decodeBinaryFrame(type, in);
         } else {
             // Decode a 0xff terminated UTF-8 string
-            return decodeTextFrame(buffer);
+            return decodeTextFrame(in);
         }
     }
 
