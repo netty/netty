@@ -18,15 +18,13 @@ package io.netty.example.http.snoop;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 
-import java.util.Queue;
-
-public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter<Object> {
+public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private boolean readingChunks;
 
@@ -39,19 +37,7 @@ public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter<Object>
 
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
-            throws Exception {
-        Queue<Object> in = ctx.in().messageBuffer();
-        while (handleMessage(in.poll())) {
-            continue;
-        }
-    }
-
-    private boolean handleMessage(Object msg) throws Exception {
-        if (msg == null) {
-            return false;
-        }
-
+    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (!readingChunks) {
             HttpResponse response = (HttpResponse) msg;
 
@@ -89,8 +75,6 @@ public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter<Object>
                 System.out.flush();
             }
         }
-
-        return true;
     }
 
     @Override

@@ -25,8 +25,8 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.CookieEncoder;
@@ -42,10 +42,9 @@ import io.netty.util.CharsetUtil;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Queue;
 import java.util.Set;
 
-public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter<Object> {
+public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private HttpRequest request;
     private boolean readingChunks;
@@ -59,19 +58,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter<Object>
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
-            throws Exception {
-        Queue<Object> in = ctx.in().messageBuffer();
-        while (handleMessage(ctx, in.poll())) {
-            continue;
-        }
-    }
-
-    private boolean handleMessage(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
-        if (msg == null) {
-            return false;
-        }
-
+    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) msg;
 
@@ -136,8 +123,6 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter<Object>
                 buf.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
             }
         }
-
-        return true;
     }
 
     private void writeResponse(ChannelInboundHandlerContext<Object> ctx) {
