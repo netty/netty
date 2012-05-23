@@ -130,7 +130,8 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
     @Override
     public ChannelBuffer copy(int index, int length) {
         if (index < 0 || length < 0 || index + length > array.length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to copy - Need "
+                    + (index + length) + ", maximum is " + array.length);
         }
 
         byte[] copiedArray = new byte[length];

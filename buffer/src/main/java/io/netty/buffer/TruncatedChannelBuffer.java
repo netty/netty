@@ -37,7 +37,8 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
 
     public TruncatedChannelBuffer(ChannelBuffer buffer, int length) {
         if (length > buffer.capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Length is too large, got "
+                    + length + " but can't go higher than " + buffer.capacity());
         }
 
         this.buffer = buffer;
@@ -239,7 +240,8 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
 
     private void checkIndex(int index) {
         if (index < 0 || index >= capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid index of " + index
+                    + ", maximum is " + capacity());
         }
     }
 
@@ -249,7 +251,8 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
                     "length is negative: " + length);
         }
         if (index + length > capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid index of "
+                    + (index + length) + ", maximum is " + capacity());
         }
     }
 }

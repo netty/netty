@@ -38,11 +38,13 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
 
     public SlicedChannelBuffer(ChannelBuffer buffer, int index, int length) {
         if (index < 0 || index > buffer.capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid index of " + index
+                    + ", maximum is " + buffer.capacity());
         }
 
         if (index + length > buffer.capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid combined index of "
+                    + (index + length) + ", maximum is " + buffer.capacity());
         }
 
         this.buffer = buffer;
@@ -245,7 +247,8 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
 
     private void checkIndex(int index) {
         if (index < 0 || index >= capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid index: " + index
+                    + ", maximum is " + capacity());
         }
     }
 
@@ -255,10 +258,11 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
                     "length is negative: " + length);
         }
         if (startIndex < 0) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("startIndex cannot be negative");
         }
         if (startIndex + length > capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Index too big - Bytes needed: "
+                    + (startIndex + length) + ", maximum is " + capacity());
         }
     }
 }
