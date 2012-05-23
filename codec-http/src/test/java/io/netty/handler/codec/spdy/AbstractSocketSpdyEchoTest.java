@@ -26,18 +26,15 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ServerChannelBootstrap;
-import io.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public abstract class AbstractSocketSpdyEchoTest {
@@ -45,8 +42,6 @@ public abstract class AbstractSocketSpdyEchoTest {
     private static final Random random = new Random();
     static final ChannelBuffer frames = ChannelBuffers.buffer(1160);
     static final int ignoredBytes = 20;
-
-    private static ExecutorService executor;
 
     static {
         // SPDY UNKNOWN Frame
@@ -132,14 +127,19 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
+    private ServerChannelBootstrap sb;
+    private ChannelBootstrap cb;
+
+    @Before
+    public void initBootstrap() {
+        sb = newServerBootstrap();
+        cb = newClientBootstrap();
     }
 
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
+    @After
+    public void destroyBootstrap() {
+        sb.shutdown();
+        cb.shutdown();
     }
 
     protected abstract ServerChannelBootstrap newServerBootstrap();
@@ -147,9 +147,6 @@ public abstract class AbstractSocketSpdyEchoTest {
 
     @Test(timeout = 10000)
     public void testSpdyEcho() throws Throwable {
-        ServerChannelBootstrap sb = newServerBootstrap();
-        ChannelBootstrap cb = newClientBootstrap();
-
         final ServerHandler sh = new ServerHandler();
         final ClientHandler ch = new ClientHandler();
 
