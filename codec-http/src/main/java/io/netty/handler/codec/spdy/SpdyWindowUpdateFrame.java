@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.handler.codec.spdy;
+package io.netty.handler.codec.spdy;
 
 /**
  * A SPDY Protocol WINDOW_UPDATE Control Frame

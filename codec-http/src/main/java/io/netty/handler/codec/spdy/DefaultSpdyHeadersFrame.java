@@ -24,6 +24,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         implements SpdyHeadersFrame {
 
     private int streamID;
+    private boolean last;
 
     /**
      * Creates a new instance.
@@ -47,10 +48,21 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         this.streamID = streamID;
     }
 
+    public boolean isLast() {
+        return last;
+    }
+
+    public void setLast(boolean last) {
+        this.last = last;
+    }
+
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
+        buf.append("(last: ");
+        buf.append(isLast());
+        buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
         buf.append(streamID);

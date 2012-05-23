@@ -95,10 +95,10 @@ public class SpdySessionHandlerTest {
         assertHeaderBlock(spdyHeadersFrame, headers);
     }
 
-    private void testSpdySessionHandler(boolean server) {
+    private void testSpdySessionHandler(int version, boolean server) {
         DecoderEmbedder<Object> sessionHandler =
             new DecoderEmbedder<Object>(
-                    new SpdySessionHandler(server), new EchoHandler(closeSignal, server));
+                    new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
         sessionHandler.pollAll();
 
         int localStreamID = server ? 1 : 2;
@@ -132,7 +132,7 @@ public class SpdySessionHandlerTest {
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamID));
         Assert.assertNull(sessionHandler.peek());
         sessionHandler.offer(new DefaultSpdySynReplyFrame(remoteStreamID));
-        assertRstStream(sessionHandler.poll(), remoteStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
+        assertRstStream(sessionHandler.poll(), remoteStreamID, SpdyStreamStatus.STREAM_IN_USE);
         Assert.assertNull(sessionHandler.peek());
         remoteStreamID += 2;
 
@@ -252,12 +252,12 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        testSpdySessionHandler(false);
+        testSpdySessionHandler(2, false);
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        testSpdySessionHandler(true);
+        testSpdySessionHandler(2, true);
     }
 
     // Echo Handler opens 4 half-closed streams on session connection

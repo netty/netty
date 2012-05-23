@@ -32,23 +32,24 @@ public class SpdyFrameCodec implements ChannelUpstreamHandler,
     private final SpdyFrameEncoder encoder;
 
     /**
-     * Creates a new instance with the default decoder and encoder options
+     * Creates a new instance with the specified {@code version} and
+     * the default decoder and encoder options
      * ({@code maxChunkSize (8192)}, {@code maxHeaderSize (16384)},
-     * {@code compressionLevel (6)}, {@code windowBits (15)}, and
-     * {@code memLevel (8)}).
+     * {@code compressionLevel (6)}, {@code windowBits (15)},
+     * and {@code memLevel (8)}).
      */
-    public SpdyFrameCodec() {
-        this(8192, 16384, 6, 15, 8);
+    public SpdyFrameCodec(int version) {
+        this(version, 8192, 16384, 6, 15, 8);
     }
 
     /**
      * Creates a new instance with the specified decoder and encoder options.
      */
     public SpdyFrameCodec(
-            int maxChunkSize, int maxHeaderSize,
+            int version, int maxChunkSize, int maxHeaderSize,
             int compressionLevel, int windowBits, int memLevel) {
-        decoder = new SpdyFrameDecoder(maxChunkSize, maxHeaderSize);
-        encoder = new SpdyFrameEncoder(compressionLevel, windowBits, memLevel);
+        decoder = new SpdyFrameDecoder(version, maxChunkSize, maxHeaderSize);
+        encoder = new SpdyFrameEncoder(version, compressionLevel, windowBits, memLevel);
     }
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)

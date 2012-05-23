@@ -23,6 +23,7 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
 
     private int lastGoodStreamID;
+    private SpdySessionStatus status;
 
     /**
      * Creates a new instance.
@@ -30,7 +31,28 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
      * @param lastGoodStreamID the Last-good-stream-ID of this frame
      */
     public DefaultSpdyGoAwayFrame(int lastGoodStreamID) {
+        this(lastGoodStreamID, 0);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param lastGoodStreamID the Last-good-stream-ID of this frame
+     * @param statusCode       the Status code of this frame
+     */
+    public DefaultSpdyGoAwayFrame(int lastGoodStreamID, int statusCode) {
+        this(lastGoodStreamID, SpdySessionStatus.valueOf(statusCode));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param lastGoodStreamID the Last-good-stream-ID of this frame
+     * @param status           the status of this frame
+     */
+    public DefaultSpdyGoAwayFrame(int lastGoodStreamID, SpdySessionStatus status) {
         setLastGoodStreamID(lastGoodStreamID);
+        setStatus(status);
     }
 
     public int getLastGoodStreamID() {
@@ -45,6 +67,14 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         this.lastGoodStreamID = lastGoodStreamID;
     }
 
+    public SpdySessionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SpdySessionStatus status) {
+        this.status = status;
+    }
+
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
@@ -52,6 +82,9 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Last-good-stream-ID = ");
         buf.append(lastGoodStreamID);
+        buf.append(StringUtil.NEWLINE);
+        buf.append("--> Status: ");
+        buf.append(status.toString());
         return buf.toString();
     }
 }

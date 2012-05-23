@@ -21,13 +21,14 @@ import io.netty.util.internal.DetectionUtil;
 abstract class SpdyHeaderBlockCompressor {
 
     static SpdyHeaderBlockCompressor newInstance(
-            int compressionLevel, int windowBits, int memLevel) {
+            int version, int compressionLevel, int windowBits, int memLevel) {
 
         if (DetectionUtil.javaVersion() >= 7) {
-            return new SpdyHeaderBlockZlibCompressor(compressionLevel);
+            return new SpdyHeaderBlockZlibCompressor(
+                    version, compressionLevel);
         } else {
             return new SpdyHeaderBlockJZlibCompressor(
-                    compressionLevel, windowBits, memLevel);
+                    version, compressionLevel, windowBits, memLevel);
         }
     }
 
