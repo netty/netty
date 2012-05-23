@@ -69,7 +69,8 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
             throw new IllegalArgumentException("length: " + length);
         }
         if (length > buffer.readableBytes()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
+                    + length + ", maximum is " + buffer.readableBytes());
         }
 
         this.buffer = buffer;
@@ -237,10 +238,11 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
 
     private void checkAvailable(int fieldSize) throws IOException {
         if (fieldSize < 0) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("fieldSize cannot be a negative number");
         }
         if (fieldSize > available()) {
-            throw new EOFException();
+            throw new EOFException("fieldSize is too long! Length is " + fieldSize 
+                    + ", but maximum is " + available());
         }
     }
 }
