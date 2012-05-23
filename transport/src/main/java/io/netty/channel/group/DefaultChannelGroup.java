@@ -116,7 +116,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         boolean added = map.putIfAbsent(channel.id(), channel) == null;
         if (added) {
-            channel.addClosureListener(remover);
+            channel.closeFuture().addListener(remover);
         }
         return added;
     }
@@ -142,7 +142,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             return false;
         }
 
-        c.removeClosureListener(remover);
+        c.closeFuture().removeListener(remover);
         return true;
     }
 
