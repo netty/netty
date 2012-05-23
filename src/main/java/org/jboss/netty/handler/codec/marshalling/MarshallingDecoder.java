@@ -15,12 +15,9 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import java.io.IOException;
 import java.io.ObjectStreamConstants;
 
 import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.MarshallerFactory;
-import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
@@ -38,30 +35,27 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  *
  */
 public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
-    protected final MarshallingConfiguration config;
-    protected final MarshallerFactory factory;
+    protected final UnmarshallerProvider provider;
     protected final long maxObjectSize;
     
     /**
      * Create a new instance of {@link MarshallingDecoder}. 
      * 
-     * @param factory       the {@link MarshallerFactory} which is used to obtain the {@link Unmarshaller} from
-     * @param config        the {@link MarshallingConfiguration} to use 
+     * @param provider      the {@link UnmarshallerProvider} which is used to obtain the {@link Unmarshaller} for the {@link Channel}
      * @param maxObjectSize the maximal size (in bytes) of the {@link Object} to unmarshal. Once the size is exceeded
      *                      the {@link Channel} will get closed. Use a a maxObjectSize of <= 0 to disable this. 
      *                      You should only do this if you are sure that the received Objects will never be big and the
      *                      sending side are trusted, as this opens the possibility for a DOS-Attack due an {@link OutOfMemoryError}.
      *                      
      */
-    public MarshallingDecoder(MarshallerFactory factory, MarshallingConfiguration config, long maxObjectSize) {
-        this.factory = factory;
-        this.config = config;
+    public MarshallingDecoder(UnmarshallerProvider provider, long maxObjectSize) {
+        this.provider = provider;
         this.maxObjectSize = maxObjectSize;
     }
     
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state) throws Exception {
-        Unmarshaller unmarshaller = factory.createUnmarshaller(config);
+        Unmarshaller unmarshaller = provider.getUnmarshaller(channel);
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize > 0) {
             input = new LimitingByteInput(input, maxObjectSize);
@@ -110,13 +104,5 @@ public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
         } else {
             super.exceptionCaught(ctx, e);
         }
-    }
-    
-    /**
-     * Create a new {@link Unmarshaller} for the given {@link Channel}
-     * 
-     */
-    protected Unmarshaller getUnmarshaller(Channel channel) throws IOException {
-        return factory.createUnmarshaller(config);
     }
 }

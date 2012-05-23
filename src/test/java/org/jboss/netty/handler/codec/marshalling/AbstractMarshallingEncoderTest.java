@@ -36,7 +36,7 @@ public abstract class AbstractMarshallingEncoderTest {
         final MarshallerFactory marshallerFactory = createMarshallerFactory();
         final MarshallingConfiguration configuration = createMarshallingConfig();
         
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(new MarshallingEncoder(marshallerFactory, configuration));
+        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(new MarshallingEncoder(createProvider()));
 
         encoder.offer(testObject);
         Assert.assertTrue(encoder.finish());
@@ -57,7 +57,12 @@ public abstract class AbstractMarshallingEncoderTest {
     }
 
 
+    protected MarshallerProvider createProvider() {
+        return new DefaultMarshallerProvider(createMarshallerFactory(), createMarshallingConfig());
+    }
+    
     protected abstract MarshallerFactory createMarshallerFactory();
 
     protected abstract MarshallingConfiguration createMarshallingConfig();
+    
 }

@@ -43,7 +43,7 @@ public abstract class AbstractMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(marshallerFactory, configuration, 0));
+        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(0));
         
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -70,7 +70,7 @@ public abstract class AbstractMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(marshallerFactory, configuration, 0));
+        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(0));
         
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -101,7 +101,7 @@ public abstract class AbstractMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        MarshallingDecoder mDecoder = createDecoder(marshallerFactory, configuration, 1);
+        MarshallingDecoder mDecoder = createDecoder(1);
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(mDecoder);
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -124,10 +124,14 @@ public abstract class AbstractMarshallingDecoderTest {
 
     }
     
-    protected MarshallingDecoder createDecoder(MarshallerFactory factory, MarshallingConfiguration config, long maxObjectSize) {
-        return new MarshallingDecoder(factory, config, maxObjectSize);
+    private MarshallingDecoder createDecoder(long maxObjectSize) {
+        return new MarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
     
+    protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
+        return new DefaultUnmarshallerProvider(factory, config);
+
+    }
     
     protected abstract MarshallerFactory createMarshallerFactory();
     protected abstract MarshallingConfiguration createMarshallingConfig();

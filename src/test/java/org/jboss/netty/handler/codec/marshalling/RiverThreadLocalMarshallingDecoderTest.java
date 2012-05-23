@@ -21,7 +21,9 @@ import org.jboss.marshalling.MarshallingConfiguration;
 public class RiverThreadLocalMarshallingDecoderTest extends RiverMarshallingDecoderTest {
 
     @Override
-    protected MarshallingDecoder createDecoder(MarshallerFactory factory, MarshallingConfiguration config, long maxObjectSize) {
-        return new ThreadLocalMarshallingDecoder(factory, config, maxObjectSize);
+    protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
+        return new ThreadLocalUnmarshallingProvider(factory, config);
     }
+
+
 }
