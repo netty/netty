@@ -101,7 +101,7 @@ public abstract class AbstractMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        MarshallingDecoder mDecoder = createDecoder(1);
+        CompatibleMarshallingDecoder mDecoder = createDecoder(1);
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(mDecoder);
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -124,8 +124,8 @@ public abstract class AbstractMarshallingDecoderTest {
 
     }
     
-    private MarshallingDecoder createDecoder(long maxObjectSize) {
-        return new MarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
+    private CompatibleMarshallingDecoder createDecoder(long maxObjectSize) {
+        return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
     
     protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {

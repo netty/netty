@@ -15,58 +15,67 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import java.io.ObjectStreamConstants;
+import java.io.StreamCorruptedException;
 
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-import org.jboss.netty.handler.codec.replay.VoidEnum;
-
 /**
- * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
+ * Decoder which MUST be used with {@link MarshallingEncoder}.
  * 
- * Most times you want to use {@link ThreadLocalMarshallingDecoder} to get a better performance and less overhead.
- * 
+ * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
  *
  */
-public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
-    protected final UnmarshallerProvider provider;
-    protected final long maxObjectSize;
-    
+public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
+
+    private final UnmarshallerProvider provider;
+
     /**
-     * Create a new instance of {@link MarshallingDecoder}. 
+     * Creates a new decoder whose maximum object size is {@code 1048576}
+     * bytes.  If the size of the received object is greater than
+     * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
+     * raised.
      * 
-     * @param provider      the {@link UnmarshallerProvider} which is used to obtain the {@link Unmarshaller} for the {@link Channel}
-     * @param maxObjectSize the maximal size (in bytes) of the {@link Object} to unmarshal. Once the size is exceeded
-     *                      the {@link Channel} will get closed. Use a a maxObjectSize of <= 0 to disable this. 
-     *                      You should only do this if you are sure that the received Objects will never be big and the
-     *                      sending side are trusted, as this opens the possibility for a DOS-Attack due an {@link OutOfMemoryError}.
-     *                      
      */
-    public MarshallingDecoder(UnmarshallerProvider provider, long maxObjectSize) {
-        this.provider = provider;
-        this.maxObjectSize = maxObjectSize;
+    public MarshallingDecoder(UnmarshallerProvider provider) {
+        this(provider, 1048576);
     }
     
+    /**
+     * Creates a new decoder with the specified maximum object size.
+     *
+     * @param maxObjectSize  the maximum byte length of the serialized object.
+     *                       if the length of the received object is greater
+     *                       than this value, {@link TooLongFrameException}
+     *                       will be raised.
+     */
+    public MarshallingDecoder(UnmarshallerProvider provider, int maxObjectSize) {
+        super(maxObjectSize, 0, 4, 0, 4);
+        this.provider = provider;
+    }
+    
+    
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state) throws Exception {
+    protected Object decode(
+            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+
+        ChannelBuffer frame = (ChannelBuffer) super.decode(ctx, channel, buffer);
+        if (frame == null) {
+            return null;
+        }
+
         Unmarshaller unmarshaller = provider.getUnmarshaller(channel);
         ByteInput input = new ChannelBufferByteInput(buffer);
-        if (maxObjectSize > 0) {
-            input = new LimitingByteInput(input, maxObjectSize);
-        } 
+        
         try {
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
             return obj;
-        } catch (LimitingByteInput.TooBigObjectException e) {
-            throw new TooLongFrameException("Object to big to unmarshal");
         } finally {
             // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
             // readable. This helps to be sure that we do not leak resource
@@ -75,34 +84,7 @@ public class MarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     }
 
     @Override
-    protected Object decodeLast(ChannelHandlerContext ctx, Channel channel,
-            ChannelBuffer buffer, VoidEnum state)
-            throws Exception {
-        switch (buffer.readableBytes()) {
-        case 0:
-            return null;
-        case 1:
-            // Ignore the last TC_RESET
-            if (buffer.getByte(buffer.readerIndex()) == ObjectStreamConstants.TC_RESET) {
-                buffer.skipBytes(1);
-                return null;
-            }
-        }
-
-        Object decoded = decode(ctx, channel, buffer, state);
-        return decoded;
-    }
-
-    /**
-     * Calls {@link Channel#close()} if a TooLongFrameException was thrown
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        if (e.getCause() instanceof TooLongFrameException) {
-            e.getChannel().close();
-
-        } else {
-            super.exceptionCaught(ctx, e);
-        }
+    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
+        return buffer.slice(index, length);
     }
 }

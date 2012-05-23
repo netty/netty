@@ -36,7 +36,7 @@ public abstract class AbstractMarshallingEncoderTest {
         final MarshallerFactory marshallerFactory = createMarshallerFactory();
         final MarshallingConfiguration configuration = createMarshallingConfig();
         
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(new MarshallingEncoder(createProvider()));
+        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(new CompatibleMarshallingEncoder(createProvider()));
 
         encoder.offer(testObject);
         Assert.assertTrue(encoder.finish());
