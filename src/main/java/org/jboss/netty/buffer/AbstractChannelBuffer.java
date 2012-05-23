@@ -52,14 +52,16 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void writerIndex(int writerIndex) {
         if (writerIndex < readerIndex || writerIndex > capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid readerIndex: " 
+                    + readerIndex + " - Maximum is " + writerIndex);
         }
         this.writerIndex = writerIndex;
     }
 
     public void setIndex(int readerIndex, int writerIndex) {
         if (readerIndex < 0 || readerIndex > writerIndex || writerIndex > capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid writerIndex: " 
+                    + writerIndex + " - Maximum is " + readerIndex + " or " + capacity());
         }
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;
@@ -114,7 +116,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void ensureWritableBytes(int writableBytes) {
         if (writableBytes > writableBytes()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Writable bytes exceeded: Got " 
+                    + writableBytes + ", maximum is " + writableBytes());
         }
     }
 
@@ -160,7 +163,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void getBytes(int index, ChannelBuffer dst, int length) {
         if (length > dst.writableBytes()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be read: Need "
+                    + length + ", maximum is " + dst.writableBytes());
         }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
@@ -188,7 +192,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void setBytes(int index, ChannelBuffer src, int length) {
         if (length > src.readableBytes()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to write: Need "
+                    + length + ", maximum is " + src.readableBytes());
         }
         setBytes(index, src, src.readerIndex(), length);
         src.readerIndex(src.readerIndex() + length);
@@ -228,7 +233,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public byte readByte() {
         if (readerIndex == writerIndex) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Readable byte limit exceeded: "
+                    + readerIndex);
         }
         return getByte(readerIndex ++);
     }
@@ -344,7 +350,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void readBytes(ChannelBuffer dst, int length) {
         if (length > dst.writableBytes()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be read: Need "
+                    + length + ", maximum is " + dst.writableBytes());
         }
         readBytes(dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
@@ -380,7 +387,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     public void skipBytes(int length) {
         int newReaderIndex = readerIndex + length;
         if (newReaderIndex > writerIndex) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Readable bytes exceeded - Need "
+                    + newReaderIndex + ", maximum is " + writerIndex);
         }
         readerIndex = newReaderIndex;
     }
@@ -447,7 +455,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void writeBytes(ChannelBuffer src, int length) {
         if (length > src.readableBytes()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to write - Need "
+                    + length + ", maximum is " + src.readableBytes());
         }
         writeBytes(src, src.readerIndex(), length);
         src.readerIndex(src.readerIndex() + length);
@@ -649,7 +658,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
      */
     protected void checkReadableBytes(int minimumReadableBytes) {
         if (readableBytes() < minimumReadableBytes) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Not enough readable bytes - Need "
+                    + minimumReadableBytes + ", maximum is " + readableBytes());
         }
     }
 }
