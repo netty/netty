@@ -96,6 +96,18 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         checkIndex(index, 2);
         return buffer.getShort(index);
     }
+    
+    @Override
+    public char getChar(int index) {
+        checkIndex(index, 2);
+        return buffer.getChar(index);
+    }
+    
+    @Override
+    public String getChars(int index, int characterCount) {
+        checkIndex(index, characterCount * 2);
+        return buffer.getChars(index, characterCount);
+    }
 
     @Override
     public int getUnsignedMedium(int index) {
@@ -165,6 +177,19 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
     public void setShort(int index, int value) {
         checkIndex(index, 2);
         buffer.setShort(index, value);
+    }
+    
+    @Override
+    public void setChar(int index, int value) {
+        checkIndex(index, 2);
+        buffer.setChar(index, value);
+    }
+    
+    @Override
+    public void setChars(int index, String value) {
+        checkIndex(index, value.length() * 2);
+        
+        buffer.setChars(index, value);
     }
 
     @Override

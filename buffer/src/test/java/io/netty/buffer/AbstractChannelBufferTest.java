@@ -1642,6 +1642,13 @@ public abstract class AbstractChannelBufferTest {
         assertEquals(0, set.size());
     }
     
+    @Test
+    public void testReadWriteChars() {
+        buffer.writeChars("Hi");
+        
+        assertEquals(buffer.readChars(2), "Hi");
+    }
+    
     // Test case for https://github.com/netty/netty/issues/325
     @Test
     public void testDiscardAllReadBytes() {

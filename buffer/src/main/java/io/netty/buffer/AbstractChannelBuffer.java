@@ -166,6 +166,28 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     public char getChar(int index) {
         return (char) getShort(index);
     }
+    
+    @Override
+    public String getChars(int index, int characterCount) {
+        checkReadableBytes(characterCount * 2);
+        
+        StringBuilder builder = new StringBuilder(characterCount);
+        
+        for (int charIndex = 0; charIndex < characterCount; charIndex++) {
+            builder.append(getChar(index + (charIndex * 2)));
+        }
+        
+        return builder.toString();
+    }
+    
+    @Override
+    public String getString(int index) {
+        checkReadableBytes(2);
+        
+        int characterCount = getUnsignedShort(index);
+        
+        return getChars(index, characterCount);
+    }
 
     @Override
     public float getFloat(int index) {
@@ -204,6 +226,21 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     @Override
     public void setChar(int index, int value) {
         setShort(index, value);
+    }
+    
+    @Override
+    public void setChars(int index, String value) {
+        for (char character : value.toCharArray()) {
+            setChar(index, character);
+            index += 2;
+        }
+    }
+    
+    @Override
+    public void setString(int index, String value) {
+        setShort(index, value.length());
+        
+        setChars(index + 2, value);
     }
 
     @Override
@@ -341,6 +378,27 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     public char readChar() {
         return (char) readShort();
     }
+    
+    @Override
+    public String readChars(int characterCount) {
+        checkReadableBytes(characterCount * 2);
+        StringBuilder builder = new StringBuilder(characterCount);
+        
+        for (int index = 0; index < characterCount; index++) {
+            builder.append(readChar());
+        }
+        
+        return builder.toString();
+    }
+    
+    @Override
+    public String readString() {
+        checkReadableBytes(2);
+        
+        int characterCount = readUnsignedShort();
+        
+        return readChars(characterCount);
+    }
 
     @Override
     public float readFloat() {
@@ -474,6 +532,19 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     @Override
     public void writeChar(int value) {
         writeShort(value);
+    }
+    
+    @Override
+    public void writeChars(String value) {
+        for (char character : value.toCharArray()) {
+            writeChar(character);
+        }
+    }
+    
+    @Override
+    public void writeString(String value) {
+        writeShort(value.length());
+        writeChars(value);
     }
 
     @Override
