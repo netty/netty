@@ -18,7 +18,7 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
 
-public class SerialThreadLocalMarshallingDecoderTest extends SerialMarshallingDecoderTest {
+public class SerialThreadLocalCompatibleMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
 
 
     @Override

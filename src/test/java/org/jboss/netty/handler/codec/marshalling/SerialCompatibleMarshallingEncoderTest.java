@@ -19,7 +19,8 @@ import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
 
-public class SerialMarshallingDecoderTest extends AbstractMarshallingDecoderTest {
+public class SerialCompatibleMarshallingEncoderTest extends AbstractCompatibleMarshallingEncoderTest {
+
 
     @Override
     protected MarshallerFactory createMarshallerFactory() {

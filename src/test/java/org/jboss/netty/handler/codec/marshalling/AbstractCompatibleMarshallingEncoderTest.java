@@ -24,10 +24,11 @@ import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.junit.Test;
 
-public abstract class AbstractMarshallingEncoderTest {
+public abstract class AbstractCompatibleMarshallingEncoderTest {
 
     @Test
     public void testMarshalling() throws IOException, ClassNotFoundException {
@@ -36,7 +37,7 @@ public abstract class AbstractMarshallingEncoderTest {
         final MarshallerFactory marshallerFactory = createMarshallerFactory();
         final MarshallingConfiguration configuration = createMarshallingConfig();
         
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(new CompatibleMarshallingEncoder(createProvider()));
+        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(createEncoder());
 
         encoder.offer(testObject);
         Assert.assertTrue(encoder.finish());
@@ -56,6 +57,9 @@ public abstract class AbstractMarshallingEncoderTest {
         unmarshaller.close();
     }
 
+    protected ChannelDownstreamHandler createEncoder() {
+        return new CompatibleMarshallingEncoder(createProvider());
+    }
 
     protected MarshallerProvider createProvider() {
         return new DefaultMarshallerProvider(createMarshallerFactory(), createMarshallingConfig());

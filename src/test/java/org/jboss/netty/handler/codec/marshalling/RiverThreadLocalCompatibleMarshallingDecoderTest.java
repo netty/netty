@@ -18,7 +18,7 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
 
-public class RiverThreadLocalMarshallingDecoderTest extends RiverMarshallingDecoderTest {
+public class RiverThreadLocalCompatibleMarshallingDecoderTest extends RiverCompatibleMarshallingDecoderTest {
 
     @Override
     protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {

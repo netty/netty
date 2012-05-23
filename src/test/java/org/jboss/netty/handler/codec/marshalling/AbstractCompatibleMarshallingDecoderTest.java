@@ -30,12 +30,13 @@ import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.junit.Test;
 
-public abstract class AbstractMarshallingDecoderTest {
+public abstract class AbstractCompatibleMarshallingDecoderTest {
     private final String testObject = new String("test");
 
     @Test
@@ -101,7 +102,7 @@ public abstract class AbstractMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
         
-        CompatibleMarshallingDecoder mDecoder = createDecoder(1);
+        ChannelUpstreamHandler mDecoder = createDecoder(1);
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(mDecoder);
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -124,7 +125,7 @@ public abstract class AbstractMarshallingDecoderTest {
 
     }
     
-    private CompatibleMarshallingDecoder createDecoder(long maxObjectSize) {
+    private ChannelUpstreamHandler createDecoder(long maxObjectSize) {
         return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
     

@@ -19,7 +19,7 @@ import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
 
-public class RiverMarshallingDecoderTest extends AbstractMarshallingDecoderTest {
+public class RiverCompatibleMarshallingDecoderTest extends AbstractCompatibleMarshallingDecoderTest {
 
     @Override
     protected MarshallerFactory createMarshallerFactory() {

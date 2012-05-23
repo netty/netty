@@ -19,7 +19,7 @@ import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
 
-public class RiverMarshallingEncoderTest extends AbstractMarshallingEncoderTest {
+public class RiverCompatibleMarshallingEncoderTest extends AbstractCompatibleMarshallingEncoderTest {
 
 
     @Override
