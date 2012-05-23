@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
- * used utility methods that access an {@link SpdyHeaderBlock}.
+ * used utility methods that access a {@link SpdyHeaderBlock}.
  * @apiviz.stereotype static
  */
 public class SpdyHeaders {
@@ -37,6 +37,41 @@ public class SpdyHeaders {
      * @apiviz.stereotype static
      */
     public static final class HttpNames {
+        /**
+         * {@code ":host"}
+         */
+        public static final String HOST = ":host";
+        /**
+         * {@code ":method"}
+         */
+        public static final String METHOD = ":method";
+        /**
+         * {@code ":path"}
+         */
+        public static final String PATH = ":path";
+        /**
+         * {@code ":scheme"}
+         */
+        public static final String SCHEME = ":scheme";
+        /**
+         * {@code ":status"}
+         */
+        public static final String STATUS = ":status";
+        /**
+         * {@code ":version"}
+         */
+        public static final String VERSION = ":version";
+
+        private HttpNames() {
+            super();
+        }
+    }
+
+    /**
+     * SPDY/2 HTTP header names
+     * @apiviz.stereotype static
+     */
+    public static final class Spdy2HttpNames {
         /**
          * {@code "method"}
          */
@@ -58,7 +93,7 @@ public class SpdyHeaders {
          */
         public static final String VERSION = "version";
 
-        private HttpNames() {
+        private Spdy2HttpNames() {
             super();
         }
     }
@@ -115,64 +150,118 @@ public class SpdyHeaders {
     }
 
     /**
-     * Removes the {@code "method"} header.
+     * Removes the SPDY host header.
      */
-    public static void removeMethod(SpdyHeaderBlock block) {
-        block.removeHeader(HttpNames.METHOD);
+    public static void removeHost(SpdyHeaderBlock block) {
+        block.removeHeader(HttpNames.HOST);
     }
 
     /**
-     * Returns the {@link HttpMethod} represented by the {@code "method"} header.
+     * Returns the SPDY host header.
      */
-    public static HttpMethod getMethod(SpdyHeaderBlock block) {
+    public static String getHost(SpdyHeaderBlock block) {
+        return block.getHeader(HttpNames.HOST);
+    }
+
+    /**
+     * Set the SPDY host header.
+     */
+    public static void setHost(SpdyHeaderBlock block, String host) {
+        block.setHeader(HttpNames.HOST, host);
+    }
+
+    /**
+     * Removes the HTTP method header.
+     */
+    public static void removeMethod(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 3) {
+            block.removeHeader(Spdy2HttpNames.METHOD);
+        } else {
+            block.removeHeader(HttpNames.METHOD);
+        }
+    }
+
+    /**
+     * Returns the {@link HttpMethod} represented by the HTTP method header.
+     */
+    public static HttpMethod getMethod(int spdyVersion, SpdyHeaderBlock block) {
         try {
-            return HttpMethod.valueOf(block.getHeader(HttpNames.METHOD));
+            if (spdyVersion < 3) {
+                return HttpMethod.valueOf(block.getHeader(Spdy2HttpNames.METHOD));
+            } else {
+                return HttpMethod.valueOf(block.getHeader(HttpNames.METHOD));
+            }
         } catch (Exception e) {
             return null;
         }
     }
 
     /**
-     * Sets the {@code "method"} header.
+     * Sets the HTTP method header.
      */
-    public static void setMethod(SpdyHeaderBlock block, HttpMethod method) {
-        block.setHeader(HttpNames.METHOD, method.getName());
+    public static void setMethod(int spdyVersion, SpdyHeaderBlock block, HttpMethod method) {
+        if (spdyVersion < 3) {
+            block.setHeader(Spdy2HttpNames.METHOD, method.getName());
+        } else {
+            block.setHeader(HttpNames.METHOD, method.getName());
+        }
     }
 
     /**
-     * Removes the {@code "scheme"} header.
+     * Removes the URL scheme header.
      */
-    public static void removeScheme(SpdyHeaderBlock block) {
-        block.removeHeader(HttpNames.SCHEME);
+    public static void removeScheme(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 2) {
+            block.removeHeader(Spdy2HttpNames.SCHEME);
+        } else {
+            block.removeHeader(HttpNames.SCHEME);
+        }
     }
 
     /**
-     * Returns the value of the {@code "scheme"} header.
+     * Returns the value of the URL scheme header.
      */
-    public static String getScheme(SpdyHeaderBlock block) {
-        return block.getHeader(HttpNames.SCHEME);
+    public static String getScheme(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 3) {
+            return block.getHeader(Spdy2HttpNames.SCHEME);
+        } else {
+            return block.getHeader(HttpNames.SCHEME);
+        }
     }
 
     /**
-     * Sets the {@code "scheme"} header.
+     * Sets the URL scheme header.
      */
-    public static void setScheme(SpdyHeaderBlock block, String value) {
-        block.setHeader(HttpNames.SCHEME, value);
+    public static void setScheme(int spdyVersion, SpdyHeaderBlock block, String scheme) {
+        if (spdyVersion < 3) {
+            block.setHeader(Spdy2HttpNames.SCHEME, scheme);
+        } else {
+            block.setHeader(HttpNames.SCHEME, scheme);
+        }
     }
 
     /**
-     * Removes the {@code "status"} header.
+     * Removes the HTTP response status header.
      */
-    public static void removeStatus(SpdyHeaderBlock block) {
-        block.removeHeader(HttpNames.STATUS);
+    public static void removeStatus(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 3) {
+            block.removeHeader(Spdy2HttpNames.STATUS);
+        } else {
+            block.removeHeader(HttpNames.STATUS);
+        }
     }
 
     /**
-     * Returns the {@link HttpResponseStatus} represented by the {@code "status"} header.
+     * Returns the {@link HttpResponseStatus} represented by the HTTP response status header.
      */
-    public static HttpResponseStatus getStatus(SpdyHeaderBlock block) {
+    public static HttpResponseStatus getStatus(int spdyVersion, SpdyHeaderBlock block) {
         try {
-            String status = block.getHeader(HttpNames.STATUS);
+            String status;
+            if (spdyVersion < 3) {
+                status = block.getHeader(Spdy2HttpNames.STATUS);
+            } else {
+                status = block.getHeader(HttpNames.STATUS);
+            }
             int space = status.indexOf(' ');
             if (space == -1) {
                 return HttpResponseStatus.valueOf(Integer.parseInt(status));
@@ -180,7 +269,7 @@ public class SpdyHeaders {
                 int code = Integer.parseInt(status.substring(0, space));
                 String reasonPhrase = status.substring(space + 1);
                 HttpResponseStatus responseStatus = HttpResponseStatus.valueOf(code);
-                if (responseStatus.getReasonPhrase().equals(responseStatus)) {
+                if (responseStatus.getReasonPhrase().equals(reasonPhrase)) {
                     return responseStatus;
                 } else {
                     return new HttpResponseStatus(code, reasonPhrase);
@@ -192,56 +281,84 @@ public class SpdyHeaders {
     }
 
     /**
-     * Sets the {@code "status"} header.
+     * Sets the HTTP response status header.
      */
-    public static void setStatus(SpdyHeaderBlock block, HttpResponseStatus status) {
-        block.setHeader(HttpNames.STATUS, status.toString());
+    public static void setStatus(int spdyVersion, SpdyHeaderBlock block, HttpResponseStatus status) {
+        if (spdyVersion < 3) {
+            block.setHeader(Spdy2HttpNames.STATUS, status.toString());
+        } else {
+            block.setHeader(HttpNames.STATUS, status.toString());
+        }
     }
 
     /**
-     * Removes the {@code "url"} header.
+     * Removes the URL path header.
      */
-    public static void removeUrl(SpdyHeaderBlock block) {
-        block.removeHeader(HttpNames.URL);
+    public static void removeUrl(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 3) {
+            block.removeHeader(Spdy2HttpNames.URL);
+        } else {
+            block.removeHeader(HttpNames.PATH);
+        }
     }
 
     /**
-     * Returns the value of the {@code "url"} header.
+     * Returns the value of the URL path header.
      */
-    public static String getUrl(SpdyHeaderBlock block) {
-        return block.getHeader(HttpNames.URL);
+    public static String getUrl(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 3) {
+            return block.getHeader(Spdy2HttpNames.URL);
+        } else {
+            return block.getHeader(HttpNames.PATH);
+        }
     }
 
     /**
-     * Sets the {@code "url"} header.
+     * Sets the URL path header.
      */
-    public static void setUrl(SpdyHeaderBlock block, String value) {
-        block.setHeader(HttpNames.URL, value);
+    public static void setUrl(int spdyVersion, SpdyHeaderBlock block, String path) {
+        if (spdyVersion < 3) {
+            block.setHeader(Spdy2HttpNames.URL, path);
+        } else {
+            block.setHeader(HttpNames.PATH, path);
+        }
     }
 
     /**
-     * Removes the {@code "version"} header.
+     * Removes the HTTP version header.
      */
-    public static void removeVersion(SpdyHeaderBlock block) {
-        block.removeHeader(HttpNames.VERSION);
+    public static void removeVersion(int spdyVersion, SpdyHeaderBlock block) {
+        if (spdyVersion < 3) {
+            block.removeHeader(Spdy2HttpNames.VERSION);
+        } else {
+            block.removeHeader(HttpNames.VERSION);
+        }
     }
 
     /**
-     * Returns the {@link HttpVersion} represented by the {@code "version"} header.
+     * Returns the {@link HttpVersion} represented by the HTTP version header.
      */
-    public static HttpVersion getVersion(SpdyHeaderBlock block) {
+    public static HttpVersion getVersion(int spdyVersion, SpdyHeaderBlock block) {
         try {
-            return HttpVersion.valueOf(block.getHeader(HttpNames.VERSION));
+            if (spdyVersion < 3) {
+                return HttpVersion.valueOf(block.getHeader(Spdy2HttpNames.VERSION));
+            } else {
+                return HttpVersion.valueOf(block.getHeader(HttpNames.VERSION));
+            }
         } catch (Exception e) {
             return null;
         }
     }
 
     /**
-     * Sets the {@code "version"} header.
+     * Sets the HTTP version header.
      */
-    public static void setVersion(SpdyHeaderBlock block, HttpVersion version) {
-        block.setHeader(HttpNames.VERSION, version.getText());
+    public static void setVersion(int spdyVersion, SpdyHeaderBlock block, HttpVersion httpVersion) {
+        if (spdyVersion < 3) {
+            block.setHeader(Spdy2HttpNames.VERSION, httpVersion.getText());
+        } else {
+            block.setHeader(HttpNames.VERSION, httpVersion.getText());
+        }
     }
 
 

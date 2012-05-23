@@ -28,13 +28,14 @@ import io.netty.channel.ChannelUpstreamHandler;
 public class SpdyHttpCodec implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
     private final SpdyHttpDecoder decoder;
-    private final SpdyHttpEncoder encoder = new SpdyHttpEncoder();
+    private final SpdyHttpEncoder encoder;
 
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public SpdyHttpCodec(int maxContentLength) {
-        decoder = new SpdyHttpDecoder(maxContentLength);
+    public SpdyHttpCodec(int version, int maxContentLength) {
+        decoder = new SpdyHttpDecoder(version, maxContentLength);
+        encoder = new SpdyHttpEncoder(version);
     }
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)

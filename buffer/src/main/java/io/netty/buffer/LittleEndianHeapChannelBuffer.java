@@ -130,7 +130,8 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
     @Override
     public ChannelBuffer copy(int index, int length) {
         if (index < 0 || length < 0 || index + length > array.length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Copy could not be completed. Bytes needed: "
+                    + (index + length) + ", maximum: " + array.length);
         }
 
         byte[] copiedArray = new byte[length];
