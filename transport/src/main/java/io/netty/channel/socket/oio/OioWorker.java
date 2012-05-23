@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.FileRegion;
+import io.netty.channel.socket.SocketChannels;
 
 class OioWorker extends AbstractOioWorker<OioSocketChannel> {
 
@@ -56,15 +57,47 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
     boolean process() throws IOException {
         byte[] buf;
         int readBytes;
+        
+        // check if the input was closed
+        if (!channel.isInputOpen()) {
+            // Simulate the blocking time via a sleep to not consume to much CPU
+            int timeout = channel.socket.getSoTimeout();
+            if (timeout < 1) {
+                timeout = 10;
+            }
+            try {
+                Thread.sleep(timeout);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return true;
+        }
+        
         PushbackInputStream in = channel.getInputStream();
         int bytesToRead = in.available();
         if (bytesToRead > 0) {
             buf = new byte[bytesToRead];
             readBytes = in.read(buf);
+            if (readBytes < 0) {
+                // check if the input was closed in the meantime if so we need to continue 
+                // with the event loop
+                if (channel.isInputOpen()) {
+                    return false;
+                }
+                
+                return true;
+                
+            }
         } else {
             int b = in.read();
             if (b < 0) {
-                return false;
+                // check if the input was closed in the meantime if so we need to continue 
+                // with the event loop
+                if (channel.isInputOpen()) {
+                    return false;
+                }
+                return true;
+                
             }
             in.unread(b);
             return true;
@@ -139,6 +172,72 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                             String.valueOf(t.getMessage())).matches()) {
                 t = new ClosedChannelException();
             }
+            future.setFailure(t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
+        }
+    }
+    
+    static void closeInput(OioSocketChannel channel, ChannelFuture future) {
+        closeInput(channel, future, isIoThread(channel));
+    }
+    
+    static void closeOutput(OioSocketChannel channel, ChannelFuture future) {
+        closeOutput(channel, future, isIoThread(channel));
+    }
+    
+    private static void closeInput(OioSocketChannel channel, ChannelFuture future, boolean iothread) {
+        boolean bound = channel.isBound();
+        
+        try {
+            channel.socket.shutdownInput();
+            if (channel.setClosedInput()) {
+                future.setSuccess();
+
+                if (bound) {
+                    if (iothread) {
+                        SocketChannels.fireChannelInputClosed(channel);
+                    } else {
+                        SocketChannels.fireChannelInputClosedLater(channel);
+                    }
+                }
+                
+            } else {
+                future.setSuccess();
+            }
+        } catch (Throwable t) {
+            future.setFailure(t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
+        }
+    }
+    
+    private static void closeOutput(OioSocketChannel channel, ChannelFuture future, boolean iothread) {
+        boolean bound = channel.isBound();
+        
+        try {
+            channel.socket.shutdownOutput();
+            if (channel.setClosedOutput()) {
+                future.setSuccess();
+
+                if (bound) {
+                    if (iothread) {
+                        SocketChannels.fireChannelOutputClosed(channel);
+                    } else {
+                        SocketChannels.fireChannelOutputClosedLater(channel);
+                    }
+                }
+                
+            } else {
+                future.setSuccess();
+            }
+        } catch (Throwable t) {
             future.setFailure(t);
             if (iothread) {
                 fireExceptionCaught(channel, t);

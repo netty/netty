@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.socket.SocketChannel;
+
 import java.net.SocketAddress;
 
 /**
@@ -33,6 +35,12 @@ import java.net.SocketAddress;
  * </tr>
  * <tr>
  * <td>Upstream</td><td>{@link #OPEN}</td><td>{@code false}</td><td>The channel is closed.</td>
+ * </tr>
+ * <tr>
+ * <td>Upstream</td><td>{@link #OPEN_INPUT}</td><td>{@code false}</td><td>The channel's input is closed.</td>
+ * </tr>
+ * <tr>
+ * <td>Upstream</td><td>{@link #OPEN_OUTPUT}</td><td>{@code false}</td><td>The channel's input is closed.</td>
  * </tr>
  * <tr>
  * <td>Upstream</td><td>{@link #BOUND}</td><td>{@link SocketAddress}</td><td>The channel is bound to a local address.</td>
@@ -79,6 +87,16 @@ public enum ChannelState {
      * Represents a {@link Channel}'s {@link Channel#isOpen() open} property
      */
     OPEN,
+    
+    /**
+     * Represents a {@link SocketChannel}'s {@link SocketChannel#isInputOpen() open} property
+     */
+    OPEN_INPUT,
+    
+    /**
+     * Represents a {@link SocketChannel}'s {@link SocketChannel#isOutputOpen() open} property
+     */
+    OPEN_OUTPUT,
 
     /**
      * Represents a {@link Channel}'s {@link Channel#isBound() bound} property
@@ -90,6 +108,7 @@ public enum ChannelState {
      * property
      */
     CONNECTED,
+    
 
     /**
      * Represents a {@link Channel}'s {@link Channel#getInterestOps() interestOps}

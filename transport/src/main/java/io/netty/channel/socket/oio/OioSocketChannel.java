@@ -22,18 +22,23 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelCloseFuture;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketChannels;
 
 abstract class OioSocketChannel extends AbstractOioChannel
                                 implements SocketChannel {
 
     final Socket socket;
     private final SocketChannelConfig config;
+    private final ChannelCloseFuture inputCloseFuture = new ChannelCloseFuture(this);
+    private final ChannelCloseFuture outputCloseFuture = new ChannelCloseFuture(this);
 
     OioSocketChannel(
             Channel parent,
@@ -85,4 +90,43 @@ abstract class OioSocketChannel extends AbstractOioChannel
     boolean isSocketClosed() {
         return socket.isClosed();
     }
+
+    @Override
+    public ChannelFuture getCloseInputFuture() {
+        return inputCloseFuture;
+    }
+
+    @Override
+    public ChannelFuture closeInput() {
+        return SocketChannels.closeInput(this);
+    }
+
+    @Override
+    public ChannelFuture getCloseOutputFuture() {
+        return outputCloseFuture;
+    }
+
+    @Override
+    public ChannelFuture closeOutput() {
+        return SocketChannels.closeOutput(this);
+    }
+    
+    boolean setClosedInput() {
+        return inputCloseFuture.setClosed();
+    }
+
+    boolean setClosedOutput() {
+        return outputCloseFuture.setClosed();
+    }
+
+    @Override
+    public boolean isInputOpen() {
+        return !socket.isInputShutdown();
+    }
+
+    @Override
+    public boolean isOutputOpen() {
+        return !socket.isOutputShutdown();
+    }
+
 }

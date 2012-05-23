@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelCloseFuture;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -30,6 +31,7 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.SocketChannels;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -69,6 +71,10 @@ final class HttpTunnelClientChannel extends AbstractChannel implements
 
     private final SaturationManager saturationManager;
 
+    private final ChannelCloseFuture inputCloseFuture = new ChannelCloseFuture(this);
+    private final ChannelCloseFuture outputCloseFuture = new ChannelCloseFuture(this);
+
+    
     protected static HttpTunnelClientChannel create(ChannelFactory factory,
             ChannelPipeline pipeline, HttpTunnelClientChannelSink sink,
             ClientSocketChannelFactory outboundFactory,
@@ -396,5 +402,95 @@ final class HttpTunnelClientChannel extends AbstractChannel implements
             return serverHostName;
         }
 
+    }
+
+    @Override
+    public ChannelFuture getCloseInputFuture() {
+        return inputCloseFuture;
+    }
+
+    @Override
+    public ChannelFuture closeInput() {
+        return SocketChannels.closeInput(this);
+    }
+
+    @Override
+    public ChannelFuture getCloseOutputFuture() {
+        return outputCloseFuture;
+    }
+
+    @Override
+    public ChannelFuture closeOutput() {
+        return SocketChannels.closeOutput(this);
+    }
+    
+    void onCloseInputRequest(final ChannelFuture closeFuture) {
+        ChannelFutureListener closeListener =
+                new CloseInputConsolidatingFutureListener(closeFuture, 2);
+        sendChannel.closeInput().addListener(closeListener);
+        pollChannel.closeInput().addListener(closeListener);
+    }
+    
+    
+    void onCloseOutputRequest(final ChannelFuture closeFuture) {
+        ChannelFutureListener closeListener =
+                new CloseOutputConsolidatingFutureListener(closeFuture, 2);
+        sendChannel.closeOutput().addListener(closeListener);
+        pollChannel.closeOutput().addListener(closeListener);
+    }
+
+    private final class CloseInputConsolidatingFutureListener extends ConsolidatingFutureListener {
+
+        public CloseInputConsolidatingFutureListener(ChannelFuture completionFuture, int numToConsolidate) {
+            super(completionFuture, numToConsolidate);
+        }
+
+        @Override
+        protected void futureFailed(ChannelFuture future) {
+            LOG.warn("Failed to close one input of the child channels of tunnel " + tunnelId);
+            inputCloseFuture.setClosed();
+        }
+
+        @Override
+        protected void allFuturesComplete() {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Input of Tunnel " + tunnelId + " closed");
+            }
+            inputCloseFuture.setClosed();
+        }
+
+    }
+    
+
+    private final class CloseOutputConsolidatingFutureListener extends ConsolidatingFutureListener {
+
+        public CloseOutputConsolidatingFutureListener(ChannelFuture completionFuture, int numToConsolidate) {
+            super(completionFuture, numToConsolidate);
+        }
+
+        @Override
+        protected void futureFailed(ChannelFuture future) {
+            LOG.warn("Failed to close one output of the child channels of tunnel " + tunnelId);
+            outputCloseFuture.setClosed();
+        }
+
+        @Override
+        protected void allFuturesComplete() {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Output of Tunnel " + tunnelId + " closed");
+            }
+            outputCloseFuture.setClosed();
+        }
+
+    }
+
+    @Override
+    public boolean isInputOpen() {
+        return pollChannel.isInputOpen() && sendChannel.isInputOpen();
+    }
+
+    @Override
+    public boolean isOutputOpen() {
+        return pollChannel.isOutputOpen() && sendChannel.isOutputOpen();
     }
 }

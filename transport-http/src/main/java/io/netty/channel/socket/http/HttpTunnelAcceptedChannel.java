@@ -23,11 +23,14 @@ import java.net.InetSocketAddress;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelCloseFuture;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketChannels;
 
 /**
  * Represents the server end of an HTTP tunnel, created after a legal tunnel creation
@@ -45,6 +48,10 @@ final class HttpTunnelAcceptedChannel extends AbstractChannel implements
 
     private final InetSocketAddress remoteAddress;
 
+
+    private final ChannelCloseFuture inputCloseFuture = new ChannelCloseFuture(this);
+    private final ChannelCloseFuture outputCloseFuture = new ChannelCloseFuture(this);
+    
     protected static HttpTunnelAcceptedChannel create(
             HttpTunnelServerChannel parent, ChannelFactory factory,
             ChannelPipeline pipeline, HttpTunnelAcceptedChannelSink sink,
@@ -129,4 +136,35 @@ final class HttpTunnelAcceptedChannel extends AbstractChannel implements
         setInterestOpsNow(ops);
         Channels.fireChannelInterestChanged(this);
     }
+
+    @Override
+    public ChannelFuture getCloseInputFuture() {
+        return inputCloseFuture;
+    }
+
+    @Override
+    public ChannelFuture closeInput() {
+        return SocketChannels.closeInput(this);
+    }
+
+    @Override
+    public ChannelFuture getCloseOutputFuture() {
+        return outputCloseFuture;
+    }
+
+    @Override
+    public ChannelFuture closeOutput() {
+        return SocketChannels.closeOutput(this);
+    }
+
+    @Override
+    public boolean isInputOpen() {
+        return isOpen();
+    }
+
+    @Override
+    public boolean isOutputOpen() {
+        return isOpen();
+    }
+
 }

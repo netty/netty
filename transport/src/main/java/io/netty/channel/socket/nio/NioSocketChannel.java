@@ -16,10 +16,12 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelCloseFuture;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.socket.SocketChannels;
 
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
@@ -31,8 +33,12 @@ public abstract class NioSocketChannel extends AbstractNioChannel implements io.
     private static final int ST_CONNECTED = 2;
     private static final int ST_CLOSED = -1;
     volatile int state = ST_OPEN;
+    volatile boolean inputClosed;
+    volatile boolean outputClosed;
 
     private final NioSocketChannelConfig config;
+    private final ChannelCloseFuture inputCloseFuture = new ChannelCloseFuture(this);
+    private final ChannelCloseFuture outputCloseFuture = new ChannelCloseFuture(this);
 
     public NioSocketChannel(
             Channel parent, ChannelFactory factory,
@@ -43,6 +49,17 @@ public abstract class NioSocketChannel extends AbstractNioChannel implements io.
         config = new DefaultNioSocketChannelConfig(socket.socket());
     }
 
+
+    @Override
+    public ChannelFuture closeInput() {
+        return SocketChannels.closeInput(this);
+    }
+
+    @Override
+    public ChannelFuture closeOutput() {
+        return SocketChannels.closeOutput(this);
+    }
+    
     @Override
     public NioWorker getWorker() {
         return (NioWorker) super.getWorker();
@@ -94,5 +111,45 @@ public abstract class NioSocketChannel extends AbstractNioChannel implements io.
             return getUnsupportedOperationFuture();
         }
     }
+
+
+    @Override
+    public ChannelFuture getCloseInputFuture() {
+        return inputCloseFuture;
+    }
+
+
+    @Override
+    public ChannelFuture getCloseOutputFuture() {
+        return outputCloseFuture;
+    }
     
+    boolean setClosedInput() {
+        inputClosed = true;
+        return inputCloseFuture.setClosed();
+    }
+    
+    boolean setClosedOutput() {
+        outputClosed = true;
+        return outputCloseFuture.setClosed();
+    }
+    
+    @Override
+    protected NioSocketJdkChannel getJdkChannel() {
+        return (NioSocketJdkChannel) super.getJdkChannel();
+    }
+
+
+    @Override
+    public boolean isInputOpen() {
+        return isOpen() && !inputClosed;
+    }
+
+
+    @Override
+    public boolean isOutputOpen() {
+        return isOpen() && !outputClosed;
+
+    }
+
 }
