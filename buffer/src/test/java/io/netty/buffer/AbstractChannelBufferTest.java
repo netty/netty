@@ -1682,6 +1682,30 @@ public abstract class AbstractChannelBufferTest {
         assertEquals(buffer.readString(), "");
     }
     
+    @Test
+    public void testSetGetChars() {
+        buffer.clear();
+        
+        //Pretend we wrote, say, 20 bytes and decided to insert a string
+        buffer.writerIndex(20);
+        
+        buffer.setChars(5, "Bach?");
+        
+        assertEquals(buffer.getChars(5, 5), "Bach?");
+    }
+    
+    @Test
+    public void testGetSetString() {
+        buffer.clear();
+        
+        //Pretend we wrote, say, 60 bytes and decided to insert a string
+        buffer.writerIndex(60);
+        
+        buffer.setString(2, "Bach is not bark");
+        
+        assertEquals(buffer.getString(2), "Bach is not bark");
+    }
+    
     // Test case for https://github.com/netty/netty/issues/325
     @Test
     public void testDiscardAllReadBytes() {
