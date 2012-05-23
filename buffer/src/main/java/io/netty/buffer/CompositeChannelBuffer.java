@@ -53,7 +53,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         if (index + length > capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to decompose - Need "
+                    + (index + length) + ", capacity is " + capacity());
         }
 
         int componentId = componentId(index);
@@ -226,7 +227,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.length - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to read - Needs "
+                    + (index + length) + ", maximum is " + capacity() + " or " 
+                    + dst.length);
         }
 
         int i = componentId;
@@ -248,7 +251,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int limit = dst.limit();
         int length = dst.remaining();
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
+                    + (index + length) + ", maximum is " + capacity());
         }
 
         int i = componentId;
@@ -272,7 +276,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
+                    + (index + length) + " or " + (dstIndex + length) + ", maximum is "
+                    + capacity() + " or " + dst.capacity());
         }
 
         int i = componentId;
@@ -302,7 +308,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throws IOException {
         int componentId = componentId(index);
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be read - needs " 
+                    + (index + length) + ", maximum of " + capacity());
         }
 
         int i = componentId;
@@ -383,7 +390,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || srcIndex > src.length - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to read - needs "
+                    + (index + length) + " or " + (srcIndex + length) + ", maximum is "
+                    + capacity() + " or " + src.length);
         }
 
         int i = componentId;
@@ -405,7 +414,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int limit = src.limit();
         int length = src.remaining();
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be written - Needs "
+                    + (index + length) + ", maximum is " + capacity());
         }
 
         int i = componentId;
@@ -429,7 +439,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || srcIndex > src.capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to be written - Needs "
+                    + (index + length) + " or " + (srcIndex + length) + ", maximum is "
+                    + capacity() + " or " + src.capacity());
         }
 
         int i = componentId;
@@ -450,7 +462,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throws IOException {
         int componentId = componentId(index);
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to write - Needs "
+                    + (index + length) + ", maximum is " + capacity());
         }
 
         int i = componentId;
@@ -489,7 +502,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throws IOException {
         int componentId = componentId(index);
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to write - Needs "
+                    + (index + length) + ", maximum is " + capacity());
         }
 
         int i = componentId;
@@ -526,7 +540,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public ChannelBuffer copy(int index, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to copy - Needs "
+                    + (index + length) + ", maximum is " + capacity());
         }
 
         ChannelBuffer dst = factory().getBuffer(order(), length);
@@ -559,7 +574,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
         } else if (index < 0 || index > capacity() - length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Invalid index: " + index
+                    + " - Bytes needed: " + (index + length) + ", maximum is "
+                    + capacity());
         } else if (length == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
@@ -594,7 +611,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public ByteBuffer[] toByteBuffers(int index, int length) {
         int componentId = componentId(index);
         if (index + length > capacity()) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
+                    + (index + length) + ", maximum is " + capacity());
         }
 
         List<ByteBuffer> buffers = new ArrayList<ByteBuffer>(components.length);
@@ -637,7 +655,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             }
         }
 
-        throw new IndexOutOfBoundsException();
+        throw new IndexOutOfBoundsException("Invalid index: " + index + ", maximum: " + indices.length);
     }
 
     @Override

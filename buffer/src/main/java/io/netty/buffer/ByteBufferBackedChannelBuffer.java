@@ -144,7 +144,8 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         try {
             tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to read - Need "
+                    + (index + length) + ", maximum is " + data.limit());
         }
         tmpBuf.get(dst, dstIndex, length);
     }
@@ -155,7 +156,8 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         try {
             tmpBuf.clear().position(index).limit(index + bytesToCopy);
         } catch (IllegalArgumentException e) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to read - Need "
+                    + (index + bytesToCopy) + ", maximum is " + data.limit());
         }
         dst.put(tmpBuf);
     }
@@ -307,7 +309,8 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         try {
             src = (ByteBuffer) tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Too many bytes to read - Need "
+                    + (index + length));
         }
 
         ByteBuffer dst = src.isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);
