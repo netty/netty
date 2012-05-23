@@ -18,22 +18,22 @@ package io.netty.handler.codec.spdy;
 import io.netty.util.internal.StringUtil;
 
 /**
- * The default {@link SpdyHeadersFrame} implementation.
+ * The default {@link SpdyWindowUpdateFrame} implementation.
  */
-public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
-        implements SpdyHeadersFrame {
+public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
 
     private int streamID;
-    private boolean last;
+    private int deltaWindowSize;
 
     /**
      * Creates a new instance.
      *
-     * @param streamID the Stream-ID of this frame
+     * @param streamID        the Stream-ID of this frame
+     * @param deltaWindowSize the Delta-Window-Size of this frame
      */
-    public DefaultSpdyHeadersFrame(int streamID) {
-        super();
+    public DefaultSpdyWindowUpdateFrame(int streamID, int deltaWindowSize) {
         setStreamID(streamID);
+        setDeltaWindowSize(deltaWindowSize);
     }
 
     public int getStreamID() {
@@ -48,31 +48,29 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         this.streamID = streamID;
     }
 
-    public boolean isLast() {
-        return last;
+    public int getDeltaWindowSize() {
+        return deltaWindowSize;
     }
 
-    public void setLast(boolean last) {
-        this.last = last;
+    public void setDeltaWindowSize(int deltaWindowSize) {
+        if (deltaWindowSize <= 0) {
+            throw new IllegalArgumentException(
+                    "Delta-Window-Size must be positive: " +
+                    deltaWindowSize);
+        }
+        this.deltaWindowSize = deltaWindowSize;
     }
 
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
-        buf.append("(last: ");
-        buf.append(isLast());
-        buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
         buf.append(streamID);
         buf.append(StringUtil.NEWLINE);
-        buf.append("--> Headers:");
-        buf.append(StringUtil.NEWLINE);
-        appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        buf.append("--> Delta-Window-Size = ");
+        buf.append(deltaWindowSize);
         return buf.toString();
     }
 }

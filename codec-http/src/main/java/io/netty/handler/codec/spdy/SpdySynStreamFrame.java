@@ -48,7 +48,7 @@ public interface SpdySynStreamFrame extends SpdyHeaderBlock {
 
     /**
      * Sets the priority of the stream.
-     * The priority must be between 0 and 3 inclusive.
+     * The priority must be between 0 and 7 inclusive.
      */
     void setPriority(byte priority);
 

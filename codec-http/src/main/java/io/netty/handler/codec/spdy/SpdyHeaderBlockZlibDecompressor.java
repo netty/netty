@@ -24,8 +24,17 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
 
+    private final int version;
     private final byte[] out = new byte[8192];
     private final Inflater decompressor = new Inflater();
+
+    public SpdyHeaderBlockZlibDecompressor(int version) {
+        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+            throw new IllegalArgumentException(
+                    "unsupported version: " + version);
+        }
+        this.version = version;
+    }
 
     @Override
     public void setInput(ChannelBuffer compressed) {
@@ -39,7 +48,11 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
         try {
             int numBytes = decompressor.inflate(out);
             if (numBytes == 0 && decompressor.needsDictionary()) {
-                decompressor.setDictionary(SPDY_DICT);
+                if (version < 3) {
+                    decompressor.setDictionary(SPDY2_DICT);
+                } else {
+                    decompressor.setDictionary(SPDY_DICT);
+                }
                 numBytes = decompressor.inflate(out);
             }
             decompressed.writeBytes(out, 0, numBytes);
