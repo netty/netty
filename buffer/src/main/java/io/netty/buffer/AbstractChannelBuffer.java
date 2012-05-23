@@ -191,7 +191,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         
         int characterCount = getUnsignedShort(index);
         
-        return getChars(index, characterCount);
+        return getChars(index + 2, characterCount);
     }
 
     @Override
