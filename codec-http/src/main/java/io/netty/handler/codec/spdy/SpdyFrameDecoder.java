@@ -115,6 +115,26 @@ public class SpdyFrameDecoder extends FrameDecoder {
                     fireInvalidControlFrameException(ctx);
                 }
             }
+
+            // FrameDecoders must consume data when producing frames
+            // All length 0 frames must be generated now
+            if (length == 0) {
+                if (state == State.READ_DATA_FRAME) {
+                    if (streamID == 0) {
+                        state = State.FRAME_ERROR;
+                        fireProtocolException(ctx, "Received invalid data frame");
+                        return null;
+                    }
+
+                    SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
+                    spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
+                    state = State.READ_COMMON_HEADER;
+                    return spdyDataFrame;
+                }
+                // There are no length 0 control frames
+                state = State.READ_COMMON_HEADER;
+            }
+
             return null;
 
         case READ_CONTROL_FRAME:
@@ -343,13 +363,14 @@ public class SpdyFrameDecoder extends FrameDecoder {
     }
 
     private Object readControlFrame(ChannelBuffer buffer) {
+        int streamID;
         switch (type) {
         case SPDY_RST_STREAM_FRAME:
             if (buffer.readableBytes() < 8) {
                 return null;
             }
 
-            int streamID = getUnsignedInt(buffer, buffer.readerIndex());
+            streamID = getUnsignedInt(buffer, buffer.readerIndex());
             int statusCode = getSignedInt(buffer, buffer.readerIndex() + 4);
             buffer.skipBytes(8);
 
@@ -374,6 +395,17 @@ public class SpdyFrameDecoder extends FrameDecoder {
             buffer.skipBytes(4);
 
             return new DefaultSpdyGoAwayFrame(lastGoodStreamID);
+
+        case SPDY_WINDOW_UPDATE_FRAME:
+            if (buffer.readableBytes() < 8) {
+                return null;
+            }
+
+            streamID = getUnsignedInt(buffer, buffer.readerIndex());
+            int deltaWindowSize = getUnsignedInt(buffer, buffer.readerIndex() + 4);
+            buffer.skipBytes(8);
+
+            return new DefaultSpdyWindowUpdateFrame(streamID, deltaWindowSize);
 
         default:
             throw new Error("Shouldn't reach here.");
@@ -622,6 +654,8 @@ public class SpdyFrameDecoder extends FrameDecoder {
             return length == 4 || length >= 8;
 
         case SPDY_WINDOW_UPDATE_FRAME:
+            return length == 8;
+
         default:
             return true;
         }
@@ -636,10 +670,10 @@ public class SpdyFrameDecoder extends FrameDecoder {
         case SPDY_PING_FRAME:
         case SPDY_GOAWAY_FRAME:
         case SPDY_HEADERS_FRAME:
+        case SPDY_WINDOW_UPDATE_FRAME:
             return true;
 
         case SPDY_NOOP_FRAME:
-        case SPDY_WINDOW_UPDATE_FRAME:
         default:
             return false;
         }
