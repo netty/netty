@@ -38,22 +38,63 @@ public interface DatagramChannel extends Channel {
     /**
      * Joins a multicast group.
      */
-    void joinGroup(InetAddress multicastAddress, ChannelFuture future);
+    ChannelFuture joinGroup(InetAddress multicastAddress);
+    ChannelFuture joinGroup(InetAddress multicastAddress, ChannelFuture future);
 
     /**
      * Joins the specified multicast group at the specified interface.
      */
-    void joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+    ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
 
-    void joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelFuture future);
+    ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
+    ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelFuture future);
 
     /**
      * Leaves a multicast group.
      */
-    void leaveGroup(InetAddress multicastAddress, ChannelFuture future);
+    ChannelFuture leaveGroup(InetAddress multicastAddress);
+    ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelFuture future);
 
     /**
      * Leaves a multicast group on a specified local interface.
      */
-    void leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+    ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+
+    /**
+     * Leave the specified multicast group at the specified interface using the specified source.
+     */
+    ChannelFuture leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
+    ChannelFuture leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
+            ChannelFuture future);
+
+        /**
+     * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
+     */
+    ChannelFuture block(
+            InetAddress multicastAddress, NetworkInterface networkInterface,
+            InetAddress sourceToBlock);
+
+    /**
+     * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
+     */
+    ChannelFuture block(
+            InetAddress multicastAddress, NetworkInterface networkInterface,
+            InetAddress sourceToBlock, ChannelFuture future);
+
+    /**
+     * Block the given sourceToBlock address for the given multicastAddress
+     *
+     */
+    ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock);
+
+    /**
+     * Block the given sourceToBlock address for the given multicastAddress
+     *
+     */
+    ChannelFuture block(
+            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelFuture future);
 }

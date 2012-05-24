@@ -19,6 +19,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
+import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
@@ -30,6 +31,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected AbstractNioChannel(Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id);
         this.ch = ch;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

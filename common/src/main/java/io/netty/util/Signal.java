@@ -11,11 +11,11 @@ public final class Signal extends Error {
     private static final ConcurrentMap<String, Boolean> map =
             new ConcurrentHashMap<String, Boolean>();
 
-    private final SignalName uname;
+    private final UniqueName uname;
 
     public Signal(String name) {
         super(name);
-        uname = new SignalName(name);
+        uname = new UniqueName(map, name);
     }
 
     public void expect(Signal signal) {
@@ -37,11 +37,5 @@ public final class Signal extends Error {
     @Override
     public String toString() {
         return uname.name();
-    }
-
-    private static class SignalName extends UniqueName {
-        protected SignalName(String name) {
-            super(map, name);
-        }
     }
 }

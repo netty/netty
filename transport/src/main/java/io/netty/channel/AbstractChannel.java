@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
@@ -715,20 +716,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private void flush0() {
             // Perform outbound I/O.
             try {
-                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                    int localFlushedAmount = doFlush(i == 0);
-                    if (localFlushedAmount > 0) {
-                        flushedAmount += localFlushedAmount;
-                        notifyFlushFutures();
-                        break;
-                    }
-                    if (out().isEmpty()) {
-                        // Reset reader/writerIndex to 0 if the buffer is empty.
-                        if (out().hasByteBuffer()) {
-                            out().byteBuffer().clear();
-                        }
-                        break;
-                    }
+                ChannelBufferHolder<Object> out = out();
+                if (out.hasByteBuffer()) {
+                    flushByteBuf(out.byteBuffer());
+                } else {
+                    flushMessageBuf(out.messageBuffer());
                 }
             } catch (Throwable t) {
                 notifyFlushFutures(t);
@@ -737,6 +729,42 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (!isActive()) {
                     close(voidFuture());
+                }
+            }
+        }
+
+        private void flushByteBuf(ChannelBuffer buf) throws Exception {
+            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                int localFlushedAmount = doFlush(i == 0);
+                if (localFlushedAmount > 0) {
+                    flushedAmount += localFlushedAmount;
+                    notifyFlushFutures();
+                    break;
+                }
+                if (!buf.readable()) {
+                    // Reset reader/writerIndex to 0 if the buffer is empty.
+                    buf.clear();
+                    break;
+                }
+            }
+        }
+
+        private void flushMessageBuf(Queue<Object> buf) throws Exception {
+            final int writeSpinCount = config().getWriteSpinCount() - 1;
+            while (!buf.isEmpty()) {
+                boolean wrote = false;
+                for (int i = writeSpinCount; i >= 0; i --) {
+                    int localFlushedAmount = doFlush(i == 0);
+                    if (localFlushedAmount > 0) {
+                        flushedAmount += localFlushedAmount;
+                        wrote = true;
+                        notifyFlushFutures();
+                        break;
+                    }
+                }
+
+                if (!wrote) {
+                    break;
                 }
             }
         }

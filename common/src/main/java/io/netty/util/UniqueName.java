@@ -10,7 +10,7 @@ public class UniqueName implements Comparable<UniqueName> {
     private final int id;
     private final String name;
 
-    protected UniqueName(ConcurrentMap<String, Boolean> map, String name, Object... args) {
+    public UniqueName(ConcurrentMap<String, Boolean> map, String name, Object... args) {
         if (map == null) {
             throw new NullPointerException("map");
         }
