@@ -183,9 +183,12 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
             lineBuf.append((char) b);
         }
 
-        while (lineBuf.charAt(lineBuf.length() - 1) == '\r') {
-            lineBuf.setLength(lineBuf.length() - 1);
+        if (lineBuf.length() > 0) {
+            while (lineBuf.charAt(lineBuf.length() - 1) == '\r') {
+                lineBuf.setLength(lineBuf.length() - 1);
+            }
         }
+        
 
         return lineBuf.toString();
     }
