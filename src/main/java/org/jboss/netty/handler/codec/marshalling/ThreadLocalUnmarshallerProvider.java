@@ -27,19 +27,19 @@ import org.jboss.netty.channel.Channel;
  * 
  *
  */
-public class ThreadLocalUnmarshallingProvider implements UnmarshallerProvider {
+public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
     private final ThreadLocal<Unmarshaller> unmarshallers = new ThreadLocal<Unmarshaller>();
 
     private final MarshallerFactory factory;
     private final MarshallingConfiguration config;
     
     /**
-     * Create a new instance of the {@link ThreadLocalUnmarshallingProvider}
+     * Create a new instance of the {@link ThreadLocalUnmarshallerProvider}
      * 
      * @param factory   the {@link MarshallerFactory} to use to create {@link Unmarshaller}'s if needed
      * @param config    the {@link MarshallingConfiguration} to use
      */
-    public ThreadLocalUnmarshallingProvider(MarshallerFactory factory, MarshallingConfiguration config) {
+    public ThreadLocalUnmarshallerProvider(MarshallerFactory factory, MarshallingConfiguration config) {
         this.factory = factory;
         this.config = config;
     }

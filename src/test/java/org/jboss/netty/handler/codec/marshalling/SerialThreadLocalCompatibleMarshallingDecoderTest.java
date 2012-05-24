@@ -23,7 +23,7 @@ public class SerialThreadLocalCompatibleMarshallingDecoderTest extends SerialCom
 
     @Override
     protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
-        return new ThreadLocalUnmarshallingProvider(factory, config);
+        return new ThreadLocalUnmarshallerProvider(factory, config);
     }
 
 }
