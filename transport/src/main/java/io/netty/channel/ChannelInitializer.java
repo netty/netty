@@ -3,11 +3,11 @@ package io.netty.channel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
-public abstract class ChannelInitializer extends ChannelInboundHandlerAdapter<Object> {
+public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter<Object> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
 
-    public abstract void initChannel(Channel ch) throws Exception;
+    public abstract void initChannel(C ch) throws Exception;
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
@@ -39,7 +39,7 @@ public abstract class ChannelInitializer extends ChannelInboundHandlerAdapter<Ob
     public final void channelRegistered(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
         try {
-            initChannel(ctx.channel());
+            initChannel((C) ctx.channel());
             ctx.pipeline().remove(this);
             // Note that we do not call ctx.fireChannelRegistered() because a user might have
             // inserted a handler before the initializer using pipeline.addFirst().
