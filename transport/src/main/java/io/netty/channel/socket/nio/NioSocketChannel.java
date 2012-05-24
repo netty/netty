@@ -47,7 +47,11 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     public NioSocketChannel() {
-        this(null, null, newSocket());
+        this(newSocket());
+    }
+
+    public NioSocketChannel(SocketChannel socket) {
+        this(null, null, socket);
     }
 
     public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
