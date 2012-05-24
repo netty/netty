@@ -126,7 +126,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress);
+        javaChannel().socket().bind(localAddress);
         selectionKey().interestOps(SelectionKey.OP_READ);
     }
 
@@ -174,6 +174,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     @Override
     protected int doRead(ChannelBufferHolder<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
+        // FIXME: Make this configurable.
         ByteBuffer data = ByteBuffer.allocate(1024);
         InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
         if (remoteAddress == null) {

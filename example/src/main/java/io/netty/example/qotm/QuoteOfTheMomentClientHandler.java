@@ -15,27 +15,30 @@
  */
 package io.netty.example.qotm;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.CharsetUtil;
 
-public class QuoteOfTheMomentClientHandler extends SimpleChannelUpstreamHandler {
+public class QuoteOfTheMomentClientHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public void messageReceived(
+            ChannelInboundHandlerContext<DatagramPacket> ctx, DatagramPacket msg)
             throws Exception {
-        String msg = (String) e.getMessage();
-        if (msg.startsWith("QOTM: ")) {
-            System.out.println("Quote of the Moment: " + msg.substring(6));
-            e.channel().close();
+        String response = msg.data().toString(CharsetUtil.UTF_8);
+        if (response.startsWith("QOTM: ")) {
+            System.out.println("Quote of the Moment: " + response.substring(6));
+            ctx.close();
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+    public void exceptionCaught(
+            ChannelInboundHandlerContext<DatagramPacket> ctx, Throwable cause)
             throws Exception {
-        e.cause().printStackTrace();
-        e.channel().close();
+        cause.printStackTrace();
+        ctx.close();
     }
 }

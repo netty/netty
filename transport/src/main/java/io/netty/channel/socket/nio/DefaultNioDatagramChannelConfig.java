@@ -42,29 +42,29 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         }
 
         Object ipMulticastIf = null;
+        Method getOption = null;
+        Method setOption = null;
         if (socketOptionType != null) {
             try {
                 ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_IF").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_IF field", e);
             }
+
+            try {
+                getOption = DatagramChannel.class.getDeclaredMethod("getOption", socketOptionType);
+            } catch (Exception e) {
+                throw new Error("cannot locate the getOption() method", e);
+            }
+
+            try {
+                setOption = DatagramChannel.class.getDeclaredMethod("setOption", socketOptionType, Object.class);
+            } catch (Exception e) {
+                throw new Error("cannot locate the setOption() method", e);
+            }
         }
         IP_MULTICAST_IF = ipMulticastIf;
-
-        Method getOption;
-        try {
-            getOption = DatagramChannel.class.getDeclaredMethod("getOption", socketOptionType);
-        } catch (Exception e) {
-            throw new Error("cannot locate the getOption() method", e);
-        }
         GET_OPTION = getOption;
-
-        Method setOption;
-        try {
-            setOption = DatagramChannel.class.getDeclaredMethod("setOption", socketOptionType, Object.class);
-        } catch (Exception e) {
-            throw new Error("cannot locate the setOption() method", e);
-        }
         SET_OPTION = setOption;
     }
 
