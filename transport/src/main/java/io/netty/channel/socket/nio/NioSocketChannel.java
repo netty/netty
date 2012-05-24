@@ -26,7 +26,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -78,16 +77,6 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     @Override
     public SocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override
@@ -199,7 +188,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
             // b) If wrote nothing:
             //    1) If 'lastSpin' is false, the caller will call this method again real soon.
             //       - Do not update OP_WRITE.
-            //    a) If 'lastSpin' is true, the caller will not retry.
+            //    2) If 'lastSpin' is true, the caller will not retry.
             //       - Set OP_WRITE so that the event loop calls flushForcibly() later.
             if (writtenBytes > 0 || lastSpin) {
                 if ((interestOps & SelectionKey.OP_WRITE) == 0) {
