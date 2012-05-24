@@ -168,4 +168,15 @@ public class ChannelBufferStreamTest {
 
         assertEquals(buf.readerIndex(), in.readBytes());
     }
+
+    @Test
+    public void testEmptyReadLine() throws Exception {
+        ChannelBuffer buf = ChannelBuffers.buffer(0);
+        ChannelBufferInputStream in = new ChannelBufferInputStream(buf);
+
+        String s = in.readLine();
+        assertEquals(0, s.length());
+
+        in.close();
+    }
 }
