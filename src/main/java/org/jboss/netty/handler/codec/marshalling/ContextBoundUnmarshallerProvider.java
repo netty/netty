@@ -18,31 +18,32 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * Default implementation of {@link UnmarshallerProvider} which will just create a new {@link Unmarshaller}
- * on every call to {@link #getUnmarshaller(ChannelHandlerContext)}
+ * {@link UnmarshallerProvider} which store a reference to the {@link Unmarshaller} in the 
+ * {@link ChannelHandlerContext} via the {@link ChannelHandlerContext#setAttachment(Object)} 
+ * method. So the same {@link Unmarshaller} will be used during the life-time of a {@link Channel}
+ * for the {@link ChannelHandler}'s {@link ChannelHandlerContext}.
+ * 
  *
  */
-public class DefaultUnmarshallerProvider implements UnmarshallerProvider {
+public class ContextBoundUnmarshallerProvider extends DefaultUnmarshallerProvider {
 
-    private final MarshallerFactory factory;
-    private final MarshallingConfiguration config;
-    
-    /**
-     * Create a new instance of {@link DefaultMarshallerProvider} 
-     * 
-     * @param factory   the {@link MarshallerFactory} to use to create {@link Unmarshaller}
-     * @param config    the {@link MarshallingConfiguration}
-     */
-    public DefaultUnmarshallerProvider(MarshallerFactory factory, MarshallingConfiguration config) {
-        this.factory = factory;
-        this.config = config;
+    public ContextBoundUnmarshallerProvider(MarshallerFactory factory, MarshallingConfiguration config) {
+        super(factory, config);
     }
-    
+
+    @Override
     public Unmarshaller getUnmarshaller(ChannelHandlerContext ctx) throws Exception {
-        return factory.createUnmarshaller(config);
+        Unmarshaller unmarshaller = (Unmarshaller) ctx.getAttachment();
+        if (unmarshaller == null) {
+            unmarshaller = super.getUnmarshaller(ctx);
+            ctx.setAttachment(unmarshaller);
+        }
+        return unmarshaller;
     }
 
 }

@@ -18,7 +18,7 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * {@link UnmarshallerProvider} implementation which use a {@link ThreadLocal} to store references
@@ -44,7 +44,7 @@ public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
         this.config = config;
     }
 
-    public Unmarshaller getUnmarshaller(Channel channel) throws Exception {
+    public Unmarshaller getUnmarshaller(ChannelHandlerContext ctx) throws Exception {
         Unmarshaller unmarshaller = unmarshallers.get();
         if (unmarshaller == null) {
             unmarshaller = factory.createUnmarshaller(config);

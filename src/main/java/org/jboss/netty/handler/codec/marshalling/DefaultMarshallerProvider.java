@@ -18,11 +18,11 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Default implementation of {@link MarshallerProvider} which just create a new {@link Marshaller}
- * on ever {@link #getMarshaller(Channel)} call.
+ * on ever {@link #getMarshaller(ChannelHandlerContext)} call.
  * 
  *
  */
@@ -42,7 +42,7 @@ public class DefaultMarshallerProvider implements MarshallerProvider {
         this.config = config;
     }
     
-    public Marshaller getMarshaller(Channel channel) throws Exception {
+    public Marshaller getMarshaller(ChannelHandlerContext ctx) throws Exception {
         return factory.createMarshaller(config);
     }
 

@@ -15,17 +15,15 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import org.jboss.marshalling.Unmarshaller;
-import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.marshalling.MarshallerFactory;
+import org.jboss.marshalling.MarshallingConfiguration;
 
-/**
- * This provider is responsible to get an {@link Unmarshaller} for a {@link ChannelHandlerContext}
- *
- */
-public interface UnmarshallerProvider {
+public class SerialContextBoundMarshallingDecoderTest extends SerialMarshallingDecoderTest {
 
-    /**
-     * Get the {@link Unmarshaller} for the given {@link ChannelHandlerContext}
-     */
-    Unmarshaller getUnmarshaller(ChannelHandlerContext ctx) throws Exception;
+
+    @Override
+    protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
+        return new ContextBoundUnmarshallerProvider(factory, config);
+    }
+
 }

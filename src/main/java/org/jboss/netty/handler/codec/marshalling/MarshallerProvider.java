@@ -16,17 +16,17 @@
 package org.jboss.netty.handler.codec.marshalling;
 
 import org.jboss.marshalling.Marshaller;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * This provider is responsible to get a {@link Marshaller} for the given Channel. 
+ * This provider is responsible to get a {@link Marshaller} for the given {@link ChannelHandlerContext}. 
  * 
  *
  */
 public interface MarshallerProvider {
 
     /**
-     * Get a {@link Marshaller} for the given {@link Channel}
+     * Get a {@link Marshaller} for the given {@link ChannelHandlerContext}
      */
-    Marshaller getMarshaller(Channel channel) throws Exception;
+    Marshaller getMarshaller(ChannelHandlerContext ctx) throws Exception;
 }

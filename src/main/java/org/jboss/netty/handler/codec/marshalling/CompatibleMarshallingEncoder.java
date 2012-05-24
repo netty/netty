@@ -49,7 +49,7 @@ public class CompatibleMarshallingEncoder extends OneToOneEncoder {
     
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        Marshaller marshaller = provider.getMarshaller(channel);
+        Marshaller marshaller = provider.getMarshaller(ctx);
         ChannelBufferByteOutput output = new ChannelBufferByteOutput(ctx.getChannel().getConfig().getBufferFactory(), 256);
         marshaller.start(output);
         marshaller.writeObject(msg);

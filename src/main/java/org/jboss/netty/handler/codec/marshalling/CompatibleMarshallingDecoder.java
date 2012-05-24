@@ -56,7 +56,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state) throws Exception {
-        Unmarshaller unmarshaller = provider.getUnmarshaller(channel);
+        Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize != Integer.MAX_VALUE) {
             input = new LimitingByteInput(input, maxObjectSize);

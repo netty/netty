@@ -18,7 +18,7 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.MarshallingConfiguration;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * {@link UnmarshallerProvider} implementation which use a {@link ThreadLocal} to store references
@@ -46,7 +46,7 @@ public class ThreadLocalMarshallerProvider implements MarshallerProvider {
         this.config = config;
     }
 
-    public Marshaller getMarshaller(Channel channel) throws Exception {
+    public Marshaller getMarshaller(ChannelHandlerContext ctx) throws Exception {
         Marshaller marshaller = marshallers.get();
         if (marshaller == null) {
             marshaller = factory.createMarshaller(config);
