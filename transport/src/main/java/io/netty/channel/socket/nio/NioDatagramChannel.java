@@ -174,8 +174,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     @Override
     protected int doRead(ChannelBufferHolder<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        // FIXME: Make this configurable.
-        ByteBuffer data = ByteBuffer.allocate(1024);
+        ByteBuffer data = ByteBuffer.allocate(config().getReceivePacketSize());
         InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
         if (remoteAddress == null) {
             return 0;

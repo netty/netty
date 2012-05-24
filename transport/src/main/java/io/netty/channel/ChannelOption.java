@@ -44,6 +44,9 @@ public class ChannelOption<T> extends UniqueKey<T> {
     public static final ChannelOption<Boolean> IP_MULTICAST_LOOP_DISABLED =
             new ChannelOption<Boolean>("IP_MULTICAST_LOOP_DISABLED", Boolean.class);
 
+    public static final ChannelOption<Integer> UDP_RECEIVE_PACKET_SIZE =
+            new ChannelOption<Integer>("UDP_RECEIVE_PACKET_SIZE", Integer.class);
+
     public static final ChannelOption<Boolean> TCP_NODELAY =
             new ChannelOption<Boolean>("TCP_NODELAY", Boolean.class);
 

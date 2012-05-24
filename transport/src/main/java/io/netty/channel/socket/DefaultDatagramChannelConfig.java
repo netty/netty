@@ -33,7 +33,10 @@ import java.util.Map;
  */
 public class DefaultDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
 
+    private static int DEFAULT_RECEIVE_PACKET_SIZE = 2048;
+
     private final DatagramSocket socket;
+    private volatile int receivePacketSize = DEFAULT_RECEIVE_PACKET_SIZE;
 
     /**
      * Creates a new instance.
@@ -50,7 +53,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         return getOptions(
                 super.getOptions(),
                 SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED,
-                IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS);
+                IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, UDP_RECEIVE_PACKET_SIZE);
     }
 
     @Override
@@ -63,6 +66,9 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         }
         if (option == SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == UDP_RECEIVE_PACKET_SIZE) {
+            return (T) Integer.valueOf(getReceivePacketSize());
         }
         if (option == SO_REUSEADDR) {
             return (T) Boolean.valueOf(isReuseAddress());
@@ -267,6 +273,20 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+    }
+
+    @Override
+    public int getReceivePacketSize() {
+        return receivePacketSize;
+    }
+
+    @Override
+    public void setReceivePacketSize(int receivePacketSize) {
+        if (receivePacketSize <= 0) {
+            throw new IllegalArgumentException(
+                    String.format("receivePacketSize: %d (expected: > 0)", receivePacketSize));
+        }
+        this.receivePacketSize = receivePacketSize;
     }
 
     @Override

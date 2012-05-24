@@ -75,6 +75,10 @@ public interface DatagramChannelConfig extends ChannelConfig {
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
+    int getReceivePacketSize();
+
+    void setReceivePacketSize(int receivePacketSize);
+
     /**
      * Gets the traffic class.
      */
