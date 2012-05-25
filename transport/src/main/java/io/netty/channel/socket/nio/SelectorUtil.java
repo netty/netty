@@ -47,11 +47,6 @@ final class SelectorUtil {
 
     static void select(Selector selector) throws IOException {
         try {
-            for (int i = 0; i < 32; i ++) {
-                if (selector.selectNow() > 0) {
-                    return;
-                }
-            }
             selector.select(10);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
