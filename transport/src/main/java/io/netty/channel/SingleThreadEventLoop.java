@@ -106,8 +106,9 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         assert inEventLoop();
         Runnable task = taskQueue.poll();
         if (task == null) {
-            fetchScheduledTasks();
-            task = taskQueue.poll();
+            if (fetchScheduledTasks()) {
+                task = taskQueue.poll();
+            }
         }
         return task;
     }
@@ -125,12 +126,24 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
 
     protected Runnable peekTask() {
         assert inEventLoop();
-        return taskQueue.peek();
+        Runnable task = taskQueue.peek();
+        if (task == null) {
+            if (fetchScheduledTasks()) {
+                task = taskQueue.peek();
+            }
+        }
+        return task;
     }
 
     protected boolean hasTasks() {
         assert inEventLoop();
-        return !taskQueue.isEmpty();
+        boolean empty = taskQueue.isEmpty();
+        if (empty) {
+            if (fetchScheduledTasks()) {
+                empty = taskQueue.isEmpty();
+            }
+        }
+        return !empty;
     }
 
     protected void addTask(Runnable task) {
@@ -353,9 +366,9 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         return task;
     }
 
-    private void fetchScheduledTasks() {
+    private boolean fetchScheduledTasks() {
         if (scheduledTasks.isEmpty()) {
-            return;
+            return false;
         }
 
         long nanoTime = nanoTime();
@@ -369,6 +382,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         }
 
         if (nanoTime - lastCheckTimeNanos >= SCHEDULE_CHECK_INTERVAL) {
+            boolean added = false;
             for (;;) {
                 ScheduledFutureTask<?> task = scheduledTasks.poll();
                 if (task == null) {
@@ -380,10 +394,14 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
                         task.cancel(false);
                     } else {
                         taskQueue.add(task);
+                        added = true;
                     }
                 }
             }
+            return added;
         }
+
+        return false;
     }
 
     private void cancelScheduledTasks() {

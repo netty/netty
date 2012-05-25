@@ -163,14 +163,15 @@ final class SingleThreadSelectorEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeys() {
-        for (Iterator<SelectionKey> i = selector.selectedKeys().iterator(); i.hasNext();) {
+        Iterator<SelectionKey> i;
+        for (i = selector.selectedKeys().iterator(); i.hasNext();) {
             final SelectionKey k = i.next();
+            i.remove();
             final Channel ch = (Channel) k.attachment();
             final Unsafe unsafe = ch.unsafe();
-            boolean removeKey = true;
             try {
                 int readyOps = k.readyOps();
-                if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
+                if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
                     unsafe.read();
                     if (!ch.isOpen()) {
                         // Connection already closed - no need to handle write.
@@ -180,22 +181,16 @@ final class SingleThreadSelectorEventLoop extends SingleThreadEventLoop {
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     unsafe.flushForcibly();
                 }
-                if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
-                    unsafe.read();
-                }
                 if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                     unsafe.finishConnect();
                 }
             } catch (CancelledKeyException ignored) {
                 unsafe.close(unsafe.voidFuture());
-            } finally {
-                if (removeKey) {
-                    i.remove();
-                }
             }
 
             if (cleanUpCancelledKeys()) {
-                break; // break the loop to avoid ConcurrentModificationException
+                // Create the iterator again to avoid ConcurrentModificationException
+                i = selector.selectedKeys().iterator();
             }
         }
     }
