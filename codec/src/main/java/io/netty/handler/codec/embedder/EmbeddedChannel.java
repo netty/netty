@@ -126,7 +126,12 @@ class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doRead(ChannelBufferHolder<Object> buf) throws Exception {
+    protected int doRead(ChannelBuffer buf) throws Exception {
+        return 0;
+    }
+
+    @Override
+    protected int doRead(Queue<Object> buf) throws Exception {
         return 0;
     }
 
