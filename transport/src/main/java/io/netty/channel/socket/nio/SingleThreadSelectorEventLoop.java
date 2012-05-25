@@ -163,8 +163,12 @@ final class SingleThreadSelectorEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeys() {
+        Set<SelectionKey> selectedKeys = selector.selectedKeys();
+        if (selectedKeys.isEmpty()) {
+            return;
+        }
         Iterator<SelectionKey> i;
-        for (i = selector.selectedKeys().iterator(); i.hasNext();) {
+        for (i = selectedKeys.iterator(); i.hasNext();) {
             final SelectionKey k = i.next();
             i.remove();
             final Channel ch = (Channel) k.attachment();
@@ -190,7 +194,11 @@ final class SingleThreadSelectorEventLoop extends SingleThreadEventLoop {
 
             if (cleanUpCancelledKeys()) {
                 // Create the iterator again to avoid ConcurrentModificationException
-                i = selector.selectedKeys().iterator();
+                if (selectedKeys.isEmpty()) {
+                    break;
+                } else {
+                    i = selectedKeys.iterator();
+                }
             }
         }
     }
