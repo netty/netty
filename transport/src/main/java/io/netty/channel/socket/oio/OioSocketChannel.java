@@ -193,6 +193,9 @@ public class OioSocketChannel extends AbstractChannel
 
     @Override
     protected int doRead(ChannelBuffer buf) throws Exception {
+        if (socket.isClosed()) {
+            return -1;
+        }
         try {
             int readBytes = buf.writeBytes(is, buf.writableBytes());
             return readBytes;

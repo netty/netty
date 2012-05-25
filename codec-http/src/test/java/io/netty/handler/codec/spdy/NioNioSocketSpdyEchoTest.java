@@ -26,18 +26,15 @@ public class NioNioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
 
     @Override
     protected ChannelBootstrap newClientBootstrap() {
-        ChannelBootstrap b = new ChannelBootstrap();
-        b.eventLoop(new SelectorEventLoop());
-        b.channel(new NioSocketChannel());
-        return b;
+        return new ChannelBootstrap()
+                .eventLoop(new SelectorEventLoop())
+                .channel(new NioSocketChannel());
     }
 
     @Override
     protected ServerChannelBootstrap newServerBootstrap() {
-        ServerChannelBootstrap b = new ServerChannelBootstrap();
-        b.eventLoop(new SelectorEventLoop(), new SelectorEventLoop());
-        b.channel(new NioServerSocketChannel());
-        return b;
+        return new ServerChannelBootstrap()
+                .eventLoop(new SelectorEventLoop(), new SelectorEventLoop())
+                .channel(new NioServerSocketChannel());
     }
-
 }

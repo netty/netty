@@ -153,6 +153,10 @@ public class OioServerSocketChannel extends AbstractServerChannel
 
     @Override
     protected int doRead(Queue<Object> buf) throws Exception {
+        if (socket.isClosed()) {
+            return -1;
+        }
+
         Socket s = null;
         try {
             s = socket.accept();
