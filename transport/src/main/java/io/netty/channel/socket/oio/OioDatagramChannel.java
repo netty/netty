@@ -46,9 +46,12 @@ public class OioDatagramChannel extends AbstractChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
+    private static final byte[] EMPTY_DATA = new byte[0];
+
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
     private final ChannelBufferHolder<Object> out = ChannelBufferHolders.messageBuffer();
+    private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
 
     private static MulticastSocket newSocket() {
         try {
@@ -194,14 +197,15 @@ public class OioDatagramChannel extends AbstractChannel
     protected int doRead(Queue<Object> buf) throws Exception {
         int packetSize = config().getReceivePacketSize();
         byte[] data = new byte[packetSize];
-        java.net.DatagramPacket p = new java.net.DatagramPacket(data, packetSize);
+        tmpPacket.setData(data);
         try {
-            socket.receive(p);
-            InetSocketAddress remoteAddr = (InetSocketAddress) p.getSocketAddress();
+            socket.receive(tmpPacket);
+            InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
             if (remoteAddr == null) {
                 remoteAddr = remoteAddress();
             }
-            buf.add(new DatagramPacket(ChannelBuffers.wrappedBuffer(data, p.getOffset(), p.getLength()), remoteAddr));
+            buf.add(new DatagramPacket(ChannelBuffers.wrappedBuffer(
+                    data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
             return 1;
         } catch (SocketTimeoutException e) {
             // Expected
@@ -224,18 +228,16 @@ public class OioDatagramChannel extends AbstractChannel
         DatagramPacket p = (DatagramPacket) buf.poll();
         ChannelBuffer data = p.data();
         int length = data.readableBytes();
-        SocketAddress remoteAddr = p.remoteAddress();
-        java.net.DatagramPacket q;
+        tmpPacket.setSocketAddress(p.remoteAddress());
         if (data.hasArray()) {
-            q = new java.net.DatagramPacket(
-                    data.array(), data.arrayOffset() + data.readerIndex(), length, remoteAddr);
+            tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
         } else {
             byte[] tmp = new byte[length];
             data.getBytes(data.readerIndex(), tmp);
-            q = new java.net.DatagramPacket(tmp, length, remoteAddr);
+            tmpPacket.setData(tmp);
         }
 
-        socket.send(q);
+        socket.send(tmpPacket);
         return 1;
     }
 
