@@ -6,7 +6,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.SingleThreadEventLoop;
 
 
-public class SingleBlockingChannelEventLoop extends SingleThreadEventLoop {
+class SingleBlockingChannelEventLoop extends SingleThreadEventLoop {
 
     private final BlockingChannelEventLoop parent;
     private Channel ch;
