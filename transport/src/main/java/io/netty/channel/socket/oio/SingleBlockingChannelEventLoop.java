@@ -43,17 +43,12 @@ class SingleBlockingChannelEventLoop extends SingleThreadEventLoop {
                     // Waken up by interruptThread()
                 }
             } else {
+                processTaskQueue();
                 ch.unsafe().read();
-                for (;;) {
-                    Runnable task = pollTask();
-                    if (task == null) {
-                        break;
-                    }
-                    task.run();
-                }
 
                 // Handle deregistration
                 if (!ch.isRegistered()) {
+                    processTaskQueue();
                     deregister();
                 }
             }
@@ -61,6 +56,16 @@ class SingleBlockingChannelEventLoop extends SingleThreadEventLoop {
             if (isShutdown() && peekTask() == null) {
                 break;
             }
+        }
+    }
+
+    private void processTaskQueue() {
+        for (;;) {
+            Runnable task = pollTask();
+            if (task == null) {
+                break;
+            }
+            task.run();
         }
     }
 
