@@ -6,12 +6,12 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.SingleThreadEventLoop;
 
 
-class SingleBlockingChannelEventLoop extends SingleThreadEventLoop {
+class OioChildEventLoop extends SingleThreadEventLoop {
 
-    private final BlockingChannelEventLoop parent;
+    private final OioEventLoop parent;
     private Channel ch;
 
-    SingleBlockingChannelEventLoop(BlockingChannelEventLoop parent) {
+    OioChildEventLoop(OioEventLoop parent) {
         super(parent.threadFactory);
         this.parent = parent;
     }
@@ -33,7 +33,7 @@ class SingleBlockingChannelEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            Channel ch = SingleBlockingChannelEventLoop.this.ch;
+            Channel ch = OioChildEventLoop.this.ch;
             if (ch == null || !ch.isActive()) {
                 Runnable task;
                 try {

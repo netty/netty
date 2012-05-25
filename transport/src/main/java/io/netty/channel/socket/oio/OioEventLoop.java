@@ -23,25 +23,25 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class BlockingChannelEventLoop implements EventLoop {
+public class OioEventLoop implements EventLoop {
 
     private final int maxChannels;
     final ThreadFactory threadFactory;
-    final Set<SingleBlockingChannelEventLoop> activeChildren = Collections.newSetFromMap(
-            new ConcurrentHashMap<SingleBlockingChannelEventLoop, Boolean>());
-    final Queue<SingleBlockingChannelEventLoop> idleChildren =
-            QueueFactory.createQueue(SingleBlockingChannelEventLoop.class);
+    final Set<OioChildEventLoop> activeChildren = Collections.newSetFromMap(
+            new ConcurrentHashMap<OioChildEventLoop, Boolean>());
+    final Queue<OioChildEventLoop> idleChildren =
+            QueueFactory.createQueue(OioChildEventLoop.class);
     private final ChannelException tooManyChannels;
 
-    public BlockingChannelEventLoop() {
+    public OioEventLoop() {
         this(0);
     }
 
-    public BlockingChannelEventLoop(int maxChannels) {
+    public OioEventLoop(int maxChannels) {
         this(maxChannels, Executors.defaultThreadFactory());
     }
 
-    public BlockingChannelEventLoop(int maxChannels, ThreadFactory threadFactory) {
+    public OioEventLoop(int maxChannels, ThreadFactory threadFactory) {
         if (maxChannels < 0) {
             throw new IllegalArgumentException(String.format(
                     "maxChannels: %d (expected: >= 0)", maxChannels));
@@ -234,20 +234,20 @@ public class BlockingChannelEventLoop implements EventLoop {
     }
 
     private EventLoop nextEventLoop() {
-        SingleBlockingChannelEventLoop loop = idleChildren.poll();
+        OioChildEventLoop loop = idleChildren.poll();
         if (loop == null) {
             if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
                 throw tooManyChannels;
             }
-            loop = new SingleBlockingChannelEventLoop(this);
+            loop = new OioChildEventLoop(this);
         }
         activeChildren.add(loop);
         return loop;
     }
 
-    private static SingleBlockingChannelEventLoop currentEventLoop() {
-        SingleBlockingChannelEventLoop loop =
-                (SingleBlockingChannelEventLoop) SingleThreadEventLoop.currentEventLoop();
+    private static OioChildEventLoop currentEventLoop() {
+        OioChildEventLoop loop =
+                (OioChildEventLoop) SingleThreadEventLoop.currentEventLoop();
         if (loop == null) {
             throw new IllegalStateException("not called from an event loop thread");
         }

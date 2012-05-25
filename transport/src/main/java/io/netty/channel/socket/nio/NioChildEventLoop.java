@@ -34,13 +34,13 @@ import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-final class SingleThreadSelectorEventLoop extends SingleThreadEventLoop {
+final class NioChildEventLoop extends SingleThreadEventLoop {
 
     /**
      * Internal Netty logger.
      */
     protected static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(SingleThreadSelectorEventLoop.class);
+            .getInstance(NioChildEventLoop.class);
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
@@ -59,7 +59,7 @@ final class SingleThreadSelectorEventLoop extends SingleThreadEventLoop {
 
     int cancelledKeys;
 
-    SingleThreadSelectorEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+    NioChildEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
         super(threadFactory);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");

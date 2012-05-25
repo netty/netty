@@ -19,8 +19,8 @@ package io.netty.handler.codec.spdy;
 import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.nio.SelectorEventLoop;
-import io.netty.channel.socket.oio.BlockingChannelEventLoop;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.oio.OioEventLoop;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
 
 public class NioOioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
@@ -28,14 +28,14 @@ public class NioOioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
     @Override
     protected ChannelBootstrap newClientBootstrap() {
         return new ChannelBootstrap()
-                .eventLoop(new SelectorEventLoop())
+                .eventLoop(new NioEventLoop())
                 .channel(new NioSocketChannel());
     }
 
     @Override
     protected ServerChannelBootstrap newServerBootstrap() {
         return new ServerChannelBootstrap()
-                .eventLoop(new BlockingChannelEventLoop(), new BlockingChannelEventLoop())
+                .eventLoop(new OioEventLoop(), new OioEventLoop())
                 .channel(new OioServerSocketChannel());
     }
 }

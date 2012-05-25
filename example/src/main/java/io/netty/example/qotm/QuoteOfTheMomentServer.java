@@ -15,12 +15,12 @@
  */
 package io.netty.example.qotm;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.channel.socket.nio.NioEventLoop;
 
 import java.net.InetSocketAddress;
 
@@ -41,13 +41,13 @@ public class QuoteOfTheMomentServer {
     public void run() throws Exception {
         ChannelBootstrap b = new ChannelBootstrap();
         try {
-            b.eventLoop(new SelectorEventLoop())
+            b.eventLoop(new NioEventLoop())
              .channel(new NioDatagramChannel())
              .localAddress(new InetSocketAddress(port))
              .option(ChannelOption.SO_BROADCAST, true)
-             .initializer(new ChannelInitializer() {
+             .initializer(new ChannelInitializer<DatagramChannel>() {
                 @Override
-                public void initChannel(Channel ch) throws Exception {
+                public void initChannel(DatagramChannel ch) throws Exception {
                     ch.pipeline().addLast(new QuoteOfTheMomentServerHandler());
                 }
              });

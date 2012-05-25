@@ -15,15 +15,15 @@
  */
 package io.netty.example.http.snoop;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 
-public class HttpSnoopServerInitializer extends ChannelInitializer {
+public class HttpSnoopServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
-    public void initChannel(Channel ch) throws Exception {
+    public void initChannel(SocketChannel ch) throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline p = ch.pipeline();
 

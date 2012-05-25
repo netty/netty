@@ -89,7 +89,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new DefaultNioDatagramChannelConfig(socket);
+        config = new NioDatagramChannelConfig(socket);
 
     }
 
@@ -168,7 +168,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     @Override
     protected void doDeregister() throws Exception {
         selectionKey().cancel();
-        ((SingleThreadSelectorEventLoop) eventLoop()).cancelledKeys ++;
+        ((NioChildEventLoop) eventLoop()).cancelledKeys ++;
     }
 
     @Override

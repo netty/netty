@@ -155,7 +155,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     @Override
     protected void doDeregister() throws Exception {
         selectionKey().cancel();
-        ((SingleThreadSelectorEventLoop) eventLoop()).cancelledKeys ++;
+        ((NioChildEventLoop) eventLoop()).cancelledKeys ++;
     }
 
     @Override

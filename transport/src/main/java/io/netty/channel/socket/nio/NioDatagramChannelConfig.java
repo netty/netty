@@ -26,7 +26,7 @@ import java.nio.channels.DatagramChannel;
 /**
  * The default {@link NioSocketChannelConfig} implementation.
  */
-class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig {
+class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     private static final Object IP_MULTICAST_IF;
     private static final Method GET_OPTION;
@@ -70,7 +70,7 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     private final DatagramChannel channel;
 
-    DefaultNioDatagramChannelConfig(DatagramChannel channel) {
+    NioDatagramChannelConfig(DatagramChannel channel) {
         super(channel.socket());
         this.channel = channel;
     }

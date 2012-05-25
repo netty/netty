@@ -118,7 +118,7 @@ public class OioServerSocketChannel extends AbstractServerChannel
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleBlockingChannelEventLoop;
+        return loop instanceof OioChildEventLoop;
     }
 
     @Override

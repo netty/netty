@@ -15,13 +15,13 @@
  */
 package io.netty.example.echo;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.nio.SelectorEventLoop;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
@@ -49,13 +49,13 @@ public class EchoClient {
         // Configure the client.
         ChannelBootstrap b = new ChannelBootstrap();
         try {
-            b.eventLoop(new SelectorEventLoop())
+            b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .option(ChannelOption.TCP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
-             .initializer(new ChannelInitializer() {
+             .initializer(new ChannelInitializer<SocketChannel>() {
                  @Override
-                 public void initChannel(Channel ch) throws Exception {
+                 public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(
                              new LoggingHandler(LogLevel.INFO),
                              new EchoClientHandler(firstMessageSize));

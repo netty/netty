@@ -55,12 +55,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadSelectorEventLoop;
+        return loop instanceof NioChildEventLoop;
     }
 
     @Override
     protected void doRegister() throws Exception {
-        SingleThreadSelectorEventLoop loop = (SingleThreadSelectorEventLoop) eventLoop();
+        NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
         selectionKey = javaChannel().register(loop.selector, isActive()? SelectionKey.OP_READ : 0, this);
     }
 

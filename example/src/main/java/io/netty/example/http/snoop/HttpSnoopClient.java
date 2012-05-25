@@ -18,7 +18,7 @@ package io.netty.example.http.snoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.handler.codec.http.CookieEncoder;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -63,7 +63,7 @@ public class HttpSnoopClient {
         // Configure the client.
         ChannelBootstrap b = new ChannelBootstrap();
         try {
-            b.eventLoop(new SelectorEventLoop())
+            b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .initializer(new HttpSnoopClientInitializer(ssl))
              .remoteAddress(new InetSocketAddress(host, port));

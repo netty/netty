@@ -18,7 +18,7 @@ package io.netty.example.http.snoop;
 import io.netty.channel.Channel;
 import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.channel.socket.nio.NioEventLoop;
 
 import java.net.InetSocketAddress;
 
@@ -39,7 +39,7 @@ public class HttpSnoopServer {
         ServerChannelBootstrap b = new ServerChannelBootstrap();
 
         try {
-            b.eventLoop(new SelectorEventLoop(), new SelectorEventLoop())
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .childInitializer(new HttpSnoopServerInitializer())
              .localAddress(new InetSocketAddress(port));

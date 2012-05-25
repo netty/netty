@@ -15,9 +15,9 @@
  */
 package io.netty.example.http.snoop;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.logging.LogLevel;
@@ -25,7 +25,7 @@ import io.netty.handler.logging.LoggingHandler;
 
 import javax.net.ssl.SSLEngine;
 
-public class HttpSnoopClientInitializer extends ChannelInitializer {
+public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final boolean ssl;
 
@@ -34,7 +34,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer {
     }
 
     @Override
-    public void initChannel(Channel ch) throws Exception {
+    public void initChannel(SocketChannel ch) throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline p = ch.pipeline();
 

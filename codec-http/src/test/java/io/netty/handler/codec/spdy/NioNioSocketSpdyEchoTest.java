@@ -20,21 +20,21 @@ import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.nio.SelectorEventLoop;
+import io.netty.channel.socket.nio.NioEventLoop;
 
 public class NioNioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
 
     @Override
     protected ChannelBootstrap newClientBootstrap() {
         return new ChannelBootstrap()
-                .eventLoop(new SelectorEventLoop())
+                .eventLoop(new NioEventLoop())
                 .channel(new NioSocketChannel());
     }
 
     @Override
     protected ServerChannelBootstrap newServerBootstrap() {
         return new ServerChannelBootstrap()
-                .eventLoop(new SelectorEventLoop(), new SelectorEventLoop())
+                .eventLoop(new NioEventLoop(), new NioEventLoop())
                 .channel(new NioServerSocketChannel());
     }
 }

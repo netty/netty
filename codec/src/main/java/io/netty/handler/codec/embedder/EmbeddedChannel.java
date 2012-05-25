@@ -126,18 +126,7 @@ class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doRead(ChannelBuffer buf) throws Exception {
-        return 0;
-    }
-
-    @Override
-    protected int doRead(Queue<Object> buf) throws Exception {
-        return 0;
-    }
-
-    @Override
-    protected int doFlush(boolean lastSpin) throws Exception {
-        ChannelBuffer buf = firstOut().byteBuffer();
+    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
         int length = buf.readableBytes();
         if (length > 0) {
             productQueue.add(buf.readBytes(length));
