@@ -29,6 +29,10 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
 
     static final ThreadLocal<SingleThreadEventLoop> CURRENT_EVENT_LOOP = new ThreadLocal<SingleThreadEventLoop>();
 
+    public static SingleThreadEventLoop currentEventLoop() {
+        return CURRENT_EVENT_LOOP.get();
+    }
+
     private static long nanoTime() {
         return System.nanoTime() - START_TIME;
     }

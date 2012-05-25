@@ -247,43 +247,15 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
 
-        int readBytes = 0;
-
         if (buffer.hasArray()) {
-            index += buffer.arrayOffset();
-            do {
-                int localReadBytes = in.read(buffer.array(), index, length);
-                if (localReadBytes < 0) {
-                    if (readBytes == 0) {
-                        return -1;
-                    } else {
-                        break;
-                    }
-                }
-                readBytes += localReadBytes;
-                index += localReadBytes;
-                length -= localReadBytes;
-            } while (length > 0);
+            return in.read(buffer.array(), buffer.arrayOffset() + index, length);
         } else {
             byte[] tmp = new byte[length];
-            int i = 0;
-            do {
-                int localReadBytes = in.read(tmp, i, tmp.length - i);
-                if (localReadBytes < 0) {
-                    if (readBytes == 0) {
-                        return -1;
-                    } else {
-                        break;
-                    }
-                }
-                readBytes += localReadBytes;
-                i += readBytes;
-            } while (i < tmp.length);
+            int readBytes = in.read(tmp);
             tmpBuf.clear().position(index);
             tmpBuf.put(tmp);
+            return readBytes;
         }
-
-        return readBytes;
     }
 
     @Override

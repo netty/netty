@@ -15,74 +15,210 @@
  */
 package io.netty.channel.socket.oio;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PushbackInputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelException;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
-abstract class OioSocketChannel extends AbstractOioChannel
-                                implements SocketChannel {
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.nio.channels.NotYetConnectedException;
+import java.util.Queue;
 
-    final Socket socket;
+public class OioSocketChannel extends AbstractChannel
+                              implements SocketChannel {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(OioSocketChannel.class);
+
+    private final Socket socket;
     private final SocketChannelConfig config;
+    private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer();
+    private InputStream is;
+    private OutputStream os;
 
-    OioSocketChannel(
-            Channel parent,
-            ChannelFactory factory,
-            ChannelPipeline pipeline,
-            ChannelSink sink,
-            Socket socket) {
+    public OioSocketChannel() {
+        this(new Socket());
+    }
 
-        super(parent, factory, pipeline, sink);
+    public OioSocketChannel(Socket socket) {
+        this(null, null, socket);
+    }
 
+    public OioSocketChannel(Channel parent, Integer id, Socket socket) {
+        super(parent, id);
         this.socket = socket;
         config = new DefaultSocketChannelConfig(socket);
+
+        boolean success = false;
+        try {
+            if (socket.isConnected()) {
+                is = socket.getInputStream();
+                os = socket.getOutputStream();
+            }
+            socket.setSoTimeout(1000);
+            success = true;
+        } catch (Exception e) {
+            throw new ChannelException("failed to initialize a socket", e);
+        } finally {
+            if (!success) {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    logger.warn("Failed to close a socket.", e);
+                }
+            }
+        }
     }
 
     @Override
-    public SocketChannelConfig getConfig() {
+    public SocketChannelConfig config() {
         return config;
     }
 
-    abstract PushbackInputStream getInputStream();
-    abstract OutputStream getOutputStream();
-
     @Override
-    boolean isSocketBound() {
-        return socket.isBound();
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
-    boolean isSocketConnected() {
-        return socket.isConnected();
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override
-    InetSocketAddress getLocalSocketAddress() throws Exception {
-        return (InetSocketAddress) socket.getLocalSocketAddress();
+    public boolean isOpen() {
+        return !socket.isClosed();
     }
 
     @Override
-    InetSocketAddress getRemoteSocketAddress() throws Exception {
-        return (InetSocketAddress) socket.getRemoteSocketAddress();
+    public boolean isActive() {
+        return !socket.isClosed() && socket.isConnected();
     }
 
     @Override
-    void closeSocket() throws IOException {
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof SingleBlockingChannelEventLoop;
+    }
+
+    @Override
+    protected java.nio.channels.Channel javaChannel() {
+        return null;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected ChannelBufferHolder<Object> firstOut() {
+        return (ChannelBufferHolder<Object>) out;
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return socket.getLocalSocketAddress();
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return socket.getRemoteSocketAddress();
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected void doBind(SocketAddress localAddress) throws Exception {
+        socket.bind(localAddress);
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress,
+            SocketAddress localAddress) throws Exception {
+        if (localAddress != null) {
+            socket.bind(localAddress);
+        }
+
+        boolean success = false;
+        try {
+            socket.connect(remoteAddress, config().getConnectTimeoutMillis());
+            is = socket.getInputStream();
+            os = socket.getOutputStream();
+            success = true;
+            return true;
+        } finally {
+            if (!success) {
+                doClose();
+            }
+        }
+    }
+
+    @Override
+    protected void doFinishConnect() throws Exception {
+        throw new Error();
+    }
+
+    @Override
+    protected void doDisconnect() throws Exception {
+        doClose();
+    }
+
+    @Override
+    protected void doClose() throws Exception {
         socket.close();
     }
 
     @Override
-    boolean isSocketClosed() {
-        return socket.isClosed();
+    protected void doDeregister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected int doRead(Queue<Object> buf) throws Exception {
+        throw new Error();
+    }
+
+    @Override
+    protected int doRead(ChannelBuffer buf) throws Exception {
+        try {
+            int readBytes = buf.writeBytes(is, buf.writableBytes());
+            return readBytes;
+        } catch (SocketTimeoutException e) {
+            // Expected
+            return 0;
+        }
+    }
+
+    @Override
+    protected int doFlush(boolean lastSpin) throws Exception {
+        OutputStream os = this.os;
+        if (os == null) {
+            throw new NotYetConnectedException();
+        }
+        final ChannelBuffer buf = unsafe().out().byteBuffer();
+        final int length = buf.readableBytes();
+        if (length == 0) {
+            return 0;
+        }
+        buf.readBytes(os, length);
+        return length;
+    }
+
+    @Override
+    protected boolean inEventLoopDrivenFlush() {
+        return false;
     }
 }

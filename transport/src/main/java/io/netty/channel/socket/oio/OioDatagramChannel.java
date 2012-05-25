@@ -15,94 +15,287 @@
  */
 package io.netty.channel.socket.oio;
 
-import static io.netty.channel.Channels.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoop;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramChannelConfig;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.nio.channels.Channel;
+import java.util.Queue;
 
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
-import io.netty.channel.socket.DefaultDatagramChannelConfig;
-
-final class OioDatagramChannel extends AbstractOioChannel
+public class OioDatagramChannel extends AbstractChannel
                                 implements DatagramChannel {
 
-    final MulticastSocket socket;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
+
+    private final MulticastSocket socket;
     private final DatagramChannelConfig config;
+    private final ChannelBufferHolder<Object> out = ChannelBufferHolders.messageBuffer();
 
-
-    static OioDatagramChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink) {
-        OioDatagramChannel instance =
-                new OioDatagramChannel(factory, pipeline, sink);
-        fireChannelOpen(instance);
-        return instance;
+    private static MulticastSocket newSocket() {
+        try {
+            return new MulticastSocket(null);
+        } catch (Exception e) {
+            throw new ChannelException("failed to create a new socket", e);
+        }
     }
 
-    private OioDatagramChannel(
-            ChannelFactory factory,
-            ChannelPipeline pipeline,
-            ChannelSink sink) {
+    public OioDatagramChannel() {
+        this(newSocket());
+    }
 
-        super(null, factory, pipeline, sink);
+    public OioDatagramChannel(MulticastSocket socket) {
+        this(null, socket);
+    }
 
+    public OioDatagramChannel(Integer id, MulticastSocket socket) {
+        super(null, id);
+
+        boolean success = false;
         try {
-            socket = new MulticastSocket(null);
-        } catch (IOException e) {
-            throw new ChannelException("Failed to open a datagram socket.", e);
-        }
-
-        try {
-            socket.setSoTimeout(10);
+            socket.setSoTimeout(1000);
             socket.setBroadcast(false);
+            success = true;
         } catch (SocketException e) {
             throw new ChannelException(
                     "Failed to configure the datagram socket timeout.", e);
+        } finally {
+            if (!success) {
+                socket.close();
+            }
         }
+
+        this.socket = socket;
         config = new DefaultDatagramChannelConfig(socket);
     }
 
     @Override
-    public DatagramChannelConfig getConfig() {
+    public DatagramChannelConfig config() {
         return config;
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress) {
-        ensureBound();
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
+    }
+
+    @Override
+    public boolean isOpen() {
+        return !socket.isClosed();
+    }
+
+    @Override
+    public boolean isActive() {
+        return isOpen() && socket.isBound();
+    }
+
+    @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof SingleBlockingChannelEventLoop;
+    }
+
+    @Override
+    protected Channel javaChannel() {
+        return null;
+    }
+
+    @Override
+    protected ChannelBufferHolder<Object> firstOut() {
+        return out;
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return socket.getLocalSocketAddress();
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return socket.getRemoteSocketAddress();
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected void doBind(SocketAddress localAddress) throws Exception {
+        socket.bind(localAddress);
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress,
+            SocketAddress localAddress) throws Exception {
+        if (localAddress != null) {
+            socket.bind(localAddress);
+        }
+
+        boolean success = false;
         try {
-            socket.joinGroup(multicastAddress);
-            return Channels.succeededFuture(this);
-        } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            socket.connect(remoteAddress);
+            success = true;
+            return true;
+        } finally {
+            if (!success) {
+                try {
+                    socket.close();
+                } catch (Throwable t) {
+                    logger.warn("Failed to close a socket.", t);
+                }
+            }
         }
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        ensureBound();
-        try {
-            socket.joinGroup(multicastAddress, networkInterface);
-            return Channels.succeededFuture(this);
+    protected void doFinishConnect() throws Exception {
+        throw new Error();
+    }
 
-        } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+    @Override
+    protected void doDisconnect() throws Exception {
+        socket.disconnect();
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        socket.close();
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected int doRead(Queue<Object> buf) throws Exception {
+        int packetSize = config().getReceivePacketSize();
+        byte[] data = new byte[packetSize];
+        java.net.DatagramPacket p = new java.net.DatagramPacket(data, packetSize);
+        try {
+            socket.receive(p);
+            InetSocketAddress remoteAddr = (InetSocketAddress) p.getSocketAddress();
+            if (remoteAddr == null) {
+                remoteAddr = remoteAddress();
+            }
+            buf.add(new DatagramPacket(ChannelBuffers.wrappedBuffer(data, p.getOffset(), p.getLength()), remoteAddr));
+            return 1;
+        } catch (SocketTimeoutException e) {
+            // Expected
+            return 0;
         }
     }
 
+    @Override
+    protected int doRead(ChannelBuffer buf) throws Exception {
+        throw new Error();
+    }
+
+    @Override
+    protected int doFlush(boolean lastSpin) throws Exception {
+        final Queue<Object> buf = unsafe().out().messageBuffer();
+        if (buf.isEmpty()) {
+            return 0;
+        }
+
+        DatagramPacket p = (DatagramPacket) buf.poll();
+        ChannelBuffer data = p.data();
+        int length = data.readableBytes();
+        SocketAddress remoteAddr = p.remoteAddress();
+        java.net.DatagramPacket q;
+        if (data.hasArray()) {
+            q = new java.net.DatagramPacket(
+                    data.array(), data.arrayOffset() + data.readerIndex(), length, remoteAddr);
+        } else {
+            byte[] tmp = new byte[length];
+            data.getBytes(data.readerIndex(), tmp);
+            q = new java.net.DatagramPacket(tmp, length, remoteAddr);
+        }
+
+        socket.send(q);
+        return 1;
+    }
+
+    @Override
+    protected boolean inEventLoopDrivenFlush() {
+        return false;
+    }
+
+    @Override
+    public ChannelFuture joinGroup(InetAddress multicastAddress) {
+        return joinGroup(multicastAddress, newFuture());
+    }
+
+    @Override
+    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelFuture future) {
+        ensureBound();
+        try {
+            socket.joinGroup(multicastAddress);
+            future.setSuccess();
+        } catch (IOException e) {
+            future.setFailure(e);
+        }
+        return future;
+    }
+
+    @Override
+    public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        return joinGroup(multicastAddress, networkInterface, newFuture());
+    }
+
+    @Override
+    public ChannelFuture joinGroup(
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface,
+            ChannelFuture future) {
+        ensureBound();
+        try {
+            socket.joinGroup(multicastAddress, networkInterface);
+            future.setSuccess();
+        } catch (IOException e) {
+            future.setFailure(e);
+        }
+        return future;
+    }
+
+    @Override
+    public ChannelFuture joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        return newFailedFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public ChannelFuture joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
+            ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
+        return future;
+    }
+
     private void ensureBound() {
-        if (!isBound()) {
+        if (!isActive()) {
             throw new IllegalStateException(
                     DatagramChannel.class.getName() +
                     " must be bound to join a group.");
@@ -111,56 +304,77 @@ final class OioDatagramChannel extends AbstractOioChannel
 
     @Override
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+        return leaveGroup(multicastAddress, newFuture());
+    }
+
+    @Override
+    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelFuture future) {
         try {
             socket.leaveGroup(multicastAddress);
-            return Channels.succeededFuture(this);
-
+            future.setSuccess();
         } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            future.setFailure(e);
         }
+        return future;
     }
 
     @Override
     public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        return leaveGroup(multicastAddress, networkInterface, newFuture());
+    }
+
+    @Override
+    public ChannelFuture leaveGroup(
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface,
+            ChannelFuture future) {
         try {
             socket.leaveGroup(multicastAddress, networkInterface);
-            return Channels.succeededFuture(this);
-
+            future.setSuccess();
         } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            future.setFailure(e);
         }
+        return future;
     }
 
     @Override
-    boolean isSocketBound() {
-        return socket.isBound();
+    public ChannelFuture leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        return newFailedFuture(new UnsupportedOperationException());
     }
 
     @Override
-    boolean isSocketConnected() {
-        return socket.isConnected();
+    public ChannelFuture leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
+            ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
+        return future;
     }
 
     @Override
-    InetSocketAddress getLocalSocketAddress() throws Exception {
-        return (InetSocketAddress) socket.getLocalSocketAddress();
+    public ChannelFuture block(InetAddress multicastAddress,
+            NetworkInterface networkInterface, InetAddress sourceToBlock) {
+        return newFailedFuture(new UnsupportedOperationException());
     }
 
     @Override
-    InetSocketAddress getRemoteSocketAddress() throws Exception {
-        return (InetSocketAddress) socket.getRemoteSocketAddress();
+    public ChannelFuture block(InetAddress multicastAddress,
+            NetworkInterface networkInterface, InetAddress sourceToBlock,
+            ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
+        return future;
     }
 
     @Override
-    void closeSocket() throws IOException {
-        socket.close();
+    public ChannelFuture block(InetAddress multicastAddress,
+            InetAddress sourceToBlock) {
+        return newFailedFuture(new UnsupportedOperationException());
     }
 
     @Override
-    boolean isSocketClosed() {
-        return socket.isClosed();
+    public ChannelFuture block(InetAddress multicastAddress,
+            InetAddress sourceToBlock, ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
+        return future;
     }
-    
-    
 }

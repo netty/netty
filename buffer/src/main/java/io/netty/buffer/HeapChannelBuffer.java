@@ -156,22 +156,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        int readBytes = 0;
-        do {
-            int localReadBytes = in.read(array, index, length);
-            if (localReadBytes < 0) {
-                if (readBytes == 0) {
-                    return -1;
-                } else {
-                    break;
-                }
-            }
-            readBytes += localReadBytes;
-            index += localReadBytes;
-            length -= localReadBytes;
-        } while (length > 0);
-
-        return readBytes;
+        return in.read(array, index, length);
     }
 
     @Override
