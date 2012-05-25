@@ -187,12 +187,12 @@ public class OioSocketChannel extends AbstractChannel
     }
 
     @Override
-    protected int doRead(Queue<Object> buf) throws Exception {
+    protected int doReadMessages(Queue<Object> buf) throws Exception {
         throw new Error();
     }
 
     @Override
-    protected int doRead(ChannelBuffer buf) throws Exception {
+    protected int doReadBytes(ChannelBuffer buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
@@ -206,16 +206,12 @@ public class OioSocketChannel extends AbstractChannel
     }
 
     @Override
-    protected int doFlush(boolean lastSpin) throws Exception {
+    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
         }
-        final ChannelBuffer buf = unsafe().out().byteBuffer();
         final int length = buf.readableBytes();
-        if (length == 0) {
-            return 0;
-        }
         buf.readBytes(os, length);
         return length;
     }

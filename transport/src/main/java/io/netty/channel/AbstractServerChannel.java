@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
-
 import java.net.SocketAddress;
 import java.util.AbstractQueue;
 import java.util.Collections;
@@ -75,16 +73,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     @Override
     protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected int doRead(ChannelBuffer buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected int doFlush(boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
 

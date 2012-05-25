@@ -194,7 +194,7 @@ public class OioDatagramChannel extends AbstractChannel
     }
 
     @Override
-    protected int doRead(Queue<Object> buf) throws Exception {
+    protected int doReadMessages(Queue<Object> buf) throws Exception {
         int packetSize = config().getReceivePacketSize();
         byte[] data = new byte[packetSize];
         tmpPacket.setData(data);
@@ -214,17 +214,7 @@ public class OioDatagramChannel extends AbstractChannel
     }
 
     @Override
-    protected int doRead(ChannelBuffer buf) throws Exception {
-        throw new Error();
-    }
-
-    @Override
-    protected int doFlush(boolean lastSpin) throws Exception {
-        final Queue<Object> buf = unsafe().out().messageBuffer();
-        if (buf.isEmpty()) {
-            return 0;
-        }
-
+    protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
         ChannelBuffer data = p.data();
         int length = data.readableBytes();

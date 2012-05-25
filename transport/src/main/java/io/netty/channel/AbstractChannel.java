@@ -647,7 +647,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (buf.hasMessageBuffer()) {
                     Queue<Object> msgBuf = buf.messageBuffer();
                     for (;;) {
-                        int localReadAmount = doRead(msgBuf);
+                        int localReadAmount = doReadMessages(msgBuf);
                         if (localReadAmount > 0) {
                             read = true;
                         } else if (localReadAmount == 0) {
@@ -660,7 +660,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } else {
                     ChannelBuffer byteBuf = buf.byteBuffer();
                     for (;;) {
-                        int localReadAmount = doRead(byteBuf);
+                        int localReadAmount = doReadBytes(byteBuf);
                         if (localReadAmount > 0) {
                             read = true;
                         } else if (localReadAmount < 0) {
@@ -750,8 +750,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void flushByteBuf(ChannelBuffer buf) throws Exception {
+            if (!buf.readable()) {
+                // Reset reader/writerIndex to 0 if the buffer is empty.
+                buf.clear();
+                return;
+            }
+
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                int localFlushedAmount = doFlush(i == 0);
+                int localFlushedAmount = doWriteBytes(buf, i == 0);
                 if (localFlushedAmount > 0) {
                     flushedAmount += localFlushedAmount;
                     notifyFlushFutures();
@@ -770,7 +776,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             while (!buf.isEmpty()) {
                 boolean wrote = false;
                 for (int i = writeSpinCount; i >= 0; i --) {
-                    int localFlushedAmount = doFlush(i == 0);
+                    int localFlushedAmount = doWriteMessages(buf, i == 0);
                     if (localFlushedAmount > 0) {
                         flushedAmount += localFlushedAmount;
                         wrote = true;
@@ -915,9 +921,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
 
-    protected abstract int doRead(Queue<Object> buf) throws Exception;
-    protected abstract int doRead(ChannelBuffer buf) throws Exception;
-    protected abstract int doFlush(boolean lastSpin) throws Exception;
+    protected int doReadMessages(Queue<Object> buf) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    protected int doReadBytes(ChannelBuffer buf) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
     protected abstract boolean inEventLoopDrivenFlush();
 
     private static boolean expandReadBuffer(ChannelBuffer byteBuf) {

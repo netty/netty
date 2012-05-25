@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.Queue;
 
 public class NioSocketChannel extends AbstractNioChannel implements io.netty.channel.socket.SocketChannel {
 
@@ -160,23 +159,13 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     @Override
-    protected int doRead(ChannelBuffer byteBuf) throws Exception {
+    protected int doReadBytes(ChannelBuffer byteBuf) throws Exception {
         return byteBuf.writeBytes(javaChannel(), byteBuf.writableBytes());
     }
 
     @Override
-    protected int doRead(Queue<Object> buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected int doFlush(boolean lastSpin) throws Exception {
-        final ChannelBuffer buf = unsafe().out().byteBuffer();
+    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
-        if (expectedWrittenBytes == 0) {
-            return 0;
-        }
-
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
 
         final SelectionKey key = selectionKey();
