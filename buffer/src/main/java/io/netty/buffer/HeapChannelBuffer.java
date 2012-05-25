@@ -33,6 +33,8 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
      */
     protected final byte[] array;
 
+    protected final ByteBuffer nioBuf;
+
     /**
      * Creates a new heap buffer with a newly allocated byte array.
      *
@@ -64,6 +66,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         }
         this.array = array;
         setIndex(readerIndex, writerIndex);
+        nioBuf = ByteBuffer.wrap(array);
     }
 
     @Override
@@ -124,7 +127,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        return out.write(ByteBuffer.wrap(array, index, length));
+        return out.write((ByteBuffer) nioBuf.clear().position(index).limit(index + length));
     }
 
     @Override
@@ -173,29 +176,11 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        ByteBuffer buf = ByteBuffer.wrap(array, index, length);
-        int readBytes = 0;
-
-        do {
-            int localReadBytes;
-            try {
-                localReadBytes = in.read(buf);
-            } catch (ClosedChannelException e) {
-                localReadBytes = -1;
-            }
-            if (localReadBytes < 0) {
-                if (readBytes == 0) {
-                    return -1;
-                } else {
-                    break;
-                }
-            } else if (localReadBytes == 0) {
-                break;
-            }
-            readBytes += localReadBytes;
-        } while (readBytes < length);
-
-        return readBytes;
+        try {
+            return in.read((ByteBuffer) nioBuf.clear().position(index).limit(index + length));
+        } catch (ClosedChannelException e) {
+            return -1;
+        }
     }
 
     @Override
