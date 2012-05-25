@@ -42,6 +42,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
+    // TODO: Use PriorityQueue to reduce the locking overhead of DelayQueue.
     private final Queue<ScheduledFutureTask<?>> scheduledTasks = new DelayQueue<ScheduledFutureTask<?>>();
     /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
     private volatile int state;

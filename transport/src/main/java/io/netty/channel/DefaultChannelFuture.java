@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import static java.util.concurrent.TimeUnit.*;
+import io.netty.channel.AbstractChannel.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * to create a new {@link ChannelFuture} rather than calling the constructor
  * explicitly.
  */
-public class DefaultChannelFuture implements ChannelFuture {
+public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFuture {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
@@ -75,6 +76,11 @@ public class DefaultChannelFuture implements ChannelFuture {
     private boolean done;
     private Throwable cause;
     private int waiters;
+
+    /**
+     * Opportunistically extending FlushCheckpoint to reduce GC.
+     * Only used for flush() operation. See AbstractChannel.DefaultUnsafe.flush() */
+    private long flushCheckpoint;
 
     /**
      * Creates a new instance.
@@ -507,5 +513,20 @@ public class DefaultChannelFuture implements ChannelFuture {
                         ChannelFutureProgressListener.class.getSimpleName() + ".", t);
             }
         }
+    }
+
+    @Override
+    long flushCheckpoint() {
+        return flushCheckpoint;
+    }
+
+    @Override
+    void flushCheckpoint(long checkpoint) {
+        flushCheckpoint = checkpoint;
+    }
+
+    @Override
+    ChannelFuture future() {
+        return this;
     }
 }

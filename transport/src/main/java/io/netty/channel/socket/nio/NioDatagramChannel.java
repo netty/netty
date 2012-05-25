@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -172,7 +173,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     }
 
     @Override
-    protected int doRead(ChannelBufferHolder<Object> buf) throws Exception {
+    protected int doRead(Queue<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
         ByteBuffer data = ByteBuffer.allocate(config().getReceivePacketSize());
         InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
@@ -181,8 +182,13 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
         }
 
         data.flip();
-        buf.messageBuffer().add(new DatagramPacket(ChannelBuffers.wrappedBuffer(data), remoteAddress));
+        buf.add(new DatagramPacket(ChannelBuffers.wrappedBuffer(data), remoteAddress));
         return 1;
+    }
+
+    @Override
+    protected int doRead(ChannelBuffer buf) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override

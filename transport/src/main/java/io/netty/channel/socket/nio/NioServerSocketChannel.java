@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.AbstractServerChannel;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -29,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
+import java.util.Queue;
 
 public class NioServerSocketChannel extends AbstractServerChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
@@ -128,12 +128,12 @@ public class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    protected int doRead(ChannelBufferHolder<Object> buf) throws Exception {
+    protected int doRead(Queue<Object> buf) throws Exception {
         java.nio.channels.SocketChannel ch = javaChannel().accept();
         if (ch == null) {
             return 0;
         }
-        buf.messageBuffer().add(new NioSocketChannel(this, null, ch));
+        buf.add(new NioSocketChannel(this, null, ch));
         return 1;
     }
 }

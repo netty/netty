@@ -84,7 +84,7 @@ public final class ChannelBufferHolder<E> {
     public Queue<E> messageBuffer() {
         switch (bypassDirection) {
         case 0:
-            if (!hasMessageBuffer()) {
+            if (msgBuf == null) {
                 throw new IllegalStateException("does not have a message buffer");
             }
             return msgBuf;
@@ -100,7 +100,7 @@ public final class ChannelBufferHolder<E> {
     public ChannelBuffer byteBuffer() {
         switch (bypassDirection) {
         case 0:
-            if (!hasByteBuffer()) {
+            if (byteBuf == null) {
                 throw new IllegalStateException("does not have a byte buffer");
             }
             return byteBuf;
@@ -117,10 +117,10 @@ public final class ChannelBufferHolder<E> {
     public String toString() {
         switch (bypassDirection) {
         case 0:
-            if (hasMessageBuffer()) {
-                return messageBuffer().toString();
+            if (msgBuf != null) {
+                return msgBuf.toString();
             } else {
-                return byteBuffer().toString();
+                return byteBuf.toString();
             }
         case 1:
             return ctx.nextIn().toString();
@@ -134,10 +134,10 @@ public final class ChannelBufferHolder<E> {
     public int size() {
         switch (bypassDirection) {
         case 0:
-            if (hasMessageBuffer()) {
-                return messageBuffer().size();
+            if (msgBuf != null) {
+                return msgBuf.size();
             } else {
-                return byteBuffer().readableBytes();
+                return byteBuf.readableBytes();
             }
         case 1:
             return ctx.nextIn().size();
@@ -151,10 +151,10 @@ public final class ChannelBufferHolder<E> {
     public boolean isEmpty() {
         switch (bypassDirection) {
         case 0:
-            if (hasMessageBuffer()) {
-                return messageBuffer().isEmpty();
+            if (msgBuf != null) {
+                return msgBuf.isEmpty();
             } else {
-                return byteBuffer().readable();
+                return byteBuf.readable();
             }
         case 1:
             return ctx.nextIn().isEmpty();

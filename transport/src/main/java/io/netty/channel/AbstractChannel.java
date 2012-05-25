@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -92,8 +94,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private ConnectException connectTimeoutException;
 
     private long flushedAmount;
-    private FlushFutureEntry flushFuture;
-    private FlushFutureEntry lastFlushFuture;
+    private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
     private ClosedChannelException closedChannelException;
 
     /** Cache for the string representation of this channel */
@@ -643,18 +644,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             boolean closed = false;
             boolean read = false;
             try {
-                for (;;) {
-                    int localReadAmount = doRead(buf);
-                    if (localReadAmount > 0) {
-                        expandReadBuffer(buf);
-                        read = true;
-                    } else if (localReadAmount == 0) {
-                        if (!expandReadBuffer(buf)) {
+                if (buf.hasMessageBuffer()) {
+                    Queue<Object> msgBuf = buf.messageBuffer();
+                    for (;;) {
+                        int localReadAmount = doRead(msgBuf);
+                        if (localReadAmount > 0) {
+                            read = true;
+                        } else if (localReadAmount == 0) {
+                            break;
+                        } else if (localReadAmount < 0) {
+                            closed = true;
                             break;
                         }
-                    } else if (localReadAmount < 0) {
-                        closed = true;
-                        break;
+                    }
+                } else {
+                    ChannelBuffer byteBuf = buf.byteBuffer();
+                    for (;;) {
+                        int localReadAmount = doRead(byteBuf);
+                        if (localReadAmount > 0) {
+                            read = true;
+                        } else if (localReadAmount < 0) {
+                            closed = true;
+                            break;
+                        }
+                        if (!expandReadBuffer(byteBuf)) {
+                            break;
+                        }
                     }
                 }
             } catch (Throwable t) {
@@ -681,12 +696,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop().inEventLoop()) {
                 // Append flush future to the notification list.
                 if (future != voidFuture) {
-                    FlushFutureEntry newEntry = new FlushFutureEntry(future, flushedAmount + out().size(), null);
-                    if (flushFuture == null) {
-                        flushFuture = lastFlushFuture = newEntry;
+                    long checkpoint = flushedAmount + out().size();
+                    if (future instanceof FlushCheckpoint) {
+                        FlushCheckpoint cp = (FlushCheckpoint) future;
+                        cp.flushCheckpoint(checkpoint);
+                        flushCheckpoints.add(cp);
                     } else {
-                        lastFlushFuture.next = newEntry;
-                        lastFlushFuture = newEntry;
+                        flushCheckpoints.add(new DefaultFlushCheckpoint(checkpoint, future));
                     }
                 }
 
@@ -770,49 +786,44 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void notifyFlushFutures() {
-            FlushFutureEntry e = flushFuture;
-            if (e == null) {
+            if (flushCheckpoints.isEmpty()) {
                 return;
             }
 
             final long flushedAmount = AbstractChannel.this.flushedAmount;
-            do {
-                if (e.expectedFlushedAmount > flushedAmount) {
+            for (;;) {
+                FlushCheckpoint cp = flushCheckpoints.poll();
+                if (cp == null) {
                     break;
                 }
-                e.future.setSuccess();
-                e = e.next;
-            } while (e != null);
-
-            flushFuture = e;
+                if (cp.flushCheckpoint() > flushedAmount) {
+                    break;
+                }
+                cp.future().setSuccess();
+            }
 
             // Avoid overflow
-            if (e == null) {
+            if (flushCheckpoints.isEmpty()) {
                 // Reset the counter if there's nothing in the notification list.
                 AbstractChannel.this.flushedAmount = 0;
             } else if (flushedAmount >= 0x1000000000000000L) {
                 // Otherwise, reset the counter only when the counter grew pretty large
                 // so that we can reduce the cost of updating all entries in the notification list.
                 AbstractChannel.this.flushedAmount = 0;
-                do {
-                    e.expectedFlushedAmount -= flushedAmount;
-                    e = e.next;
-                } while (e != null);
+                for (FlushCheckpoint cp: flushCheckpoints) {
+                    cp.flushCheckpoint(cp.flushCheckpoint() - flushedAmount);
+                }
             }
         }
 
         private void notifyFlushFutures(Throwable cause) {
-            FlushFutureEntry e = flushFuture;
-            if (e == null) {
-                return;
+            for (;;) {
+                FlushCheckpoint cp = flushCheckpoints.poll();
+                if (cp == null) {
+                    break;
+                }
+                cp.future().setFailure(cause);
             }
-
-            do {
-                e.future.setFailure(cause);
-                e = e.next;
-            } while (e != null);
-
-            flushFuture = null;
         }
 
         private boolean ensureOpen(ChannelFuture future) {
@@ -834,15 +845,34 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    private static class FlushFutureEntry {
-        private final ChannelFuture future;
-        private long expectedFlushedAmount;
-        private FlushFutureEntry next;
+    static abstract class FlushCheckpoint {
+        abstract long flushCheckpoint();
+        abstract void flushCheckpoint(long checkpoint);
+        abstract ChannelFuture future();
+    }
 
-        FlushFutureEntry(ChannelFuture future, long expectedWrittenAmount, FlushFutureEntry next) {
+    private static class DefaultFlushCheckpoint extends FlushCheckpoint {
+        private long checkpoint;
+        private final ChannelFuture future;
+
+        DefaultFlushCheckpoint(long checkpoint, ChannelFuture future) {
+            this.checkpoint = checkpoint;
             this.future = future;
-            expectedFlushedAmount = expectedWrittenAmount;
-            this.next = next;
+        }
+
+        @Override
+        long flushCheckpoint() {
+            return checkpoint;
+        }
+
+        @Override
+        void flushCheckpoint(long checkpoint) {
+            this.checkpoint = checkpoint;
+        }
+
+        @Override
+        ChannelFuture future() {
+            return future;
         }
     }
 
@@ -885,16 +915,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
 
-    protected abstract int doRead(ChannelBufferHolder<Object> buf) throws Exception;
+    protected abstract int doRead(Queue<Object> buf) throws Exception;
+    protected abstract int doRead(ChannelBuffer buf) throws Exception;
     protected abstract int doFlush(boolean lastSpin) throws Exception;
     protected abstract boolean inEventLoopDrivenFlush();
 
-    private static boolean expandReadBuffer(ChannelBufferHolder<Object> buf) {
-        if (!buf.hasByteBuffer()) {
-            return false;
-        }
-
-        ChannelBuffer byteBuf = buf.byteBuffer();
+    private static boolean expandReadBuffer(ChannelBuffer byteBuf) {
         if (!byteBuf.writable()) {
             // FIXME: Use a sensible value.
             byteBuf.ensureWritableBytes(4096);
