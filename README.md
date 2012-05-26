@@ -39,5 +39,5 @@ Netty is an asynchronous event-driven network application framework for rapid de
 
 - __master__ branch contains code for Netty v4
 
-- __3.2__ branch contains code for Netty v3.X
+- __3.2__ branch contains code for Netty v3.x
 
