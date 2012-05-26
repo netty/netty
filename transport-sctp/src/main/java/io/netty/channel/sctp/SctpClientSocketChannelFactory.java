@@ -82,7 +82,7 @@ public class SctpClientSocketChannelFactory implements ChannelFactory {
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #SctpClientSocketChannelFactory(java.util.concurrent.Executor, java.util.concurrent.Executor, int)} with 2 *
+     * {@link #SctpClientSocketChannelFactory(java.util.concurrent.Executor,int)} with 2 *
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *

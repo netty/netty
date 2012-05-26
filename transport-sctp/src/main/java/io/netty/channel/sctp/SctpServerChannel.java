@@ -23,46 +23,44 @@ import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
- * A SCTP {@link io.netty.channel.ServerChannel} which accepts incoming SCTP connections.
+ * A SCTP/IP {@link ServerChannel} which accepts incoming SCTP/IP connections.
+ * The {@link SctpServerChannel} provides the additional operations, available in the
+ * underlying JDK SCTP Server Channel like multi-homing etc.
  */
 public interface SctpServerChannel extends ServerChannel {
     /**
-     * Bind a multi-homing address to the already bound channel
+     * Bind a address to the already bound channel to enable multi-homing.
+     * The Channel bust be bound and yet to be connected.
      */
     ChannelFuture bindAddress(InetAddress localAddress);
 
 
     /**
-     *  Unbind a multi-homing address from a already established channel
+     *  Unbind the address from channel's multi-homing address list.
+     *  The address should be added already in multi-homing address list.
      */
     ChannelFuture unbindAddress(InetAddress localAddress);
 
     /**
-     * Returns the configuration of this channel.
+     * Returns the {@link SctpServerChannelConfig} configuration of the channel.
      */
     @Override
     SctpServerChannelConfig getConfig();
 
     /**
-     * Return the primary local address of the SCTP server channel.
+     * Return the (primary) local address of the SCTP server channel.
+     *
+     * Please note that, this return the first local address in the underlying SCTP ServerChannel's
+     * local address iterator. (this method is implemented to support existing Netty API)
+     * so application, has to keep track of it's primary address. This can be done by
+     * requests the local SCTP stack, using the SctpStandardSocketOption.SCTP_PRIMARY_ADDR.
      */
     @Override
     InetSocketAddress getLocalAddress();
 
     /**
      * Return all local addresses of the SCTP server channel.
+     * Please note that, it will return more than one address if this channel is using multi-homing
      */
     Set<InetSocketAddress> getAllLocalAddresses();
-
-    /**
-     * Return the primary remote address of the server SCTP channel.
-     */
-    @Override
-    InetSocketAddress getRemoteAddress();
-
-
-    /**
-     * Return all remote addresses of the SCTP server channel.
-     */
-    Set<InetSocketAddress> getAllRemoteAddresses();
 }

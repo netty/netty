@@ -24,9 +24,6 @@ import java.net.InetAddress;
 
 public class SctpBindAddressEvent extends DownstreamChannelStateEvent {
 
-    /**
-     * Creates a new instance.
-     */
     public SctpBindAddressEvent(Channel channel, ChannelFuture future, InetAddress localAddress) {
         super(channel, future, ChannelState.INTEREST_OPS, localAddress);
     }

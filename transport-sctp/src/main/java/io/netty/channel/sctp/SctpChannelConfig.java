@@ -19,12 +19,12 @@ import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import io.netty.channel.ChannelConfig;
 
 /**
- * A {@link io.netty.channel.ChannelConfig} for a {@link io.netty.channel.sctp.SctpChannel}.
+ * A {@link ChannelConfig} for a {@link SctpChannel}.
  * <p/>
  * <h3>Available options</h3>
  * <p/>
- * In addition to the options provided by {@link io.netty.channel.ChannelConfig},
- * {@link io.netty.channel.sctp.SctpChannelConfig} allows the following options in the option map:
+ * In addition to the options provided by {@link ChannelConfig},
+ * {@link SctpChannelConfig} allows the following options in the option map:
  * <p/>
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
@@ -43,42 +43,50 @@ import io.netty.channel.ChannelConfig;
 public interface SctpChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_NODELAY}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_NODELAY}</a> option.
      */
     boolean isSctpNoDelay();
 
     /**
-     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_NODELAY}</a> option.
+     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_NODELAY}</a> option.
      */
     void setSctpNoDelay(boolean sctpNoDelay);
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_SNDBUF}</a> option.
      */
     int getSendBufferSize();
 
     /**
-     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.
+     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_SNDBUF}</a> option.
      */
     void setSendBufferSize(int sendBufferSize);
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_RCVBUF}</a> option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_RCVBUF}</a> option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
     InitMaxStreams getInitMaxStreams();
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
     void setInitMaxStreams(InitMaxStreams initMaxStreams);
 }

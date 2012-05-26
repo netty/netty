@@ -24,7 +24,7 @@ import io.netty.channel.sctp.SctpFrame;
 import io.netty.handler.codec.oneone.OneToOneDecoder;
 
 /**
- * SCTP Frame Decoder which extract payload channel buffer
+ * SCTP Frame Decoder which extract payload channel buffer.
  * Note: Supported SCTP Frame Interleave Level - 0
  */
 

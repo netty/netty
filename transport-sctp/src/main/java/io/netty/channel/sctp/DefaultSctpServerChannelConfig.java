@@ -24,7 +24,7 @@ import io.netty.util.internal.ConversionUtil;
 import java.io.IOException;
 
 /**
- * The default {@link io.netty.channel.socket.ServerSocketChannelConfig} implementation for SCTP.
+ * The default {@link SctpServerChannelConfig} implementation for SCTP.
  */
 public class DefaultSctpServerChannelConfig extends DefaultServerChannelConfig
         implements SctpServerChannelConfig {

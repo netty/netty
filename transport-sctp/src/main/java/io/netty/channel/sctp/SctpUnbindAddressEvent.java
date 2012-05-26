@@ -24,9 +24,6 @@ import java.net.InetAddress;
 
 public class SctpUnbindAddressEvent extends DownstreamChannelStateEvent {
 
-    /**
-     * Creates a new instance.
-     */
     public SctpUnbindAddressEvent(Channel channel, ChannelFuture future, InetAddress value) {
         super(channel, future, ChannelState.INTEREST_OPS, value);
     }

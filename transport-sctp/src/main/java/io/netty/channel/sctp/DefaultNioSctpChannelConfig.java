@@ -27,7 +27,7 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.ConversionUtil;
 
 /**
- * The default {@link io.netty.channel.socket.nio.NioSocketChannelConfig} implementation for SCTP.
+ * The default {@link NioSctpChannelConfig} implementation for SCTP.
  */
 class DefaultNioSctpChannelConfig extends DefaultSctpChannelConfig implements NioSctpChannelConfig {
 

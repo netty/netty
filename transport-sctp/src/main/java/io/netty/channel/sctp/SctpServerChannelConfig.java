@@ -20,11 +20,11 @@ import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import io.netty.channel.ChannelConfig;
 
 /**
- * A {@link io.netty.channel.ChannelConfig} for a {@link SctpServerChannelConfig}.
+ * A {@link ChannelConfig} for a {@link SctpServerChannelConfig}.
  * <p/>
  * <h3>Available options</h3>
  * <p/>
- * In addition to the options provided by {@link io.netty.channel.ChannelConfig},
+ * In addition to the options provided by {@link ChannelConfig},
  * {@link SctpServerChannelConfig} allows the following options in the
  * option map:
  * <p/>
@@ -45,46 +45,50 @@ import io.netty.channel.ChannelConfig;
 public interface SctpServerChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the backlog value to specify when the channel binds to a local
-     * address.
+     * Gets the backlog value to specify when the channel binds to a local address.
      */
     int getBacklog();
 
     /**
-     * Sets the backlog value to specify when the channel binds to a local
-     * address.
+     * Sets the backlog value to specify when the channel binds to a local address.
      */
     void setBacklog(int backlog);
 
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_SNDBUF}</a> option.
      */
     int getSendBufferSize();
 
     /**
-     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.
+     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_SNDBUF}</a> option.
      */
     void setSendBufferSize(int sendBufferSize);
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_RCVBUF}</a> option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SO_RCVBUF}</a> option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
     InitMaxStreams getInitMaxStreams();
 
     /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
     void setInitMaxStreams(InitMaxStreams initMaxStreams);
 }

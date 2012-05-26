@@ -17,16 +17,16 @@ package io.netty.channel.sctp;
 
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.ReceiveBufferSizePredictorFactory;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.socket.nio.NioChannelConfig;
 
 /**
- * A {@link io.netty.channel.sctp.SctpChannelConfig} for a NIO SCTP/IP {@link io.netty.channel.sctp.SctpChannel}.
+ * The {@link SctpChannelConfig} for a NIO SCTP/IP {@link SctpChannel}.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options provided by {@link io.netty.channel.ChannelConfig} and
- * {@link io.netty.channel.sctp.SctpChannelConfig}, {@link io.netty.channel.sctp.NioSctpChannelConfig} allows the
- * following options in the option map:
+ * In addition to the options provided by {@link ChannelConfig} and {@link SctpChannelConfig},
+ * {@link NioSctpChannelConfig} allows the following options in the option map:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>

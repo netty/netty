@@ -21,7 +21,7 @@ import io.netty.channel.SimpleChannelHandler;
 import io.netty.channel.sctp.SctpNotificationEvent;
 
 /**
- * SCTP Channel Handler (upstream + downstream) with SCTP notification handling
+ * SCTP Channel Handler (upstream + downstream) with SCTP notification handling.
  */
 
 public class SimpleSctpChannelHandler extends SimpleChannelHandler {

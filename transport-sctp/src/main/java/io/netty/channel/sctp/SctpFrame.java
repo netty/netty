@@ -20,6 +20,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 
 /**
+ * Representation of SCTP Data Chunk carried with {@link io.netty.channel.MessageEvent}.
  */
 public final class SctpFrame {
     private final int streamIdentifier;
