@@ -24,8 +24,8 @@ import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
- * A SCTP/IP  {@link Channel} which was either accepted by
- * {@link SctpServerChannel} or created by {@link SctpClientSocketChannelFactory}.
+ * A SCTP/IP  {@link Channel} which was either accepted by {@link SctpServerChannel} or
+ * created by {@link SctpClientSocketChannelFactory}.
  */
 public interface SctpChannel extends Channel {
 
@@ -51,9 +51,11 @@ public interface SctpChannel extends Channel {
      * Return the (primary) local address of the SCTP channel.
      *
      * Please note that, this return the first local address in the underlying SCTP Channel's
-     * local address iterator. (this method is implemented to support existing Netty API)
-     * so application, has to keep track of it's primary address. This can be done by
-     * requests the local SCTP stack, using the SctpStandardSocketOption.SCTP_PRIMARY_ADDR.
+     * local address iterator to support Netty Channel API. In other words, its the application's
+     * responsibility to keep track of it's local primary address.
+     *
+     * (To set a local address as primary, the application can request by calling local SCTP stack,
+     * with SctpStandardSocketOption.SCTP_PRIMARY_ADDR option).
      */
     @Override
     InetSocketAddress getLocalAddress();
@@ -74,11 +76,11 @@ public interface SctpChannel extends Channel {
      * Return the (primary) remote address of the SCTP channel.
      *
      * Please note that, this return the first remote address in the underlying SCTP Channel's
-     * remote address iterator. (this method is implemented to support existing Netty API)
-     * so application, has to keep track of remote's primary address.
+     * remote address iterator to support Netty Channel API. In other words, its the application's
+     * responsibility to keep track of it's peer's primary address.
      *
-     * If a peer needs to request the remote to set a specific address as primary, It can
-     * requests the local SCTP stack, using the SctpStandardSocketOption.SCTP_SET_PEER_PRIMARY_ADDR.
+     * (The application can request it's remote peer to set a specific address as primary by
+     * calling the local SCTP stack with SctpStandardSocketOption.SCTP_SET_PEER_PRIMARY_ADDR option)
      */
     @Override
     InetSocketAddress getRemoteAddress();

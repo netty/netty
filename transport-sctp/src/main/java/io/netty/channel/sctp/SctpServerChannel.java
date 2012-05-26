@@ -24,6 +24,7 @@ import java.util.Set;
 
 /**
  * A SCTP/IP {@link ServerChannel} which accepts incoming SCTP/IP connections.
+ *
  * The {@link SctpServerChannel} provides the additional operations, available in the
  * underlying JDK SCTP Server Channel like multi-homing etc.
  */
@@ -51,9 +52,11 @@ public interface SctpServerChannel extends ServerChannel {
      * Return the (primary) local address of the SCTP server channel.
      *
      * Please note that, this return the first local address in the underlying SCTP ServerChannel's
-     * local address iterator. (this method is implemented to support existing Netty API)
-     * so application, has to keep track of it's primary address. This can be done by
-     * requests the local SCTP stack, using the SctpStandardSocketOption.SCTP_PRIMARY_ADDR.
+     * local address iterator to support Netty Channel API. In other words, its the application's
+     * responsibility to keep track of it's local primary address.
+     *
+     * (To set a local address as primary, the application can request by calling local SCTP stack,
+     * with SctpStandardSocketOption.SCTP_PRIMARY_ADDR option).
      */
     @Override
     InetSocketAddress getLocalAddress();
