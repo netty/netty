@@ -32,253 +32,18 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.UpstreamMessageEvent;
 import org.junit.Test;
 
-public class IpFilterRuleTest extends TestCase
-{
-    public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception
-    {
-        return h.accept(new ChannelHandlerContext()
-        {
+public class IpFilterRuleTest extends TestCase {
+    public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception {
+        return h.accept(new ChannelHandlerContext() {
 
             @Override
-            public boolean canHandleDownstream()
-            {
-                // TODO Auto-generated method stub
+            public boolean canHandleDownstream() {
                 return false;
             }
 
             @Override
-            public boolean canHandleUpstream()
-            {
-                // TODO Auto-generated method stub
+            public boolean canHandleUpstream() {
                 return false;
-            }
-
-            @Override
-            public Object getAttachment()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public Channel getChannel()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelHandler getHandler()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public String getName()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelPipeline getPipeline()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public void sendDownstream(ChannelEvent e)
-            {
-                // TODO Auto-generated method stub
-                
-            }
-
-            @Override
-            public void sendUpstream(ChannelEvent e)
-            {
-                // TODO Auto-generated method stub
-                
-            }
-
-            @Override
-            public void setAttachment(Object attachment)
-            {
-                // TODO Auto-generated method stub
-                
-            }
-            
-        }, 
-        new UpstreamMessageEvent(new Channel()
-        {
-
-            @Override
-            public ChannelFuture bind(SocketAddress localAddress)
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture close()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture connect(SocketAddress remoteAddress)
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture disconnect()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture getCloseFuture()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelConfig getConfig()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFactory getFactory()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public Integer getId()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public int getInterestOps()
-            {
-                // TODO Auto-generated method stub
-                return 0;
-            }
-
-            @Override
-            public SocketAddress getLocalAddress()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public Channel getParent()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelPipeline getPipeline()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public SocketAddress getRemoteAddress()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public boolean isBound()
-            {
-                // TODO Auto-generated method stub
-                return false;
-            }
-
-            @Override
-            public boolean isConnected()
-            {
-                // TODO Auto-generated method stub
-                return false;
-            }
-
-            @Override
-            public boolean isOpen()
-            {
-                // TODO Auto-generated method stub
-                return false;
-            }
-
-            @Override
-            public boolean isReadable()
-            {
-                // TODO Auto-generated method stub
-                return false;
-            }
-
-            @Override
-            public boolean isWritable()
-            {
-                // TODO Auto-generated method stub
-                return false;
-            }
-
-            @Override
-            public ChannelFuture setInterestOps(int interestOps)
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture setReadable(boolean readable)
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture unbind()
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture write(Object message)
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ChannelFuture write(Object message, SocketAddress remoteAddress)
-            {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public int compareTo(Channel o)
-            {
-                // TODO Auto-generated method stub
-                return 0;
             }
 
             @Override
@@ -287,17 +52,179 @@ public class IpFilterRuleTest extends TestCase
             }
 
             @Override
-            public void setAttachment(Object attachment) {
-                
+            public Channel getChannel() {
+                return null;
             }
-            
-        }, h, addr), 
-        addr);
+
+            @Override
+            public ChannelHandler getHandler() {
+                return null;
+            }
+
+            @Override
+            public String getName() {
+                return null;
+            }
+
+            @Override
+            public ChannelPipeline getPipeline() {
+                return null;
+            }
+
+            @Override
+            public void sendDownstream(ChannelEvent e) {
+
+            }
+
+            @Override
+            public void sendUpstream(ChannelEvent e) {
+
+            }
+
+            @Override
+            public void setAttachment(Object attachment) {
+
+            }
+
+        },
+                new UpstreamMessageEvent(new Channel() {
+
+                    @Override
+                    public ChannelFuture bind(SocketAddress localAddress) {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture close() {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture connect(SocketAddress remoteAddress) {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture disconnect() {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture getCloseFuture() {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelConfig getConfig() {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFactory getFactory() {
+                        return null;
+                    }
+
+                    @Override
+                    public Integer getId() {
+                        return null;
+                    }
+
+                    @Override
+                    public int getInterestOps() {
+                        return 0;
+                    }
+
+                    @Override
+                    public SocketAddress getLocalAddress() {
+                        return null;
+                    }
+
+                    @Override
+                    public Channel getParent() {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelPipeline getPipeline() {
+                        return null;
+                    }
+
+                    @Override
+                    public SocketAddress getRemoteAddress() {
+                        return null;
+                    }
+
+                    @Override
+                    public boolean isBound() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isConnected() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isOpen() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isReadable() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isWritable() {
+                        return false;
+                    }
+
+                    @Override
+                    public ChannelFuture setInterestOps(int interestOps) {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture setReadable(boolean readable) {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture unbind() {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture write(Object message) {
+                        return null;
+                    }
+
+                    @Override
+                    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
+                        return null;
+                    }
+
+                    @Override
+                    public int compareTo(Channel o) {
+                        return 0;
+                    }
+
+                    @Override
+                    public Object getAttachment() {
+                        return null;
+                    }
+
+                    @Override
+                    public void setAttachment(Object attachment) {
+
+                    }
+
+                }, h, addr),
+                addr);
     }
-    
+
     @Test
-    public void testIpFilterRule() throws Exception
-    {
+    public void testIpFilterRule() throws Exception {
         IpFilterRuleHandler h = new IpFilterRuleHandler();
         h.addAll(new IpFilterRuleList("+n:localhost, -n:*"));
         InetSocketAddress addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
@@ -306,9 +233,9 @@ public class IpFilterRuleTest extends TestCase
         assertFalse(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName(InetAddress.getLocalHost().getHostName()), 8080);
         assertTrue(accept(h, addr));
-        
+
         h.clear();
-        h.addAll(new IpFilterRuleList("+n:*"+InetAddress.getLocalHost().getHostName().substring(1)+", -n:*"));
+        h.addAll(new IpFilterRuleList("+n:*" + InetAddress.getLocalHost().getHostName().substring(1) + ", -n:*"));
         addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
         assertTrue(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName("127.0.0.2"), 8080);
@@ -317,7 +244,7 @@ public class IpFilterRuleTest extends TestCase
         assertTrue(accept(h, addr));
 
         h.clear();
-        h.addAll(new IpFilterRuleList("+c:"+InetAddress.getLocalHost().getHostAddress()+"/32, -n:*"));
+        h.addAll(new IpFilterRuleList("+c:" + InetAddress.getLocalHost().getHostAddress() + "/32, -n:*"));
         addr = new InetSocketAddress(InetAddress.getLocalHost(), 8080);
         assertTrue(accept(h, addr));
         addr = new InetSocketAddress(InetAddress.getByName("127.0.0.2"), 8080);
