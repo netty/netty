@@ -352,7 +352,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private static boolean expandReadBuffer(ChannelBuffer byteBuf) {
         if (!byteBuf.writable()) {
-            // FIXME: Use a sensible value.
+            // FIXME: Magic number
             byteBuf.ensureWritableBytes(4096);
             return true;
         }

@@ -27,8 +27,8 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PushbackInputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
@@ -43,7 +43,7 @@ public class OioSocketChannel extends AbstractOioChannel
     private final Socket socket;
     private final SocketChannelConfig config;
     private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer();
-    private PushbackInputStream is;
+    private InputStream is;
     private OutputStream os;
 
     public OioSocketChannel() {
@@ -62,7 +62,7 @@ public class OioSocketChannel extends AbstractOioChannel
         boolean success = false;
         try {
             if (socket.isConnected()) {
-                is = new PushbackInputStream(socket.getInputStream());
+                is = socket.getInputStream();
                 os = socket.getOutputStream();
             }
             socket.setSoTimeout(1000);
@@ -126,7 +126,7 @@ public class OioSocketChannel extends AbstractOioChannel
         boolean success = false;
         try {
             socket.connect(remoteAddress, config().getConnectTimeoutMillis());
-            is = new PushbackInputStream(socket.getInputStream());
+            is = socket.getInputStream();
             os = socket.getOutputStream();
             success = true;
         } finally {
@@ -151,17 +151,21 @@ public class OioSocketChannel extends AbstractOioChannel
         if (socket.isClosed()) {
             return -1;
         }
-        int b;
         try {
-            b = is.read();
-            if (b < 0) {
-                return -1;
-            }
-            is.unread(b);
-
             int available = is.available();
-            buf.ensureWritableBytes(available);
-            return buf.writeBytes(is, available);
+            if (available > 0) {
+                buf.ensureWritableBytes(available);
+            } else if (!buf.writable()) {
+                // FIXME: Magic number
+                buf.ensureWritableBytes(4096);
+            }
+
+            int readBytes = buf.writeBytes(is, buf.writableBytes());
+            if (!buf.writable()) {
+                // FIXME: Magic number
+                buf.ensureWritableBytes(4096);
+            }
+            return readBytes;
         } catch (SocketTimeoutException e) {
             return 0;
         }
