@@ -38,6 +38,7 @@ abstract class AbstractOioStreamChannel extends AbstractOioChannel {
             boolean read = false;
             try {
                 ChannelBuffer byteBuf = buf.byteBuffer();
+                expandReadBuffer(byteBuf);
                 int localReadAmount = doReadBytes(byteBuf);
                 if (localReadAmount > 0) {
                     read = true;
@@ -80,6 +81,17 @@ abstract class AbstractOioStreamChannel extends AbstractOioChannel {
         buf.clear();
     }
 
+    protected abstract int available();
     protected abstract int doReadBytes(ChannelBuffer buf) throws Exception;
     protected abstract int doWriteBytes(ChannelBuffer buf) throws Exception;
+
+    private void expandReadBuffer(ChannelBuffer byteBuf) {
+        int available = available();
+        if (available > 0) {
+            byteBuf.ensureWritableBytes(available);
+        } else if (!byteBuf.writable()) {
+            // FIXME: Magic number
+            byteBuf.ensureWritableBytes(4096);
+        }
+    }
 }

@@ -28,31 +28,6 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         return new NioMessageUnsafe();
     }
 
-    @Override
-    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
-        flushMessageBuf(buf.messageBuffer());
-    }
-
-    private void flushMessageBuf(Queue<Object> buf) throws Exception {
-        final int writeSpinCount = config().getWriteSpinCount() - 1;
-        while (!buf.isEmpty()) {
-            boolean wrote = false;
-            for (int i = writeSpinCount; i >= 0; i --) {
-                int localFlushedAmount = doWriteMessages(buf, i == 0);
-                if (localFlushedAmount > 0) {
-                    writeCounter += localFlushedAmount;
-                    wrote = true;
-                    notifyFlushFutures();
-                    break;
-                }
-            }
-
-            if (!wrote) {
-                break;
-            }
-        }
-    }
-
     private class NioMessageUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
@@ -91,6 +66,31 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (closed && isOpen()) {
                     close(voidFuture());
                 }
+            }
+        }
+    }
+
+    @Override
+    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
+        flushMessageBuf(buf.messageBuffer());
+    }
+
+    private void flushMessageBuf(Queue<Object> buf) throws Exception {
+        final int writeSpinCount = config().getWriteSpinCount() - 1;
+        while (!buf.isEmpty()) {
+            boolean wrote = false;
+            for (int i = writeSpinCount; i >= 0; i --) {
+                int localFlushedAmount = doWriteMessages(buf, i == 0);
+                if (localFlushedAmount > 0) {
+                    writeCounter += localFlushedAmount;
+                    wrote = true;
+                    notifyFlushFutures();
+                    break;
+                }
+            }
+
+            if (!wrote) {
+                break;
             }
         }
     }

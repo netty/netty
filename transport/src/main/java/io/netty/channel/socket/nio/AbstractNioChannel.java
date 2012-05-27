@@ -99,32 +99,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return selectionKey;
     }
 
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof NioChildEventLoop;
-    }
-
-    @Override
-    protected boolean isFlushPending() {
-        return (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
-        selectionKey = javaChannel().register(
-                loop.selector, isActive()? defaultInterestOps : 0, this);
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        ((NioChildEventLoop) eventLoop()).cancel(selectionKey());
-    }
-
-    protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
-
-    protected abstract void doFinishConnect() throws Exception;
-
     public interface NioUnsafe extends Unsafe {
         java.nio.channels.Channel ch();
         void finishConnect();
@@ -216,4 +190,29 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         }
     }
+
+    @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof NioChildEventLoop;
+    }
+
+    @Override
+    protected boolean isFlushPending() {
+        return (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
+        selectionKey = javaChannel().register(
+                loop.selector, isActive()? defaultInterestOps : 0, this);
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        ((NioChildEventLoop) eventLoop()).cancel(selectionKey());
+    }
+
+    protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+    protected abstract void doFinishConnect() throws Exception;
 }

@@ -147,25 +147,21 @@ public class OioSocketChannel extends AbstractOioStreamChannel
     }
 
     @Override
+    protected int available() {
+        try {
+            return is.available();
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    @Override
     protected int doReadBytes(ChannelBuffer buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
         try {
-            int available = is.available();
-            if (available > 0) {
-                buf.ensureWritableBytes(available);
-            } else if (!buf.writable()) {
-                // FIXME: Magic number
-                buf.ensureWritableBytes(4096);
-            }
-
-            int readBytes = buf.writeBytes(is, buf.writableBytes());
-            if (!buf.writable()) {
-                // FIXME: Magic number
-                buf.ensureWritableBytes(4096);
-            }
-            return readBytes;
+            return buf.writeBytes(is, buf.writableBytes());
         } catch (SocketTimeoutException e) {
             return 0;
         }

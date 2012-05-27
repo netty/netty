@@ -29,26 +29,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
         return (OioUnsafe) super.unsafe();
     }
 
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof OioChildEventLoop;
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        // NOOP
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
-    }
-
-    @Override
-    protected boolean isFlushPending() {
-        return false;
-    }
-
     public interface OioUnsafe extends Unsafe {
         void read();
     }
@@ -85,6 +65,26 @@ abstract class AbstractOioChannel extends AbstractChannel {
                 });
             }
         }
+    }
+
+    @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof OioChildEventLoop;
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected boolean isFlushPending() {
+        return false;
     }
 
     protected abstract void doConnect(

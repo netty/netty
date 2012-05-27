@@ -41,6 +41,7 @@ abstract class AbstractNioStreamChannel extends AbstractNioChannel {
             boolean read = false;
             try {
                 ChannelBuffer byteBuf = buf.byteBuffer();
+                expandReadBuffer(byteBuf);
                 for (;;) {
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount > 0) {
