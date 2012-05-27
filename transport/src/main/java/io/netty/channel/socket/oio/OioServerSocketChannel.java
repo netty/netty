@@ -34,7 +34,7 @@ import java.util.Queue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class OioServerSocketChannel extends AbstractOioChannel
+public class OioServerSocketChannel extends AbstractOioMessageChannel
                                     implements ServerSocketChannel {
 
     private static final InternalLogger logger =
@@ -172,6 +172,11 @@ public class OioServerSocketChannel extends AbstractOioChannel
 
     @Override
     protected void doDisconnect() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected int doWriteMessages(Queue<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

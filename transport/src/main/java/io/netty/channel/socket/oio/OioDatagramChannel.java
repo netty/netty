@@ -38,7 +38,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Queue;
 
-public class OioDatagramChannel extends AbstractOioChannel
+public class OioDatagramChannel extends AbstractOioMessageChannel
                                 implements DatagramChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);

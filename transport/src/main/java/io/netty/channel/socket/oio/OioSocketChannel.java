@@ -34,7 +34,7 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.NotYetConnectedException;
 
-public class OioSocketChannel extends AbstractOioChannel
+public class OioSocketChannel extends AbstractOioStreamChannel
                               implements SocketChannel {
 
     private static final InternalLogger logger =
