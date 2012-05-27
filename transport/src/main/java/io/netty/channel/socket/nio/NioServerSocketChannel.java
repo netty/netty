@@ -28,7 +28,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Queue;
 
-public class NioServerSocketChannel extends AbstractNioChannel
+public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
     private static ServerSocketChannel newSocket() {
@@ -118,6 +118,11 @@ public class NioServerSocketChannel extends AbstractNioChannel
 
     @Override
     protected void doDisconnect() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

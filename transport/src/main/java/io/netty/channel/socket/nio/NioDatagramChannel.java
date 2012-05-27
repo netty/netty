@@ -44,7 +44,7 @@ import java.util.Queue;
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-public final class NioDatagramChannel extends AbstractNioChannel implements io.netty.channel.socket.DatagramChannel {
+public final class NioDatagramChannel extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =

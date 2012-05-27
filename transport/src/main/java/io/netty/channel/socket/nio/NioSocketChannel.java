@@ -30,7 +30,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-public class NioSocketChannel extends AbstractNioChannel implements io.netty.channel.socket.SocketChannel {
+public class NioSocketChannel extends AbstractNioStreamChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
@@ -54,7 +54,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
-        super(parent, id, socket, SelectionKey.OP_READ);
+        super(parent, id, socket);
         try {
             socket.configureBlocking(false);
         } catch (IOException e) {

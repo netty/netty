@@ -579,6 +579,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        @Override
         public void flushNow() {
             try {
                 doFlush(out());
