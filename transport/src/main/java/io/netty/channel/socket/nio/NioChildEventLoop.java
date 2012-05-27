@@ -57,7 +57,8 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
      */
     protected final AtomicBoolean wakenUp = new AtomicBoolean();
 
-    int cancelledKeys;
+    private int cancelledKeys;
+    private boolean cleanedCancelledKeys;
 
     NioChildEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
         super(threadFactory);
@@ -118,7 +119,7 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
                 }
 
                 cancelledKeys = 0;
-                processTaskQueue();
+                runAllTasks();
                 processSelectedKeys();
 
                 if (isShutdown()) {
@@ -150,15 +151,13 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void processTaskQueue() {
-        for (;;) {
-            final Runnable task = pollTask();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
+    void cancel(SelectionKey key) {
+        key.cancel();
+        cancelledKeys ++;
+        if (cancelledKeys >= CLEANUP_INTERVAL) {
+            cancelledKeys = 0;
+            cleanedCancelledKeys = true;
+            SelectorUtil.cleanupKeys(selector);
         }
     }
 
@@ -168,6 +167,7 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
             return;
         }
         Iterator<SelectionKey> i;
+        cleanedCancelledKeys = false;
         for (i = selectedKeys.iterator(); i.hasNext();) {
             final SelectionKey k = i.next();
             i.remove();
@@ -192,7 +192,7 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
                 unsafe.close(unsafe.voidFuture());
             }
 
-            if (cleanUpCancelledKeys()) {
+            if (cleanedCancelledKeys) {
                 // Create the iterator again to avoid ConcurrentModificationException
                 if (selectedKeys.isEmpty()) {
                     break;
@@ -201,15 +201,6 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
-    }
-
-    private boolean cleanUpCancelledKeys() {
-        if (cancelledKeys >= CLEANUP_INTERVAL) {
-            cancelledKeys = 0;
-            SelectorUtil.cleanupKeys(selector);
-            return true;
-        }
-        return false;
     }
 
     private void closeAll() {

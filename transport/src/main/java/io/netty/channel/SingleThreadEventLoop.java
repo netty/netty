@@ -168,6 +168,17 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         return taskQueue.remove(task);
     }
 
+    protected void runAllTasks() {
+        for (;;) {
+            final Runnable task = pollTask();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
+        }
+    }
+
     protected abstract void run();
 
     protected void cleanup() {

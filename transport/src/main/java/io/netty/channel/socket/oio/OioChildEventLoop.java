@@ -43,12 +43,12 @@ class OioChildEventLoop extends SingleThreadEventLoop {
                     // Waken up by interruptThread()
                 }
             } else {
-                processTaskQueue();
+                runAllTasks();
                 ch.unsafe().read();
 
                 // Handle deregistration
                 if (!ch.isRegistered()) {
-                    processTaskQueue();
+                    runAllTasks();
                     deregister();
                 }
             }
@@ -56,16 +56,6 @@ class OioChildEventLoop extends SingleThreadEventLoop {
             if (isShutdown() && peekTask() == null) {
                 break;
             }
-        }
-    }
-
-    private void processTaskQueue() {
-        for (;;) {
-            Runnable task = pollTask();
-            if (task == null) {
-                break;
-            }
-            task.run();
         }
     }
 

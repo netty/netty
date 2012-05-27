@@ -127,8 +127,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        selectionKey().cancel();
-        ((NioChildEventLoop) eventLoop()).cancelledKeys ++;
+        ((NioChildEventLoop) eventLoop()).cancel(selectionKey());
     }
 
     protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
