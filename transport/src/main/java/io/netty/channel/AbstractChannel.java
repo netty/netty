@@ -15,22 +15,17 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -85,17 +80,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
-    /**
-     * The future of the current connection attempt.  If not null, subsequent
-     * connection attempts will fail.
-     */
-    private ChannelFuture connectFuture;
-    private ScheduledFuture<?> connectTimeoutFuture;
-    private ConnectException connectTimeoutException;
-
-    private long flushedAmount;
-    private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
     private ClosedChannelException closedChannelException;
+    private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
+    protected long writeCounter;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -125,7 +112,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         this.parent = parent;
         this.id = id;
-        unsafe = new DefaultUnsafe();
+        unsafe = newUnsafe();
 
         closeFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -192,11 +179,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected void invalidateRemoteAddress() {
         remoteAddress = null;
-    }
-
-    @Override
-    public boolean isOpen() {
-        return unsafe().ch().isOpen();
     }
 
     @Override
@@ -314,6 +296,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return unsafe;
     }
 
+    protected abstract Unsafe newUnsafe();
+
     /**
      * Returns the {@linkplain System#identityHashCode(Object) identity hash code}
      * of this channel.
@@ -376,12 +360,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
-    private class DefaultUnsafe implements Unsafe {
-
-        @Override
-        public java.nio.channels.Channel ch() {
-            return javaChannel();
-        }
+    protected abstract class AbstractUnsafe implements Unsafe {
 
         @Override
         public ChannelBufferHolder<Object> out() {
@@ -475,85 +454,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
-                    return;
-                }
-
-                try {
-                    if (connectFuture != null) {
-                        throw new IllegalStateException("connection attempt already made");
-                    }
-
-                    boolean wasActive = isActive();
-                    if (doConnect(remoteAddress, localAddress)) {
-                        future.setSuccess();
-                        if (!wasActive && isActive()) {
-                            pipeline().fireChannelActive();
-                        }
-                    } else {
-                        connectFuture = future;
-
-                        // Schedule connect timeout.
-                        int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                        if (connectTimeoutMillis > 0) {
-                            connectTimeoutFuture = eventLoop().schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (connectTimeoutException == null) {
-                                        connectTimeoutException = new ConnectException("connection timed out");
-                                    }
-                                    ChannelFuture connectFuture = AbstractChannel.this.connectFuture;
-                                    if (connectFuture == null) {
-                                        return;
-                                    } else {
-                                        if (connectFuture.setFailure(connectTimeoutException)) {
-                                            pipeline().fireExceptionCaught(connectTimeoutException);
-                                            close(voidFuture());
-                                        }
-                                    }
-                                }
-                            }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                        }
-                    }
-                } catch (Throwable t) {
-                    future.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
-                    closeIfClosed();
-                }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress, future);
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void finishConnect() {
-            assert eventLoop().inEventLoop();
-            assert connectFuture != null;
-            try {
-                boolean wasActive = isActive();
-                doFinishConnect();
-                connectFuture.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline().fireChannelActive();
-                }
-            } catch (Throwable t) {
-                connectFuture.setFailure(t);
-                pipeline().fireExceptionCaught(t);
-                closeIfClosed();
-            } finally {
-                connectTimeoutFuture.cancel(false);
-                connectFuture = null;
-            }
-        }
-
-        @Override
         public void disconnect(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 try {
@@ -637,66 +537,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void read() {
-            assert eventLoop().inEventLoop();
-
-            final ChannelBufferHolder<Object> buf = pipeline().nextIn();
-            boolean closed = false;
-            boolean read = false;
-            try {
-                if (buf.hasMessageBuffer()) {
-                    Queue<Object> msgBuf = buf.messageBuffer();
-                    for (;;) {
-                        int localReadAmount = doReadMessages(msgBuf);
-                        if (localReadAmount > 0) {
-                            read = true;
-                        } else if (localReadAmount == 0) {
-                            break;
-                        } else if (localReadAmount < 0) {
-                            closed = true;
-                            break;
-                        }
-                    }
-                } else {
-                    ChannelBuffer byteBuf = buf.byteBuffer();
-                    for (;;) {
-                        int localReadAmount = doReadBytes(byteBuf);
-                        if (localReadAmount > 0) {
-                            read = true;
-                        } else if (localReadAmount < 0) {
-                            closed = true;
-                            break;
-                        }
-                        if (!expandReadBuffer(byteBuf)) {
-                            break;
-                        }
-                    }
-                }
-            } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireInboundBufferUpdated();
-                }
-                pipeline().fireExceptionCaught(t);
-                if (t instanceof IOException) {
-                    close(voidFuture());
-                }
-            } finally {
-                if (read) {
-                    pipeline.fireInboundBufferUpdated();
-                }
-                if (closed && isOpen()) {
-                    close(voidFuture());
-                }
-            }
-        }
-
-        @Override
         public void flush(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 // Append flush future to the notification list.
                 if (future != voidFuture) {
-                    long checkpoint = flushedAmount + out().size();
+                    long checkpoint = writeCounter + out().size();
                     if (future instanceof FlushCheckpoint) {
                         FlushCheckpoint cp = (FlushCheckpoint) future;
                         cp.flushCheckpoint(checkpoint);
@@ -709,10 +554,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Attempt/perform outbound I/O if:
                 // - the channel is inactive - flush0() will fail the futures.
                 // - the event loop has no plan to call flushForcibly().
-                if (!isActive() || !inEventLoopDrivenFlush()) {
-                    // Note that we don't call flushForcibly() because otherwise its stack trace
-                    // will be confusing.
-                    flush0();
+                try {
+                    if (!isActive() || !isFlushPending()) {
+                        doFlush(out());
+                    }
+                } catch (Throwable t) {
+                    notifyFlushFutures(t);
+                    pipeline().fireExceptionCaught(t);
+                    if (t instanceof IOException) {
+                        close(voidFuture());
+                    }
+                } finally {
+                    if (!isActive()) {
+                        close(unsafe().voidFuture());
+                    }
                 }
             } else {
                 eventLoop().execute(new Runnable() {
@@ -724,115 +579,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        @Override
-        public void flushForcibly() {
-            flush0();
-        }
-
-        private void flush0() {
-            // Perform outbound I/O.
+        public void flushNow() {
             try {
-                ChannelBufferHolder<Object> out = out();
-                if (out.hasByteBuffer()) {
-                    flushByteBuf(out.byteBuffer());
-                } else {
-                    flushMessageBuf(out.messageBuffer());
-                }
+                doFlush(out());
             } catch (Throwable t) {
                 notifyFlushFutures(t);
                 pipeline().fireExceptionCaught(t);
-                close(voidFuture());
-            } finally {
-                if (!isActive()) {
+                if (t instanceof IOException) {
                     close(voidFuture());
                 }
-            }
-        }
-
-        private void flushByteBuf(ChannelBuffer buf) throws Exception {
-            if (!buf.readable()) {
-                // Reset reader/writerIndex to 0 if the buffer is empty.
-                buf.clear();
-                return;
-            }
-
-            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                int localFlushedAmount = doWriteBytes(buf, i == 0);
-                if (localFlushedAmount > 0) {
-                    flushedAmount += localFlushedAmount;
-                    notifyFlushFutures();
-                    break;
-                }
-                if (!buf.readable()) {
-                    // Reset reader/writerIndex to 0 if the buffer is empty.
-                    buf.clear();
-                    break;
+            } finally {
+                if (!isActive()) {
+                    close(unsafe().voidFuture());
                 }
             }
         }
 
-        private void flushMessageBuf(Queue<Object> buf) throws Exception {
-            final int writeSpinCount = config().getWriteSpinCount() - 1;
-            while (!buf.isEmpty()) {
-                boolean wrote = false;
-                for (int i = writeSpinCount; i >= 0; i --) {
-                    int localFlushedAmount = doWriteMessages(buf, i == 0);
-                    if (localFlushedAmount > 0) {
-                        flushedAmount += localFlushedAmount;
-                        wrote = true;
-                        notifyFlushFutures();
-                        break;
-                    }
-                }
-
-                if (!wrote) {
-                    break;
-                }
-            }
-        }
-
-        private void notifyFlushFutures() {
-            if (flushCheckpoints.isEmpty()) {
-                return;
-            }
-
-            final long flushedAmount = AbstractChannel.this.flushedAmount;
-            for (;;) {
-                FlushCheckpoint cp = flushCheckpoints.poll();
-                if (cp == null) {
-                    break;
-                }
-                if (cp.flushCheckpoint() > flushedAmount) {
-                    break;
-                }
-                cp.future().setSuccess();
-            }
-
-            // Avoid overflow
-            if (flushCheckpoints.isEmpty()) {
-                // Reset the counter if there's nothing in the notification list.
-                AbstractChannel.this.flushedAmount = 0;
-            } else if (flushedAmount >= 0x1000000000000000L) {
-                // Otherwise, reset the counter only when the counter grew pretty large
-                // so that we can reduce the cost of updating all entries in the notification list.
-                AbstractChannel.this.flushedAmount = 0;
-                for (FlushCheckpoint cp: flushCheckpoints) {
-                    cp.flushCheckpoint(cp.flushCheckpoint() - flushedAmount);
-                }
-            }
-        }
-
-        private void notifyFlushFutures(Throwable cause) {
-            for (;;) {
-                FlushCheckpoint cp = flushCheckpoints.poll();
-                if (cp == null) {
-                    break;
-                }
-                cp.future().setFailure(cause);
-            }
-        }
-
-        private boolean ensureOpen(ChannelFuture future) {
+        protected boolean ensureOpen(ChannelFuture future) {
             if (isOpen()) {
                 return true;
             }
@@ -843,11 +606,68 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return false;
         }
 
-        private void closeIfClosed() {
+        protected void closeIfClosed() {
             if (isOpen()) {
                 return;
             }
             close(voidFuture());
+        }
+    }
+
+    protected abstract boolean isCompatible(EventLoop loop);
+
+    protected abstract ChannelBufferHolder<Object> firstOut();
+
+    protected abstract SocketAddress localAddress0();
+    protected abstract SocketAddress remoteAddress0();
+
+    protected abstract void doRegister() throws Exception;
+    protected abstract void doBind(SocketAddress localAddress) throws Exception;
+    protected abstract void doDisconnect() throws Exception;
+    protected abstract void doClose() throws Exception;
+    protected abstract void doDeregister() throws Exception;
+    protected abstract void doFlush(ChannelBufferHolder<Object> buf) throws Exception;
+
+    protected abstract boolean isFlushPending();
+
+    protected void notifyFlushFutures() {
+        if (flushCheckpoints.isEmpty()) {
+            return;
+        }
+
+        final long flushedAmount = AbstractChannel.this.writeCounter;
+        for (;;) {
+            FlushCheckpoint cp = flushCheckpoints.poll();
+            if (cp == null) {
+                break;
+            }
+            if (cp.flushCheckpoint() > flushedAmount) {
+                break;
+            }
+            cp.future().setSuccess();
+        }
+
+        // Avoid overflow
+        if (flushCheckpoints.isEmpty()) {
+            // Reset the counter if there's nothing in the notification list.
+            AbstractChannel.this.writeCounter = 0;
+        } else if (flushedAmount >= 0x1000000000000000L) {
+            // Otherwise, reset the counter only when the counter grew pretty large
+            // so that we can reduce the cost of updating all entries in the notification list.
+            AbstractChannel.this.writeCounter = 0;
+            for (FlushCheckpoint cp: flushCheckpoints) {
+                cp.flushCheckpoint(cp.flushCheckpoint() - flushedAmount);
+            }
+        }
+    }
+
+    protected void notifyFlushFutures(Throwable cause) {
+        for (;;) {
+            FlushCheckpoint cp = flushCheckpoints.poll();
+            if (cp == null) {
+                break;
+            }
+            cp.future().setFailure(cause);
         }
     }
 
@@ -903,49 +723,5 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assert set;
             return set;
         }
-    }
-
-    protected abstract boolean isCompatible(EventLoop loop);
-
-    protected abstract java.nio.channels.Channel javaChannel();
-    protected abstract ChannelBufferHolder<Object> firstOut();
-
-    protected abstract SocketAddress localAddress0();
-    protected abstract SocketAddress remoteAddress0();
-
-    protected abstract void doRegister() throws Exception;
-    protected abstract void doBind(SocketAddress localAddress) throws Exception;
-    protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
-    protected abstract void doFinishConnect() throws Exception;
-    protected abstract void doDisconnect() throws Exception;
-    protected abstract void doClose() throws Exception;
-    protected abstract void doDeregister() throws Exception;
-
-    protected int doReadMessages(Queue<Object> buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    protected int doReadBytes(ChannelBuffer buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    protected abstract boolean inEventLoopDrivenFlush();
-
-    private static boolean expandReadBuffer(ChannelBuffer byteBuf) {
-        if (!byteBuf.writable()) {
-            // FIXME: Use a sensible value.
-            byteBuf.ensureWritableBytes(4096);
-            return true;
-        }
-
-        return false;
     }
 }

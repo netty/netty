@@ -22,8 +22,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
@@ -48,8 +46,6 @@ import java.util.Queue;
  */
 public final class NioDatagramChannel extends AbstractNioChannel implements io.netty.channel.socket.DatagramChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannel.class);
-
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
             new HashMap<InetAddress, List<MembershipKey>>();
@@ -72,25 +68,8 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     }
 
     public NioDatagramChannel(Integer id, DatagramChannel socket) {
-        super(null, id, socket);
-        try {
-            socket.configureBlocking(false);
-        } catch (IOException e) {
-            try {
-                socket.close();
-            } catch (IOException e2) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(
-                            "Failed to close a partially initialized socket.", e2);
-                }
-
-            }
-
-            throw new ChannelException("Failed to enter non-blocking mode.", e);
-        }
-
+        super(null, id, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(socket);
-
     }
 
     @Override
@@ -163,12 +142,6 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     @Override
     protected void doClose() throws Exception {
         javaChannel().close();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        selectionKey().cancel();
-        ((NioChildEventLoop) eventLoop()).cancelledKeys ++;
     }
 
     @Override

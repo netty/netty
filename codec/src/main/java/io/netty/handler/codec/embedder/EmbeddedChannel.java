@@ -16,15 +16,14 @@
 package io.netty.handler.codec.embedder;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 
-import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Queue;
 
@@ -36,27 +35,21 @@ class EmbeddedChannel extends AbstractChannel {
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> productQueue;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
-    private final java.nio.channels.Channel javaChannel = new java.nio.channels.Channel() {
-        @Override
-        public boolean isOpen() {
-            return state < 2;
-        }
-
-        @Override
-        public void close() throws IOException {
-            // NOOP
-        }
-    };
 
     EmbeddedChannel(Queue<Object> productQueue) {
         super(null, null);
         this.productQueue = productQueue;
-        firstOut = ChannelBufferHolders.catchAllBuffer(productQueue, ChannelBuffers.dynamicBuffer());
+        firstOut = ChannelBufferHolders.catchAllBuffer();
     }
 
     @Override
     public ChannelConfig config() {
         return config;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return state < 2;
     }
 
     @Override
@@ -67,11 +60,6 @@ class EmbeddedChannel extends AbstractChannel {
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof EmbeddedEventLoop;
-    }
-
-    @Override
-    protected java.nio.channels.Channel javaChannel() {
-        return javaChannel;
     }
 
     @Override
@@ -101,16 +89,6 @@ class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        return true;
-    }
-
-    @Override
-    protected void doFinishConnect() throws Exception {
-        // NOOP
-    }
-
-    @Override
     protected void doDisconnect() throws Exception {
         doClose();
     }
@@ -126,16 +104,37 @@ class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
-        int length = buf.readableBytes();
-        if (length > 0) {
-            productQueue.add(buf.readBytes(length));
+    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
+        ChannelBuffer byteBuf = buf.byteBuffer();
+        int byteBufLen = byteBuf.readableBytes();
+        if (byteBufLen > 0) {
+            productQueue.add(byteBuf.readBytes(byteBufLen));
+            writeCounter += byteBufLen;
+            byteBuf.clear();
         }
-        return length;
+        Queue<Object> msgBuf = buf.messageBuffer();
+        if (!msgBuf.isEmpty()) {
+            productQueue.addAll(msgBuf);
+            writeCounter += msgBuf.size();
+            msgBuf.clear();
+        }
     }
 
     @Override
-    protected boolean inEventLoopDrivenFlush() {
+    protected Unsafe newUnsafe() {
+        return new DefaultUnsafe();
+    }
+
+    @Override
+    protected boolean isFlushPending() {
         return false;
+    }
+
+    private class DefaultUnsafe extends AbstractUnsafe {
+        @Override
+        public void connect(SocketAddress remoteAddress,
+                SocketAddress localAddress, ChannelFuture future) {
+            future.setSuccess();
+        }
     }
 }

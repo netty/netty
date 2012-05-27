@@ -16,12 +16,10 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -29,16 +27,14 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
+import java.io.PushbackInputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Queue;
 
-public class OioSocketChannel extends AbstractChannel
+public class OioSocketChannel extends AbstractOioChannel
                               implements SocketChannel {
 
     private static final InternalLogger logger =
@@ -47,7 +43,7 @@ public class OioSocketChannel extends AbstractChannel
     private final Socket socket;
     private final SocketChannelConfig config;
     private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer();
-    private InputStream is;
+    private PushbackInputStream is;
     private OutputStream os;
 
     public OioSocketChannel() {
@@ -66,7 +62,7 @@ public class OioSocketChannel extends AbstractChannel
         boolean success = false;
         try {
             if (socket.isConnected()) {
-                is = socket.getInputStream();
+                is = new PushbackInputStream(socket.getInputStream());
                 os = socket.getOutputStream();
             }
             socket.setSoTimeout(1000);
@@ -90,16 +86,6 @@ public class OioSocketChannel extends AbstractChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
     public boolean isOpen() {
         return !socket.isClosed();
     }
@@ -107,16 +93,6 @@ public class OioSocketChannel extends AbstractChannel
     @Override
     public boolean isActive() {
         return !socket.isClosed() && socket.isConnected();
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof OioChildEventLoop;
-    }
-
-    @Override
-    protected java.nio.channels.Channel javaChannel() {
-        return null;
     }
 
     @Override
@@ -136,17 +112,12 @@ public class OioSocketChannel extends AbstractChannel
     }
 
     @Override
-    protected void doRegister() throws Exception {
-        // NOOP
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         socket.bind(localAddress);
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress,
+    protected void doConnect(SocketAddress remoteAddress,
             SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
             socket.bind(localAddress);
@@ -155,20 +126,14 @@ public class OioSocketChannel extends AbstractChannel
         boolean success = false;
         try {
             socket.connect(remoteAddress, config().getConnectTimeoutMillis());
-            is = socket.getInputStream();
+            is = new PushbackInputStream(socket.getInputStream());
             os = socket.getOutputStream();
             success = true;
-            return true;
         } finally {
             if (!success) {
                 doClose();
             }
         }
-    }
-
-    @Override
-    protected void doFinishConnect() throws Exception {
-        throw new Error();
     }
 
     @Override
@@ -182,31 +147,28 @@ public class OioSocketChannel extends AbstractChannel
     }
 
     @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
-    }
-
-    @Override
-    protected int doReadMessages(Queue<Object> buf) throws Exception {
-        throw new Error();
-    }
-
-    @Override
     protected int doReadBytes(ChannelBuffer buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
+        int b;
         try {
-            int readBytes = buf.writeBytes(is, buf.writableBytes());
-            return readBytes;
+            b = is.read();
+            if (b < 0) {
+                return -1;
+            }
+            is.unread(b);
+
+            int available = is.available();
+            buf.ensureWritableBytes(available);
+            return buf.writeBytes(is, available);
         } catch (SocketTimeoutException e) {
-            // Expected
             return 0;
         }
     }
 
     @Override
-    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
+    protected int doWriteBytes(ChannelBuffer buf) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -214,10 +176,5 @@ public class OioSocketChannel extends AbstractChannel
         final int length = buf.readableBytes();
         buf.readBytes(os, length);
         return length;
-    }
-
-    @Override
-    protected boolean inEventLoopDrivenFlush() {
-        return false;
     }
 }

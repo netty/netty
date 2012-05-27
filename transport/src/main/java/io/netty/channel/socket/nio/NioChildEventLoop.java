@@ -16,9 +16,9 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
-import io.netty.channel.Channel.Unsafe;
 import io.netty.channel.ChannelException;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -171,8 +171,8 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
         for (i = selectedKeys.iterator(); i.hasNext();) {
             final SelectionKey k = i.next();
             i.remove();
-            final Channel ch = (Channel) k.attachment();
-            final Unsafe unsafe = ch.unsafe();
+            final AbstractNioChannel ch = (AbstractNioChannel) k.attachment();
+            final NioUnsafe unsafe = ch.unsafe();
             try {
                 int readyOps = k.readyOps();
                 if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
@@ -183,7 +183,7 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
                     }
                 }
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    unsafe.flushForcibly();
+                    unsafe.flushNow();
                 }
                 if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                     unsafe.finishConnect();

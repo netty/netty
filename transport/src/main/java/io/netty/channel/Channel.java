@@ -172,7 +172,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     Unsafe unsafe();
 
     public interface Unsafe {
-        java.nio.channels.Channel ch();
         ChannelBufferHolder<Object> out();
         ChannelFuture voidFuture();
 
@@ -182,13 +181,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
         void register(EventLoop eventLoop, ChannelFuture future);
         void bind(SocketAddress localAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
-        void finishConnect();
         void disconnect(ChannelFuture future);
         void close(ChannelFuture future);
         void deregister(ChannelFuture future);
 
-        void read();
         void flush(ChannelFuture future);
-        void flushForcibly();
+        void flushNow();
     }
 }

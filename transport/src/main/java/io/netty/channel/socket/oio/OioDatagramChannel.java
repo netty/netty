@@ -17,12 +17,10 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -38,10 +36,9 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.nio.channels.Channel;
 import java.util.Queue;
 
-public class OioDatagramChannel extends AbstractChannel
+public class OioDatagramChannel extends AbstractOioChannel
                                 implements DatagramChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
@@ -96,16 +93,6 @@ public class OioDatagramChannel extends AbstractChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
     public boolean isOpen() {
         return !socket.isClosed();
     }
@@ -113,16 +100,6 @@ public class OioDatagramChannel extends AbstractChannel
     @Override
     public boolean isActive() {
         return isOpen() && socket.isBound();
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof OioChildEventLoop;
-    }
-
-    @Override
-    protected Channel javaChannel() {
-        return null;
     }
 
     @Override
@@ -141,17 +118,12 @@ public class OioDatagramChannel extends AbstractChannel
     }
 
     @Override
-    protected void doRegister() throws Exception {
-        // NOOP
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         socket.bind(localAddress);
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress,
+    protected void doConnect(SocketAddress remoteAddress,
             SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
             socket.bind(localAddress);
@@ -161,7 +133,6 @@ public class OioDatagramChannel extends AbstractChannel
         try {
             socket.connect(remoteAddress);
             success = true;
-            return true;
         } finally {
             if (!success) {
                 try {
@@ -174,11 +145,6 @@ public class OioDatagramChannel extends AbstractChannel
     }
 
     @Override
-    protected void doFinishConnect() throws Exception {
-        throw new Error();
-    }
-
-    @Override
     protected void doDisconnect() throws Exception {
         socket.disconnect();
     }
@@ -186,11 +152,6 @@ public class OioDatagramChannel extends AbstractChannel
     @Override
     protected void doClose() throws Exception {
         socket.close();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
     }
 
     @Override
@@ -214,7 +175,7 @@ public class OioDatagramChannel extends AbstractChannel
     }
 
     @Override
-    protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(Queue<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
         ChannelBuffer data = p.data();
         int length = data.readableBytes();
@@ -229,11 +190,6 @@ public class OioDatagramChannel extends AbstractChannel
 
         socket.send(tmpPacket);
         return 1;
-    }
-
-    @Override
-    protected boolean inEventLoopDrivenFlush() {
-        return false;
     }
 
     @Override

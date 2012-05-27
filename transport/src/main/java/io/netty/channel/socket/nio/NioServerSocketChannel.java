@@ -15,13 +15,11 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.AbstractServerChannel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,43 +28,23 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Queue;
 
-public class NioServerSocketChannel extends AbstractServerChannel
+public class NioServerSocketChannel extends AbstractNioChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
-
-    private final ServerSocketChannel socket;
-    private final ServerSocketChannelConfig config;
-    private volatile SelectionKey selectionKey;
-
-    public NioServerSocketChannel() {
-        super(null);
-
+    private static ServerSocketChannel newSocket() {
         try {
-            socket = ServerSocketChannel.open();
+            return ServerSocketChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
                     "Failed to open a server socket.", e);
         }
+    }
 
-        try {
-            socket.configureBlocking(false);
-        } catch (IOException e) {
-            try {
-                socket.close();
-            } catch (IOException e2) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(
-                            "Failed to close a partially initialized socket.", e2);
-                }
+    private final ServerSocketChannelConfig config;
 
-            }
-
-            throw new ChannelException("Failed to enter non-blocking mode.", e);
-        }
-
-        config = new DefaultServerSocketChannelConfig(socket.socket());
+    public NioServerSocketChannel() {
+        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 
     @Override
@@ -80,51 +58,30 @@ public class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public InetSocketAddress remoteAddress() {
         return null;
     }
 
     @Override
     protected java.nio.channels.ServerSocketChannel javaChannel() {
-        return socket;
+        return (ServerSocketChannel) super.javaChannel();
     }
 
     @Override
     protected SocketAddress localAddress0() {
-        return socket.socket().getLocalSocketAddress();
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof NioChildEventLoop;
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
-        selectionKey = javaChannel().register(
-                loop.selector, isActive()? SelectionKey.OP_ACCEPT : 0, this);
+        return javaChannel().socket().getLocalSocketAddress();
     }
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().socket().bind(localAddress);
+        SelectionKey selectionKey = selectionKey();
         selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
     }
 
     @Override
     protected void doClose() throws Exception {
         javaChannel().close();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        selectionKey.cancel();
     }
 
     @Override
@@ -135,5 +92,32 @@ public class NioServerSocketChannel extends AbstractServerChannel
         }
         buf.add(new NioSocketChannel(this, null, ch));
         return 1;
+    }
+
+    // Unnecessary stuff
+    @Override
+    protected boolean doConnect(
+            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void doFinishConnect() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected ChannelBufferHolder<Object> firstOut() {
+        return ChannelBufferHolders.discardBuffer();
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return null;
+    }
+
+    @Override
+    protected void doDisconnect() throws Exception {
+        throw new UnsupportedOperationException();
     }
 }

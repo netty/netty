@@ -54,7 +54,7 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     }
 
     public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
-        super(parent, id, socket);
+        super(parent, id, socket, SelectionKey.OP_READ);
         try {
             socket.configureBlocking(false);
         } catch (IOException e) {
@@ -150,12 +150,6 @@ public class NioSocketChannel extends AbstractNioChannel implements io.netty.cha
     @Override
     protected void doClose() throws Exception {
         javaChannel().close();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        selectionKey().cancel();
-        ((NioChildEventLoop) eventLoop()).cancelledKeys ++;
     }
 
     @Override

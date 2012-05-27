@@ -16,9 +16,6 @@
 package io.netty.channel;
 
 import java.net.SocketAddress;
-import java.util.AbstractQueue;
-import java.util.Collections;
-import java.util.Iterator;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
@@ -32,8 +29,6 @@ import java.util.Iterator;
  */
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
 
-    private final ChannelBufferHolder<Object> out = ChannelBufferHolders.messageBuffer(new NoopQueue());
-
     /**
      * Creates a new instance.
      */
@@ -43,7 +38,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     @Override
     public ChannelBufferHolder<Object> out() {
-        return out;
+        return ChannelBufferHolders.discardBuffer();
     }
 
     @Override
@@ -53,7 +48,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     @Override
     protected ChannelBufferHolder<Object> firstOut() {
-        return out;
+        return ChannelBufferHolders.discardBuffer();
     }
 
     @Override
@@ -62,49 +57,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void doFinishConnect() throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     protected void doDisconnect() throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean inEventLoopDrivenFlush() {
-        return false;
-    }
-
-    private static class NoopQueue extends AbstractQueue<Object> {
-        @Override
-        public boolean offer(Object e) {
-            return false;
-        }
-
-        @Override
-        public Object poll() {
-            return null;
-        }
-
-        @Override
-        public Object peek() {
-            return null;
-        }
-
-        @Override
-        public Iterator<Object> iterator() {
-            return Collections.emptyList().iterator();
-        }
-
-        @Override
-        public int size() {
-            return 0;
-        }
     }
 }

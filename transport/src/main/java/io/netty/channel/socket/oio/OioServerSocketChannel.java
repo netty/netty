@@ -15,9 +15,9 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.channel.AbstractServerChannel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -30,12 +30,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.Channel;
 import java.util.Queue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class OioServerSocketChannel extends AbstractServerChannel
+public class OioServerSocketChannel extends AbstractOioChannel
                                     implements ServerSocketChannel {
 
     private static final InternalLogger logger =
@@ -62,7 +61,7 @@ public class OioServerSocketChannel extends AbstractServerChannel
     }
 
     public OioServerSocketChannel(Integer id, ServerSocket socket) {
-        super(id);
+        super(null, id);
         if (socket == null) {
             throw new NullPointerException("socket");
         }
@@ -97,13 +96,8 @@ public class OioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
+        return null;
     }
 
     @Override
@@ -117,23 +111,8 @@ public class OioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof OioChildEventLoop;
-    }
-
-    @Override
-    protected Channel javaChannel() {
-        return null;
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return socket.getLocalSocketAddress();
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        // NOOP
     }
 
     @Override
@@ -144,11 +123,6 @@ public class OioServerSocketChannel extends AbstractServerChannel
     @Override
     protected void doClose() throws Exception {
         socket.close();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
     }
 
     @Override
@@ -178,5 +152,26 @@ public class OioServerSocketChannel extends AbstractServerChannel
         }
 
         return 0;
+    }
+
+    @Override
+    protected void doConnect(
+            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected ChannelBufferHolder<Object> firstOut() {
+        return ChannelBufferHolders.discardBuffer();
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return null;
+    }
+
+    @Override
+    protected void doDisconnect() throws Exception {
+        throw new UnsupportedOperationException();
     }
 }

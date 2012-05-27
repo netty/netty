@@ -9,7 +9,7 @@ import io.netty.channel.SingleThreadEventLoop;
 class OioChildEventLoop extends SingleThreadEventLoop {
 
     private final OioEventLoop parent;
-    private Channel ch;
+    private AbstractOioChannel ch;
 
     OioChildEventLoop(OioEventLoop parent) {
         super(parent.threadFactory);
@@ -22,7 +22,7 @@ class OioChildEventLoop extends SingleThreadEventLoop {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    ch = future.channel();
+                    ch = (AbstractOioChannel) future.channel();
                 } else {
                     deregister();
                 }
@@ -33,7 +33,7 @@ class OioChildEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            Channel ch = OioChildEventLoop.this.ch;
+            AbstractOioChannel ch = OioChildEventLoop.this.ch;
             if (ch == null || !ch.isActive()) {
                 Runnable task;
                 try {
