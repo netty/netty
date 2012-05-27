@@ -19,6 +19,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ServerChannelBootstrap;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -47,6 +48,12 @@ public class EchoServer {
              .option(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))
              .childOption(ChannelOption.TCP_NODELAY, true)
+             .initializer(new ChannelInitializer<ServerSocketChannel>() {
+                @Override
+                public void initChannel(ServerSocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
+                }
+             })
              .childInitializer(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
