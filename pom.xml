@@ -72,9 +72,6 @@
     <module>codec</module>
     <module>codec-http</module>
     <module>transport</module>
-    <module>transport-http</module>
-    <module>transport-rxtx</module>
-    <module>transport-sctp</module>
     <module>handler</module>
     <module>example</module>
     <module>all</module>
