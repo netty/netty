@@ -205,12 +205,19 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         }
 
         if (cumulation == null) {
-            // the cumulation buffer is not created yet so just pass the input to callDecode(...) method
-            callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
-            if (input.readable()) {
-                // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
-                (cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
+            // Wrap in try / finally.
+            //
+            // See https://github.com/netty/netty/issues/364
+            try {
+                // the cumulation buffer is not created yet so just pass the input to callDecode(...) method
+                callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
+            } finally {
+                if (input.readable()) {
+                    // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
+                    (cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
+                }
             }
+
         } else {
             assert cumulation.readable();
             boolean fit = false;
@@ -226,7 +233,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
                     fit = true;
                 }
             } else {
-
                 // ok the input fit into the cumulation buffer
                 fit = true;
             }
@@ -243,17 +249,23 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
                 cumulation = buf;
             }
 
+            // Wrap in try / finally.
+            //
+            // See https://github.com/netty/netty/issues/364
+            try {
+                callDecode(ctx, e.getChannel(), buf, e.getRemoteAddress());
+            } finally {
+                if (!buf.readable()) {
+                    // nothing readable left so reset the state
+                    cumulation = null;
+                } else {
+                    // create a new buffer and copy the readable buffer into it
+                    cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                    cumulation.writeBytes(buf);
 
-            callDecode(ctx, e.getChannel(), buf, e.getRemoteAddress());
-            if (!buf.readable()) {
-                // nothing readable left so reset the state
-                cumulation = null;
-            } else {
-                // create a new buffer and copy the readable buffer into it
-                cumulation = newCumulationBuffer(ctx, buf.readableBytes());
-                cumulation.writeBytes(buf);
-
+                }
             }
+            
         }
     }
 
