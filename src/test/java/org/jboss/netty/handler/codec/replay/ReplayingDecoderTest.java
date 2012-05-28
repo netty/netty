@@ -17,12 +17,16 @@ package org.jboss.netty.handler.codec.replay;
 
 import static org.junit.Assert.*;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 public class ReplayingDecoderTest {
@@ -49,6 +53,46 @@ public class ReplayingDecoderTest {
         assertNull(e.poll());
     }
 
+    @Test
+    public void testAssertFailure() {
+        final AtomicBoolean fail = new AtomicBoolean(true);
+        DecoderEmbedder<ChannelBuffer> e = new DecoderEmbedder<ChannelBuffer>(
+                new ReplayingDecoder<VoidEnum>() {
+
+                    @Override
+                    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state) throws Exception {
+                        if (fail.get()) {
+                            for (;;) {
+                                try {
+                                buffer.readByte();
+                                } catch (ReplayError er) {
+                                    break;
+                                }
+                            }
+                            fail.set(false);
+                            throw new Exception();
+
+                        
+                        }
+       
+                        
+                        buffer.readByte();
+                        return new Object();
+                    }
+                    
+                });
+        try {
+            e.offer(ChannelBuffers.copiedBuffer("TESTME!!!!", CharsetUtil.US_ASCII));
+            fail();
+        } catch (CodecEmbedderException ex) {
+            // expected
+        }
+        
+        // this will trigger an assert error when asserts are enabled via the -ea 
+        // jvm switch. This is the default when run via the maven sunfire plugin
+        e.offer(ChannelBuffers.copiedBuffer("TESTME!!!!", CharsetUtil.US_ASCII));
+        e.finish();
+    }
     private static final class LineDecoder extends ReplayingDecoder<VoidEnum> {
 
         LineDecoder() {
