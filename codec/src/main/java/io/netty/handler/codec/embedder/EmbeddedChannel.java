@@ -109,13 +109,11 @@ class EmbeddedChannel extends AbstractChannel {
         int byteBufLen = byteBuf.readableBytes();
         if (byteBufLen > 0) {
             productQueue.add(byteBuf.readBytes(byteBufLen));
-            writeCounter += byteBufLen;
             byteBuf.clear();
         }
         Queue<Object> msgBuf = buf.messageBuffer();
         if (!msgBuf.isEmpty()) {
             productQueue.addAll(msgBuf);
-            writeCounter += msgBuf.size();
             msgBuf.clear();
         }
     }
