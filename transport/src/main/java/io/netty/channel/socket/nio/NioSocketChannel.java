@@ -160,6 +160,10 @@ public class NioSocketChannel extends AbstractNioStreamChannel implements io.net
     @Override
     protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
+
+        // FIXME: This is not as efficient as Netty 3's SendBufferPool if heap buffer is used
+        //        because of potentially unwanted repetitive memory copy in case of
+        //        a slow connection or a large output buffer that triggers OP_WRITE.
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
 
         final SelectionKey key = selectionKey();
