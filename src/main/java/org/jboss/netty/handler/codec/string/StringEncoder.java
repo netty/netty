@@ -90,6 +90,6 @@ public class StringEncoder extends OneToOneEncoder {
         if (!(msg instanceof String)) {
             return msg;
         }
-        return copiedBuffer((String) msg, charset);
+        return copiedBuffer(ctx.getChannel().getConfig().getBufferFactory().getDefaultOrder(),(String) msg, charset);
     }
 }
