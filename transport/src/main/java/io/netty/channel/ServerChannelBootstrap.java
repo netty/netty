@@ -17,7 +17,7 @@ public class ServerChannelBootstrap {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerChannelBootstrap.class);
     private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(SocketAddresses.LOCALHOST, 0);
 
-    private final ChannelHandler acceptor = new ChannelInitializer() {
+    private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) throws Exception {
             Acceptor acceptor = new Acceptor();
@@ -93,6 +93,16 @@ public class ServerChannelBootstrap {
             throw new NullPointerException("localAddress");
         }
         this.localAddress = localAddress;
+        return this;
+    }
+
+    public ServerChannelBootstrap localAddress(int port) {
+        localAddress = new InetSocketAddress(port);
+        return this;
+    }
+
+    public ServerChannelBootstrap localAddress(String host, int port) {
+        localAddress = new InetSocketAddress(host, port);
         return this;
     }
 

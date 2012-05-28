@@ -3,6 +3,7 @@ package io.netty.channel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
@@ -61,8 +62,23 @@ public class ChannelBootstrap {
         return this;
     }
 
+    public ChannelBootstrap localAddress(int port) {
+        localAddress = new InetSocketAddress(port);
+        return this;
+    }
+
+    public ChannelBootstrap localAddress(String host, int port) {
+        localAddress = new InetSocketAddress(host, port);
+        return this;
+    }
+
     public ChannelBootstrap remoteAddress(SocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
+        return this;
+    }
+
+    public ChannelBootstrap remoteAddress(String host, int port) {
+        remoteAddress = new InetSocketAddress(host, port);
         return this;
     }
 
