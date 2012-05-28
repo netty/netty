@@ -15,31 +15,26 @@
  */
 package io.netty.example.discard;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelState;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.channel.WriteCompletionEvent;
 
 /**
  * Handles a client-side channel.
  */
-public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
+public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
 
-    private long transferredBytes;
     private final byte[] content;
+    private ChannelInboundHandlerContext<Byte> ctx;
+    private ChannelBuffer out;
 
     public DiscardClientHandler(int messageSize) {
         if (messageSize <= 0) {
@@ -49,70 +44,55 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
         content = new byte[messageSize];
     }
 
-    public long getTransferredBytes() {
-        return transferredBytes;
-    }
 
     @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            if (((ChannelStateEvent) e).getState() != ChannelState.INTEREST_OPS) {
-                logger.info(e.toString());
-            }
-        }
-
-        // Let SimpleChannelHandler call actual event handler methods below.
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
+            throws Exception {
+        this.ctx = ctx;
+        out = ctx.out().byteBuffer();
         // Send the initial messages.
-        generateTraffic(e);
+        generateTraffic();
     }
 
-    @Override
-    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        // Keep sending messages whenever the current socket buffer has room.
-        generateTraffic(e);
-    }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
+            throws Exception {
         // Server is supposed to send nothing.  Therefore, do nothing.
     }
 
-    @Override
-    public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e) {
-        transferredBytes += e.getWrittenAmount();
-    }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+            Throwable cause) throws Exception {
         // Close the connection when an exception is raised.
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                cause);
+        ctx.close();
     }
 
-    private void generateTraffic(ChannelStateEvent e) {
-        // Keep generating traffic until the channel is unwritable.
-        // A channel becomes unwritable when its internal buffer is full.
-        // If you keep writing messages ignoring this property,
-        // you will end up with an OutOfMemoryError.
-        Channel channel = e.channel();
-        while (channel.isWritable()) {
-            ChannelBuffer m = nextMessage();
-            if (m == null) {
-                break;
-            }
-            channel.write(m);
+    long counter;
+
+    private void generateTraffic() {
+        // Fill the outbound buffer up to 64KiB
+        while (out.readableBytes() < 65536) {
+            out.writeBytes(content);
         }
+
+        // Flush the outbound buffer to the socket.
+        // Once flushed, generate the same amount of traffic again.
+        ctx.flush().addListener(GENERATE_TRAFFIC);
     }
 
-    private ChannelBuffer nextMessage() {
-        return ChannelBuffers.wrappedBuffer(content);
-    }
+    private final ChannelFutureListener GENERATE_TRAFFIC = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                out.clear();
+                generateTraffic();
+            }
+        }
+    };
 }

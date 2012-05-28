@@ -15,54 +15,37 @@
  */
 package io.netty.example.discard;
 
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handles a server-side channel.
  */
-public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
+public class DiscardServerHandler extends ChannelInboundStreamHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             DiscardServerHandler.class.getName());
 
-    private long transferredBytes;
-
-    public long getTransferredBytes() {
-        return transferredBytes;
-    }
 
     @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-
-        // Let SimpleChannelHandler call actual event handler methods below.
-        super.handleUpstream(ctx, e);
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
+            throws Exception {
+        // Discard the received data silently.
+        ctx.in().byteBuffer().clear();
     }
 
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-        // Discard received data silently by doing nothing.
-        transferredBytes += ((ChannelBuffer) e.getMessage()).readableBytes();
-    }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+            Throwable cause) throws Exception {
         // Close the connection when an exception is raised.
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                cause);
+        ctx.close();
     }
 }

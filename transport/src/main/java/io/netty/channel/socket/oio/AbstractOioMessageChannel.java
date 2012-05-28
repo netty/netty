@@ -70,11 +70,7 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     private void flushMessageBuf(Queue<Object> buf) throws Exception {
         while (!buf.isEmpty()) {
-            int localFlushedAmount = doWriteMessages(buf);
-            if (localFlushedAmount > 0) {
-                writeCounter += localFlushedAmount;
-                notifyFlushFutures();
-            }
+            doWriteMessages(buf);
         }
     }
 

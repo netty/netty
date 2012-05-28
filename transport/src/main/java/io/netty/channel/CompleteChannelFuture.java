@@ -15,9 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -25,9 +22,6 @@ import java.util.concurrent.TimeUnit;
  * {@link ChannelFuture} which has been completed already.
  */
 public abstract class CompleteChannelFuture implements ChannelFuture {
-
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(CompleteChannelFuture.class);
 
     private final Channel channel;
 
@@ -45,29 +39,11 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
 
     @Override
     public ChannelFuture addListener(final ChannelFutureListener listener) {
-        if (channel().eventLoop().inEventLoop()) {
-            notifyListener(listener);
-        } else {
-            channel().eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    notifyListener(listener);
-                }
-            });
+        if (listener == null) {
+            throw new NullPointerException("listener");
         }
+        DefaultChannelFuture.notifyListener(this, listener);
         return this;
-    }
-
-    private void notifyListener(ChannelFutureListener listener) {
-        try {
-            listener.operationComplete(this);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + ".", t);
-            }
-        }
     }
 
     @Override

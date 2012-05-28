@@ -82,9 +82,7 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             for (int i = writeSpinCount; i >= 0; i --) {
                 int localFlushedAmount = doWriteMessages(buf, i == 0);
                 if (localFlushedAmount > 0) {
-                    writeCounter += localFlushedAmount;
                     wrote = true;
-                    notifyFlushFutures();
                     break;
                 }
             }

@@ -38,6 +38,14 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
 
+    private static final int MAX_LISTENER_STACK_DEPTH = 8;
+    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return 0;
+        }
+    };
+
     private static final Throwable CANCELLED = new Throwable();
 
     private static volatile boolean useDeadLockChecker = true;
@@ -154,17 +162,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         }
 
         if (notifyNow) {
-            if (channel().eventLoop().inEventLoop()) {
-                notifyListener(listener);
-            } else {
-                channel().eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyListener(listener);
-
-                    }
-                });
-            }
+            notifyListener(this, listener);
         }
 
         return this;
@@ -433,12 +431,12 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         }
 
         if (channel().eventLoop().inEventLoop()) {
-            notifyListener(firstListener);
+            notifyListener0(this, firstListener);
             firstListener = null;
 
             if (otherListeners != null) {
                 for (ChannelFutureListener l: otherListeners) {
-                    notifyListener(l);
+                    notifyListener0(this, l);
                 }
                 otherListeners = null;
             }
@@ -450,10 +448,10 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
             channel().eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    notifyListener(firstListener);
+                    notifyListener0(DefaultChannelFuture.this, firstListener);
                     if (otherListeners != null) {
                         for (ChannelFutureListener l: otherListeners) {
-                            notifyListener(l);
+                            notifyListener0(DefaultChannelFuture.this, l);
                         }
                     }
                 }
@@ -461,9 +459,33 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         }
     }
 
-    private void notifyListener(ChannelFutureListener l) {
+    static void notifyListener(final ChannelFuture f, final ChannelFutureListener l) {
+        EventLoop loop = f.channel().eventLoop();
+        if (loop.inEventLoop()) {
+            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                try {
+                    notifyListener0(f, l);
+                } finally {
+                    LISTENER_STACK_DEPTH.set(stackDepth);
+                }
+                return;
+            }
+        }
+
+        loop.execute(new Runnable() {
+            @Override
+            public void run() {
+                notifyListener(f, l);
+            }
+
+        });
+    }
+
+    private static void notifyListener0(ChannelFuture f, ChannelFutureListener l) {
         try {
-            l.operationComplete(this);
+            l.operationComplete(f);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn(

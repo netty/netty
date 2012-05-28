@@ -72,11 +72,7 @@ abstract class AbstractOioStreamChannel extends AbstractOioChannel {
 
     private void flushByteBuf(ChannelBuffer buf) throws Exception {
         while (buf.readable()) {
-            int localFlushedAmount = doWriteBytes(buf);
-            if (localFlushedAmount > 0) {
-                writeCounter += localFlushedAmount;
-                notifyFlushFutures();
-            }
+            doWriteBytes(buf);
         }
         buf.clear();
     }

@@ -15,15 +15,12 @@
  */
 package io.netty.example.discard;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
  * Keeps sending random data to the specified address.
@@ -40,28 +37,28 @@ public class DiscardClient {
         this.firstMessageSize = firstMessageSize;
     }
 
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ChannelBootstrap b = new ChannelBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .initializer(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new DiscardClientHandler(firstMessageSize));
+                }
+             });
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new DiscardClientHandler(firstMessageSize));
-            }
-        });
+            // Make the connection attempt.
+            ChannelFuture f = b.connect().sync();
 
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+            // Wait until the connection is closed.
+            f.channel().closeFuture().sync();
 
-        // Wait until the connection is closed or the connection attempt fails.
-        future.channel().getCloseFuture().awaitUninterruptibly();
-
-        // Shut down thread pools to exit.
-        bootstrap.releaseExternalResources();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

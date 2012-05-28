@@ -82,7 +82,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private ClosedChannelException closedChannelException;
     private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
-    protected long writeCounter;
+    private long writeCounter;
+    private boolean inFlushNow;
+    private boolean flushNowPending;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -362,6 +364,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract class AbstractUnsafe implements Unsafe {
 
+        private final Runnable flushLaterTask = new FlushLater();
+
         @Override
         public ChannelBufferHolder<Object> out() {
             return firstOut();
@@ -554,19 +558,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Attempt/perform outbound I/O if:
                 // - the channel is inactive - flush0() will fail the futures.
                 // - the event loop has no plan to call flushForcibly().
-                try {
-                    if (!isActive() || !isFlushPending()) {
-                        doFlush(out());
+                if (!inFlushNow) {
+                    try {
+                        if (!isActive() || !isFlushPending()) {
+                            flushNow();
+                        }
+                    } catch (Throwable t) {
+                        notifyFlushFutures(t);
+                        pipeline().fireExceptionCaught(t);
+                        if (t instanceof IOException) {
+                            close(voidFuture());
+                        }
+                    } finally {
+                        if (!isActive()) {
+                            close(unsafe().voidFuture());
+                        }
                     }
-                } catch (Throwable t) {
-                    notifyFlushFutures(t);
-                    pipeline().fireExceptionCaught(t);
-                    if (t instanceof IOException) {
-                        close(voidFuture());
-                    }
-                } finally {
-                    if (!isActive()) {
-                        close(unsafe().voidFuture());
+                } else {
+                    if (!flushNowPending) {
+                        flushNowPending = true;
+                        eventLoop().execute(flushLaterTask);
                     }
                 }
             } else {
@@ -581,18 +592,38 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void flushNow() {
+            if (inFlushNow) {
+                return;
+            }
+
+            inFlushNow = true;
             try {
-                doFlush(out());
-            } catch (Throwable t) {
-                notifyFlushFutures(t);
-                pipeline().fireExceptionCaught(t);
-                if (t instanceof IOException) {
-                    close(voidFuture());
+                Throwable cause = null;
+                ChannelBufferHolder<Object> out = out();
+                int oldSize = out.size();
+                try {
+                    doFlush(out);
+                } catch (Throwable t) {
+                    cause = t;
+                } finally {
+                    writeCounter += oldSize - out.size();
                 }
-            } finally {
+
+                if (cause == null) {
+                    notifyFlushFutures();
+                } else {
+                    notifyFlushFutures(cause);
+                    pipeline().fireExceptionCaught(cause);
+                    if (cause instanceof IOException) {
+                        close(voidFuture());
+                    }
+                }
+
                 if (!isActive()) {
                     close(unsafe().voidFuture());
                 }
+            } finally {
+                inFlushNow = false;
             }
         }
 
@@ -615,6 +646,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    private class FlushLater implements Runnable {
+        @Override
+        public void run() {
+            flushNowPending = false;
+            unsafe().flush(voidFuture);
+        }
+    }
+
     protected abstract boolean isCompatible(EventLoop loop);
 
     protected abstract ChannelBufferHolder<Object> firstOut();
@@ -631,38 +670,46 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract boolean isFlushPending();
 
-    protected void notifyFlushFutures() {
+    private void notifyFlushFutures() {
         if (flushCheckpoints.isEmpty()) {
             return;
         }
 
-        final long flushedAmount = AbstractChannel.this.writeCounter;
+        final long writeCounter = AbstractChannel.this.writeCounter;
         for (;;) {
-            FlushCheckpoint cp = flushCheckpoints.poll();
+            FlushCheckpoint cp = flushCheckpoints.peek();
             if (cp == null) {
+                // Reset the counter if there's nothing in the notification list.
+                AbstractChannel.this.writeCounter = 0;
                 break;
             }
-            if (cp.flushCheckpoint() > flushedAmount) {
+
+            if (cp.flushCheckpoint() > writeCounter) {
+                if (writeCounter > 0 && flushCheckpoints.size() == 1) {
+                    AbstractChannel.this.writeCounter = 0;
+                    cp.flushCheckpoint(cp.flushCheckpoint() - writeCounter);
+                }
                 break;
             }
+
+            flushCheckpoints.remove();
             cp.future().setSuccess();
         }
 
         // Avoid overflow
-        if (flushCheckpoints.isEmpty()) {
-            // Reset the counter if there's nothing in the notification list.
-            AbstractChannel.this.writeCounter = 0;
-        } else if (flushedAmount >= 0x1000000000000000L) {
-            // Otherwise, reset the counter only when the counter grew pretty large
+        final long newWriteCounter = AbstractChannel.this.writeCounter;
+        if (newWriteCounter >= 0x1000000000000000L) {
+            // Reset the counter only when the counter grew pretty large
             // so that we can reduce the cost of updating all entries in the notification list.
             AbstractChannel.this.writeCounter = 0;
             for (FlushCheckpoint cp: flushCheckpoints) {
-                cp.flushCheckpoint(cp.flushCheckpoint() - flushedAmount);
+                cp.flushCheckpoint(cp.flushCheckpoint() - newWriteCounter);
             }
         }
     }
 
-    protected void notifyFlushFutures(Throwable cause) {
+    private void notifyFlushFutures(Throwable cause) {
+        notifyFlushFutures();
         for (;;) {
             FlushCheckpoint cp = flushCheckpoints.poll();
             if (cp == null) {

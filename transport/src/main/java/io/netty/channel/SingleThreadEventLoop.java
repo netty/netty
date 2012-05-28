@@ -109,46 +109,65 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
 
     protected Runnable pollTask() {
         assert inEventLoop();
+
         Runnable task = taskQueue.poll();
-        if (task == null) {
-            if (fetchScheduledTasks()) {
-                task = taskQueue.poll();
-            }
+        if (task != null) {
+            return task;
         }
-        return task;
+
+        if (fetchScheduledTasks()) {
+            task = taskQueue.poll();
+            return task;
+        }
+
+        return null;
     }
 
     protected Runnable takeTask() throws InterruptedException {
         assert inEventLoop();
+
         for (;;) {
             Runnable task = taskQueue.poll(SCHEDULE_CHECK_INTERVAL * 2 / 3, TimeUnit.NANOSECONDS);
             if (task != null) {
                 return task;
             }
             fetchScheduledTasks();
+            task = taskQueue.poll();
+            if (task != null) {
+                return task;
+            }
         }
     }
 
     protected Runnable peekTask() {
         assert inEventLoop();
+
         Runnable task = taskQueue.peek();
-        if (task == null) {
-            if (fetchScheduledTasks()) {
-                task = taskQueue.peek();
-            }
+        if (task != null) {
+            return task;
         }
-        return task;
+
+        if (fetchScheduledTasks()) {
+            task = taskQueue.peek();
+            return task;
+        }
+
+        return null;
     }
 
     protected boolean hasTasks() {
         assert inEventLoop();
+
         boolean empty = taskQueue.isEmpty();
-        if (empty) {
-            if (fetchScheduledTasks()) {
-                empty = taskQueue.isEmpty();
-            }
+        if (!empty) {
+            return true;
         }
-        return !empty;
+
+        if (fetchScheduledTasks()) {
+            return !taskQueue.isEmpty();
+        }
+
+        return false;
     }
 
     protected void addTask(Runnable task) {
