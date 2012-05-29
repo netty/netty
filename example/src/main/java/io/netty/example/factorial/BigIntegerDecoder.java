@@ -15,13 +15,12 @@
  */
 package io.netty.example.factorial;
 
-import java.math.BigInteger;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
-import io.netty.handler.codec.FrameDecoder;
+import io.netty.handler.codec.StreamToMessageDecoder;
+
+import java.math.BigInteger;
 
 /**
  * Decodes the binary representation of a {@link BigInteger} prepended
@@ -29,36 +28,35 @@ import io.netty.handler.codec.FrameDecoder;
  * {@link BigInteger} instance.  For example, { 'F', 0, 0, 0, 1, 42 } will be
  * decoded into new BigInteger("42").
  */
-public class BigIntegerDecoder extends FrameDecoder {
+public class BigIntegerDecoder extends StreamToMessageDecoder<BigInteger> {
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+    public BigInteger decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
         // Wait until the length prefix is available.
-        if (buffer.readableBytes() < 5) {
+        if (in.readableBytes() < 5) {
             return null;
         }
 
-        buffer.markReaderIndex();
+        in.markReaderIndex();
 
         // Check the magic number.
-        int magicNumber = buffer.readUnsignedByte();
+        int magicNumber = in.readUnsignedByte();
         if (magicNumber != 'F') {
-            buffer.resetReaderIndex();
+            in.resetReaderIndex();
             throw new CorruptedFrameException(
                     "Invalid magic number: " + magicNumber);
         }
 
         // Wait until the whole data is available.
-        int dataLength = buffer.readInt();
-        if (buffer.readableBytes() < dataLength) {
-            buffer.resetReaderIndex();
+        int dataLength = in.readInt();
+        if (in.readableBytes() < dataLength) {
+            in.resetReaderIndex();
             return null;
         }
 
         // Convert the received data into a new BigInteger.
         byte[] decoded = new byte[dataLength];
-        buffer.readBytes(decoded);
+        in.readBytes(decoded);
 
         return new BigInteger(decoded);
     }

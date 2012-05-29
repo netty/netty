@@ -15,13 +15,10 @@
  */
 package io.netty.example.factorial;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.Channel;
+import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
  * Sends a sequence of integers to a {@link FactorialServer} to calculate
@@ -39,32 +36,28 @@ public class FactorialClient {
         this.count = count;
     }
 
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ChannelBootstrap b = new ChannelBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .initializer(new FactorialClientInitializer(count));
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new FactorialClientPipelineFactory(count));
+            // Make a new connection.
+            ChannelFuture f = b.connect().sync();
 
-        // Make a new connection.
-        ChannelFuture connectFuture =
-            bootstrap.connect(new InetSocketAddress(host, port));
+            // Get the handler instance to retrieve the answer.
+            FactorialClientHandler handler =
+                (FactorialClientHandler) f.channel().pipeline().last();
 
-        // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().channel();
+            // Print out the answer.
+            System.err.format(
+                    "Factorial of %,d is: %,d", count, handler.getFactorial());
 
-        // Get the handler instance to retrieve the answer.
-        FactorialClientHandler handler =
-            (FactorialClientHandler) channel.pipeline().last();
-
-        // Print out the answer.
-        System.err.format(
-                "Factorial of %,d is: %,d", count, handler.getFactorial());
-
-        // Shut down all thread pools to exit.
-        bootstrap.releaseExternalResources();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

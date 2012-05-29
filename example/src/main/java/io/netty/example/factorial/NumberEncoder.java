@@ -15,29 +15,22 @@
  */
 package io.netty.example.factorial;
 
-import java.math.BigInteger;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.handler.codec.MessageToStreamEncoder;
+
+import java.math.BigInteger;
 
 /**
  * Encodes a {@link Number} into the binary representation prepended with
  * a magic number ('F' or 0x46) and a 32-bit length prefix.  For example, 42
  * will be encoded to { 'F', 0, 0, 0, 1, 42 }.
  */
-public class NumberEncoder extends OneToOneEncoder {
+public class NumberEncoder extends MessageToStreamEncoder<Number> {
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof Number)) {
-            // Ignore what this encoder can't encode.
-            return msg;
-        }
-
+    public void encode(
+            ChannelOutboundHandlerContext<Number> ctx, Number msg, ChannelBuffer out) throws Exception {
         // Convert to a BigInteger first for easier implementation.
         BigInteger v;
         if (msg instanceof BigInteger) {
@@ -50,13 +43,9 @@ public class NumberEncoder extends OneToOneEncoder {
         byte[] data = v.toByteArray();
         int dataLength = data.length;
 
-        // Construct a message.
-        ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
-        buf.writeByte((byte) 'F'); // magic number
-        buf.writeInt(dataLength);  // data length
-        buf.writeBytes(data);      // data
-
-        // Return the constructed message.
-        return buf;
+        // Write a message.
+        out.writeByte((byte) 'F'); // magic number
+        out.writeInt(dataLength);  // data length
+        out.writeBytes(data);      // data
     }
 }

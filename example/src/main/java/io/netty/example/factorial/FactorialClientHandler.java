@@ -15,21 +15,17 @@
  */
 package io.netty.example.factorial;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+
 import java.math.BigInteger;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handler for a client-side channel.  This handler maintains stateful
@@ -38,12 +34,13 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler to avoid a race condition.
  */
-public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
+public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<BigInteger> {
 
     private static final Logger logger = Logger.getLogger(
             FactorialClientHandler.class.getName());
 
-    // Stateful properties
+    private ChannelInboundHandlerContext<BigInteger> ctx;
+    private Queue<Object> out;
     private int i = 1;
     private int receivedMessages;
     private final int count;
@@ -69,34 +66,23 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
+    public void channelActive(ChannelInboundHandlerContext<BigInteger> ctx) {
+        this.ctx = ctx;
+        out = ctx.out().messageBuffer();
+        sendNumbers();
     }
 
-    @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        sendNumbers(e);
-    }
-
-    @Override
-    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        sendNumbers(e);
-    }
 
     @Override
     public void messageReceived(
-            ChannelHandlerContext ctx, final MessageEvent e) {
+            ChannelInboundHandlerContext<BigInteger> ctx, final BigInteger msg) {
         receivedMessages ++;
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.
-            e.channel().close().addListener(new ChannelFutureListener() {
+            ctx.channel().close().addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) {
-                    boolean offered = answer.offer((BigInteger) e.getMessage());
+                    boolean offered = answer.offer(msg);
                     assert offered;
                 }
             });
@@ -105,23 +91,38 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+            ChannelInboundHandlerContext<BigInteger> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 
-    private void sendNumbers(ChannelStateEvent e) {
-        Channel channel = e.channel();
-        while (channel.isWritable()) {
+    private void sendNumbers() {
+        // Do not send more than 4096 numbers.
+        boolean finished = false;
+        while (out.size() < 4096) {
             if (i <= count) {
-                channel.write(Integer.valueOf(i));
+                out.add(Integer.valueOf(i));
                 i ++;
             } else {
+                finished = true;
                 break;
             }
         }
+
+        ChannelFuture f = ctx.flush();
+        if (!finished) {
+            f.addListener(SEND_NUMBERS);
+        }
     }
+
+    private final ChannelFutureListener SEND_NUMBERS = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                sendNumbers();
+            }
+        }
+    };
 }

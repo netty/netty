@@ -15,10 +15,9 @@
  */
 package io.netty.example.factorial;
 
-import static io.netty.channel.Channels.*;
-
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
@@ -26,12 +25,10 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 /**
  * Creates a newly configured {@link ChannelPipeline} for a server-side channel.
  */
-public class FactorialServerPipelineFactory implements
-        ChannelPipelineFactory {
-
+public class FactorialServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline pipeline = pipeline();
+    public void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
 
         // Enable stream compression (you can remove these two if unnecessary)
         pipeline.addLast("deflater", new ZlibEncoder(ZlibWrapper.GZIP));
@@ -45,7 +42,5 @@ public class FactorialServerPipelineFactory implements
         // Please note we create a handler for every new channel
         // because it has stateful properties.
         pipeline.addLast("handler", new FactorialServerHandler());
-
-        return pipeline;
     }
 }

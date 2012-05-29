@@ -15,11 +15,9 @@
  */
 package io.netty.example.factorial;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.ServerChannelBootstrap;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * Receives a sequence of integers from a {@link FactorialClient} to calculate
@@ -33,17 +31,18 @@ public class FactorialServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerChannelBootstrap b = new ServerChannelBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new FactorialServerInitializer());
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new FactorialServerPipelineFactory());
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+            b.bind().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

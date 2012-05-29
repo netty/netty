@@ -52,11 +52,9 @@ public class ZlibDecoder extends StreamToStreamDecoder {
             throw new NullPointerException("wrapper");
         }
 
-        synchronized (z) {
-            int resultCode = z.inflateInit(ZlibUtil.convertWrapperType(wrapper));
-            if (resultCode != JZlib.Z_OK) {
-                ZlibUtil.fail(z, "initialization failure", resultCode);
-            }
+        int resultCode = z.inflateInit(ZlibUtil.convertWrapperType(wrapper));
+        if (resultCode != JZlib.Z_OK) {
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         }
     }
 
@@ -73,12 +71,10 @@ public class ZlibDecoder extends StreamToStreamDecoder {
         }
         this.dictionary = dictionary;
 
-        synchronized (z) {
-            int resultCode;
-            resultCode = z.inflateInit(JZlib.W_ZLIB);
-            if (resultCode != JZlib.Z_OK) {
-                ZlibUtil.fail(z, "initialization failure", resultCode);
-            }
+        int resultCode;
+        resultCode = z.inflateInit(JZlib.W_ZLIB);
+        if (resultCode != JZlib.Z_OK) {
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         }
     }
 
@@ -95,30 +91,34 @@ public class ZlibDecoder extends StreamToStreamDecoder {
             ChannelInboundHandlerContext<Byte> ctx,
             ChannelBuffer in, ChannelBuffer out) throws Exception {
 
-        synchronized (z) {
+        if (!in.readable()) {
+            return;
+        }
+
+        try {
+            // Configure input.
+            int inputLength = in.readableBytes();
+            boolean inHasArray = in.hasArray();
+            z.avail_in = inputLength;
+            if (inHasArray) {
+                z.next_in = in.array();
+                z.next_in_index = in.arrayOffset() + in.readerIndex();
+            } else {
+                byte[] array = new byte[inputLength];
+                in.readBytes(array);
+                z.next_in = array;
+                z.next_in_index = 0;
+            }
+            int oldNextInIndex = z.next_in_index;
+
+            // Configure output.
+            int maxOutputLength = inputLength << 1;
+            boolean outHasArray = out.hasArray();
+            if (!outHasArray) {
+                z.next_out = new byte[maxOutputLength];
+            }
+
             try {
-                // Configure input.
-                int inputLength = in.readableBytes();
-                boolean inHasArray = in.hasArray();
-                z.avail_in = inputLength;
-                if (inHasArray) {
-                    z.next_in = in.array();
-                    z.next_in_index = in.arrayOffset() + in.readerIndex();
-                } else {
-                    byte[] array = new byte[inputLength];
-                    in.readBytes(array);
-                    z.next_in = array;
-                    z.next_in_index = 0;
-                }
-                int oldNextInIndex = z.next_in_index;
-
-                // Configure output.
-                int maxOutputLength = inputLength << 1;
-                boolean outHasArray = out.hasArray();
-                if (!outHasArray) {
-                    z.next_out = new byte[maxOutputLength];
-                }
-
                 loop: for (;;) {
                     z.avail_out = maxOutputLength;
                     if (outHasArray) {
@@ -131,14 +131,7 @@ public class ZlibDecoder extends StreamToStreamDecoder {
                     int oldNextOutIndex = z.next_out_index;
 
                     // Decompress 'in' into 'out'
-                    int resultCode;
-                    try {
-                        resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
-                    } finally {
-                        if (inHasArray) {
-                            in.skipBytes(z.next_in_index - oldNextInIndex);
-                        }
-                    }
+                    int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
                     int outputLength = z.next_out_index - oldNextOutIndex;
                     if (outputLength > 0) {
                         if (outHasArray) {
@@ -175,13 +168,17 @@ public class ZlibDecoder extends StreamToStreamDecoder {
                     }
                 }
             } finally {
-                // Deference the external references explicitly to tell the VM that
-                // the allocated byte arrays are temporary so that the call stack
-                // can be utilized.
-                // I'm not sure if the modern VMs do this optimization though.
-                z.next_in = null;
-                z.next_out = null;
+                if (inHasArray) {
+                    in.skipBytes(z.next_in_index - oldNextInIndex);
+                }
             }
+        } finally {
+            // Deference the external references explicitly to tell the VM that
+            // the allocated byte arrays are temporary so that the call stack
+            // can be utilized.
+            // I'm not sure if the modern VMs do this optimization though.
+            z.next_in = null;
+            z.next_out = null;
         }
     }
 }
