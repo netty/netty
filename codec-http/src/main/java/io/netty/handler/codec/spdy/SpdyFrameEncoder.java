@@ -75,6 +75,19 @@ public class SpdyFrameEncoder extends MessageToStreamEncoder<Object> {
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        // TODO: Introduce a super type.
+        return msg instanceof SpdyDataFrame ||
+               msg instanceof SpdySynStreamFrame ||
+               msg instanceof SpdySynReplyFrame ||
+               msg instanceof SpdyRstStreamFrame ||
+               msg instanceof SpdySettingsFrame ||
+               msg instanceof SpdyNoOpFrame ||
+               msg instanceof SpdyGoAwayFrame ||
+               msg instanceof SpdyHeadersFrame;
+    }
+
+    @Override
     public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg,
             ChannelBuffer out) throws Exception {
         if (msg instanceof SpdyDataFrame) {

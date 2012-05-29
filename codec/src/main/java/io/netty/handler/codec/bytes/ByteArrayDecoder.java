@@ -51,6 +51,11 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public class ByteArrayDecoder extends MessageToMessageDecoder<ChannelBuffer, byte[]> {
 
     @Override
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof ChannelBuffer;
+    }
+
+    @Override
     public byte[] decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
         byte[] array;
         if (msg.hasArray()) {

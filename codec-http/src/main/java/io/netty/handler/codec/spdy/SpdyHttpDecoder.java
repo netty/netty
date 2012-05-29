@@ -59,6 +59,13 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, Object> {
         this.maxContentLength = maxContentLength;
     }
 
+    @Override
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof SpdySynStreamFrame ||
+               msg instanceof SpdySynReplyFrame ||
+               msg instanceof SpdyHeadersFrame ||
+               msg instanceof SpdyDataFrame;
+    }
 
     @Override
     public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg)

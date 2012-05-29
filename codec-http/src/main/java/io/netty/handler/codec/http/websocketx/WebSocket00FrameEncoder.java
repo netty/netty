@@ -33,6 +33,11 @@ import io.netty.handler.codec.MessageToStreamEncoder;
 public class WebSocket00FrameEncoder extends MessageToStreamEncoder<WebSocketFrame> {
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof WebSocketFrame;
+    }
+
+    @Override
     public void encode(
             ChannelOutboundHandlerContext<WebSocketFrame> ctx,
             WebSocketFrame msg, ChannelBuffer out) throws Exception {

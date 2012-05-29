@@ -12,6 +12,11 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     private final MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT> encoder =
             new MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT>() {
         @Override
+        public boolean isEncodable(Object msg) throws Exception {
+            return MessageToMessageCodec.this.isEncodable(msg);
+        }
+
+        @Override
         public OUTBOUND_OUT encode(ChannelOutboundHandlerContext<OUTBOUND_IN> ctx, OUTBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.encode(ctx, msg);
         }
@@ -19,6 +24,11 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
 
     private final MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT> decoder =
             new MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT>() {
+        @Override
+        public boolean isDecodable(Object msg) throws Exception {
+            return MessageToMessageCodec.this.isDecodable(msg);
+        }
+
         @Override
         public INBOUND_OUT decode(ChannelInboundHandlerContext<INBOUND_IN> ctx, INBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.decode(ctx, msg);
@@ -44,6 +54,24 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     @Override
     public void flush(ChannelOutboundHandlerContext<OUTBOUND_IN> ctx, ChannelFuture future) throws Exception {
         encoder.flush(ctx, future);
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified message can be decoded by this codec.
+     *
+     * @param msg the message
+     */
+    public boolean isDecodable(Object msg) throws Exception {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified message can be encoded by this codec.
+     *
+     * @param msg the message
+     */
+    public boolean isEncodable(Object msg) throws Exception {
+        return true;
     }
 
     public abstract OUTBOUND_OUT encode(ChannelOutboundHandlerContext<OUTBOUND_IN> ctx, OUTBOUND_IN msg) throws Exception;

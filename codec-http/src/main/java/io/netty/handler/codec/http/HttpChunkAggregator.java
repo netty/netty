@@ -71,6 +71,10 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
         this.maxContentLength = maxContentLength;
     }
 
+    @Override
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
 
     @Override
     public HttpMessage decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {

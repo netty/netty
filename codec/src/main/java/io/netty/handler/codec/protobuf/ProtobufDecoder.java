@@ -83,6 +83,11 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ChannelBuffer, Mess
     }
 
     @Override
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof ChannelBuffer;
+    }
+
+    @Override
     public MessageLite decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
         if (msg.hasArray()) {
             final int offset = msg.readerIndex();

@@ -20,7 +20,6 @@ import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
 
 import java.util.Random;
@@ -58,13 +57,6 @@ public class ByteArrayEncoderTest {
     public void testEncodeOtherType() {
         String str = "Meep!";
         embedder.offer(str);
-        try {
-            embedder.poll();
-            fail();
-        } catch (EncoderException e) {
-            // Expected
-            assertTrue(e.getCause() instanceof ClassCastException);
-        }
+        assertThat(embedder.poll(), is((Object) str));
     }
-
 }

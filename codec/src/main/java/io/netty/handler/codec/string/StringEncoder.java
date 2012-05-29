@@ -74,6 +74,11 @@ public class StringEncoder extends MessageToMessageEncoder<String, ChannelBuffer
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof String;
+    }
+
+    @Override
     public ChannelBuffer encode(ChannelOutboundHandlerContext<String> ctx, String msg) throws Exception {
         return ChannelBuffers.copiedBuffer(msg, charset);
     }

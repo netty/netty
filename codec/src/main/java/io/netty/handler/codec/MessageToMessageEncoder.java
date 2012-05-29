@@ -20,23 +20,31 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
     @Override
     public void flush(ChannelOutboundHandlerContext<I> ctx, ChannelFuture future) throws Exception {
         Queue<I> in = ctx.outbound().messageBuffer();
-        boolean encoded = false;
+        boolean notify = false;
         for (;;) {
             try {
-                I msg = in.poll();
+                Object msg = in.poll();
                 if (msg == null) {
                     break;
                 }
 
-                O emsg = encode(ctx, msg);
-                if (emsg == null) {
+                if (!isEncodable(msg)) {
+                    ctx.nextOutboundMessageBuffer().add(msg);
+                    notify = true;
+                    continue;
+                }
+
+                @SuppressWarnings("unchecked")
+                I imsg = (I) msg;
+                O omsg = encode(ctx, imsg);
+                if (omsg == null) {
                     // encode() might be waiting for more inbound messages to generate
                     // an aggregated message - keep polling.
                     continue;
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextOutboundMessageBuffer(), emsg)) {
-                    encoded = true;
+                if (unfoldAndAdd(ctx, ctx.nextOutboundMessageBuffer(), omsg)) {
+                    notify = true;
                 }
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
@@ -47,9 +55,18 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
             }
         }
 
-        if (encoded) {
+        if (notify) {
             ctx.flush(future);
         }
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified message can be encoded by this encoder.
+     *
+     * @param msg the message
+     */
+    public boolean isEncodable(Object msg) throws Exception {
+        return true;
     }
 
     public abstract O encode(ChannelOutboundHandlerContext<I> ctx, I msg) throws Exception;

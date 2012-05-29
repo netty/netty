@@ -56,6 +56,11 @@ public abstract class HttpMessageEncoder extends MessageToStreamEncoder<Object> 
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
+
+    @Override
     public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;

@@ -47,7 +47,7 @@ import java.util.Queue;
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
  * converts them into {@link ChannelBuffer}s.
  */
-public abstract class HttpContentEncoder extends MessageToMessageCodec<Object, Object, Object, Object> {
+public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
     private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue(String.class);
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
@@ -59,20 +59,25 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<Object, O
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg)
-            throws Exception {
-        if (!(msg instanceof HttpMessage)) {
-            return msg;
-        }
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage;
+    }
 
-        HttpMessage m = (HttpMessage) msg;
-        String acceptedEncoding = m.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
+    @Override
+    public HttpMessage decode(ChannelInboundHandlerContext<HttpMessage> ctx, HttpMessage msg)
+            throws Exception {
+        String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
         assert offered;
-        return m;
+        return msg;
+    }
+
+    @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
     }
 
     @Override

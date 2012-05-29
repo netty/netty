@@ -22,15 +22,24 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAd
         Queue<I> in = ctx.outbound().messageBuffer();
         ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
+        boolean notify = false;
         int oldOutSize = out.readableBytes();
         for (;;) {
-            I msg = in.poll();
+            Object msg = in.poll();
             if (msg == null) {
                 break;
             }
 
+            if (!isEncodable(msg)) {
+                ctx.nextOutboundMessageBuffer().add(msg);
+                notify = true;
+                continue;
+            }
+
+            @SuppressWarnings("unchecked")
+            I imsg = (I) msg;
             try {
-                encode(ctx, msg, out);
+                encode(ctx, imsg, out);
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
@@ -40,9 +49,18 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAd
             }
         }
 
-        if (out.readableBytes() > oldOutSize) {
+        if (out.readableBytes() > oldOutSize || notify) {
             ctx.flush(future);
         }
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified message can be encoded by this encoder.
+     *
+     * @param msg the message
+     */
+    public boolean isEncodable(Object msg) throws Exception {
+        return true;
     }
 
     public abstract void encode(ChannelOutboundHandlerContext<I> ctx, I msg, ChannelBuffer out) throws Exception;

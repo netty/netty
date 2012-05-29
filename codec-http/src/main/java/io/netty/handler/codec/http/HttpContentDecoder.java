@@ -51,6 +51,11 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
     }
 
     @Override
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
+
+    @Override
     public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.

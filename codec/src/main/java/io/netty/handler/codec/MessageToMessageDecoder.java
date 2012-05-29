@@ -20,23 +20,30 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
     public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx)
             throws Exception {
         Queue<I> in = ctx.inbound().messageBuffer();
-        boolean decoded = false;
+        boolean notify = false;
         for (;;) {
             try {
-                I msg = in.poll();
+                Object msg = in.poll();
                 if (msg == null) {
                     break;
                 }
+                if (!isDecodable(msg)) {
+                    ctx.nextInboundMessageBuffer().add(msg);
+                    notify = true;
+                    continue;
+                }
 
-                O emsg = decode(ctx, msg);
-                if (emsg == null) {
+                @SuppressWarnings("unchecked")
+                I imsg = (I) msg;
+                O omsg = decode(ctx, imsg);
+                if (omsg == null) {
                     // Decoder consumed a message but returned null.
                     // Probably it needs more messages because it's an aggregator.
                     continue;
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), emsg)) {
-                    decoded = true;
+                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), omsg)) {
+                    notify = true;
                 }
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
@@ -46,9 +53,18 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
                 }
             }
         }
-        if (decoded) {
+        if (notify) {
             ctx.fireInboundBufferUpdated();
         }
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified message can be decoded by this decoder.
+     *
+     * @param msg the message
+     */
+    public boolean isDecodable(Object msg) throws Exception {
+        return true;
     }
 
     public abstract O decode(ChannelInboundHandlerContext<I> ctx, I msg) throws Exception;

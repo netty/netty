@@ -47,6 +47,11 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToStreamEncoder
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof ChannelBuffer;
+    }
+
+    @Override
     public void encode(
             ChannelOutboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg, ChannelBuffer out) throws Exception {
         ChannelBuffer body = msg;

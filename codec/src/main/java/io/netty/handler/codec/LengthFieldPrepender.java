@@ -97,6 +97,11 @@ public class LengthFieldPrepender extends MessageToStreamEncoder<ChannelBuffer> 
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof ChannelBuffer;
+    }
+
+    @Override
     public void encode(
             ChannelOutboundHandlerContext<ChannelBuffer> ctx,
             ChannelBuffer msg, ChannelBuffer out) throws Exception {

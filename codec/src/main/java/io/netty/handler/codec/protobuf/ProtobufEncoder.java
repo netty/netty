@@ -61,6 +61,11 @@ import com.google.protobuf.MessageLite;
 public class ProtobufEncoder extends MessageToMessageEncoder<Object, ChannelBuffer> {
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof MessageLite || msg instanceof MessageLite.Builder;
+    }
+
+    @Override
     public ChannelBuffer encode(ChannelOutboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());

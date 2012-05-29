@@ -25,6 +25,7 @@ import io.netty.util.AttributeKey;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 
 /**
  * An encoder which serializes a Java object into a {@link ChannelBuffer}
@@ -73,6 +74,11 @@ public class CompatibleObjectEncoder extends MessageToStreamEncoder<Object> {
      */
     protected ObjectOutputStream newObjectOutputStream(OutputStream out) throws Exception {
         return new ObjectOutputStream(out);
+    }
+
+    @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof Serializable;
     }
 
     @Override

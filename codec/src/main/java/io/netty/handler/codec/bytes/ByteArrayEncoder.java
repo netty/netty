@@ -59,6 +59,11 @@ public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ChannelBuf
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof byte[];
+    }
+
+    @Override
     public ChannelBuffer encode(ChannelOutboundHandlerContext<byte[]> ctx, byte[] msg) throws Exception {
         if (msg.length == 0) {
             return null;

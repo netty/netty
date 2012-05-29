@@ -63,6 +63,11 @@ public class Base64Encoder extends MessageToMessageEncoder<ChannelBuffer, Channe
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof ChannelBuffer;
+    }
+
+    @Override
     public ChannelBuffer encode(ChannelOutboundHandlerContext<ChannelBuffer> ctx,
             ChannelBuffer msg) throws Exception {
         return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);

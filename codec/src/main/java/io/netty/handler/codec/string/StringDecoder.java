@@ -76,6 +76,11 @@ public class StringDecoder extends MessageToMessageDecoder<ChannelBuffer, String
     }
 
     @Override
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof ChannelBuffer;
+    }
+
+    @Override
     public String decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
         return msg.toString(charset);
     }

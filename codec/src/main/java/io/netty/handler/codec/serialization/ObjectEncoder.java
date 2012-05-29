@@ -23,6 +23,7 @@ import io.netty.handler.codec.MessageToStreamEncoder;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
 /**
  * An encoder which serializes a Java object into a {@link ChannelBuffer}.
@@ -38,32 +39,9 @@ import java.io.ObjectOutputStream;
 public class ObjectEncoder extends MessageToStreamEncoder<Object> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
-    private final int estimatedLength;
-
-    /**
-     * Creates a new encoder with the estimated length of 512 bytes.
-     */
-    public ObjectEncoder() {
-        this(512);
-    }
-
-    /**
-     * Creates a new encoder.
-     *
-     * @param estimatedLength
-     *        the estimated byte length of the serialized form of an object.
-     *        If the length of the serialized form exceeds this value, the
-     *        internal buffer will be expanded automatically at the cost of
-     *        memory bandwidth.  If this value is too big, it will also waste
-     *        memory bandwidth.  To avoid unnecessary memory copy or allocation
-     *        cost, please specify the properly estimated value.
-     */
-    public ObjectEncoder(int estimatedLength) {
-        if (estimatedLength < 0) {
-            throw new IllegalArgumentException(
-                    "estimatedLength: " + estimatedLength);
-        }
-        this.estimatedLength = estimatedLength;
+    @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof Serializable;
     }
 
     @Override

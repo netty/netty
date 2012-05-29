@@ -94,6 +94,11 @@ public class WebSocket08FrameEncoder extends MessageToStreamEncoder<WebSocketFra
     }
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof WebSocketFrame;
+    }
+
+    @Override
     public void encode(ChannelOutboundHandlerContext<WebSocketFrame> ctx,
             WebSocketFrame msg, ChannelBuffer out) throws Exception {
         byte[] mask;

@@ -110,6 +110,10 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
 
     private volatile int currentStreamID;
 
+    @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
 
     @Override
     public Object encode(ChannelOutboundHandlerContext<Object> ctx, Object msg)
