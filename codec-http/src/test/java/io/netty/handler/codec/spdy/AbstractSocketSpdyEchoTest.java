@@ -16,16 +16,16 @@
 package io.netty.handler.codec.spdy;
 
 import static org.junit.Assert.*;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ServerChannelBootstrap;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -127,8 +127,8 @@ public abstract class AbstractSocketSpdyEchoTest {
         frames.writeInt(random.nextInt() & 0x7FFFFFFF);
     }
 
-    private ServerChannelBootstrap sb;
-    private ChannelBootstrap cb;
+    private ServerBootstrap sb;
+    private Bootstrap cb;
 
     @Before
     public void initBootstrap() {
@@ -142,8 +142,8 @@ public abstract class AbstractSocketSpdyEchoTest {
         cb.shutdown();
     }
 
-    protected abstract ServerChannelBootstrap newServerBootstrap();
-    protected abstract ChannelBootstrap newClientBootstrap();
+    protected abstract ServerBootstrap newServerBootstrap();
+    protected abstract Bootstrap newClientBootstrap();
 
     @Test(timeout = 10000)
     public void testSpdyEcho() throws Throwable {

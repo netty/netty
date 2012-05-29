@@ -13,35 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.http.websocketx.sslserver;
+package io.netty.example.http.websocketx.server;
 
-import static io.netty.channel.Channels.*;
-
-import javax.net.ssl.SSLEngine;
-
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.ssl.SslHandler;
 
 /**
  */
-public class WebSocketSslServerPipelineFactory implements ChannelPipelineFactory {
+public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
-        // Create a default pipeline implementation.
-        ChannelPipeline pipeline = pipeline();
-
-        SSLEngine engine = WebSocketSslServerSslContext.getInstance().getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-        pipeline.addLast("ssl", new SslHandler(engine));
-
+    public void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("handler", new WebSocketSslServerHandler());
-        return pipeline;
+        pipeline.addLast("handler", new WebSocketServerHandler());
     }
 }

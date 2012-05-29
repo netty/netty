@@ -1,5 +1,18 @@
-package io.netty.channel;
+package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
+import io.netty.channel.ServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.SocketAddresses;
@@ -12,16 +25,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 
-public class ServerChannelBootstrap {
+public class ServerBootstrap {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerChannelBootstrap.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
     private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(SocketAddresses.LOCALHOST, 0);
 
     private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) throws Exception {
-            Acceptor acceptor = new Acceptor();
-            ch.pipeline().addLast(DefaultChannelPipeline.generateName(acceptor), acceptor);
+            ch.pipeline().addLast(new Acceptor());
         }
     };
 
@@ -34,24 +46,30 @@ public class ServerChannelBootstrap {
     private ChannelHandler childInitializer;
     private SocketAddress localAddress;
 
-    public ServerChannelBootstrap eventLoop(EventLoop parentEventLoop, EventLoop childEventLoop) {
+    public ServerBootstrap eventLoop(EventLoop parentEventLoop, EventLoop childEventLoop) {
         if (parentEventLoop == null) {
             throw new NullPointerException("parentEventLoop");
+        }
+        if (this.parentEventLoop != null) {
+            throw new IllegalStateException("eventLoop set already");
         }
         this.parentEventLoop = parentEventLoop;
         this.childEventLoop = childEventLoop;
         return this;
     }
 
-    public ServerChannelBootstrap channel(ServerChannel channel) {
+    public ServerBootstrap channel(ServerChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
+        }
+        if (this.channel != null) {
+            throw new IllegalStateException("channel set already");
         }
         this.channel = channel;
         return this;
     }
 
-    public <T> ServerChannelBootstrap option(ChannelOption<T> parentOption, T value) {
+    public <T> ServerBootstrap option(ChannelOption<T> parentOption, T value) {
         if (parentOption == null) {
             throw new NullPointerException("parentOption");
         }
@@ -63,7 +81,7 @@ public class ServerChannelBootstrap {
         return this;
     }
 
-    public <T> ServerChannelBootstrap childOption(ChannelOption<T> childOption, T value) {
+    public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
         if (childOption == null) {
             throw new NullPointerException("childOption");
         }
@@ -75,12 +93,12 @@ public class ServerChannelBootstrap {
         return this;
     }
 
-    public ServerChannelBootstrap initializer(ChannelHandler initializer) {
+    public ServerBootstrap initializer(ChannelHandler initializer) {
         this.initializer = initializer;
         return this;
     }
 
-    public ServerChannelBootstrap childInitializer(ChannelHandler childInitializer) {
+    public ServerBootstrap childInitializer(ChannelHandler childInitializer) {
         if (childInitializer == null) {
             throw new NullPointerException("childInitializer");
         }
@@ -88,7 +106,7 @@ public class ServerChannelBootstrap {
         return this;
     }
 
-    public ServerChannelBootstrap localAddress(SocketAddress localAddress) {
+    public ServerBootstrap localAddress(SocketAddress localAddress) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
@@ -96,12 +114,12 @@ public class ServerChannelBootstrap {
         return this;
     }
 
-    public ServerChannelBootstrap localAddress(int port) {
+    public ServerBootstrap localAddress(int port) {
         localAddress = new InetSocketAddress(port);
         return this;
     }
 
-    public ServerChannelBootstrap localAddress(String host, int port) {
+    public ServerBootstrap localAddress(String host, int port) {
         localAddress = new InetSocketAddress(host, port);
         return this;
     }
@@ -128,9 +146,9 @@ public class ServerChannelBootstrap {
 
         ChannelPipeline p = channel.pipeline();
         if (initializer != null) {
-            p.addLast(DefaultChannelPipeline.generateName(initializer), initializer);
+            p.addLast(initializer);
         }
-        p.addLast(DefaultChannelPipeline.generateName(acceptor), acceptor);
+        p.addLast(acceptor);
 
         ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
@@ -187,7 +205,7 @@ public class ServerChannelBootstrap {
                     break;
                 }
 
-                child.pipeline().addLast(DefaultChannelPipeline.generateName(childInitializer), childInitializer);
+                child.pipeline().addLast(childInitializer);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions.entrySet()) {
                     try {

@@ -15,6 +15,15 @@
  */
 package io.netty.example.localtime;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.example.localtime.LocalTimeProtocol.Continent;
+import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
+import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
+import io.netty.example.localtime.LocalTimeProtocol.Location;
+import io.netty.example.localtime.LocalTimeProtocol.Locations;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Formatter;
@@ -24,20 +33,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.example.localtime.LocalTimeProtocol.Continent;
-import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
-import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
-import io.netty.example.localtime.LocalTimeProtocol.Location;
-import io.netty.example.localtime.LocalTimeProtocol.Locations;
-
-public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
+public class LocalTimeClientHandler extends ChannelInboundMessageHandlerAdapter<LocalTimes> {
 
     private static final Logger logger = Logger.getLogger(
             LocalTimeClientHandler.class.getName());
@@ -91,35 +87,20 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
+    public void channelRegistered(ChannelInboundHandlerContext<LocalTimes> ctx) throws Exception {
+        channel = ctx.channel();
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        channel = e.channel();
-        super.channelOpen(ctx, e);
+    public void messageReceived(ChannelInboundHandlerContext<LocalTimes> ctx, LocalTimes msg) throws Exception {
+        answer.add(msg);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, final MessageEvent e) {
-        boolean offered = answer.offer((LocalTimes) e.getMessage());
-        assert offered;
-    }
-
-    @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<LocalTimes> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

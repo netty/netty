@@ -15,8 +15,8 @@
  */
 package io.netty.example.http.snoop;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBootstrap;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.handler.codec.http.CookieEncoder;
@@ -61,7 +61,7 @@ public class HttpSnoopClient {
         boolean ssl = scheme.equalsIgnoreCase("https");
 
         // Configure the client.
-        ChannelBootstrap b = new ChannelBootstrap();
+        Bootstrap b = new Bootstrap();
         try {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())

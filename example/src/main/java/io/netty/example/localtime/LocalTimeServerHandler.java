@@ -16,18 +16,8 @@
 package io.netty.example.localtime;
 
 import static java.util.Calendar.*;
-
-import java.util.Calendar;
-import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.example.localtime.LocalTimeProtocol.Continent;
 import io.netty.example.localtime.LocalTimeProtocol.DayOfWeek;
 import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
@@ -35,25 +25,18 @@ import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
 import io.netty.example.localtime.LocalTimeProtocol.Location;
 import io.netty.example.localtime.LocalTimeProtocol.Locations;
 
-public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
+import java.util.Calendar;
+import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class LocalTimeServerHandler extends ChannelInboundMessageHandlerAdapter<Locations> {
 
     private static final Logger logger = Logger.getLogger(
             LocalTimeServerHandler.class.getName());
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
-
-        Locations locations = (Locations) e.getMessage();
+    public void messageReceived(ChannelInboundHandlerContext<Locations> ctx, Locations locations) throws Exception {
         long currentTime = System.currentTimeMillis();
 
         LocalTimes.Builder builder = LocalTimes.newBuilder();
@@ -73,17 +56,15 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
                     setSecond(calendar.get(SECOND)).build());
         }
 
-        e.channel().write(builder.build());
+        ctx.write(builder.build());
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<Locations> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 
     private static String toString(Continent c) {

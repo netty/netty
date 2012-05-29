@@ -15,11 +15,9 @@
  */
 package io.netty.example.localtime;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * Receives a list of continent/city pairs from a {@link LocalTimeClient} to
@@ -33,17 +31,19 @@ public class LocalTimeServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new LocalTimeServerInitializer());
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new LocalTimeServerPipelineFactory());
+            b.bind().sync().channel().closeFuture().sync();
 
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

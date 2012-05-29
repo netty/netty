@@ -1,6 +1,5 @@
 package io.netty.handler.codec;
 
-import static io.netty.handler.codec.MessageToMessageEncoder.*;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -42,7 +41,7 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
                     continue;
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), omsg)) {
+                if (CodecUtil.unfoldAndAdd(ctx, omsg, true)) {
                     notify = true;
                 }
             } catch (Throwable t) {

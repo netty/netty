@@ -15,67 +15,58 @@
  */
 package io.netty.example.uptime;
 
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.EventLoop;
 import io.netty.handler.timeout.ReadTimeoutException;
-import io.netty.util.Timeout;
-import io.netty.util.Timer;
-import io.netty.util.TimerTask;
+
+import java.net.ConnectException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Keep reconnecting to the server while printing out the current uptime and
  * connection attempt status.
  */
-public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
+public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
 
-    final ClientBootstrap bootstrap;
-    private final Timer timer;
+    private final UptimeClient client;
     private long startTime = -1;
 
-    public UptimeClientHandler(ClientBootstrap bootstrap, Timer timer) {
-        this.bootstrap = bootstrap;
-        this.timer = timer;
-    }
-
-    InetSocketAddress getRemoteAddress() {
-        return (InetSocketAddress) bootstrap.getOption("remoteAddress");
+    public UptimeClientHandler(UptimeClient client) {
+        this.client = client;
     }
 
     @Override
-    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        println("Disconnected from: " + getRemoteAddress());
+    public void channelActive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+        if (startTime < 0) {
+            startTime = System.currentTimeMillis();
+        }
+        println("Connected to: " + ctx.channel().remoteAddress());
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+        println("Disconnected from: " + ctx.channel().remoteAddress());
+    }
+
+    @Override
+    public void channelUnregistered(final ChannelInboundHandlerContext<Byte> ctx)
+            throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
-        timer.newTimeout(new TimerTask() {
-            public void run(Timeout timeout) throws Exception {
-                println("Reconnecting to: " + getRemoteAddress());
-                bootstrap.connect();
+
+        final EventLoop loop = ctx.channel().eventLoop();
+        loop.schedule(new Runnable() {
+            @Override
+            public void run() {
+                println("Reconnecting to: " + ctx.channel().remoteAddress());
+                client.configureBootstrap(new Bootstrap(), loop).connect();
             }
         }, UptimeClient.RECONNECT_DELAY, TimeUnit.SECONDS);
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        if (startTime < 0) {
-            startTime = System.currentTimeMillis();
-        }
-
-        println("Connected to: " + getRemoteAddress());
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        Throwable cause = e.cause();
+    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
         if (cause instanceof ConnectException) {
             startTime = -1;
             println("Failed to connect: " + cause.getMessage());

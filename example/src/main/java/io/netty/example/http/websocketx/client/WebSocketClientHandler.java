@@ -38,11 +38,8 @@
 package io.netty.example.http.websocketx.client;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -51,7 +48,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.CharsetUtil;
 
-public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
+public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private final WebSocketClientHandshaker handshaker;
 
@@ -60,26 +57,26 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
         System.out.println("WebSocket Client disconnected!");
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         Channel ch = ctx.channel();
         if (!handshaker.isHandshakeComplete()) {
-            handshaker.finishHandshake(ch, (HttpResponse) e.getMessage());
+            handshaker.finishHandshake(ch, (HttpResponse) msg);
             System.out.println("WebSocket Client connected!");
             return;
         }
 
-        if (e.getMessage() instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) e.getMessage();
+        if (msg instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) msg;
             throw new Exception("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
                     + response.getContent().toString(CharsetUtil.UTF_8) + ")");
         }
 
-        WebSocketFrame frame = (WebSocketFrame) e.getMessage();
+        WebSocketFrame frame = (WebSocketFrame) msg;
         if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
             System.out.println("WebSocket Client received message: " + textFrame.getText());
@@ -92,9 +89,8 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        final Throwable t = e.cause();
-        t.printStackTrace();
-        e.channel().close();
+    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 }

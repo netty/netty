@@ -15,17 +15,15 @@
  */
 package io.netty.example.localtime;
 
-import java.net.InetSocketAddress;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
@@ -44,39 +42,35 @@ public class LocalTimeClient {
         this.cities.addAll(cities);
     }
 
-    public void run() {
-        // Set up.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        Bootstrap b = new Bootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .initializer(new LocalTimeClientInitializer());
 
-        // Configure the event pipeline factory.
-        bootstrap.setPipelineFactory(new LocalTimeClientPipelineFactory());
+            // Make a new connection.
+            Channel ch = b.connect().sync().channel();
 
-        // Make a new connection.
-        ChannelFuture connectFuture =
-            bootstrap.connect(new InetSocketAddress(host, port));
+            // Get the handler instance to initiate the request.
+            LocalTimeClientHandler handler =
+                ch.pipeline().get(LocalTimeClientHandler.class);
 
-        // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().channel();
+            // Request and get the response.
+            List<String> response = handler.getLocalTimes(cities);
 
-        // Get the handler instance to initiate the request.
-        LocalTimeClientHandler handler =
-            channel.pipeline().get(LocalTimeClientHandler.class);
+            // Close the connection.
+            ch.close();
 
-        // Request and get the response.
-        List<String> response = handler.getLocalTimes(cities);
-        // Close the connection.
-        channel.close().awaitUninterruptibly();
-
-        // Shut down all thread pools to exit.
-        bootstrap.releaseExternalResources();
-
-        // Print the response at last but not least.
-        Iterator<String> i1 = cities.iterator();
-        Iterator<String> i2 = response.iterator();
-        while (i1.hasNext()) {
-            System.out.format("%28s: %s%n", i1.next(), i2.next());
+            // Print the response at last but not least.
+            Iterator<String> i1 = cities.iterator();
+            Iterator<String> i2 = response.iterator();
+            while (i1.hasNext()) {
+                System.out.format("%28s: %s%n", i1.next(), i2.next());
+            }
+        } finally {
+            b.shutdown();
         }
     }
 

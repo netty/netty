@@ -15,14 +15,9 @@
  */
 package io.netty.example.proxy;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.ClientSocketChannelFactory;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 public class HexDumpProxy {
 
@@ -36,25 +31,23 @@ public class HexDumpProxy {
         this.remotePort = remotePort;
     }
 
-    public void run() {
+    public void run() throws Exception {
         System.err.println(
                 "Proxying *:" + localPort + " to " +
                 remoteHost + ':' + remotePort + " ...");
 
         // Configure the bootstrap.
-        Executor executor = Executors.newCachedThreadPool();
-        ServerBootstrap sb = new ServerBootstrap(
-                new NioServerSocketChannelFactory(executor));
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(localPort)
+             .childInitializer(new HexDumpProxyInitializer(remoteHost, remotePort));
 
-        // Set up the event pipeline factory.
-        ClientSocketChannelFactory cf =
-                new NioClientSocketChannelFactory(executor);
-
-        sb.setPipelineFactory(
-                new HexDumpProxyPipelineFactory(cf, remoteHost, remotePort));
-
-        // Start up the server.
-        sb.bind(new InetSocketAddress(localPort));
+            b.bind().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

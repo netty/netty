@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.handler.codec.MessageToMessageEncoder.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
@@ -378,7 +377,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
         }
 
         try {
-            if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), decodeLast(ctx, replayable))) {
+            if (CodecUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
                 fireInboundBufferUpdated(ctx, in);
             }
         } catch (Signal replay) {
@@ -442,7 +441,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
                 }
 
                 // A successful decode
-                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), result)) {
+                if (CodecUtil.unfoldAndAdd(ctx, result, true)) {
                     decoded = true;
                 }
             } catch (Throwable t) {

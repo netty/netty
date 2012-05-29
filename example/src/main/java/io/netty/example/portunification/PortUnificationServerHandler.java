@@ -15,18 +15,16 @@
  */
 package io.netty.example.portunification;
 
-import javax.net.ssl.SSLEngine;
-
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.example.factorial.BigIntegerDecoder;
 import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
 import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.example.securechat.SecureChatSslContextFactory;
-import io.netty.handler.codec.FrameDecoder;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
@@ -35,11 +33,13 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
 
+import javax.net.ssl.SSLEngine;
+
 /**
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
  */
-public class PortUnificationServerHandler extends FrameDecoder {
+public class PortUnificationServerHandler extends ChannelInboundStreamHandlerAdapter {
 
     private final boolean detectSsl;
     private final boolean detectGzip;
@@ -54,11 +54,12 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+        ChannelBuffer buffer = ctx.inbound().byteBuffer();
 
         // Will use the first two bytes to detect a protocol.
         if (buffer.readableBytes() < 2) {
-            return null;
+            return;
         }
 
         final int magic1 = buffer.getUnsignedByte(buffer.readerIndex());
@@ -74,13 +75,14 @@ public class PortUnificationServerHandler extends FrameDecoder {
             switchToFactorial(ctx);
         } else {
             // Unknown protocol; discard everything and close the connection.
-            buffer.skipBytes(buffer.readableBytes());
-            ctx.channel().close();
-            return null;
+            buffer.clear();
+            ctx.close();
+            return;
         }
 
         // Forward the current read buffer as is to the new handlers.
-        return buffer.readBytes(buffer.readableBytes());
+        ctx.nextInboundByteBuffer().writeBytes(buffer);
+        ctx.fireInboundBufferUpdated();
     }
 
     private boolean isSsl(int magic1) {
@@ -102,7 +104,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         return false;
     }
 
-    private boolean isHttp(int magic1, int magic2) {
+    private static boolean isHttp(int magic1, int magic2) {
         return
             magic1 == 'G' && magic2 == 'E' || // GET
             magic1 == 'P' && magic2 == 'O' || // POST
@@ -115,7 +117,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
             magic1 == 'C' && magic2 == 'O';   // CONNECT
     }
 
-    private boolean isFactorial(int magic1) {
+    private static boolean isFactorial(int magic1) {
         return magic1 == 'F';
     }
 

@@ -15,29 +15,25 @@
  */
 package io.netty.example.proxy;
 
-import static io.netty.channel.Channels.*;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.socket.ClientSocketChannelFactory;
+public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
 
-public class HexDumpProxyPipelineFactory implements ChannelPipelineFactory {
-
-    private final ClientSocketChannelFactory cf;
     private final String remoteHost;
     private final int remotePort;
 
-    public HexDumpProxyPipelineFactory(
-            ClientSocketChannelFactory cf, String remoteHost, int remotePort) {
-        this.cf = cf;
+    public HexDumpProxyInitializer(String remoteHost, int remotePort) {
         this.remoteHost = remoteHost;
         this.remotePort = remotePort;
     }
 
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline p = pipeline(); // Note the static import.
-        p.addLast("handler", new HexDumpProxyInboundHandler(cf, remoteHost, remotePort));
-        return p;
+    public void initChannel(SocketChannel ch) throws Exception {
+        ch.pipeline().addLast(
+                new LoggingHandler(LogLevel.INFO),
+                new HexDumpProxyFrontendHandler(remoteHost, remotePort));
     }
 }

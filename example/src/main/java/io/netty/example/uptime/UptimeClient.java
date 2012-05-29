@@ -15,18 +15,13 @@
  */
 package io.netty.example.uptime;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoop;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
 
 
 /**
@@ -51,34 +46,27 @@ public class UptimeClient {
     }
 
     public void run() {
-        // Initialize the timer that schedules subsequent reconnection attempts.
-        final Timer timer = new HashedWheelTimer();
+        configureBootstrap(new Bootstrap()).connect();
+    }
 
-        // Configure the client.
-        final ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    private Bootstrap configureBootstrap(Bootstrap b) {
+        return configureBootstrap(b, new NioEventLoop());
+    }
 
-        // Configure the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-
-            private final ChannelHandler timeoutHandler =
-                new ReadTimeoutHandler(timer, READ_TIMEOUT);
-            private final ChannelHandler uptimeHandler =
-                new UptimeClientHandler(bootstrap, timer);
-
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        timeoutHandler, uptimeHandler);
+    Bootstrap configureBootstrap(Bootstrap b, EventLoop l) {
+        b.eventLoop(l)
+         .channel(new NioSocketChannel())
+         .remoteAddress(host, port)
+         .initializer(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(
+                        new ReadTimeoutHandler(READ_TIMEOUT),
+                        new UptimeClientHandler(UptimeClient.this));
             }
-        });
+         });
 
-        bootstrap.setOption(
-                "remoteAddress", new InetSocketAddress(host, port));
-
-        // Initiate the first connection attempt - the rest is handled by
-        // UptimeClientHandler.
-        bootstrap.connect();
+        return b;
     }
 
     public static void main(String[] args) throws Exception {

@@ -15,9 +15,9 @@
  */
 package io.netty.example.discard;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -34,7 +34,7 @@ public class DiscardServer {
     }
 
     public void run() throws Exception {
-        ServerChannelBootstrap b = new ServerChannelBootstrap();
+        ServerBootstrap b = new ServerBootstrap();
         try {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())

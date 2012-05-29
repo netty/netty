@@ -15,10 +15,9 @@
  */
 package io.netty.example.telnet;
 
-import static io.netty.channel.Channels.*;
-
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
@@ -27,13 +26,10 @@ import io.netty.handler.codec.string.StringEncoder;
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
-public class TelnetServerPipelineFactory implements
-        ChannelPipelineFactory {
-
+public class TelnetServerPipelineFactory extends ChannelInitializer<SocketChannel> {
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
-        // Create a default pipeline implementation.
-        ChannelPipeline pipeline = pipeline();
+    public void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
 
         // Add the text line codec combination first,
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
@@ -43,7 +39,5 @@ public class TelnetServerPipelineFactory implements
 
         // and then business logic.
         pipeline.addLast("handler", new TelnetServerHandler());
-
-        return pipeline;
     }
 }

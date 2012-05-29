@@ -15,58 +15,35 @@
  */
 package io.netty.example.objectecho;
 
-import java.util.concurrent.atomic.AtomicLong;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelState;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handles both client-side and server-side handler depending on which
  * constructor was called.
  */
-public class ObjectEchoServerHandler extends SimpleChannelUpstreamHandler {
+public class ObjectEchoServerHandler extends ChannelInboundMessageHandlerAdapter<List<Integer>> {
 
     private static final Logger logger = Logger.getLogger(
             ObjectEchoServerHandler.class.getName());
 
-    private final AtomicLong transferredMessages = new AtomicLong();
-
-    public long getTransferredMessages() {
-        return transferredMessages.get();
-    }
-
-    @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent &&
-            ((ChannelStateEvent) e).getState() != ChannelState.INTEREST_OPS) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
-
     @Override
     public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+            ChannelInboundHandlerContext<List<Integer>> ctx, List<Integer> msg) throws Exception {
         // Echo back the received object to the client.
-        transferredMessages.incrementAndGet();
-        e.channel().write(e.getMessage());
+        ctx.write(msg);
     }
 
     @Override
     public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+            ChannelInboundHandlerContext<List<Integer>> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

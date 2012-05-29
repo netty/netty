@@ -15,11 +15,9 @@
  */
 package io.netty.example.telnet;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * Simplistic telnet server.
@@ -32,17 +30,18 @@ public class TelnetServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new TelnetServerPipelineFactory());
 
-        // Configure the pipeline factory.
-        bootstrap.setPipelineFactory(new TelnetServerPipelineFactory());
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+            b.bind().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

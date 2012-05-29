@@ -13,25 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.http.websocketx.autobahn;
+package io.netty.example.http.file;
 
-import static io.netty.channel.Channels.*;
-
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.stream.ChunkedWriteHandler;
 
-public class AutobahnServerPipelineFactory implements ChannelPipelineFactory {
+public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
+    public void initChannel(SocketChannel ch) throws Exception {
         // Create a default pipeline implementation.
-        ChannelPipeline pipeline = pipeline();
+        ChannelPipeline pipeline = ch.pipeline();
+
+        // Uncomment the following line if you want HTTPS
+        //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
+        //engine.setUseClientMode(false);
+        //pipeline.addLast("ssl", new SslHandler(engine));
+
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("handler", new AutobahnServerHandler());
-        return pipeline;
+        pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
+
+        pipeline.addLast("handler", new HttpStaticFileServerHandler());
     }
 }

@@ -15,37 +15,38 @@
  */
 package io.netty.example.securechat;
 
-import static io.netty.channel.Channels.*;
-
-import javax.net.ssl.SSLEngine;
-
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.ssl.SslHandler;
 
+import javax.net.ssl.SSLEngine;
+
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
-public class SecureChatClientPipelineFactory implements
-        ChannelPipelineFactory {
+public class SecureChatServerInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline pipeline = pipeline();
+    public void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
 
         // Add SSL handler first to encrypt and decrypt everything.
         // In this example, we use a bogus certificate in the server side
         // and accept any invalid certificates in the client side.
         // You will need something more complicated to identify both
         // and server in the real world.
+        //
+        // Read SecureChatSslContextFactory
+        // if you need client certificate authentication.
 
         SSLEngine engine =
-            SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        engine.setUseClientMode(true);
+            SecureChatSslContextFactory.getServerContext().createSSLEngine();
+        engine.setUseClientMode(false);
 
         pipeline.addLast("ssl", new SslHandler(engine));
 
@@ -56,8 +57,6 @@ public class SecureChatClientPipelineFactory implements
         pipeline.addLast("encoder", new StringEncoder());
 
         // and then business logic.
-        pipeline.addLast("handler", new SecureChatClientHandler());
-
-        return pipeline;
+        pipeline.addLast("handler", new SecureChatServerHandler());
     }
 }

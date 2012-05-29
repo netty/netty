@@ -15,47 +15,31 @@
  */
 package io.netty.example.telnet;
 
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handles a client-side channel.
  */
-public class TelnetClientHandler extends SimpleChannelUpstreamHandler {
+public class TelnetClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
 
     private static final Logger logger = Logger.getLogger(
             TelnetClientHandler.class.getName());
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String msg) throws Exception {
         // Print out the line received from the server.
-        System.err.println(e.getMessage());
+        System.err.println(msg);
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

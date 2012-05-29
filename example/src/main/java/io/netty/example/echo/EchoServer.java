@@ -15,10 +15,10 @@
  */
 package io.netty.example.echo;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
@@ -41,7 +41,7 @@ public class EchoServer {
 
     public void run() throws Exception {
         // Configure the server.
-        ServerChannelBootstrap b = new ServerChannelBootstrap();
+        ServerBootstrap b = new ServerBootstrap();
         try {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())

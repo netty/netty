@@ -16,17 +16,14 @@
 package io.netty.example.objectecho;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.example.echo.EchoServer;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoServer} which utilizes Java object serialization.
@@ -39,26 +36,27 @@ public class ObjectEchoServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(
+                            new ObjectEncoder(),
+                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                            new ObjectEchoServerHandler());
+                }
+             });
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new ObjectEncoder(),
-                        new ObjectDecoder(
-                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
-                        new ObjectEchoServerHandler());
-            }
-        });
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+            // Bind and start to accept incoming connections.
+            b.bind().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

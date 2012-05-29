@@ -15,54 +15,34 @@
  */
 package io.netty.example.telnet;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-
 /**
  * Handles a server-side channel.
  */
-public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
+public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
 
     private static final Logger logger = Logger.getLogger(
             TelnetServerHandler.class.getName());
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void channelActive(ChannelInboundHandlerContext<String> ctx) throws Exception {
         // Send greeting for a new connection.
-        e.channel().write(
+        ctx.write(
                 "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
-        e.channel().write("It is " + new Date() + " now.\r\n");
+        ctx.write("It is " + new Date() + " now.\r\n");
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
-
-        // Cast to a String first.
-        // We know it is a String because we put some codec in TelnetPipelineFactory.
-        String request = (String) e.getMessage();
-
+    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String request) throws Exception {
         // Generate and write a response.
         String response;
         boolean close = false;
@@ -77,7 +57,7 @@ public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
 
         // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-        ChannelFuture future = e.channel().write(response);
+        ChannelFuture future = ctx.write(response);
 
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.
@@ -87,12 +67,10 @@ public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

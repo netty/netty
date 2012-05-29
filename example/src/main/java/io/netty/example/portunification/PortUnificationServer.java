@@ -15,14 +15,11 @@
  */
 package io.netty.example.portunification;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * Serves two protocols (HTTP and Factorial) using only one port, enabling
@@ -39,21 +36,24 @@ public class PortUnificationServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(new PortUnificationServerHandler());
+                }
+            });
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(new PortUnificationServerHandler());
-            }
-        });
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
+            // Bind and start to accept incoming connections.
+            b.bind().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

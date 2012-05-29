@@ -20,15 +20,13 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -47,7 +45,7 @@ import io.netty.util.CharsetUtil;
 /**
  * Handles handshakes and messages
  */
-public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
+public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -55,8 +53,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Object msg = e.getMessage();
+    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             handleHttpRequest(ctx, (HttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -91,12 +88,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Handshake
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                this.getWebSocketLocation(req), null, false);
-        this.handshaker = wsFactory.newHandshaker(req);
-        if (this.handshaker == null) {
+                getWebSocketLocation(req), null, false);
+        handshaker = wsFactory.newHandshaker(req);
+        if (handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
-            this.handshaker.handshake(ctx.channel(), req);
+            handshaker.handshake(ctx.channel(), req);
         }
     }
 
@@ -104,7 +101,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            this.handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
@@ -117,12 +114,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).getText();
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.channel().getId(), request));
+            logger.debug(String.format("Channel %s received %s", ctx.channel().id(), request));
         }
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
-    private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.getStatus().getCode() != 200) {
             res.setContent(ChannelBuffers.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
@@ -137,12 +134,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        e.cause().printStackTrace();
-        e.channel().close();
+    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 
-    private String getWebSocketLocation(HttpRequest req) {
+    private static String getWebSocketLocation(HttpRequest req) {
         return "ws://" + req.getHeader(HttpHeaders.Names.HOST) + WEBSOCKET_PATH;
     }
 }

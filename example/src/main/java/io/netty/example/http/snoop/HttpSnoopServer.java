@@ -15,8 +15,8 @@
  */
 package io.netty.example.http.snoop;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ServerChannelBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 
@@ -36,7 +36,7 @@ public class HttpSnoopServer {
 
     public void run() throws Exception {
         // Configure the server.
-        ServerChannelBootstrap b = new ServerChannelBootstrap();
+        ServerBootstrap b = new ServerBootstrap();
 
         try {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())

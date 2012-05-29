@@ -1,6 +1,5 @@
 package io.netty.handler.codec;
 
-import static io.netty.handler.codec.MessageToMessageEncoder.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -33,7 +32,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         }
 
         try {
-            if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), decodeLast(ctx, in))) {
+            if (CodecUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
                 in.discardReadBytes();
                 ctx.fireInboundBufferUpdated();
             }
@@ -69,7 +68,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
                     }
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), o)) {
+                if (CodecUtil.unfoldAndAdd(ctx, o, true)) {
                     decoded = true;
                 } else {
                     break;

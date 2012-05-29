@@ -3,7 +3,6 @@ package io.netty.handler.codec;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerContext;
 
@@ -43,7 +42,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
                     continue;
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextOutboundMessageBuffer(), omsg)) {
+                if (CodecUtil.unfoldAndAdd(ctx, omsg, false)) {
                     notify = true;
                 }
             } catch (Throwable t) {
@@ -70,47 +69,4 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
     }
 
     public abstract O encode(ChannelOutboundHandlerContext<I> ctx, I msg) throws Exception;
-
-    static <T> boolean unfoldAndAdd(
-            ChannelHandlerContext ctx, Queue<Object> dst, Object msg) throws Exception {
-        if (msg == null) {
-            return false;
-        }
-
-        if (msg instanceof Object[]) {
-            Object[] array = (Object[]) msg;
-            if (array.length == 0) {
-                return false;
-            }
-
-            boolean added = false;
-            for (Object m: array) {
-                if (m == null) {
-                    break;
-                }
-                if (unfoldAndAdd(ctx, dst, m)) {
-                    added = true;
-                }
-            }
-            return added;
-        }
-
-        if (msg instanceof Iterable) {
-            boolean added = false;
-            @SuppressWarnings("unchecked")
-            Iterable<Object> i = (Iterable<Object>) msg;
-            for (Object m: i) {
-                if (m == null) {
-                    break;
-                }
-                if (unfoldAndAdd(ctx, dst, m)) {
-                    added = true;
-                }
-            }
-            return added;
-        }
-
-        dst.add(msg);
-        return true;
-    }
 }

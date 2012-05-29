@@ -15,18 +15,15 @@
  */
 package io.netty.example.objectecho;
 
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.echo.EchoClient;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
@@ -43,26 +40,27 @@ public class ObjectEchoClient {
         this.firstMessageSize = firstMessageSize;
     }
 
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        Bootstrap b = new Bootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .initializer(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(
+                            new ObjectEncoder(),
+                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                            new ObjectEchoClientHandler(firstMessageSize));
+                }
+             });
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new ObjectEncoder(),
-                        new ObjectDecoder(
-                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
-                        new ObjectEchoClientHandler(firstMessageSize));
-            }
-        });
-
-        // Start the connection attempt.
-        bootstrap.connect(new InetSocketAddress(host, port));
+            // Start the connection attempt.
+            b.connect().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {

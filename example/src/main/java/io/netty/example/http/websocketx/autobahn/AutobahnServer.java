@@ -15,11 +15,10 @@
  */
 package io.netty.example.http.websocketx.autobahn;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a> test
@@ -33,22 +32,24 @@ public class AutobahnServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new AutobahnServerInitializer());
 
-        // bootstrap.setOption("child.tcpNoDelay", true);
+            ChannelFuture f = b.bind().sync();
+            System.out.println("Web Socket Server started at port " + port);
+            f.channel().closeFuture().sync();
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new AutobahnServerPipelineFactory());
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
-
-        System.out.println("Web Socket Server started at port " + port);
+        } finally {
+            b.shutdown();
+        }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);

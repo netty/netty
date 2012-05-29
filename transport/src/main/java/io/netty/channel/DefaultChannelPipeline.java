@@ -179,7 +179,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    static String generateName(ChannelHandler handler) {
+    private static String generateName(ChannelHandler handler) {
         String type = handler.getClass().getSimpleName();
         StringBuilder buf = new StringBuilder(type.length() + 10);
         buf.append(type);

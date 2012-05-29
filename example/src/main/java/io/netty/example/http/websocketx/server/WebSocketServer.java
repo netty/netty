@@ -15,11 +15,10 @@
  */
 package io.netty.example.http.websocketx.server;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
  * A HTTP server which serves Web Socket requests at:
@@ -48,21 +47,25 @@ public class WebSocketServer {
         this.port = port;
     }
 
-    public void run() {
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(port)
+             .childInitializer(new WebSocketServerInitializer());
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
+            Channel ch = b.bind().sync().channel();
+            System.out.println("Web socket server started at port " + port + '.');
+            System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
 
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
-
-        System.out.println("Web socket server started at port " + port + '.');
-        System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
+            ch.closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port;
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);

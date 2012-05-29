@@ -15,27 +15,23 @@
  */
 package io.netty.example.securechat;
 
-import java.net.InetAddress;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.ssl.SslHandler;
 
+import java.net.InetAddress;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * Handles a server-side channel.
  */
-public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
+public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
 
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());
@@ -43,18 +39,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     static final ChannelGroup channels = new DefaultChannelGroup();
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-
+    public void channelActive(ChannelInboundHandlerContext<String> ctx) throws Exception {
         // Get the SslHandler in the current pipeline.
         // We added it in SecureChatPipelineFactory.
         final SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
@@ -65,24 +50,11 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelDisconnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        // Unregister the channel from the global channel list
-        // so the channel does not receive messages anymore.
-        channels.remove(e.channel());
-    }
-
-    @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
-
-        // Convert to a String first.
-        String request = (String) e.getMessage();
-
+    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String request) throws Exception {
         // Send the received message to all channels but the current one.
         for (Channel c: channels) {
-            if (c != e.channel()) {
-                c.write("[" + e.channel().getRemoteAddress() + "] " +
+            if (c != ctx.channel()) {
+                c.write("[" + ctx.channel().remoteAddress() + "] " +
                         request + '\n');
             } else {
                 c.write("[you] " + request + '\n');
@@ -91,18 +63,16 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
         // Close the connection if the client has sent 'bye'.
         if (request.toLowerCase().equals("bye")) {
-            e.channel().close();
+            ctx.close();
         }
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.cause());
-        e.channel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 
     private static final class Greeter implements ChannelFutureListener {

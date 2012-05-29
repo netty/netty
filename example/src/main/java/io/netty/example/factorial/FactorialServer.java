@@ -15,7 +15,7 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.channel.ServerChannelBootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
@@ -32,7 +32,7 @@ public class FactorialServer {
     }
 
     public void run() throws Exception {
-        ServerChannelBootstrap b = new ServerChannelBootstrap();
+        ServerBootstrap b = new ServerBootstrap();
         try {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())

@@ -1,5 +1,12 @@
-package io.netty.channel;
+package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -10,9 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class ChannelBootstrap {
+public class Bootstrap {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelBootstrap.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private EventLoop eventLoop;
@@ -21,23 +28,29 @@ public class ChannelBootstrap {
     private SocketAddress localAddress;
     private SocketAddress remoteAddress;
 
-    public ChannelBootstrap eventLoop(EventLoop eventLoop) {
+    public Bootstrap eventLoop(EventLoop eventLoop) {
         if (eventLoop == null) {
             throw new NullPointerException("eventLoop");
+        }
+        if (this.eventLoop != null) {
+            throw new IllegalStateException("eventLoop set already");
         }
         this.eventLoop = eventLoop;
         return this;
     }
 
-    public ChannelBootstrap channel(Channel channel) {
+    public Bootstrap channel(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
+        }
+        if (this.channel != null) {
+            throw new IllegalStateException("channel set already");
         }
         this.channel = channel;
         return this;
     }
 
-    public <T> ChannelBootstrap option(ChannelOption<T> option, T value) {
+    public <T> Bootstrap option(ChannelOption<T> option, T value) {
         if (option == null) {
             throw new NullPointerException("option");
         }
@@ -49,7 +62,7 @@ public class ChannelBootstrap {
         return this;
     }
 
-    public ChannelBootstrap initializer(ChannelHandler initializer) {
+    public Bootstrap initializer(ChannelHandler initializer) {
         if (initializer == null) {
             throw new NullPointerException("initializer");
         }
@@ -57,27 +70,27 @@ public class ChannelBootstrap {
         return this;
     }
 
-    public ChannelBootstrap localAddress(SocketAddress localAddress) {
+    public Bootstrap localAddress(SocketAddress localAddress) {
         this.localAddress = localAddress;
         return this;
     }
 
-    public ChannelBootstrap localAddress(int port) {
+    public Bootstrap localAddress(int port) {
         localAddress = new InetSocketAddress(port);
         return this;
     }
 
-    public ChannelBootstrap localAddress(String host, int port) {
+    public Bootstrap localAddress(String host, int port) {
         localAddress = new InetSocketAddress(host, port);
         return this;
     }
 
-    public ChannelBootstrap remoteAddress(SocketAddress remoteAddress) {
+    public Bootstrap remoteAddress(SocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
         return this;
     }
 
-    public ChannelBootstrap remoteAddress(String host, int port) {
+    public Bootstrap remoteAddress(String host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
         return this;
     }
@@ -141,7 +154,7 @@ public class ChannelBootstrap {
         }
 
         ChannelPipeline p = channel.pipeline();
-        p.addLast(DefaultChannelPipeline.generateName(initializer), initializer);
+        p.addLast(initializer);
 
         for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
             try {

@@ -13,54 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.securechat;
+package io.netty.example.telnet;
 
-import static io.netty.channel.Channels.*;
-
-import javax.net.ssl.SSLEngine;
-
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.ssl.SslHandler;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
-public class SecureChatServerPipelineFactory implements
-        ChannelPipelineFactory {
+public class TelnetClientInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
-    public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline pipeline = pipeline();
+    public void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
 
-        // Add SSL handler first to encrypt and decrypt everything.
-        // In this example, we use a bogus certificate in the server side
-        // and accept any invalid certificates in the client side.
-        // You will need something more complicated to identify both
-        // and server in the real world.
-        //
-        // Read SecureChatSslContextFactory
-        // if you need client certificate authentication.
-
-        SSLEngine engine =
-            SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-
-        pipeline.addLast("ssl", new SslHandler(engine));
-
-        // On top of the SSL handler, add the text line codec.
+        // Add the text line codec combination first,
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
                 8192, Delimiters.lineDelimiter()));
         pipeline.addLast("decoder", new StringDecoder());
         pipeline.addLast("encoder", new StringEncoder());
 
         // and then business logic.
-        pipeline.addLast("handler", new SecureChatServerHandler());
-
-        return pipeline;
+        pipeline.addLast("handler", new TelnetClientHandler());
     }
 }
