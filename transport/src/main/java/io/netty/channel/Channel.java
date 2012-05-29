@@ -136,6 +136,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     boolean isRegistered();
     boolean isActive();
 
+    ChannelBufferHolder<Object> outbound();
+
     /**
      * Returns the local address where this channel is bound to.  The returned
      * {@link SocketAddress} is supposed to be down-cast into more concrete

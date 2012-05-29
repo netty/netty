@@ -61,14 +61,14 @@ public abstract class ChannelInboundHandlerAdapter<I> implements ChannelInboundH
     }
 
     static <I> void inboundBufferUpdated0(ChannelInboundHandlerContext<I> ctx) {
-        if (ctx.in().isBypass()) {
+        if (ctx.inbound().isBypass()) {
             ctx.fireInboundBufferUpdated();
             return;
         }
 
-        if (ctx.in().hasMessageBuffer()) {
-            Queue<I> in = ctx.in().messageBuffer();
-            Queue<Object> nextIn = ctx.nextIn().messageBuffer();
+        if (ctx.inbound().hasMessageBuffer()) {
+            Queue<I> in = ctx.inbound().messageBuffer();
+            Queue<Object> nextIn = ctx.nextInboundMessageBuffer();
             for (;;) {
                 I msg = in.poll();
                 if (msg == null) {
@@ -77,8 +77,8 @@ public abstract class ChannelInboundHandlerAdapter<I> implements ChannelInboundH
                 nextIn.add(msg);
             }
         } else {
-            ChannelBuffer in = ctx.in().byteBuffer();
-            ChannelBuffer nextIn = ctx.nextIn().byteBuffer();
+            ChannelBuffer in = ctx.inbound().byteBuffer();
+            ChannelBuffer nextIn = ctx.nextInboundByteBuffer();
             nextIn.writeBytes(in);
             in.discardReadBytes();
         }

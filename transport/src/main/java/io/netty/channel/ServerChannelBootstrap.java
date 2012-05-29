@@ -180,7 +180,7 @@ public class ServerChannelBootstrap {
 
         @Override
         public void inboundBufferUpdated(ChannelInboundHandlerContext<Channel> ctx) {
-            Queue<Channel> in = ctx.in().messageBuffer();
+            Queue<Channel> in = ctx.inbound().messageBuffer();
             for (;;) {
                 Channel child = in.poll();
                 if (child == null) {

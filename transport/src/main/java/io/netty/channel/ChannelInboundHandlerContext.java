@@ -1,5 +1,5 @@
 package io.netty.channel;
 
 public interface ChannelInboundHandlerContext<I> extends ChannelHandlerContext {
-    ChannelBufferHolder<I> in();
+    ChannelBufferHolder<I> inbound();
 }

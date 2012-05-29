@@ -19,7 +19,7 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
     @Override
     public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx)
             throws Exception {
-        Queue<I> in = ctx.in().messageBuffer();
+        Queue<I> in = ctx.inbound().messageBuffer();
         boolean decoded = false;
         for (;;) {
             try {
@@ -35,7 +35,7 @@ public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundHandle
                     continue;
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextIn(), emsg)) {
+                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), emsg)) {
                     decoded = true;
                 }
             } catch (Throwable t) {

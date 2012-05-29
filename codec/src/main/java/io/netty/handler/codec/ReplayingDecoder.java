@@ -378,7 +378,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
         }
 
         try {
-            if (unfoldAndAdd(ctx, ctx.nextIn(), decodeLast(ctx, replayable))) {
+            if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), decodeLast(ctx, replayable))) {
                 fireInboundBufferUpdated(ctx, in);
             }
         } catch (Signal replay) {
@@ -442,7 +442,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
                 }
 
                 // A successful decode
-                if (unfoldAndAdd(ctx, ctx.nextIn(), result)) {
+                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), result)) {
                     decoded = true;
                 }
             } catch (Throwable t) {

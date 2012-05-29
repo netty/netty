@@ -57,14 +57,14 @@ public abstract class ChannelOutboundHandlerAdapter<O> implements ChannelOutboun
     }
 
     static <O> void flush0(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) {
-        if (ctx.prevOut().isBypass()) {
+        if (ctx.outbound().isBypass()) {
             ctx.flush(future);
             return;
         }
 
-        if (ctx.prevOut().hasMessageBuffer()) {
-            Queue<O> out = ctx.prevOut().messageBuffer();
-            Queue<Object> nextOut = ctx.out().messageBuffer();
+        if (ctx.outbound().hasMessageBuffer()) {
+            Queue<O> out = ctx.outbound().messageBuffer();
+            Queue<Object> nextOut = ctx.nextOutboundMessageBuffer();
             for (;;) {
                 O msg = out.poll();
                 if (msg == null) {
@@ -73,8 +73,8 @@ public abstract class ChannelOutboundHandlerAdapter<O> implements ChannelOutboun
                 nextOut.add(msg);
             }
         } else {
-            ChannelBuffer out = ctx.prevOut().byteBuffer();
-            ChannelBuffer nextOut = ctx.out().byteBuffer();
+            ChannelBuffer out = ctx.outbound().byteBuffer();
+            ChannelBuffer nextOut = ctx.nextOutboundByteBuffer();
             nextOut.writeBytes(out);
             out.discardReadBytes();
         }

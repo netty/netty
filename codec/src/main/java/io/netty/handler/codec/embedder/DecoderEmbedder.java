@@ -57,7 +57,7 @@ public class DecoderEmbedder<E> extends AbstractCodecEmbedder<E> {
 
     @Override
     public boolean offer(Object input) {
-        ChannelBufferHolder<Object> in = pipeline().nextIn();
+        ChannelBufferHolder<Object> in = pipeline().inbound();
         if (in.hasByteBuffer()) {
             in.byteBuffer().writeBytes((ChannelBuffer) input);
         } else {

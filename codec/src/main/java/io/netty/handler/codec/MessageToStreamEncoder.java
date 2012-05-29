@@ -19,8 +19,8 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAd
 
     @Override
     public void flush(ChannelOutboundHandlerContext<I> ctx, ChannelFuture future) throws Exception {
-        Queue<I> in = ctx.prevOut().messageBuffer();
-        ChannelBuffer out = ctx.out().byteBuffer();
+        Queue<I> in = ctx.outbound().messageBuffer();
+        ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
         int oldOutSize = out.readableBytes();
         for (;;) {

@@ -21,12 +21,12 @@ public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter
 
     @Override
     public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        ChannelBuffer in = ctx.in().byteBuffer();
+        ChannelBuffer in = ctx.inbound().byteBuffer();
         if (!in.readable()) {
             callDecode(ctx);
         }
 
-        ChannelBuffer out = ctx.nextIn().byteBuffer();
+        ChannelBuffer out = ctx.nextInboundByteBuffer();
         int oldOutSize = out.readableBytes();
         try {
             decodeLast(ctx, in, out);
@@ -47,8 +47,8 @@ public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter
     }
 
     private void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
-        ChannelBuffer in = ctx.in().byteBuffer();
-        ChannelBuffer out = ctx.nextIn().byteBuffer();
+        ChannelBuffer in = ctx.inbound().byteBuffer();
+        ChannelBuffer out = ctx.nextInboundByteBuffer();
 
         int oldOutSize = out.readableBytes();
         while (in.readable()) {

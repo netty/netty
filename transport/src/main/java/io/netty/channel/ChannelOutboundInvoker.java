@@ -3,8 +3,6 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 public interface ChannelOutboundInvoker {
-    ChannelBufferHolder<Object> out();
-
     ChannelFuture bind(SocketAddress localAddress);
     ChannelFuture connect(SocketAddress remoteAddress);
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);

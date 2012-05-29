@@ -78,7 +78,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
     @Override
     public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
-        Queue<Object> in = ctx.in().messageBuffer();
+        Queue<Object> in = ctx.inbound().messageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {
@@ -272,7 +272,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
             }
         }
 
-        ctx.nextIn().messageBuffer().add(msg);
+        ctx.nextInboundMessageBuffer().add(msg);
     }
 
     @Override
@@ -303,7 +303,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
     public void flush(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
 
-        Queue<Object> in = ctx.prevOut().messageBuffer();
+        Queue<Object> in = ctx.outbound().messageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {
@@ -394,7 +394,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
             }
         }
 
-        ctx.out().messageBuffer().add(msg);
+        ctx.nextOutboundMessageBuffer().add(msg);
     }
 
     /*

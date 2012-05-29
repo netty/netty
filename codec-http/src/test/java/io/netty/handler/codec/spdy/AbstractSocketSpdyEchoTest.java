@@ -248,7 +248,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         @Override
         public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
                 throws Exception {
-            ChannelBuffer m = ctx.in().byteBuffer().readBytes(ctx.in().byteBuffer().readableBytes());
+            ChannelBuffer m = ctx.inbound().byteBuffer().readBytes(ctx.inbound().byteBuffer().readableBytes());
             byte[] actual = new byte[m.readableBytes()];
             m.getBytes(0, actual);
 

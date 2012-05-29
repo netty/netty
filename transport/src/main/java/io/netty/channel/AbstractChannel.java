@@ -259,8 +259,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelBufferHolder<Object> out() {
-        return pipeline().out();
+    public ChannelBufferHolder<Object> outbound() {
+        return pipeline().outbound();
     }
 
     @Override

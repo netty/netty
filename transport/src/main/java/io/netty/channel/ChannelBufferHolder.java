@@ -59,9 +59,9 @@ public final class ChannelBufferHolder<E> {
         case 0:
             return msgBuf != null;
         case 1:
-            return ctx.nextIn().hasMessageBuffer();
+            return ctx.nextInboundMessageBuffer() != null;
         case 2:
-            return ctx.out().hasMessageBuffer();
+            return ctx.nextOutboundMessageBuffer() != null;
         default:
             throw new Error();
         }
@@ -72,15 +72,14 @@ public final class ChannelBufferHolder<E> {
         case 0:
             return byteBuf != null;
         case 1:
-            return ctx.nextIn().hasByteBuffer();
+            return ctx.nextInboundByteBuffer() != null;
         case 2:
-            return ctx.out().hasByteBuffer();
+            return ctx.nextOutboundByteBuffer() != null;
         default:
             throw new Error();
         }
     }
 
-    @SuppressWarnings("unchecked")
     public Queue<E> messageBuffer() {
         switch (bypassDirection) {
         case 0:
@@ -89,9 +88,9 @@ public final class ChannelBufferHolder<E> {
             }
             return msgBuf;
         case 1:
-            return (Queue<E>) ctx.nextIn().messageBuffer();
+            return (Queue<E>) ctx.nextInboundMessageBuffer();
         case 2:
-            return (Queue<E>) ctx.out().messageBuffer();
+            return (Queue<E>) ctx.nextOutboundMessageBuffer();
         default:
             throw new Error();
         }
@@ -105,9 +104,9 @@ public final class ChannelBufferHolder<E> {
             }
             return byteBuf;
         case 1:
-            return ctx.nextIn().byteBuffer();
+            return ctx.nextInboundByteBuffer();
         case 2:
-            return ctx.out().byteBuffer();
+            return ctx.nextOutboundByteBuffer();
         default:
             throw new Error();
         }
@@ -118,14 +117,18 @@ public final class ChannelBufferHolder<E> {
         switch (bypassDirection) {
         case 0:
             if (msgBuf != null) {
-                return msgBuf.toString();
+                if (byteBuf != null) {
+                    return "CatchAllBuffer";
+                } else {
+                    return "MessageBuffer(" + msgBuf.size() + ')';
+                }
             } else {
                 return byteBuf.toString();
             }
         case 1:
-            return ctx.nextIn().toString();
+            return "InboundBypassBuffer";
         case 2:
-            return ctx.out().toString();
+            return "OutboundBypassBuffer";
         default:
             throw new Error();
         }
@@ -140,9 +143,8 @@ public final class ChannelBufferHolder<E> {
                 return byteBuf.readableBytes();
             }
         case 1:
-            return ctx.nextIn().size();
         case 2:
-            return ctx.out().size();
+            throw new UnsupportedOperationException();
         default:
             throw new Error();
         }
@@ -157,9 +159,8 @@ public final class ChannelBufferHolder<E> {
                 return byteBuf.readable();
             }
         case 1:
-            return ctx.nextIn().isEmpty();
         case 2:
-            return ctx.out().isEmpty();
+            throw new UnsupportedOperationException();
         default:
             throw new Error();
         }

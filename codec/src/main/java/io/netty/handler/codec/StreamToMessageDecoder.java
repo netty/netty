@@ -27,13 +27,13 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
 
     @Override
     public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        ChannelBuffer in = ctx.in().byteBuffer();
+        ChannelBuffer in = ctx.inbound().byteBuffer();
         if (in.readable()) {
             callDecode(ctx);
         }
 
         try {
-            if (unfoldAndAdd(ctx, ctx.nextIn(), decodeLast(ctx, in))) {
+            if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), decodeLast(ctx, in))) {
                 in.discardReadBytes();
                 ctx.fireInboundBufferUpdated();
             }
@@ -49,7 +49,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
     }
 
     protected void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
-        ChannelBuffer in = ctx.in().byteBuffer();
+        ChannelBuffer in = ctx.inbound().byteBuffer();
 
         boolean decoded = false;
         for (;;) {
@@ -69,7 +69,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
                     }
                 }
 
-                if (unfoldAndAdd(ctx, ctx.nextIn(), o)) {
+                if (unfoldAndAdd(ctx, ctx.nextInboundMessageBuffer(), o)) {
                     decoded = true;
                 } else {
                     break;
@@ -109,10 +109,10 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         // the new handler.
         ctx.pipeline().addAfter(ctx.name(), newHandlerName, newHandler);
 
-        ChannelBuffer in = ctx.in().byteBuffer();
+        ChannelBuffer in = ctx.inbound().byteBuffer();
         try {
             if (in.readable()) {
-                ctx.nextIn().byteBuffer().writeBytes(ctx.in().byteBuffer());
+                ctx.nextInboundByteBuffer().writeBytes(ctx.inbound().byteBuffer());
                 ctx.fireInboundBufferUpdated();
             }
         } finally {

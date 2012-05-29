@@ -34,7 +34,7 @@ public class DiscardServerHandler extends ChannelInboundStreamHandlerAdapter {
     public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
             throws Exception {
         // Discard the received data silently.
-        ctx.in().byteBuffer().clear();
+        ctx.inbound().byteBuffer().clear();
     }
 
 

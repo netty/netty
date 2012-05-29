@@ -40,7 +40,6 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
             FactorialClientHandler.class.getName());
 
     private ChannelInboundHandlerContext<BigInteger> ctx;
-    private Queue<Object> out;
     private int i = 1;
     private int receivedMessages;
     private final int count;
@@ -68,7 +67,6 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     @Override
     public void channelActive(ChannelInboundHandlerContext<BigInteger> ctx) {
         this.ctx = ctx;
-        out = ctx.out().messageBuffer();
         sendNumbers();
     }
 
@@ -101,6 +99,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
         boolean finished = false;
+        Queue<Object> out = ctx.nextOutboundMessageBuffer();
         while (out.size() < 4096) {
             if (i <= count) {
                 out.add(Integer.valueOf(i));

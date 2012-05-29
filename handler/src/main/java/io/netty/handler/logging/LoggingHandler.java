@@ -352,7 +352,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
             throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, formatBuffer("INBUF", ctx.in())));
+            logger.log(internalLevel, format(ctx, formatBuffer("INBUF", ctx.inbound())));
         }
         ctx.fireInboundBufferUpdated();
     }
@@ -407,7 +407,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     public void flush(ChannelOutboundHandlerContext<Object> ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, formatBuffer("OUTBUF", ctx.prevOut())));
+            logger.log(internalLevel, format(ctx, formatBuffer("OUTBUF", ctx.outbound())));
         }
         ctx.flush(future);
     }

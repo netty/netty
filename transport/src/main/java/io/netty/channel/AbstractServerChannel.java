@@ -37,7 +37,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelBufferHolder<Object> out() {
+    public ChannelBufferHolder<Object> outbound() {
         return ChannelBufferHolders.discardBuffer();
     }
 

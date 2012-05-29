@@ -16,9 +16,11 @@
 package io.netty.channel;
 
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.util.AttributeMap;
 
 import java.nio.channels.Channels;
+import java.util.Queue;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
@@ -133,4 +135,10 @@ public interface ChannelHandlerContext
 
     boolean canHandleInbound();
     boolean canHandleOutbound();
+
+    ChannelBuffer nextInboundByteBuffer();
+    Queue<Object> nextInboundMessageBuffer();
+
+    ChannelBuffer nextOutboundByteBuffer();
+    Queue<Object> nextOutboundMessageBuffer();
 }

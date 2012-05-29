@@ -205,6 +205,9 @@ import java.util.NoSuchElementException;
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
+    ChannelBufferHolder<Object> inbound();
+    ChannelBufferHolder<Object> outbound();
+
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
      *

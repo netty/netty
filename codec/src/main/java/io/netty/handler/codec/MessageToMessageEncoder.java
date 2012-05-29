@@ -1,6 +1,5 @@
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
@@ -20,7 +19,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
 
     @Override
     public void flush(ChannelOutboundHandlerContext<I> ctx, ChannelFuture future) throws Exception {
-        Queue<I> in = ctx.prevOut().messageBuffer();
+        Queue<I> in = ctx.outbound().messageBuffer();
         boolean encoded = false;
         for (;;) {
             try {
@@ -36,7 +35,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
                     continue;
                 }
 
-                if (unfoldAndAdd(ctx, ctx.out(), emsg)) {
+                if (unfoldAndAdd(ctx, ctx.nextOutboundMessageBuffer(), emsg)) {
                     encoded = true;
                 }
             } catch (Throwable t) {
@@ -56,7 +55,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
     public abstract O encode(ChannelOutboundHandlerContext<I> ctx, I msg) throws Exception;
 
     static <T> boolean unfoldAndAdd(
-            ChannelHandlerContext ctx, ChannelBufferHolder<Object> dst, Object msg) throws Exception {
+            ChannelHandlerContext ctx, Queue<Object> dst, Object msg) throws Exception {
         if (msg == null) {
             return false;
         }
@@ -94,18 +93,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundHandl
             return added;
         }
 
-        if (dst.hasMessageBuffer()) {
-            dst.messageBuffer().add(msg);
-        } else if (msg instanceof ChannelBuffer) {
-            ChannelBuffer buf = (ChannelBuffer) msg;
-            if (!buf.readable()) {
-                return false;
-            }
-            dst.byteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
-        } else {
-            throw new UnsupportedMessageTypeException(msg, ChannelBuffer.class);
-        }
-
+        dst.add(msg);
         return true;
     }
 }

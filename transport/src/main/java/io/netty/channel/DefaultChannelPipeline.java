@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -570,19 +571,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelBufferHolder<Object> nextIn() {
+    public ChannelBufferHolder<Object> inbound() {
         DefaultChannelHandlerContext ctx = firstInboundContext();
         if (ctx != null) {
-            return ctx.in();
+            return ctx.inbound();
         }
         return null;
     }
 
     @Override
-    public ChannelBufferHolder<Object> out() {
+    public ChannelBufferHolder<Object> outbound() {
         DefaultChannelHandlerContext ctx = firstOutboundContext();
         if (ctx != null) {
-            return ctx.prevOut();
+            return ctx.outbound();
         }
         return channel().unsafe().out();
     }
@@ -903,11 +904,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         validateFuture(future);
 
-        if (out().hasMessageBuffer()) {
-            out().messageBuffer().add(message);
+        ChannelBufferHolder<Object> out = outbound();
+        if (out.hasMessageBuffer()) {
+            out.messageBuffer().add(message);
         } else if (message instanceof ChannelBuffer) {
             ChannelBuffer m = (ChannelBuffer) message;
-            out().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
+            out.byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
         } else {
             throw new IllegalArgumentException(
                     "cannot write a message whose type is not " +
@@ -1057,7 +1059,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final boolean canHandleInbound;
         private final boolean canHandleOutbound;
         private final ChannelBufferHolder<Object> in;
-        private final ChannelBufferHolder<Object> prevOut;
+        private final ChannelBufferHolder<Object> out;
 
         @SuppressWarnings("unchecked")
         DefaultChannelHandlerContext(
@@ -1096,7 +1098,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             if (canHandleOutbound) {
                 try {
-                    prevOut = ((ChannelOutboundHandler<Object>) handler).newOutboundBuffer(this);
+                    out = ((ChannelOutboundHandler<Object>) handler).newOutboundBuffer(this);
                 } catch (Exception e) {
                     throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
                 } finally {
@@ -1105,7 +1107,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     }
                 }
             } else {
-                prevOut = null;
+                out = null;
             }
         }
 
@@ -1140,32 +1142,82 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public ChannelBufferHolder<Object> in() {
+        public ChannelBufferHolder<Object> inbound() {
             return in;
         }
 
         @Override
-        public ChannelBufferHolder<Object> prevOut() {
-            return prevOut;
+        public ChannelBufferHolder<Object> outbound() {
+            return out;
         }
 
         @Override
-        public ChannelBufferHolder<Object> nextIn() {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                return next.in();
-            } else {
-                throw new NoSuchElementException("no inbound buffer in the rest of the pipeline");
+        public ChannelBuffer nextInboundByteBuffer() {
+            DefaultChannelHandlerContext ctx = this;
+            for (;;) {
+                ctx = nextInboundContext(ctx.next);
+                if (ctx == null) {
+                    return null;
+                }
+                ChannelBufferHolder<Object> nextIn = ctx.inbound();
+                if (nextIn.hasByteBuffer()) {
+                    return nextIn.byteBuffer();
+                }
             }
         }
 
         @Override
-        public ChannelBufferHolder<Object> out() {
-            DefaultChannelHandlerContext next = nextOutboundContext(prev);
-            if (next != null) {
-                return next.prevOut();
-            } else {
-                return channel().unsafe().out();
+        public Queue<Object> nextInboundMessageBuffer() {
+            DefaultChannelHandlerContext ctx = this;
+            for (;;) {
+                ctx = nextInboundContext(ctx.next);
+                if (ctx == null) {
+                    return null;
+                }
+                ChannelBufferHolder<Object> nextIn = ctx.inbound();
+                if (nextIn.hasMessageBuffer()) {
+                    return nextIn.messageBuffer();
+                }
+            }
+        }
+
+        @Override
+        public ChannelBuffer nextOutboundByteBuffer() {
+            DefaultChannelHandlerContext ctx = this;
+            for (;;) {
+                ctx = nextOutboundContext(ctx.prev);
+                if (ctx == null) {
+                    ChannelBufferHolder<Object> lastOut = channel().unsafe().out();
+                    if (lastOut.hasByteBuffer()) {
+                        return lastOut.byteBuffer();
+                    } else {
+                        return null;
+                    }
+                }
+                ChannelBufferHolder<Object> nextOut = ctx.outbound();
+                if (nextOut.hasByteBuffer()) {
+                    return nextOut.byteBuffer();
+                }
+            }
+        }
+
+        @Override
+        public Queue<Object> nextOutboundMessageBuffer() {
+            DefaultChannelHandlerContext ctx = this;
+            for (;;) {
+                ctx = nextOutboundContext(ctx.prev);
+                if (ctx == null) {
+                    ChannelBufferHolder<Object> lastOut = channel().unsafe().out();
+                    if (lastOut.hasMessageBuffer()) {
+                        return lastOut.messageBuffer();
+                    } else {
+                        return null;
+                    }
+                }
+                ChannelBufferHolder<Object> nextOut = ctx.outbound();
+                if (nextOut.hasMessageBuffer()) {
+                    return nextOut.messageBuffer();
+                }
             }
         }
 
@@ -1304,9 +1356,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public ChannelFuture write(Object message, ChannelFuture future) {
             if (message instanceof ChannelBuffer) {
                 ChannelBuffer m = (ChannelBuffer) message;
-                out().byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
+                nextOutboundByteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
             } else {
-                out().messageBuffer().add(message);
+                nextOutboundMessageBuffer().add(message);
             }
             return flush(future);
         }

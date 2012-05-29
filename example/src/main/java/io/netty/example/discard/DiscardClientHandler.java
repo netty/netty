@@ -34,7 +34,6 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
     private final byte[] content;
     private ChannelInboundHandlerContext<Byte> ctx;
-    private ChannelBuffer out;
 
     public DiscardClientHandler(int messageSize) {
         if (messageSize <= 0) {
@@ -49,7 +48,6 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
     public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
             throws Exception {
         this.ctx = ctx;
-        out = ctx.out().byteBuffer();
         // Send the initial messages.
         generateTraffic();
     }
@@ -77,6 +75,7 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
     private void generateTraffic() {
         // Fill the outbound buffer up to 64KiB
+        ChannelBuffer out = ctx.nextOutboundByteBuffer();
         while (out.readableBytes() < 65536) {
             out.writeBytes(content);
         }
@@ -90,7 +89,7 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
-                out.clear();
+                ctx.nextOutboundByteBuffer().discardReadBytes();
                 generateTraffic();
             }
         }

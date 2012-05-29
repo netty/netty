@@ -17,8 +17,8 @@ public abstract class StreamToStreamEncoder extends ChannelOutboundHandlerAdapte
 
     @Override
     public void flush(ChannelOutboundHandlerContext<Byte> ctx, ChannelFuture future) throws Exception {
-        ChannelBuffer in = ctx.prevOut().byteBuffer();
-        ChannelBuffer out = ctx.out().byteBuffer();
+        ChannelBuffer in = ctx.outbound().byteBuffer();
+        ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
         int oldOutSize = out.readableBytes();
         while (in.readable()) {

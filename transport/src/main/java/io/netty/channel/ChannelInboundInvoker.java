@@ -2,8 +2,6 @@ package io.netty.channel;
 
 
 public interface ChannelInboundInvoker {
-    ChannelBufferHolder<Object> nextIn();
-
     void fireChannelRegistered();
     void fireChannelUnregistered();
     void fireChannelActive();
