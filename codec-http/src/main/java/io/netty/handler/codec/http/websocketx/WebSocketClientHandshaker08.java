@@ -15,9 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.net.URI;
-import java.util.Map;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -33,6 +30,9 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import java.net.URI;
+import java.util.Map;
 
 /**
  * <p>
@@ -55,7 +55,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     /**
      * Constructor specifying the destination web socket location and version to initiate
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -79,7 +79,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -90,7 +90,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 8
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -122,7 +122,15 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
         request.addHeader(Names.HOST, wsURL.getHost());
-        request.addHeader(Names.ORIGIN, "http://" + wsURL.getHost());
+
+        int wsPort = wsURL.getPort();
+        String originValue = "http://" + wsURL.getHost();
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            originValue = originValue + ":" + wsPort;
+        }
+
         if (protocol != null && !protocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
         }
@@ -145,7 +153,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -153,7 +161,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response

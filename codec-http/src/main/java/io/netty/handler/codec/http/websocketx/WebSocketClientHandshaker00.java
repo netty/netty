@@ -15,11 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Map;
-
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -33,6 +28,11 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * <p>
@@ -50,7 +50,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
     /**
      * Constructor specifying the destination web socket location and version to initiate
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -71,7 +71,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -80,10 +80,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Origin: http://example.com
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -138,7 +138,15 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         request.addHeader(Names.UPGRADE, Values.WEBSOCKET);
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.HOST, wsURL.getHost());
-        request.addHeader(Names.ORIGIN, "http://" + wsURL.getHost());
+
+        int wsPort = wsURL.getPort();
+        String originValue = "http://" + wsURL.getHost();
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            originValue = originValue + ":" + wsPort;
+        }
+
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
         if (getExpectedSubprotocol() != null && !getExpectedSubprotocol().equals("")) {
@@ -164,7 +172,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -172,10 +180,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
@@ -215,7 +223,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         setHandshakeComplete();
     }
 
-    private String insertRandomCharacters(String key) {
+    private static String insertRandomCharacters(String key) {
         int count = WebSocketUtil.randomNumber(1, 12);
 
         char[] randomChars = new char[count];
@@ -238,7 +246,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         return key;
     }
 
-    private String insertSpaces(String key, int spaces) {
+    private static String insertSpaces(String key, int spaces) {
         for (int i = 0; i < spaces; i++) {
             int split = WebSocketUtil.randomNumber(1, key.length() - 1);
             String part1 = key.substring(0, split);
@@ -248,5 +256,4 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         return key;
     }
-
 }
