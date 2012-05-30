@@ -10,15 +10,13 @@ import java.util.Queue;
 
 abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
-    private final ChannelBufferHolder<Object> firstOut = ChannelBufferHolders.messageBuffer();
-
     protected AbstractOioMessageChannel(Channel parent, Integer id) {
         super(parent, id);
     }
 
     @Override
-    protected ChannelBufferHolder<Object> firstOut() {
-        return firstOut;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.messageBuffer();
     }
 
     @Override

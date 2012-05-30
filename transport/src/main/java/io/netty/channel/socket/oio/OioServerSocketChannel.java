@@ -161,7 +161,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected ChannelBufferHolder<Object> firstOut() {
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
         return ChannelBufferHolders.discardBuffer();
     }
 

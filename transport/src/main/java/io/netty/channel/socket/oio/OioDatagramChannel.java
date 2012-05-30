@@ -47,7 +47,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
-    private final ChannelBufferHolder<Object> out = ChannelBufferHolders.messageBuffer();
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
 
     private static MulticastSocket newSocket() {
@@ -103,8 +102,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected ChannelBufferHolder<Object> firstOut() {
-        return out;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.messageBuffer();
     }
 
     @Override

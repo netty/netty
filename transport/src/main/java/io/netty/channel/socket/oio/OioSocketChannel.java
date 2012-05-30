@@ -42,7 +42,6 @@ public class OioSocketChannel extends AbstractOioStreamChannel
 
     private final Socket socket;
     private final SocketChannelConfig config;
-    private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer();
     private InputStream is;
     private OutputStream os;
 
@@ -96,9 +95,8 @@ public class OioSocketChannel extends AbstractOioStreamChannel
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected ChannelBufferHolder<Object> firstOut() {
-        return (ChannelBufferHolder<Object>) out;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

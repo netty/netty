@@ -10,16 +10,13 @@ import java.io.IOException;
 
 abstract class AbstractOioStreamChannel extends AbstractOioChannel {
 
-    private final ChannelBufferHolder<?> firstOut = ChannelBufferHolders.byteBuffer();
-
     protected AbstractOioStreamChannel(Channel parent, Integer id) {
         super(parent, id);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected ChannelBufferHolder<Object> firstOut() {
-        return (ChannelBufferHolder<Object>) firstOut;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override
