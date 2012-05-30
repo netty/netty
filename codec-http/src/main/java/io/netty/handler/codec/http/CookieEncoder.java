@@ -82,6 +82,9 @@ public class CookieEncoder {
      * Encodes the {@link Cookie}s which were added by {@link #addCookie(Cookie)}
      * so far into an HTTP header value.  If no {@link Cookie}s were added,
      * an empty string is returned.
+     *
+     * <strong>Be aware that calling this method will clear the {@link Cookie}s you added to
+     * this encoder.</strong>
      */
     public String encode() {
         String answer;
