@@ -15,32 +15,32 @@
  */
 package io.netty.channel.local;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.Channels;
-import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.channel.local.DefaultLocalClientChannelFactory;
-import io.netty.channel.local.DefaultLocalServerChannelFactory;
-import io.netty.channel.local.LocalAddress;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
+import java.nio.channels.Channels;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 public class LocalAddressTest {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(LocalAddressTest.class);
+
     private static String LOCAL_ADDR_ID = "test.id";
 
     @Test
     public void localConnectOK()
          throws Exception {
 
-        ClientBootstrap cb = new ClientBootstrap(new DefaultLocalClientChannelFactory());
-        ServerBootstrap sb = new ServerBootstrap(new DefaultLocalServerChannelFactory());
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
 
         cb.setPipelineFactory(new ChannelPipelineFactory() {
             @Override
@@ -70,7 +70,7 @@ public class LocalAddressTest {
 
         // Start server
         sb.bind(addr);
-        
+
         // Connect to the server
         ChannelFuture connectFuture = cb.connect(addr);
         connectFuture.awaitUninterruptibly();
@@ -83,7 +83,7 @@ public class LocalAddressTest {
 
         // Wait until the connection is closed, or the connection attempt fails
         connectFuture.channel().getCloseFuture().awaitUninterruptibly();
-        
+
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 
@@ -139,7 +139,7 @@ public class LocalAddressTest {
         // Wait until the connection is closed, or the connection attempt fails
         connectFuture.channel().getCloseFuture().awaitUninterruptibly();
 
-        
+
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 
@@ -157,7 +157,7 @@ public class LocalAddressTest {
                                                      ChannelEvent e)
             throws Exception {
 
-            System.err.println(String.format("Received upstream event '%s'", e));
+            logger.info(String.format("Received upstream event '%s'", e));
         }
     }
 }
