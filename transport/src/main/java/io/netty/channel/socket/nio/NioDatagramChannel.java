@@ -49,7 +49,6 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
             new HashMap<InetAddress, List<MembershipKey>>();
-    private final ChannelBufferHolder<Object> out = ChannelBufferHolders.messageBuffer();
 
     private static DatagramChannel newSocket() {
         try {
@@ -89,8 +88,8 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
     }
 
     @Override
-    protected ChannelBufferHolder<Object> firstOut() {
-        return out;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.messageBuffer();
     }
 
     @Override

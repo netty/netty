@@ -35,7 +35,6 @@ public class NioSocketChannel extends AbstractNioStreamChannel implements io.net
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
     private final SocketChannelConfig config;
-    private final ChannelBufferHolder<?> out = ChannelBufferHolders.byteBuffer();
 
     private static SocketChannel newSocket() {
         try {
@@ -91,9 +90,8 @@ public class NioSocketChannel extends AbstractNioStreamChannel implements io.net
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected ChannelBufferHolder<Object> firstOut() {
-        return (ChannelBufferHolder<Object>) out;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

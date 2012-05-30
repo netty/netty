@@ -11,16 +11,14 @@ import java.util.Queue;
 
 abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
-    private final ChannelBufferHolder<Object> firstOut = ChannelBufferHolders.messageBuffer();
-
     protected AbstractNioMessageChannel(
             Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
         super(parent, id, ch, defaultInterestOps);
     }
 
     @Override
-    protected ChannelBufferHolder<Object> firstOut() {
-        return firstOut;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.messageBuffer();
     }
 
     @Override

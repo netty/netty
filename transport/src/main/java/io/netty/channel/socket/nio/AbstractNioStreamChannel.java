@@ -12,17 +12,14 @@ import java.nio.channels.SelectionKey;
 
 abstract class AbstractNioStreamChannel extends AbstractNioChannel {
 
-    private final ChannelBufferHolder<?> firstOut = ChannelBufferHolders.byteBuffer();
-
     protected AbstractNioStreamChannel(
             Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id, ch, SelectionKey.OP_READ);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected ChannelBufferHolder<Object> firstOut() {
-        return (ChannelBufferHolder<Object>) firstOut;
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
+        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

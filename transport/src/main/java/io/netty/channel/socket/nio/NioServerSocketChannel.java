@@ -107,7 +107,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected ChannelBufferHolder<Object> firstOut() {
+    protected ChannelBufferHolder<?> newOutboundBuffer() {
         return ChannelBufferHolders.discardBuffer();
     }
 

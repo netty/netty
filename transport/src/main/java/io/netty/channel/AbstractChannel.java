@@ -80,6 +80,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
+    private final ChannelBufferHolder<Object> outbound;
     private ClosedChannelException closedChannelException;
     private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
     private long writeCounter;
@@ -100,6 +101,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
+    @SuppressWarnings("unchecked")
     protected AbstractChannel(Channel parent, Integer id) {
         if (id == null) {
             id = allocateId(this);
@@ -115,6 +117,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.id = id;
         unsafe = newUnsafe();
+        outbound = (ChannelBufferHolder<Object>) newOutboundBuffer();
 
         closeFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -368,7 +371,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public ChannelBufferHolder<Object> out() {
-            return firstOut();
+            return outbound;
         }
 
         @Override
@@ -656,7 +659,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract boolean isCompatible(EventLoop loop);
 
-    protected abstract ChannelBufferHolder<Object> firstOut();
+    protected abstract ChannelBufferHolder<?> newOutboundBuffer();
 
     protected abstract SocketAddress localAddress0();
     protected abstract SocketAddress remoteAddress0();
