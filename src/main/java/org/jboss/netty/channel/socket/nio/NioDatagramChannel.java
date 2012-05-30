@@ -92,11 +92,11 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                 // This block only works on java7++, but we checked before if we have it
                 switch (family) {
                 case INET:
-                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET);
+                    channel = DatagramChannel.open(ProtocolFamilyConverter.convert(family));
                     break;
 
                 case INET6:
-                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET6);
+                    channel = DatagramChannel.open(ProtocolFamilyConverter.convert(family));
                     break;
 
                 default:
