@@ -50,7 +50,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     }
 
     // Fields for event loop
-    private final BlockingQueue<Runnable> taskQueue = QueueFactory.createQueue(Runnable.class);
+    private final BlockingQueue<Runnable> taskQueue = QueueFactory.createQueue();
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);

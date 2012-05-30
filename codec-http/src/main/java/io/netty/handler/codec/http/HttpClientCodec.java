@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class HttpClientCodec extends CombinedChannelHandler {
 
     /** A queue that is used for correlating a request and a response. */
-    final Queue<HttpMethod> queue = QueueFactory.createQueue(HttpMethod.class);
+    final Queue<HttpMethod> queue = QueueFactory.createQueue();
 
     /** If true, decoding stops (i.e. pass-through) */
     volatile boolean done;

@@ -49,7 +49,7 @@ import java.util.Queue;
  */
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
-    private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue(String.class);
+    private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue();
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
 
     /**

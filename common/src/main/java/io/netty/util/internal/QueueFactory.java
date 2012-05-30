@@ -15,7 +15,9 @@
  */
 package io.netty.util.internal;
 
-import java.util.Collection;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -23,40 +25,45 @@ import java.util.concurrent.BlockingQueue;
  * instance for the running JVM.
  */
 public final class QueueFactory {
-    
-    private static final boolean useUnsafe = DetectionUtil.hasUnsafe();
-    
-    private QueueFactory() {
-        // only use static methods!
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(QueueFactory.class);
+
+    private static final boolean USE_LTQ;
+
+    static {
+        boolean useLTQ = false;
+        try {
+            if (DetectionUtil.hasUnsafe()) {
+                new LinkedTransferQueue<Object>();
+                useLTQ = true;
+            }
+            logger.debug(
+                    "No access to the Unsafe - using " +
+                    LegacyLinkedTransferQueue.class.getSimpleName() + " instead.");
+        } catch (Throwable t) {
+            logger.debug(
+                    "Failed to initialize a " + LinkedTransferQueue.class.getSimpleName() + " - " +
+                    "using " + LegacyLinkedTransferQueue.class.getSimpleName() + " instead.", t);
+        }
+
+        USE_LTQ = useLTQ;
     }
-    
-    
+
     /**
-     * Create a new unbound {@link BlockingQueue} 
-     * 
-     * @param itemClass  the {@link Class} type which will be used as {@link BlockingQueue} items
+     * Create a new unbound {@link BlockingQueue}
+     *
      * @return queue     the {@link BlockingQueue} implementation
      */
-    public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
-        if (useUnsafe) {
+    public static <T> BlockingQueue<T> createQueue() {
+        if (USE_LTQ) {
             return new LinkedTransferQueue<T>();
         } else {
             return new LegacyLinkedTransferQueue<T>();
         }
     }
-    
-    /**
-     * Create a new unbound {@link BlockingQueue} 
-     * 
-     * @param collection  the collection which should get copied to the newly created {@link BlockingQueue}
-     * @param itemClass   the {@link Class} type which will be used as {@link BlockingQueue} items
-     * @return queue      the {@link BlockingQueue} implementation
-     */
-    public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
-        if (useUnsafe) {
-            return new LinkedTransferQueue<T>(collection);
-        } else {
-            return new LegacyLinkedTransferQueue<T>(collection);
-        }
+
+    private QueueFactory() {
+        // only use static methods!
     }
 }

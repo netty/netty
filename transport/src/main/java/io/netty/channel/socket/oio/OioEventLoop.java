@@ -29,8 +29,7 @@ public class OioEventLoop implements EventLoop {
     final ThreadFactory threadFactory;
     final Set<OioChildEventLoop> activeChildren = Collections.newSetFromMap(
             new ConcurrentHashMap<OioChildEventLoop, Boolean>());
-    final Queue<OioChildEventLoop> idleChildren =
-            QueueFactory.createQueue(OioChildEventLoop.class);
+    final Queue<OioChildEventLoop> idleChildren = QueueFactory.createQueue();
     private final ChannelException tooManyChannels;
 
     public OioEventLoop() {
