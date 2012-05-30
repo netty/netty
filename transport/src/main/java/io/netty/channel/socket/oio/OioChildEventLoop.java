@@ -53,8 +53,11 @@ class OioChildEventLoop extends SingleThreadEventLoop {
                 }
             }
 
-            if (isShutdown() && peekTask() == null) {
-                break;
+            if (isShutdown()) {
+                ch.unsafe().close(ch.unsafe().voidFuture());
+                if (peekTask() == null) {
+                    break;
+                }
             }
         }
     }
