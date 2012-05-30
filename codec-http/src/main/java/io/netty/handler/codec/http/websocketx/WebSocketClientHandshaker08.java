@@ -178,13 +178,13 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equals(Values.WEBSOCKET.toLowerCase())) {
+        if (upgrade == null || !upgrade.equalsIgnoreCase(Values.WEBSOCKET)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equals(Values.UPGRADE)) {
+        if (connection == null || !connection.equalsIgnoreCase(Values.UPGRADE)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }
