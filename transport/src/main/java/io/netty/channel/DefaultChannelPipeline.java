@@ -42,6 +42,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private volatile DefaultChannelHandlerContext tail;
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
+    private boolean firedChannelActive;
+    private boolean fireInboundBufferUpdatedOnActivation;
 
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
@@ -626,7 +628,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public void fireChannelActive() {
         DefaultChannelHandlerContext ctx = firstInboundContext();
         if (ctx != null) {
+            firedChannelActive = true;
             fireChannelActive(ctx);
+            if (fireInboundBufferUpdatedOnActivation) {
+                fireInboundBufferUpdatedOnActivation = false;
+                fireInboundBufferUpdated(ctx);
+            }
         }
     }
 
@@ -642,6 +649,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public void fireChannelInactive() {
         DefaultChannelHandlerContext ctx = firstInboundContext();
         if (ctx != null) {
+            firedChannelActive = false;
             fireChannelInactive(ctx);
         }
     }
@@ -704,6 +712,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public void fireInboundBufferUpdated() {
+        if (!firedChannelActive) {
+            fireInboundBufferUpdatedOnActivation = true;
+            return;
+        }
         DefaultChannelHandlerContext ctx = firstInboundContext();
         if (ctx != null) {
             fireInboundBufferUpdated(ctx);
