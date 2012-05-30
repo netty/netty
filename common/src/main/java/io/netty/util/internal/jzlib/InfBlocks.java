@@ -161,12 +161,11 @@ final class InfBlocks {
 
                 switch (t >>> 1) {
                 case 0: // stored
-                {
-                    b >>>= 3;
-                    k -= 3;
-                }
+                    {
+                        b >>>= 3;
+                        k -= 3;
+                    }
                     t = k & 7; // go to byte boundary
-
                     {
                         b >>>= t;
                         k -= t;
@@ -174,38 +173,33 @@ final class InfBlocks {
                     mode = LENS; // get length of stored block
                     break;
                 case 1: // fixed
-                {
-                    int[] bl = new int[1];
-                    int[] bd = new int[1];
-                    int[][] tl = new int[1][];
-                    int[][] td = new int[1][];
+                    {
+                        int[] bl = new int[1];
+                        int[] bd = new int[1];
+                        int[][] tl = new int[1][];
+                        int[][] td = new int[1][];
 
-                    InfTree.inflate_trees_fixed(bl, bd, tl, td);
-                    codes.init(bl[0], bd[0], tl[0], 0, td[0], 0);
-                }
-
+                        InfTree.inflate_trees_fixed(bl, bd, tl, td);
+                        codes.init(bl[0], bd[0], tl[0], 0, td[0], 0);
+                    }
                     {
                         b >>>= 3;
                         k -= 3;
                     }
-
                     mode = CODES;
                     break;
                 case 2: // dynamic
-
-                {
-                    b >>>= 3;
-                    k -= 3;
-                }
-
+                    {
+                        b >>>= 3;
+                        k -= 3;
+                    }
                     mode = TABLE;
                     break;
                 case 3: // illegal
-
-                {
-                    b >>>= 3;
-                    k -= 3;
-                }
+                    {
+                        b >>>= 3;
+                        k -= 3;
+                    }
                     mode = BAD;
                     z.msg = "invalid block type";
                     r = JZlib.Z_DATA_ERROR;
