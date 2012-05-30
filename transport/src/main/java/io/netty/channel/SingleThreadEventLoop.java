@@ -6,8 +6,8 @@ import io.netty.util.internal.QueueFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -56,7 +56,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     private final Semaphore threadLock = new Semaphore(0);
     // TODO: Use PriorityQueue to reduce the locking overhead of DelayQueue.
     private final Queue<ScheduledFutureTask<?>> scheduledTasks = new DelayQueue<ScheduledFutureTask<?>>();
-    private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
+    private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
     private volatile int state;
     private long lastCheckTimeNanos;
