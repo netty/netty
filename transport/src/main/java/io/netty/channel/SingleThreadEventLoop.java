@@ -1,11 +1,16 @@
 package io.netty.channel;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.QueueFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -21,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class SingleThreadEventLoop extends AbstractExecutorService implements EventLoop {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(SingleThreadEventLoop.class);
 
     private static final long SCHEDULE_CHECK_INTERVAL = TimeUnit.MILLISECONDS.toNanos(10);
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
@@ -48,6 +56,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     private final Semaphore threadLock = new Semaphore(0);
     // TODO: Use PriorityQueue to reduce the locking overhead of DelayQueue.
     private final Queue<ScheduledFutureTask<?>> scheduledTasks = new DelayQueue<ScheduledFutureTask<?>>();
+    private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
     /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
     private volatile int state;
     private long lastCheckTimeNanos;
@@ -70,6 +79,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
                     }
                     try {
                         cancelScheduledTasks();
+                        runShutdownHooks();
                         cleanup();
                     } finally {
                         threadLock.release();
@@ -201,7 +211,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     protected abstract void run();
 
     protected void cleanup() {
-        // Do nothing. Subclasses will override.
+        // Do nothing. Subclases will override.
     }
 
     protected abstract void wakeup(boolean inEventLoop);
@@ -209,6 +219,37 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     @Override
     public boolean inEventLoop() {
         return Thread.currentThread() == thread;
+    }
+
+    public void addShutdownHook(Runnable task) {
+        ensureShutdownHookAccess();
+        shutdownHooks.add(task);
+    }
+
+    public void removeShutdownHook(Runnable task) {
+        ensureShutdownHookAccess();
+        shutdownHooks.remove(task);
+    }
+
+    private void ensureShutdownHookAccess() {
+        if (!inEventLoop()) {
+            throw new IllegalStateException("must be called from the event loop");
+        }
+    }
+
+    private void runShutdownHooks() {
+        // Note shutdown hooks can add / remove shutdown hooks.
+        while (!shutdownHooks.isEmpty()) {
+            List<Runnable> copy = new ArrayList<Runnable>(shutdownHooks);
+            shutdownHooks.clear();
+            for (Runnable task: copy) {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    logger.warn("Shutdown hook raised an exception.", t);
+                }
+            }
+        }
     }
 
     @Override

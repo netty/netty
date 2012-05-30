@@ -30,6 +30,12 @@ import java.net.SocketAddress;
 public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig();
+    private final Runnable shutdownHook = new Runnable() {
+        @Override
+        public void run() {
+            unsafe().close(unsafe().voidFuture());
+        }
+    };
 
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
@@ -79,7 +85,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        // NOOP
+        ((SingleThreadEventLoop) eventLoop()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -102,7 +108,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        // NOOP
+        ((SingleThreadEventLoop) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     LocalChannel serve(final LocalChannel peer) {

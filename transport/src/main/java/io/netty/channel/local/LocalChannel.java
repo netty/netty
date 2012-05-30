@@ -39,6 +39,12 @@ import java.util.Queue;
 public class LocalChannel extends AbstractChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig();
+    private final Runnable shutdownHook = new Runnable() {
+        @Override
+        public void run() {
+            unsafe().close(unsafe().voidFuture());
+        }
+    };
 
     private volatile int state; // 0 - open, 1 - bound, 2 - connected, 3 - closed
     private volatile LocalChannel peer;
@@ -126,6 +132,8 @@ public class LocalChannel extends AbstractChannel {
                 }
             });
         }
+
+        ((SingleThreadEventLoop) eventLoop()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -162,6 +170,7 @@ public class LocalChannel extends AbstractChannel {
         if (isOpen()) {
             unsafe().close(unsafe().voidFuture());
         }
+        ((SingleThreadEventLoop) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     @Override

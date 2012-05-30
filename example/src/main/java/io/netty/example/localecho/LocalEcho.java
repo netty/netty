@@ -78,7 +78,10 @@ public class LocalEcho {
 
               });
 
-            Channel sch = sb.bind().sync().channel();
+            // Start the server.
+            sb.bind().sync();
+
+            // Start the client.
             Channel ch = cb.connect().sync().channel();
 
             // Read commands from the stdin.
@@ -99,9 +102,6 @@ public class LocalEcho {
             if (lastWriteFuture != null) {
                 lastWriteFuture.awaitUninterruptibly();
             }
-
-            ch.close().sync();
-            sch.close().sync();
         } finally {
             sb.shutdown();
             cb.shutdown();
