@@ -26,6 +26,9 @@ import java.util.zip.Deflater;
  * Utility that detects various properties specific to the current runtime
  * environment, such as Java version and the availability of the
  * {@code sun.misc.Unsafe} object.
+ * <p>
+ * You can disable the use of {@code sun.misc.Unsafe} if you specify
+ * the system property <strong>io.netty.noUnsafe</strong>.
  */
 public final class DetectionUtil {
 
@@ -41,6 +44,20 @@ public final class DetectionUtil {
     }
 
     private static boolean hasUnsafe(ClassLoader loader) {
+        String value = SystemPropertyUtil.get("io.netty.noUnsafe");
+        if (value != null) {
+            return false;
+        }
+
+        // Legacy properties
+        value = SystemPropertyUtil.get("io.netty.tryUnsafe");
+        if (value == null) {
+            value = SystemPropertyUtil.get("org.jboss.netty.tryUnsafe", "true");
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return false;
+        }
+
         try {
             Class<?> unsafeClazz = Class.forName("sun.misc.Unsafe", true, loader);
             return hasUnsafeField(unsafeClazz);
