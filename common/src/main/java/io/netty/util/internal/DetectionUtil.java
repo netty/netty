@@ -61,6 +61,14 @@ public final class DetectionUtil {
     }
 
     private static int javaVersion0() {
+        // Android
+        try {
+            Class.forName("android.app.Application", false, ClassLoader.getSystemClassLoader());
+            return 6;
+        } catch (Exception e) {
+            // Ignore
+        }
+
         try {
             Deflater.class.getDeclaredField("SYNC_FLUSH");
             return 7;
@@ -70,7 +78,7 @@ public final class DetectionUtil {
 
         return 6;
     }
-    
+
     private DetectionUtil() {
         // only static method supported
     }
