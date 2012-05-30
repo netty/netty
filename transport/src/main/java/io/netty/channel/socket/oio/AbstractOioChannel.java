@@ -2,6 +2,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 
@@ -10,8 +11,8 @@ import java.net.SocketAddress;
 
 abstract class AbstractOioChannel extends AbstractChannel {
 
-    protected AbstractOioChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioChannel(Channel parent, Integer id, ChannelBufferHolder<?> outboundBuffer) {
+        super(parent, id, outboundBuffer);
     }
 
     @Override

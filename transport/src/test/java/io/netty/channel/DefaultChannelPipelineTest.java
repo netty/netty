@@ -16,32 +16,49 @@
 package io.netty.channel;
 
 import static org.junit.Assert.*;
+import io.netty.channel.local.LocalChannel;
 
 import org.junit.Test;
 
 public class DefaultChannelPipelineTest {
     @Test
     public void testReplaceChannelHandler() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
-        
-        SimpleChannelHandler handler1 = new SimpleChannelHandler();
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+
+        ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
         pipeline.addLast("handler2", handler1);
         pipeline.addLast("handler3", handler1);
         assertTrue(pipeline.get("handler1") == handler1);
         assertTrue(pipeline.get("handler2") == handler1);
         assertTrue(pipeline.get("handler3") == handler1);
-        
-        SimpleChannelHandler newHandler1 = new SimpleChannelHandler();
+
+        ChannelHandler newHandler1 = newHandler();
         pipeline.replace("handler1", "handler1", newHandler1);
         assertTrue(pipeline.get("handler1") == newHandler1);
-        
-        SimpleChannelHandler newHandler3 = new SimpleChannelHandler();
+
+        ChannelHandler newHandler3 = newHandler();
         pipeline.replace("handler3", "handler3", newHandler3);
         assertTrue(pipeline.get("handler3") == newHandler3);
-        
-        SimpleChannelHandler newHandler2 = new SimpleChannelHandler();
+
+        ChannelHandler newHandler2 = newHandler();
         pipeline.replace("handler2", "handler2", newHandler2);
         assertTrue(pipeline.get("handler2") == newHandler2);
+    }
+
+    private static ChannelHandler newHandler() {
+        return new ChannelHandlerAdapter<Byte, Byte>() {
+            @Override
+            public ChannelBufferHolder<Byte> newInboundBuffer(
+                    ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+                return ChannelBufferHolders.byteBuffer();
+            }
+
+            @Override
+            public ChannelBufferHolder<Byte> newOutboundBuffer(
+                    ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+                return ChannelBufferHolders.byteBuffer();
+            }
+        };
     }
 }

@@ -44,6 +44,12 @@ public final class ChannelBufferHolder<E> {
     }
 
     ChannelBufferHolder(Queue<E> msgBuf, ChannelBuffer byteBuf) {
+        if (msgBuf == null) {
+            throw new NullPointerException("msgBuf");
+        }
+        if (byteBuf == null) {
+            throw new NullPointerException("byteBuf");
+        }
         ctx = null;
         bypassDirection = 0;
         this.msgBuf = msgBuf;

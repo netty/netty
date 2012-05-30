@@ -17,7 +17,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -66,7 +65,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     public OioDatagramChannel(Integer id, MulticastSocket socket) {
-        super(null, id);
+        super(null, id, ChannelBufferHolders.messageBuffer());
 
         boolean success = false;
         try {
@@ -99,11 +98,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public boolean isActive() {
         return isOpen() && socket.isBound();
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.messageBuffer();
     }
 
     @Override

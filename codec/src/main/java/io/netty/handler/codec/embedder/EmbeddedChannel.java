@@ -31,16 +31,15 @@ import java.util.Queue;
 class EmbeddedChannel extends AbstractChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig();
-    private final ChannelBufferHolder<?> firstOut;
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> productQueue;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
 
     EmbeddedChannel(Queue<Object> productQueue) {
-        super(null, null);
+        super(null, null, ChannelBufferHolders.catchAllBuffer(
+                productQueue, ChannelBuffers.dynamicBuffer()));
         this.productQueue = productQueue;
-        firstOut = ChannelBufferHolders.catchAllBuffer(productQueue, ChannelBuffers.dynamicBuffer());
     }
 
     @Override
@@ -61,12 +60,6 @@ class EmbeddedChannel extends AbstractChannel {
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof EmbeddedEventLoop;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    protected ChannelBufferHolder<Object> firstOut() {
-        return (ChannelBufferHolder<Object>) firstOut;
     }
 
     @Override

@@ -17,8 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -87,11 +85,6 @@ public class NioSocketChannel extends AbstractNioStreamChannel implements io.net
     public boolean isActive() {
         SocketChannel ch = javaChannel();
         return ch.isOpen() && ch.isConnected();
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

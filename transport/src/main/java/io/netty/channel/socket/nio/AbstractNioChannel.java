@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
@@ -49,8 +50,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
-    protected AbstractNioChannel(Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
-        super(parent, id);
+    protected AbstractNioChannel(
+            Channel parent, Integer id, ChannelBufferHolder<?> outboundBuffer,
+            SelectableChannel ch, int defaultInterestOps) {
+        super(parent, id, outboundBuffer);
         this.ch = ch;
         this.defaultInterestOps = defaultInterestOps;
         try {

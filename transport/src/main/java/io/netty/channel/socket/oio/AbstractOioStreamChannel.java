@@ -11,12 +11,7 @@ import java.io.IOException;
 abstract class AbstractOioStreamChannel extends AbstractOioChannel {
 
     protected AbstractOioStreamChannel(Channel parent, Integer id) {
-        super(parent, id);
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.byteBuffer();
+        super(parent, id, ChannelBufferHolders.byteBuffer());
     }
 
     @Override

@@ -14,12 +14,7 @@ abstract class AbstractNioStreamChannel extends AbstractNioChannel {
 
     protected AbstractNioStreamChannel(
             Channel parent, Integer id, SelectableChannel ch) {
-        super(parent, id, ch, SelectionKey.OP_READ);
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.byteBuffer();
+        super(parent, id, ChannelBufferHolders.byteBuffer(), ch, SelectionKey.OP_READ);
     }
 
     @Override

@@ -2,7 +2,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -10,13 +9,9 @@ import java.util.Queue;
 
 abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
-    protected AbstractOioMessageChannel(Channel parent, Integer id) {
-        super(parent, id);
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.messageBuffer();
+    protected AbstractOioMessageChannel(
+            Channel parent, Integer id, ChannelBufferHolder<?> outboundBuffer) {
+        super(parent, id, outboundBuffer);
     }
 
     @Override

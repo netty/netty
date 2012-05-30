@@ -39,29 +39,6 @@ public class CompleteChannelFutureTest {
     }
 
     @Test
-    public void shouldNotifyImmediatelyOnAdd() throws Exception {
-        ChannelFutureListener l = createStrictMock(ChannelFutureListener.class);
-        l.operationComplete(future);
-        replay(l);
-
-        future.addListener(l);
-        verify(l);
-    }
-
-    @Test
-    public void shouldNotRethrowListenerException() {
-        ChannelFutureListener l = new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future)
-                    throws Exception {
-                throw new ExpectedError();
-            }
-        };
-
-        future.addListener(l);
-    }
-
-    @Test
     public void shouldNotDoAnythingOnRemove() throws Exception {
         ChannelFutureListener l = createStrictMock(ChannelFutureListener.class);
         replay(l);
@@ -108,13 +85,6 @@ public class CompleteChannelFutureTest {
         @Override
         public ChannelFuture syncUninterruptibly() {
             throw new Error();
-        }
-    }
-
-    private static class ExpectedError extends Error {
-        private static final long serialVersionUID = 7059276744882005047L;
-
-        ExpectedError() {
         }
     }
 }

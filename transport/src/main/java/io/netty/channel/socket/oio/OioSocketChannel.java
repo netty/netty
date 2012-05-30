@@ -17,8 +17,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
@@ -92,11 +90,6 @@ public class OioSocketChannel extends AbstractOioStreamChannel
     @Override
     public boolean isActive() {
         return !socket.isClosed() && socket.isConnected();
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

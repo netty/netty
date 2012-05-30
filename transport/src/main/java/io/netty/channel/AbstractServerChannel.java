@@ -33,7 +33,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
      * Creates a new instance.
      */
     protected AbstractServerChannel(Integer id) {
-        super(null, id);
+        super(null, id, ChannelBufferHolders.discardBuffer());
     }
 
     @Override
@@ -47,8 +47,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected ChannelBufferHolder<Object> newOutboundBuffer() {
-        return ChannelBufferHolders.discardBuffer();
+    protected Unsafe newUnsafe() {
+        return new DefaultServerUnsafe();
     }
 
     @Override
@@ -59,5 +59,54 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     @Override
     protected void doDisconnect() throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected boolean isFlushPending() {
+        return false;
+    }
+
+    protected class DefaultServerUnsafe extends AbstractUnsafe {
+
+        @Override
+        public void flush(final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                reject(future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        flush(future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress,
+                final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                reject(future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        connect(remoteAddress, localAddress, future);
+                    }
+                });
+            }
+        }
+
+        private void reject(ChannelFuture future) {
+            Exception cause = new UnsupportedOperationException();
+            future.setFailure(cause);
+            pipeline().fireExceptionCaught(cause);
+        }
     }
 }

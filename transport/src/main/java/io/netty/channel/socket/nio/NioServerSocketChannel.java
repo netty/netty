@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -43,7 +42,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     public NioServerSocketChannel() {
-        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, null, ChannelBufferHolders.discardBuffer(), newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 
@@ -104,11 +103,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected void doFinishConnect() throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.discardBuffer();
     }
 
     @Override

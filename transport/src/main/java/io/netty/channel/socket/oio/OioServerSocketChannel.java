@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -61,7 +60,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     public OioServerSocketChannel(Integer id, ServerSocket socket) {
-        super(null, id);
+        super(null, id, ChannelBufferHolders.discardBuffer());
         if (socket == null) {
             throw new NullPointerException("socket");
         }
@@ -158,11 +157,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     protected void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.discardBuffer();
     }
 
     @Override

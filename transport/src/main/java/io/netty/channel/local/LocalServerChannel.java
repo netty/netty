@@ -15,14 +15,113 @@
  */
 package io.netty.channel.local;
 
+import io.netty.channel.AbstractServerChannel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.SingleThreadEventLoop;
+
+import java.net.SocketAddress;
 
 /**
  * A {@link ServerChannel} for the local transport.
  */
-public interface LocalServerChannel extends ServerChannel {
+public class LocalServerChannel extends AbstractServerChannel {
+
+    private final ChannelConfig config = new DefaultChannelConfig();
+
+    private volatile int state; // 0 - open, 1 - active, 2 - closed
+    private volatile LocalAddress localAddress;
+
+    public LocalServerChannel() {
+        this(null);
+    }
+
+    public LocalServerChannel(Integer id) {
+        super(id);
+    }
+
     @Override
-    LocalAddress getLocalAddress();
+    public ChannelConfig config() {
+        return config;
+    }
+
     @Override
-    LocalAddress getRemoteAddress();
+    public LocalAddress localAddress() {
+        return (LocalAddress) super.localAddress();
+    }
+
+    @Override
+    public LocalAddress remoteAddress() {
+        return (LocalAddress) super.remoteAddress();
+    }
+
+    @Override
+    public boolean isOpen() {
+        return state < 2;
+    }
+
+    @Override
+    public boolean isActive() {
+        return state == 1;
+    }
+
+    @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof SingleThreadEventLoop;
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return localAddress;
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        // NOOP
+    }
+
+    @Override
+    protected void doBind(SocketAddress localAddress) throws Exception {
+        this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
+        state = 1;
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        if (state > 1) {
+            // Closed already.
+            return;
+        }
+
+        LocalChannelRegistry.unregister(localAddress);
+        localAddress = null;
+        state = 2;
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        // NOOP
+    }
+
+    LocalChannel serve(final LocalChannel peer) {
+        LocalChannel child = new LocalChannel(this, peer);
+        serve0(child);
+        return child;
+    }
+
+    private void serve0(final LocalChannel child) {
+        if (eventLoop().inEventLoop()) {
+            pipeline().inbound().messageBuffer().add(child);
+            pipeline().fireInboundBufferUpdated();
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    serve0(child);
+                }
+            });
+        }
+    }
 }

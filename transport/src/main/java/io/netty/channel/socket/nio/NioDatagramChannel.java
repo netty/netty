@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -67,7 +66,7 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
     }
 
     public NioDatagramChannel(Integer id, DatagramChannel socket) {
-        super(null, id, socket, SelectionKey.OP_READ);
+        super(null, id, ChannelBufferHolders.messageBuffer(), socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(socket);
     }
 
@@ -85,11 +84,6 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
     @Override
     protected DatagramChannel javaChannel() {
         return (DatagramChannel) super.javaChannel();
-    }
-
-    @Override
-    protected ChannelBufferHolder<?> newOutboundBuffer() {
-        return ChannelBufferHolders.messageBuffer();
     }
 
     @Override
