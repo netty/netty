@@ -585,7 +585,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (ctx != null) {
             return ctx.outbound();
         }
-        return channel().unsafe().out();
+        return channel().unsafe().directOutbound();
     }
 
     @Override
@@ -1187,7 +1187,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             for (;;) {
                 ctx = nextOutboundContext(ctx.prev);
                 if (ctx == null) {
-                    ChannelBufferHolder<Object> lastOut = channel().unsafe().out();
+                    ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
                     if (lastOut.hasByteBuffer()) {
                         return lastOut.byteBuffer();
                     } else {
@@ -1207,7 +1207,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             for (;;) {
                 ctx = nextOutboundContext(ctx.prev);
                 if (ctx == null) {
-                    ChannelBufferHolder<Object> lastOut = channel().unsafe().out();
+                    ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
                     if (lastOut.hasMessageBuffer()) {
                         return lastOut.messageBuffer();
                     } else {

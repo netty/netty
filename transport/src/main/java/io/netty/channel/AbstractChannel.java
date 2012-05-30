@@ -370,7 +370,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private final Runnable flushLaterTask = new FlushLater();
 
         @Override
-        public ChannelBufferHolder<Object> out() {
+        public ChannelBufferHolder<Object> directOutbound() {
             return outbound;
         }
 
@@ -548,7 +548,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop().inEventLoop()) {
                 // Append flush future to the notification list.
                 if (future != voidFuture) {
-                    long checkpoint = writeCounter + out().size();
+                    long checkpoint = writeCounter + directOutbound().size();
                     if (future instanceof FlushCheckpoint) {
                         FlushCheckpoint cp = (FlushCheckpoint) future;
                         cp.flushCheckpoint(checkpoint);
@@ -602,7 +602,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             inFlushNow = true;
             try {
                 Throwable cause = null;
-                ChannelBufferHolder<Object> out = out();
+                ChannelBufferHolder<Object> out = directOutbound();
                 int oldSize = out.size();
                 try {
                     doFlush(out);

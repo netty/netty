@@ -174,7 +174,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     Unsafe unsafe();
 
     public interface Unsafe {
-        ChannelBufferHolder<Object> out();
+        ChannelBufferHolder<Object> directOutbound();
         ChannelFuture voidFuture();
 
         SocketAddress localAddress();
