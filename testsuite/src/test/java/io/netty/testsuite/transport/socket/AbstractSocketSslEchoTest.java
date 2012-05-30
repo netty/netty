@@ -16,6 +16,17 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.SocketAddresses;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -41,25 +52,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509TrustManager;
 
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.execution.ExecutionHandler;
-import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -318,21 +310,13 @@ public abstract class AbstractSocketSslEchoTest {
             @Override
             public void checkClientTrusted(
                     X509Certificate[] chain, String authType) throws CertificateException {
-                // Always trust - it is an example.
-                // You should do something in the real world.
-                // You will reach here only if you enabled client certificate auth,
-                // as described in SecureChatSslContextFactory.
-                System.err.println(
-                        "UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
+                // NOOP
             }
 
             @Override
             public void checkServerTrusted(
                     X509Certificate[] chain, String authType) throws CertificateException {
-                // Always trust - it is an example.
-                // You should do something in the real world.
-                System.err.println(
-                        "UNKNOWN SERVER CERTIFICATE: " + chain[0].getSubjectDN());
+                // NOOP
             }
         };
 

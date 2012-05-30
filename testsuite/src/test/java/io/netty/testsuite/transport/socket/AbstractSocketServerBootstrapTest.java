@@ -16,6 +16,17 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipelineException;
+import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.testsuite.util.DummyHandler;
+import io.netty.util.SocketAddresses;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -24,22 +35,6 @@ import java.net.Socket;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipelineException;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.ChildChannelStateEvent;
-import io.netty.channel.ServerChannelFactory;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.testsuite.util.DummyHandler;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
 
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
@@ -51,6 +46,9 @@ import org.junit.Test;
  * An abstract test class to test server socket bootstraps
  */
 public abstract class AbstractSocketServerBootstrapTest {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(AbstractSocketServerBootstrapTest.class);
 
     private static final boolean BUFSIZE_MODIFIABLE;
 
@@ -66,12 +64,12 @@ public abstract class AbstractSocketServerBootstrapTest {
                 }
             } catch (Exception e) {
                 bufSizeModifiable = false;
-                System.err.println(
+                logger.warn(
                         "Socket.getReceiveBufferSize() does not work: " + e);
             }
         } catch (Exception e) {
             bufSizeModifiable = false;
-            System.err.println(
+            logger.warn(
                     "Socket.setReceiveBufferSize() does not work: " + e);
         } finally {
             BUFSIZE_MODIFIABLE = bufSizeModifiable;
