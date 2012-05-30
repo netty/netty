@@ -668,7 +668,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext ctx = firstInboundContext();
         if (ctx != null) {
             fireExceptionCaught(ctx, cause);
+        } else {
+            logTerminalException(cause);
         }
+    }
+
+    private static void logTerminalException(Throwable cause) {
+        logger.warn(
+                "An exceptionCaught() event was fired, and it reached at the end of the " +
+                "pipeline.  It usually means the last inbound handler in the pipeline did not " +
+                "handle the exception.", cause);
     }
 
     @SuppressWarnings("unchecked")
@@ -1270,6 +1279,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             DefaultChannelHandlerContext next = nextInboundContext(this.next);
             if (next != null) {
                 DefaultChannelPipeline.this.fireExceptionCaught(next, cause);
+            } else {
+                logTerminalException(cause);
             }
         }
 
