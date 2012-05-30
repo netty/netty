@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalEventLoop;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.handler.logging.LogLevel;
@@ -45,9 +46,10 @@ public class LocalEcho {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         try {
-            // Note that we can use any event loop so that you can ensure certain local channels
-            // are handled by the same event loop thread which drives a certain socket channel.
-            sb.eventLoop(new NioEventLoop(), new NioEventLoop())
+            // Note that we can use any event loop to ensure certain local channels
+            // are handled by the same event loop thread which drives a certain socket channel
+            // to reduce the communication latency between socket channels and local channels.
+            sb.eventLoop(new LocalEventLoop(), new LocalEventLoop())
               .channel(new LocalServerChannel())
               .localAddress(addr)
               .initializer(new ChannelInitializer<LocalServerChannel>() {
