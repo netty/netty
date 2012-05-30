@@ -17,12 +17,21 @@ package org.jboss.netty.channel.socket.nio;
 
 import java.net.ProtocolFamily;
 
+
+/**
+ * Helper class which convert the {@link ProtocolFamily}. 
+ * 
+ *
+ */
 final class ProtocolFamilyConverter {
 
     private ProtocolFamilyConverter() {
-        
+        // Utility class
     }
     
+    /**
+     * Convert the {@link NioDatagramChannel.ProtocolFamily}. This MUST only be called on jdk version >= 7.
+     */
     public static ProtocolFamily convert(NioDatagramChannel.ProtocolFamily family) {
         switch (family) {
         case INET:

@@ -89,7 +89,11 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             if (DetectionUtil.javaVersion() < 7 || family == null) {
                 channel = DatagramChannel.open();
             } else {
-                // This block only works on java7++, but we checked before if we have it
+                // This block only works on java7++, but we checked before if we have it.
+                //
+                // Use the ProtocolFamilyConvert for conversion to prevent NoClassDefFoundError.
+                //
+                // See #368
                 switch (family) {
                 case INET:
                     channel = DatagramChannel.open(ProtocolFamilyConverter.convert(family));
