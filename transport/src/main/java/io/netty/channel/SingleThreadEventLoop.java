@@ -221,19 +221,29 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         return Thread.currentThread() == thread;
     }
 
-    public void addShutdownHook(Runnable task) {
-        ensureShutdownHookAccess();
-        shutdownHooks.add(task);
+    public void addShutdownHook(final Runnable task) {
+        if (inEventLoop()) {
+            shutdownHooks.add(task);
+        } else {
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownHooks.add(task);
+                }
+            });
+        }
     }
 
-    public void removeShutdownHook(Runnable task) {
-        ensureShutdownHookAccess();
-        shutdownHooks.remove(task);
-    }
-
-    private void ensureShutdownHookAccess() {
-        if (!inEventLoop()) {
-            throw new IllegalStateException("must be called from the event loop");
+    public void removeShutdownHook(final Runnable task) {
+        if (inEventLoop()) {
+            shutdownHooks.remove(task);
+        } else {
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownHooks.remove(task);
+                }
+            });
         }
     }
 
