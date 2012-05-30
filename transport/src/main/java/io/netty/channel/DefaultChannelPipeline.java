@@ -1157,7 +1157,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             for (;;) {
                 ctx = nextInboundContext(ctx.next);
                 if (ctx == null) {
-                    return null;
+                    throw NoSuchBufferException.INSTANCE;
                 }
                 ChannelBufferHolder<Object> nextIn = ctx.inbound();
                 if (nextIn.hasByteBuffer()) {
@@ -1172,7 +1172,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             for (;;) {
                 ctx = nextInboundContext(ctx.next);
                 if (ctx == null) {
-                    return null;
+                    throw NoSuchBufferException.INSTANCE;
                 }
                 ChannelBufferHolder<Object> nextIn = ctx.inbound();
                 if (nextIn.hasMessageBuffer()) {
@@ -1191,7 +1191,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     if (lastOut.hasByteBuffer()) {
                         return lastOut.byteBuffer();
                     } else {
-                        return null;
+                        throw NoSuchBufferException.INSTANCE;
                     }
                 }
                 ChannelBufferHolder<Object> nextOut = ctx.outbound();
@@ -1211,7 +1211,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     if (lastOut.hasMessageBuffer()) {
                         return lastOut.messageBuffer();
                     } else {
-                        return null;
+                        throw NoSuchBufferException.INSTANCE;
                     }
                 }
                 ChannelBufferHolder<Object> nextOut = ctx.outbound();

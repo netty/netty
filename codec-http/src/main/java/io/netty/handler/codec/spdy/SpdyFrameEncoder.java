@@ -84,7 +84,8 @@ public class SpdyFrameEncoder extends MessageToStreamEncoder<Object> {
                msg instanceof SpdySettingsFrame ||
                msg instanceof SpdyNoOpFrame ||
                msg instanceof SpdyGoAwayFrame ||
-               msg instanceof SpdyHeadersFrame;
+               msg instanceof SpdyHeadersFrame ||
+               msg instanceof SpdyPingFrame;
     }
 
     @Override

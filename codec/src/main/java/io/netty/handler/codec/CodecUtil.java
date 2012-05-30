@@ -2,8 +2,7 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-
-import java.util.Queue;
+import io.netty.channel.NoSuchBufferException;
 
 class CodecUtil {
 
@@ -33,34 +32,32 @@ class CodecUtil {
         }
 
         if (inbound) {
-            Queue<Object> dst = ctx.nextInboundMessageBuffer();
-            if (dst != null) {
-                dst.add(msg);
+            try {
+                ctx.nextInboundMessageBuffer().add(msg);
                 return true;
-            } else if (msg instanceof ChannelBuffer) {
-                ChannelBuffer altDst = ctx.nextInboundByteBuffer();
-                ChannelBuffer src = (ChannelBuffer) msg;
-                if (altDst != null) {
+            } catch (NoSuchBufferException e) {
+                if (msg instanceof ChannelBuffer) {
+                    ChannelBuffer altDst = ctx.nextInboundByteBuffer();
+                    ChannelBuffer src = (ChannelBuffer) msg;
                     altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
                     return true;
                 }
             }
         } else {
-            Queue<Object> dst = ctx.nextOutboundMessageBuffer();
-            if (dst != null) {
-                dst.add(msg);
+            try {
+                ctx.nextOutboundMessageBuffer().add(msg);
                 return true;
-            } else if (msg instanceof ChannelBuffer) {
-                ChannelBuffer altDst = ctx.nextOutboundByteBuffer();
-                ChannelBuffer src = (ChannelBuffer) msg;
-                if (altDst != null) {
+            } catch (NoSuchBufferException e) {
+                if (msg instanceof ChannelBuffer) {
+                    ChannelBuffer altDst = ctx.nextOutboundByteBuffer();
+                    ChannelBuffer src = (ChannelBuffer) msg;
                     altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
                     return true;
                 }
             }
         }
 
-        throw new IllegalStateException("no suitable destination buffer found");
+        throw new NoSuchBufferException();
     }
 
     private CodecUtil() {

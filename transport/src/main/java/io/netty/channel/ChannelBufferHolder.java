@@ -59,9 +59,21 @@ public final class ChannelBufferHolder<E> {
         case 0:
             return msgBuf != null;
         case 1:
-            return ctx.nextInboundMessageBuffer() != null;
+            // XXX: Should we introduce hasNext(Inbound|Outbound)(Message|Byte)Buffer()
+            //      just because of this?
+            try {
+                ctx.nextInboundMessageBuffer();
+                return true;
+            } catch (NoSuchBufferException e) {
+                return false;
+            }
         case 2:
-            return ctx.nextOutboundMessageBuffer() != null;
+            try {
+                ctx.nextOutboundMessageBuffer();
+                return true;
+            } catch (NoSuchBufferException e) {
+                return false;
+            }
         default:
             throw new Error();
         }
@@ -72,9 +84,19 @@ public final class ChannelBufferHolder<E> {
         case 0:
             return byteBuf != null;
         case 1:
-            return ctx.nextInboundByteBuffer() != null;
+            try {
+                ctx.nextInboundByteBuffer();
+                return true;
+            } catch (NoSuchBufferException e) {
+                return false;
+            }
         case 2:
-            return ctx.nextOutboundByteBuffer() != null;
+            try {
+                ctx.nextOutboundByteBuffer();
+                return true;
+            } catch (NoSuchBufferException e) {
+                return false;
+            }
         default:
             throw new Error();
         }
@@ -84,7 +106,7 @@ public final class ChannelBufferHolder<E> {
         switch (bypassDirection) {
         case 0:
             if (msgBuf == null) {
-                throw new IllegalStateException("does not have a message buffer");
+                throw new NoSuchBufferException();
             }
             return msgBuf;
         case 1:
@@ -100,7 +122,7 @@ public final class ChannelBufferHolder<E> {
         switch (bypassDirection) {
         case 0:
             if (byteBuf == null) {
-                throw new IllegalStateException("does not have a byte buffer");
+                throw new NoSuchBufferException();
             }
             return byteBuf;
         case 1:

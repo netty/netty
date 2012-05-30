@@ -16,6 +16,7 @@
 package io.netty.handler.codec.embedder;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -39,7 +40,7 @@ class EmbeddedChannel extends AbstractChannel {
     EmbeddedChannel(Queue<Object> productQueue) {
         super(null, null);
         this.productQueue = productQueue;
-        firstOut = ChannelBufferHolders.catchAllBuffer();
+        firstOut = ChannelBufferHolders.catchAllBuffer(productQueue, ChannelBuffers.dynamicBuffer());
     }
 
     @Override
@@ -111,11 +112,7 @@ class EmbeddedChannel extends AbstractChannel {
             productQueue.add(byteBuf.readBytes(byteBufLen));
             byteBuf.clear();
         }
-        Queue<Object> msgBuf = buf.messageBuffer();
-        if (!msgBuf.isEmpty()) {
-            productQueue.addAll(msgBuf);
-            msgBuf.clear();
-        }
+        // We do nothing for message buffer because it's actually productQueue.
     }
 
     @Override
