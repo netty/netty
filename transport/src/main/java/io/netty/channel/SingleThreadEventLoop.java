@@ -211,7 +211,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     protected abstract void run();
 
     protected void cleanup() {
-        // Do nothing. Subclases will override.
+        // Do nothing. Subclasses will override.
     }
 
     protected abstract void wakeup(boolean inEventLoop);
