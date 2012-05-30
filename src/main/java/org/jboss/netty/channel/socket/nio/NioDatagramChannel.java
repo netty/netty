@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.StandardProtocolFamily;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
 import java.util.ArrayList;
@@ -51,8 +52,19 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
      *
      */
     public enum ProtocolFamily {
-        INET,
-        INET6
+        INET(StandardProtocolFamily.INET),
+        INET6(StandardProtocolFamily.INET6);
+
+        private final java.net.ProtocolFamily jdkFamily;
+
+        ProtocolFamily(StandardProtocolFamily jdkFamily) {
+            this.jdkFamily = jdkFamily;
+        }
+
+        java.net.ProtocolFamily getJdkFamily() {
+            return jdkFamily;
+        }
+
     }
 
     /**
@@ -90,18 +102,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                 channel = DatagramChannel.open();
             } else {
                 // This block only works on java7++, but we checked before if we have it
-                switch (family) {
-                case INET:
-                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET);
-                    break;
-
-                case INET6:
-                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET6);
-                    break;
-
-                default:
-                    throw new IllegalArgumentException();
-                }
+                channel = DatagramChannel.open(family.getJdkFamily());
             }
 
             channel.configureBlocking(false);
