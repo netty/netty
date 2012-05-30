@@ -147,6 +147,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             originValue = originValue + ":" + wsPort;
         }
 
+        request.addHeader(Names.ORIGIN, originValue);
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
         if (getExpectedSubprotocol() != null && !getExpectedSubprotocol().equals("")) {

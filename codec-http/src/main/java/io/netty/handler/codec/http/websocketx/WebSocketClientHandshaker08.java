@@ -130,6 +130,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ":" + wsPort;
         }
+        request.addHeader(Names.ORIGIN, originValue);
 
         if (protocol != null && !protocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
