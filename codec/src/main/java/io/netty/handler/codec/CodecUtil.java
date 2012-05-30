@@ -4,7 +4,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.NoSuchBufferException;
 
-class CodecUtil {
+final class CodecUtil {
 
     static boolean unfoldAndAdd(
             ChannelHandlerContext ctx, Object msg, boolean inbound) throws Exception {
