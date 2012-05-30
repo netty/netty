@@ -124,7 +124,9 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
 
                 if (isShutdown()) {
                     closeAll();
-                    break;
+                    if (peekTask() == null) {
+                        break;
+                    }
                 }
             } catch (Throwable t) {
                 logger.warn(
