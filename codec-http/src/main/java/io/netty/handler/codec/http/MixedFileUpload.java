@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ChannelBuffer;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-
-import io.netty.buffer.ChannelBuffer;
 
 /**
  * Mixed implementation using both in Memory and in File with a limit of size
@@ -28,9 +28,9 @@ import io.netty.buffer.ChannelBuffer;
 public class MixedFileUpload implements FileUpload {
     private FileUpload fileUpload;
 
-    private long limitSize;
+    private final long limitSize;
 
-    private long definedSize;
+    private final long definedSize;
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
@@ -58,7 +58,7 @@ public class MixedFileUpload implements FileUpload {
                         definedSize);
                 if (((MemoryFileUpload) fileUpload).getChannelBuffer() != null) {
                     diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
-                        .getChannelBuffer(), last);
+                        .getChannelBuffer(), false);
                 }
                 fileUpload = diskFileUpload;
             }
