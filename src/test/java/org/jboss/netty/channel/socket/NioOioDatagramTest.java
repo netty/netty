@@ -24,7 +24,7 @@ public class NioOioDatagramTest extends AbstractDatagramTest{
 
     @Override
     protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor, null);
+        return new NioDatagramChannelFactory(executor);
     }
 
 

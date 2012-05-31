@@ -46,7 +46,7 @@ public class QuoteOfTheMomentClient {
 
     public void run() {
         DatagramChannelFactory f =
-            new NioDatagramChannelFactory(Executors.newCachedThreadPool(), null);
+            new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
 

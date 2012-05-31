@@ -83,11 +83,13 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     private final NioDatagramChannel.ProtocolFamily family;
 
     /**
-     * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}.
+     * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}
+     * and without preferred {@link ProtocolFamily}.  Please note that the {@link ProtocolFamily}
+     * of the channel will be platform (and possibly configuration) dependent and therefore
+     * unspecified.  Use {@link #NioDatagramChannelFactory(ProtocolFamily)} if unsure.
      *
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
-    @Deprecated
     public NioDatagramChannelFactory() {
         this(Executors.newCachedThreadPool(), null);
     }
@@ -106,35 +108,44 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * {@link #NioDatagramChannelFactory(Executor, int)} with 2 * the number of
      * available processors in the machine.  The number of available processors
      * is obtained by {@link Runtime#availableProcessors()}.
+     * <p>
+     * Please note that the {@link ProtocolFamily} of the channel will be platform (and possibly
+     * configuration) dependent and therefore unspecified.
+     * Use {@link #NioDatagramChannelFactory(Executor, ProtocolFamily)} if unsure.
      *
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
      */
-    @Deprecated
     public NioDatagramChannelFactory(final Executor workerExecutor) {
         this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**
      * Creates a new instance.
+     * <p>
+     * Please note that the {@link ProtocolFamily} of the channel will be platform (and possibly
+     * configuration) dependent and therefore unspecified.
+     * Use {@link #NioDatagramChannelFactory(Executor, int, ProtocolFamily)} if unsure.
      *
      * @param workerExecutor
      *            the {@link Executor} which will execute the I/O worker threads
      * @param workerCount
      *            the maximum number of I/O worker threads
      */
-    @Deprecated
     public NioDatagramChannelFactory(final Executor workerExecutor, final int workerCount) {
         this(new NioDatagramWorkerPool(workerExecutor, workerCount, true));
     }
 
     /**
     * Creates a new instance.
+    * <p>
+    * Please note that the {@link ProtocolFamily} of the channel will be platform (and possibly
+    * configuration) dependent and therefore unspecified.
+    * Use {@link #NioDatagramChannelFactory(WorkerPool, ProtocolFamily)} if unsure.
     *
     * @param workerPool
     * the {@link WorkerPool} which will be used to obtain the {@link NioDatagramWorker} that execute the I/O worker threads
     */
-    @Deprecated
     public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
         this(workerPool, null);
     }

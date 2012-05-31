@@ -61,16 +61,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     private final NioDatagramChannelConfig config;
     private Map<InetAddress, List<MembershipKey>> memberships;
 
-    /**
-     * Use {@link #NioDatagramChannel(ChannelFactory, ChannelPipeline, ChannelSink, NioDatagramWorker, ProtocolFamily)}
-     */
-    @Deprecated
-    NioDatagramChannel(final ChannelFactory factory,
-            final ChannelPipeline pipeline, final ChannelSink sink,
-            final NioDatagramWorker worker) {
-        this(factory, pipeline, sink, worker, null);
-    }
-
     NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker, ProtocolFamily family) {
