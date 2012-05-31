@@ -20,15 +20,20 @@ import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.DetectionUtil;
 
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.nio.channels.DatagramChannel;
+import java.util.Enumeration;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
  */
 class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
+    private static final Object IP_MULTICAST_TTL;
     private static final Object IP_MULTICAST_IF;
+    private static final Object IP_MULTICAST_LOOP;
     private static final Method GET_OPTION;
     private static final Method SET_OPTION;
 
@@ -41,14 +46,28 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             // Not Java 7+
         }
 
+        Object ipMulticastTtl = null;
         Object ipMulticastIf = null;
+        Object ipMulticastLoop = null;
         Method getOption = null;
         Method setOption = null;
         if (socketOptionType != null) {
             try {
+                ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_TTL").get(null);
+            } catch (Exception e) {
+                throw new Error("cannot locate the IP_MULTICAST_TTL field", e);
+            }
+
+            try {
                 ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_IF").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_IF field", e);
+            }
+
+            try {
+                ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_LOOP").get(null);
+            } catch (Exception e) {
+                throw new Error("cannot locate the IP_MULTICAST_LOOP field", e);
             }
 
             try {
@@ -63,7 +82,9 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
                 throw new Error("cannot locate the setOption() method", e);
             }
         }
+        IP_MULTICAST_TTL = ipMulticastTtl;
         IP_MULTICAST_IF = ipMulticastIf;
+        IP_MULTICAST_LOOP = ipMulticastLoop;
         GET_OPTION = getOption;
         SET_OPTION = setOption;
     }
@@ -76,25 +97,76 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     @Override
+    public int getTimeToLive() {
+        return (Integer) getOption0(IP_MULTICAST_TTL);
+    }
+
+    @Override
+    public void setTimeToLive(int ttl) {
+        setOption0(IP_MULTICAST_TTL, ttl);
+    }
+
+    @Override
+    public InetAddress getInterface() {
+        NetworkInterface inf = getNetworkInterface();
+        if (inf == null) {
+            return null;
+        } else {
+            Enumeration<InetAddress> addresses = inf.getInetAddresses();
+            if (addresses.hasMoreElements()) {
+                return addresses.nextElement();
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public void setInterface(InetAddress interfaceAddress) {
+        try {
+            setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
+        } catch (SocketException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public NetworkInterface getNetworkInterface() {
+        return (NetworkInterface) getOption0(IP_MULTICAST_IF);
+    }
+
+    @Override
     public void setNetworkInterface(NetworkInterface networkInterface) {
+        setOption0(IP_MULTICAST_IF, networkInterface);
+    }
+
+    @Override
+    public boolean isLoopbackModeDisabled() {
+        return (Boolean) getOption0(IP_MULTICAST_LOOP);
+    }
+
+    @Override
+    public void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+        setOption0(IP_MULTICAST_LOOP, loopbackModeDisabled);
+    }
+
+    private Object getOption0(Object option) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
             try {
-                SET_OPTION.invoke(channel, IP_MULTICAST_IF, networkInterface);
+                return GET_OPTION.invoke(channel, option);
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
         }
     }
 
-    @Override
-    public NetworkInterface getNetworkInterface() {
+    private void setOption0(Object option, Object value) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
             try {
-                return (NetworkInterface) GET_OPTION.invoke(channel, IP_MULTICAST_IF);
+                SET_OPTION.invoke(channel, option, value);
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
