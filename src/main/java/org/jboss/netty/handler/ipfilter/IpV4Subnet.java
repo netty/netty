@@ -15,12 +15,13 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.StringTokenizer;
 import java.util.Vector;
+
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * This class allows to check if an IP-V4-Address is contained in a subnet.<BR>
@@ -42,10 +43,10 @@ import java.util.Vector;
  * where inetAddress is 192.168.1.0 and inetAddress2 is 192.168.1.123<BR>
  */
 public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
-    
+
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(IpV4Subnet.class);
-    
+
     private static final int SUBNET_MASK = 0x80000000;
 
     private static final int BYTE_ADDRESS_MASK = 0xFF;
@@ -141,7 +142,7 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      *
      * @return the integer representation
      */
-    private int toInt(InetAddress inetAddress1) {
+    private static int toInt(InetAddress inetAddress1) {
         byte[] address = inetAddress1.getAddress();
         int net = 0;
         for (byte addres : address) {
@@ -230,7 +231,7 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
         IpV4Subnet ipV4Subnet = (IpV4Subnet) o;
         return ipV4Subnet.subnet == subnet && ipV4Subnet.cidrMask == cidrMask;
     }
-    
+
     @Override
     public int hashCode() {
         return subnet;

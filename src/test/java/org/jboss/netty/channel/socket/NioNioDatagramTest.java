@@ -20,16 +20,16 @@ import java.util.concurrent.Executor;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 
 
-public class NioNioDatagramTest extends AbstractDatagramTest{
+public class NioNioDatagramTest extends AbstractDatagramTest {
 
     @Override
     protected DatagramChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor);
+        return new NioDatagramChannelFactory(executor, null);
     }
 
     @Override
     protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor);
+        return new NioDatagramChannelFactory(executor, null);
     }
 
 }

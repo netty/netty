@@ -93,7 +93,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * used in releaseExternalResources() to cancel the timer
      */
     private volatile Timeout timeout;
-    
+
     /**
      * Limit in B/s to apply to write
      */
@@ -347,14 +347,14 @@ public abstract class AbstractTrafficShapingHandler extends
     * @return the time that should be necessary to wait to respect limit. Can
     *         be negative time
     */
-    private long getTimeToWait(long limit, long bytes, long lastTime,
+    private static long getTimeToWait(long limit, long bytes, long lastTime,
             long curtime) {
         long interval = curtime - lastTime;
         if (interval == 0) {
             // Time is too short, so just lets continue
             return 0;
         }
-        return ((bytes * 1000 / limit - interval) / 10) * 10;
+        return (bytes * 1000 / limit - interval) / 10 * 10;
     }
 
     @Override

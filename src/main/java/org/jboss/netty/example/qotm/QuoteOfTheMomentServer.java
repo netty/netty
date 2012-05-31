@@ -16,7 +16,6 @@
 package org.jboss.netty.example.qotm;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -24,6 +23,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioDatagramChannel.ProtocolFamily;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
@@ -45,7 +45,7 @@ public class QuoteOfTheMomentServer {
 
     public void run() {
         DatagramChannelFactory f =
-            new NioDatagramChannelFactory(Executors.newCachedThreadPool());
+            new NioDatagramChannelFactory((ProtocolFamily) null);
 
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
 

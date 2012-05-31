@@ -65,12 +65,15 @@ public class IpFilterRuleTest extends TestCase {
             }
 
             public void sendDownstream(ChannelEvent e) {
+                // NOOP
             }
 
             public void sendUpstream(ChannelEvent e) {
+                // NOOP
             }
 
             public void setAttachment(Object attachment) {
+                // NOOP
             }
 
         }, new UpstreamMessageEvent(new Channel() {
@@ -176,7 +179,7 @@ public class IpFilterRuleTest extends TestCase {
             }
 
             public void setAttachment(Object attachment) {
-                
+                // NOOP
             }
 
         }, h, addr), addr);

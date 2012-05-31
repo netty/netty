@@ -46,7 +46,6 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DefaultChannelFuture;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
@@ -151,8 +150,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  * @apiviz.uses org.jboss.netty.handler.ssl.SslBufferPool
  */
 public class SslHandler extends FrameDecoder
-                        implements ChannelDownstreamHandler,
-                                   LifeCycleAwareChannelHandler {
+                        implements ChannelDownstreamHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SslHandler.class);
@@ -720,7 +718,7 @@ public class SslHandler extends FrameDecoder
                             outNetBuf.flip();
                             int remaining = outNetBuf.remaining();
                             msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(remaining);
-                            
+
                             // Transfer the bytes to the new ChannelBuffer using some safe method that will also
                             // work with "non" heap buffers
                             //
@@ -865,7 +863,7 @@ public class SslHandler extends FrameDecoder
                     outNetBuf.flip();
                     ChannelBuffer msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outNetBuf.remaining());
 
-                    
+
                     // Transfer the bytes to the new ChannelBuffer using some safe method that will also
                     // work with "non" heap buffers
                     //
@@ -1219,14 +1217,17 @@ public class SslHandler extends FrameDecoder
         }
     }
 
+    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
 
+    @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
 
+    @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
@@ -1234,6 +1235,7 @@ public class SslHandler extends FrameDecoder
     /**
      * Fail all pending writes which we were not able to flush out
      */
+    @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
 
         // there is no need for synchronization here as we do not receive downstream events anymore
@@ -1281,12 +1283,12 @@ public class SslHandler extends FrameDecoder
                     if (!future.isSuccess()) {
                         Channels.fireExceptionCaught(future.getChannel(), future.getCause());
                     } else {
-                        // Send the event upstream after the handshake was completed without an error. 
+                        // Send the event upstream after the handshake was completed without an error.
                         //
                         // See https://github.com/netty/netty/issues/358
                         ctx.sendUpstream(e);
                     }
-                    
+
                 }
             });
         } else {
