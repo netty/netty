@@ -28,7 +28,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public class MixedAttribute implements Attribute {
     private Attribute attribute;
 
-    private long limitSize;
+    private final long limitSize;
 
     public MixedAttribute(String name, long limitSize) {
         this.limitSize = limitSize;
