@@ -24,8 +24,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
+import org.jboss.netty.channel.socket.InternetProtocolFamily;
 import org.jboss.netty.channel.socket.Worker;
-import org.jboss.netty.channel.socket.nio.NioDatagramChannel.ProtocolFamily;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
 
@@ -80,13 +80,13 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
     private final NioDatagramPipelineSink sink;
     private final WorkerPool<NioDatagramWorker> workerPool;
-    private final NioDatagramChannel.ProtocolFamily family;
+    private final InternetProtocolFamily family;
 
     /**
      * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}
-     * and without preferred {@link ProtocolFamily}.  Please note that the {@link ProtocolFamily}
+     * and without preferred {@link InternetProtocolFamily}.  Please note that the {@link InternetProtocolFamily}
      * of the channel will be platform (and possibly configuration) dependent and therefore
-     * unspecified.  Use {@link #NioDatagramChannelFactory(ProtocolFamily)} if unsure.
+     * unspecified.  Use {@link #NioDatagramChannelFactory(InternetProtocolFamily)} if unsure.
      *
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
@@ -99,7 +99,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      *
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
-    public NioDatagramChannelFactory(ProtocolFamily family) {
+    public NioDatagramChannelFactory(InternetProtocolFamily family) {
         this(Executors.newCachedThreadPool(), family);
     }
 
@@ -109,9 +109,9 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * available processors in the machine.  The number of available processors
      * is obtained by {@link Runtime#availableProcessors()}.
      * <p>
-     * Please note that the {@link ProtocolFamily} of the channel will be platform (and possibly
+     * Please note that the {@link InternetProtocolFamily} of the channel will be platform (and possibly
      * configuration) dependent and therefore unspecified.
-     * Use {@link #NioDatagramChannelFactory(Executor, ProtocolFamily)} if unsure.
+     * Use {@link #NioDatagramChannelFactory(Executor, InternetProtocolFamily)} if unsure.
      *
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
@@ -123,9 +123,9 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     /**
      * Creates a new instance.
      * <p>
-     * Please note that the {@link ProtocolFamily} of the channel will be platform (and possibly
+     * Please note that the {@link InternetProtocolFamily} of the channel will be platform (and possibly
      * configuration) dependent and therefore unspecified.
-     * Use {@link #NioDatagramChannelFactory(Executor, int, ProtocolFamily)} if unsure.
+     * Use {@link #NioDatagramChannelFactory(Executor, int, InternetProtocolFamily)} if unsure.
      *
      * @param workerExecutor
      *            the {@link Executor} which will execute the I/O worker threads
@@ -139,9 +139,9 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     /**
     * Creates a new instance.
     * <p>
-    * Please note that the {@link ProtocolFamily} of the channel will be platform (and possibly
+    * Please note that the {@link InternetProtocolFamily} of the channel will be platform (and possibly
     * configuration) dependent and therefore unspecified.
-    * Use {@link #NioDatagramChannelFactory(WorkerPool, ProtocolFamily)} if unsure.
+    * Use {@link #NioDatagramChannelFactory(WorkerPool, InternetProtocolFamily)} if unsure.
     *
     * @param workerPool
     * the {@link WorkerPool} which will be used to obtain the {@link NioDatagramWorker} that execute the I/O worker threads
@@ -159,10 +159,10 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
      * @param family
-     *        the {@link ProtocolFamily} to use. This should be used for UDP multicast.
+     *        the {@link InternetProtocolFamily} to use. This should be used for UDP multicast.
      *        <strong>Be aware that this option is only considered when running on java7+</strong>
      */
-    public NioDatagramChannelFactory(final Executor workerExecutor, ProtocolFamily family) {
+    public NioDatagramChannelFactory(final Executor workerExecutor, InternetProtocolFamily family) {
         this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS, family);
     }
 
@@ -174,11 +174,11 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * @param workerCount
      *        the maximum number of I/O worker threads
      * @param family
-     *        the {@link ProtocolFamily} to use. This should be used for UDP multicast.
+     *        the {@link InternetProtocolFamily} to use. This should be used for UDP multicast.
      *        <strong>Be aware that this option is only considered when running on java7+</strong>
      */
     public NioDatagramChannelFactory(final Executor workerExecutor,
-            final int workerCount, ProtocolFamily family) {
+            final int workerCount, InternetProtocolFamily family) {
         this(new NioDatagramWorkerPool(workerExecutor, workerCount, true), family);
     }
 
@@ -188,10 +188,10 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * @param workerPool
      *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
      * @param family
-     *        the {@link ProtocolFamily} to use. This should be used for UDP multicast.
+     *        the {@link InternetProtocolFamily} to use. This should be used for UDP multicast.
      *        <strong>Be aware that this option is only considered when running on java7+</strong>
      */
-    public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool, ProtocolFamily family) {
+    public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool, InternetProtocolFamily family) {
         this.workerPool = workerPool;
         this.family = family;
         sink = new NioDatagramPipelineSink(workerPool);

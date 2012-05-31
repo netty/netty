@@ -15,12 +15,13 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import java.net.ProtocolFamily;
+import org.jboss.netty.channel.socket.InternetProtocolFamily;
+
 
 
 /**
- * Helper class which convert the {@link ProtocolFamily}. 
- * 
+ * Helper class which convert the {@link InternetProtocolFamily}.
+ *
  *
  */
 final class ProtocolFamilyConverter {
@@ -28,16 +29,16 @@ final class ProtocolFamilyConverter {
     private ProtocolFamilyConverter() {
         // Utility class
     }
-    
+
     /**
-     * Convert the {@link NioDatagramChannel.ProtocolFamily}. This MUST only be called on jdk version >= 7.
+     * Convert the {@link InternetProtocolFamily}. This MUST only be called on jdk version >= 7.
      */
-    public static ProtocolFamily convert(NioDatagramChannel.ProtocolFamily family) {
+    public static java.net.ProtocolFamily convert(InternetProtocolFamily family) {
         switch (family) {
-        case INET:
+        case IPv4:
             return java.net.StandardProtocolFamily.INET;
 
-        case INET6:
+        case IPv6:
             return java.net.StandardProtocolFamily.INET6;
         default:
             throw new IllegalArgumentException();
