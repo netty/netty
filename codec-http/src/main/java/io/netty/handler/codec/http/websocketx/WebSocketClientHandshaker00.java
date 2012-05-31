@@ -223,10 +223,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(subprotocol);
 
+        setHandshakeComplete();
+
         channel.pipeline().get(HttpResponseDecoder.class).replace(
                 "ws-decoder", new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
-
-        setHandshakeComplete();
     }
 
     private static String insertRandomCharacters(String key) {
