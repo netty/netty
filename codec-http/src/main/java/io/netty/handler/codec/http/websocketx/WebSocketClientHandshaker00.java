@@ -60,10 +60,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Sub protocol request sent to the server.
      * @param customHeaders
      *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders) {
-        super(webSocketURL, version, subprotocol, customHeaders);
+            Map<String, String> customHeaders, long maxFramePayloadLength) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
 
     }
 
@@ -219,7 +221,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String protocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(protocol);
 
-        channel.pipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket00FrameDecoder());
+        channel.pipeline().replace(
+                HttpResponseDecoder.class, "ws-decoder",
+                new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }

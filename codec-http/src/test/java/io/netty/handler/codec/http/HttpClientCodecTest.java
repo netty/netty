@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
@@ -72,7 +73,7 @@ public class HttpClientCodecTest {
         try {
             encoder.finish();
             fail();
-        } catch (CodecEmbedderException e) {
+        } catch (CodecException e) {
             assertTrue(e.getCause() instanceof PrematureChannelClosureException);
         }
 
@@ -92,7 +93,7 @@ public class HttpClientCodecTest {
             encoder.finish();
             decoder.finish();
             fail();
-        } catch (CodecEmbedderException e) {
+        } catch (CodecException e) {
             assertTrue(e.getCause() instanceof PrematureChannelClosureException);
         }
 

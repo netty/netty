@@ -54,7 +54,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     private final boolean allowExtensions;
 
     /**
-     * Constructor specifying the destination web socket location and version to initiate
+     * Creates a new instance.
      *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -67,10 +67,12 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            Allow extensions to be used in the reserved bits of the web socket frame
      * @param customHeaders
      *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders) {
-        super(webSocketURL, version, subprotocol, customHeaders);
+            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
 
@@ -196,7 +198,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         channel.pipeline().replace(HttpResponseDecoder.class, "ws-decoder",
-                new WebSocket13FrameDecoder(false, allowExtensions));
+                new WebSocket13FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }

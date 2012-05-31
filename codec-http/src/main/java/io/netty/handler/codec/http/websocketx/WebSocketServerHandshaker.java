@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpRequest;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -33,6 +33,8 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
+    private final long maxFramePayloadLength;
+
     /**
      * Constructor specifying the destination web socket location
      *
@@ -43,9 +45,12 @@ public abstract class WebSocketServerHandshaker {
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
     protected WebSocketServerHandshaker(
-            WebSocketVersion version, String webSocketUrl, String subprotocols) {
+            WebSocketVersion version, String webSocketUrl, String subprotocols,
+            long maxFramePayloadLength) {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
@@ -57,6 +62,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = new String[0];
         }
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     /**
@@ -71,7 +77,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p: this.subprotocols) {
+        for (String p: subprotocols) {
             ret.add(p);
         }
         return ret;
@@ -82,6 +88,13 @@ public abstract class WebSocketServerHandshaker {
      */
     public WebSocketVersion getVersion() {
         return version;
+    }
+
+    /**
+     * Returns the max length for any frame's payload.
+     */
+    public long getMaxFramePayloadLength() {
+        return maxFramePayloadLength;
     }
 
     /**
