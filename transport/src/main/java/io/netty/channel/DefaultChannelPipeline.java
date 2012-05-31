@@ -927,6 +927,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
             } catch (Throwable t) {
                 notifyHandlerException(t);
+            } finally {
+                ChannelBufferHolder<Object> outbound = ctx.outbound();
+                if (!outbound.isBypass() && outbound.isEmpty() && outbound.hasByteBuffer()) {
+                    outbound.byteBuffer().discardReadBytes();
+                }
             }
         } else {
             channel().unsafe().flush(future);

@@ -626,6 +626,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     cause = t;
                 } finally {
                     writeCounter += oldSize - out.size();
+                    if (out.isEmpty() && out.hasByteBuffer()) {
+                        out.byteBuffer().discardReadBytes();
+                    }
                 }
 
                 if (cause == null) {

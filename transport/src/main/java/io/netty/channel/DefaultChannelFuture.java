@@ -323,7 +323,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     private void checkDeadLock() {
-        if (channel().eventLoop().inEventLoop()) {
+        if (channel().isRegistered() && channel().eventLoop().inEventLoop()) {
             throw new BlockingOperationException();
         }
     }
