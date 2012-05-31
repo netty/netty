@@ -15,6 +15,7 @@
  */
 package io.netty.example.discard;
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
@@ -31,10 +32,10 @@ public class DiscardServerHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
             throws Exception {
         // Discard the received data silently.
-        ctx.inbound().byteBuffer().clear();
+        in.clear();
     }
 
 

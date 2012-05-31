@@ -54,9 +54,10 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
             throws Exception {
-        // Server is supposed to send nothing.  Therefore, do nothing.
+        // Server is supposed to send nothing, but if it sends something, discard it.
+        in.clear();
     }
 
 
