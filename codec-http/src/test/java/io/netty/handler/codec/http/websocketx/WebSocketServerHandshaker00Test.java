@@ -74,7 +74,7 @@ public class WebSocketServerHandshaker00Test {
         ChannelBuffer buffer = ChannelBuffers.copiedBuffer("^n:ds[4U", Charset.defaultCharset());
         req.setContent(buffer);
 
-        WebSocketServerHandshaker00 handsaker = new WebSocketServerHandshaker00("ws://example.com/chat", "chat", Long.MAX_VALUE);
+        WebSocketServerHandshaker00 handsaker = new WebSocketServerHandshaker00("ws://example.com/chat", "chat", Integer.MAX_VALUE);
         handsaker.handshake(channelMock, req);
 
         Assert.assertEquals("ws://example.com/chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_LOCATION));

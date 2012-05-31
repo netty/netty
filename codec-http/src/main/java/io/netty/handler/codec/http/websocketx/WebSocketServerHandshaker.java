@@ -33,7 +33,7 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
-    private final long maxFramePayloadLength;
+    private final int maxFramePayloadLength;
 
     /**
      * Constructor specifying the destination web socket location
@@ -50,7 +50,7 @@ public abstract class WebSocketServerHandshaker {
      */
     protected WebSocketServerHandshaker(
             WebSocketVersion version, String webSocketUrl, String subprotocols,
-            long maxFramePayloadLength) {
+            int maxFramePayloadLength) {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
@@ -93,7 +93,7 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns the max length for any frame's payload.
      */
-    public long getMaxFramePayloadLength() {
+    public int getMaxFramePayloadLength() {
         return maxFramePayloadLength;
     }
 

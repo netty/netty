@@ -61,7 +61,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Maximum allowable frame payload length. Setting this value to your application's requirement may
      *            reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, long maxFramePayloadLength) {
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, int maxFramePayloadLength) {
         super(WebSocketVersion.V00, webSocketURL, subprotocols, maxFramePayloadLength);
     }
 

@@ -39,7 +39,7 @@ public abstract class WebSocketClientHandshaker {
 
     protected final Map<String, String> customHeaders;
 
-    private final long maxFramePayloadLength;
+    private final int maxFramePayloadLength;
 
     /**
      * Base constructor
@@ -57,7 +57,7 @@ public abstract class WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders, long maxFramePayloadLength) {
+            Map<String, String> customHeaders, int maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
         expectedSubprotocol = subprotocol;
@@ -82,7 +82,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Returns the max length for any frame's payload
      */
-    public long getMaxFramePayloadLength() {
+    public int getMaxFramePayloadLength() {
         return maxFramePayloadLength;
     }
 

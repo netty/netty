@@ -64,7 +64,7 @@ public class WebSocketClientHandshakerFactory {
      */
     public WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength) {
+            boolean allowExtensions, Map<String, String> customHeaders, int maxFramePayloadLength) {
         if (version == WebSocketVersion.V13) {
             return new WebSocketClientHandshaker13(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
         }

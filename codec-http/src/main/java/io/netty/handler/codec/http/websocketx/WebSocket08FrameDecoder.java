@@ -110,7 +110,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
      *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
      *            helps check for denial of services attacks.
      */
-    public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, long maxFramePayloadLength) {
+    public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, int maxFramePayloadLength) {
         super(State.FRAME_START);
         this.maskedPayload = maskedPayload;
         this.allowExtensions = allowExtensions;

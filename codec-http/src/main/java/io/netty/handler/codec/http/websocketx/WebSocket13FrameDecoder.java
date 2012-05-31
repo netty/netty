@@ -70,7 +70,7 @@ public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
      *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
      *            helps check for denial of services attacks.
      */
-    public WebSocket13FrameDecoder(boolean maskedPayload, boolean allowExtensions, long maxFramePayloadLength) {
+    public WebSocket13FrameDecoder(boolean maskedPayload, boolean allowExtensions, int maxFramePayloadLength) {
         super(maskedPayload, allowExtensions, maxFramePayloadLength);
     }
 }

@@ -34,7 +34,7 @@ public class WebSocketServerHandshakerFactory {
 
     private final boolean allowExtensions;
 
-    private final long maxFramePayloadLength;
+    private final int maxFramePayloadLength;
 
     /**
      * Constructor specifying the destination web socket location
@@ -68,7 +68,7 @@ public class WebSocketServerHandshakerFactory {
      */
     public WebSocketServerHandshakerFactory(
             String webSocketURL, String subprotocols, boolean allowExtensions,
-            long maxFramePayloadLength) {
+            int maxFramePayloadLength) {
         this.webSocketURL = webSocketURL;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;

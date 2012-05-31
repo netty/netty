@@ -32,7 +32,7 @@ import io.netty.util.VoidEnum;
  */
 public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, VoidEnum> {
 
-    private static final int DEFAULT_MAX_FRAME_SIZE = 16384;
+    static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
     private final long maxFrameSize;
     private boolean receivedClosingHandshake;
@@ -48,7 +48,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
      * @param maxFrameSize
      *            the maximum frame size to decode
      */
-    public WebSocket00FrameDecoder(long maxFrameSize) {
+    public WebSocket00FrameDecoder(int maxFrameSize) {
         this.maxFrameSize = maxFrameSize;
     }
 
