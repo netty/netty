@@ -36,8 +36,7 @@ import org.jboss.marshalling.Unmarshaller;
 public class ContextBoundUnmarshallerProvider extends DefaultUnmarshallerProvider {
 
     private static final AttributeKey<Unmarshaller> UNMARSHALLER = new AttributeKey<Unmarshaller>(
-            ContextBoundUnmarshallerProvider.class.getName() + ".unmarshaller",
-            Unmarshaller.class);
+            ContextBoundUnmarshallerProvider.class.getName() + ".unmarshaller");
 
     public ContextBoundUnmarshallerProvider(MarshallerFactory factory, MarshallingConfiguration config) {
         super(factory, config);
