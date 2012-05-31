@@ -19,7 +19,6 @@ import static java.util.concurrent.TimeUnit.*;
 import io.netty.channel.AbstractChannel.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
 
 import java.nio.channels.Channels;
 import java.util.ArrayList;
@@ -47,33 +46,6 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     };
 
     private static final Throwable CANCELLED = new Throwable();
-
-    private static volatile boolean useDeadLockChecker = true;
-    private static boolean disabledDeadLockCheckerOnce;
-
-    /**
-     * Returns {@code true} if and only if the dead lock checker is enabled.
-     */
-    public static boolean isUseDeadLockChecker() {
-        return useDeadLockChecker;
-    }
-
-    /**
-     * Enables or disables the dead lock checker.  It is not recommended to
-     * disable the dead lock checker.  Disable it at your own risk!
-     */
-    public static void setUseDeadLockChecker(boolean useDeadLockChecker) {
-        if (!useDeadLockChecker && !disabledDeadLockCheckerOnce) {
-            disabledDeadLockCheckerOnce = true;
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "The dead lock checker in " +
-                        DefaultChannelFuture.class.getSimpleName() +
-                        " has been disabled as requested at your own risk.");
-            }
-        }
-        DefaultChannelFuture.useDeadLockChecker = useDeadLockChecker;
-    }
 
     private final Channel channel;
     private final boolean cancellable;
@@ -350,12 +322,9 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         }
     }
 
-    private static void checkDeadLock() {
-        if (isUseDeadLockChecker() && DeadLockProofWorker.PARENT.get() != null) {
-            throw new IllegalStateException(
-                    "await*() in I/O thread causes a dead lock or " +
-                    "sudden performance drop. Use addListener() instead or " +
-                    "call await*() from a different thread.");
+    private void checkDeadLock() {
+        if (channel().eventLoop().inEventLoop()) {
+            throw new BlockingOperationException();
         }
     }
 
