@@ -14,13 +14,8 @@
  * under the License.
  */
 
-package io.netty.channel;
+/**
+ * FIXME - I need documentation!
+ */
 
-
-public class ChannelInboundStreamHandlerAdapter extends ChannelInboundHandlerAdapter<Byte> {
-    @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        return ChannelBufferHolders.byteBuffer();
-    }
-}
+package io.netty.bootstrap;
