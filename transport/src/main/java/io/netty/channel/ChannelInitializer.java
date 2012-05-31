@@ -45,7 +45,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             // inserted a handler before the initializer using pipeline.addFirst().
             ctx.pipeline().fireChannelRegistered();
         } catch (Throwable t) {
-            logger.warn("Failed to initialize a channel. Closing: " + ctx.channel());
+            logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), t);
             ctx.close();
         }
     }

@@ -2,8 +2,8 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public class CombinedChannelHandler implements ChannelInboundHandler<Object>,
-                                               ChannelOutboundHandler<Object> {
+public class CombinedChannelHandler extends AbstractChannelHandler
+        implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
 
     private ChannelOutboundHandler<Object> out;
     private ChannelInboundHandler<Object> in;

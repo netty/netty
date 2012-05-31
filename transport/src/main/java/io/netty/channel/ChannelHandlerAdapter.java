@@ -2,27 +2,8 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public abstract class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, ChannelOutboundHandler<O> {
-
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
+public abstract class ChannelHandlerAdapter<I, O> extends AbstractChannelHandler
+        implements ChannelInboundHandler<I>, ChannelOutboundHandler<O> {
 
     @Override
     public void channelRegistered(ChannelInboundHandlerContext<I> ctx) throws Exception {

@@ -16,22 +16,53 @@
 package io.netty.handler.timeout;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
 
 /**
- * A {@link ChannelEvent} that is triggered when a {@link Channel} has been idle
- * for a while.
+ * A user event triggered by {@link IdleStateHandler} when a {@link Channel} is idle.
+ *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.timeout.IdleState oneway - -
  */
-public interface IdleStateEvent extends ChannelEvent {
+public class IdleStateEvent {
+
+    private final IdleState state;
+    private final int count;
+    private final long durationMillis;
+
+    public IdleStateEvent(IdleState state, int count, long durationMillis) {
+        if (state == null) {
+            throw new NullPointerException("state");
+        }
+        if (count < 0) {
+            throw new IllegalStateException(String.format("count: %d (expected: >= 0)", count));
+        }
+        if (durationMillis < 0) {
+            throw new IllegalStateException(String.format(
+                    "durationMillis: %d (expected: >= 0)", durationMillis));
+        }
+
+        this.state = state;
+        this.count = count;
+        this.durationMillis = durationMillis;
+    }
+
     /**
      * Returns the detailed idle state.
      */
-    IdleState getState();
+    public IdleState state() {
+        return state;
+    }
 
-    /**
-     * Returns the last time when I/O occurred in milliseconds.
-     */
-    long getLastActivityTimeMillis();
+    public int count() {
+        return count;
+    }
+
+    public long durationMillis() {
+        return durationMillis;
+    }
+
+    @Override
+    public String toString() {
+        return state + "(" + count + ", " + durationMillis + "ms)";
+    }
 }

@@ -46,7 +46,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
 
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
-        b.eventLoop(ctx.channel().eventLoop())
+        b.eventLoop(ctx.eventLoop())
          .channel(new NioSocketChannel())
          .remoteAddress(remoteHost, remotePort)
          .initializer(new ChannelInitializer<SocketChannel>() {

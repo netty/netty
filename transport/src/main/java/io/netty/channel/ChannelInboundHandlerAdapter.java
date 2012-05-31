@@ -4,26 +4,8 @@ import io.netty.buffer.ChannelBuffer;
 
 import java.util.Queue;
 
-public abstract class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I> {
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
+public abstract class ChannelInboundHandlerAdapter<I> extends AbstractChannelHandler
+        implements ChannelInboundHandler<I> {
 
     @Override
     public void channelRegistered(ChannelInboundHandlerContext<I> ctx) throws Exception {

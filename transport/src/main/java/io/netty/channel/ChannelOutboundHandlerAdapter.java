@@ -5,26 +5,8 @@ import io.netty.buffer.ChannelBuffer;
 import java.net.SocketAddress;
 import java.util.Queue;
 
-public abstract class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<O> {
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Do nothing by default.
-    }
+public abstract class ChannelOutboundHandlerAdapter<O> extends AbstractChannelHandler
+        implements ChannelOutboundHandler<O> {
 
     @Override
     public void bind(ChannelOutboundHandlerContext<O> ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {

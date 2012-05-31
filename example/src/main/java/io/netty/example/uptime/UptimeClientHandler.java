@@ -16,10 +16,13 @@
 package io.netty.example.uptime;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.EventLoop;
-import io.netty.handler.timeout.ReadTimeoutException;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +31,7 @@ import java.util.concurrent.TimeUnit;
  * Keep reconnecting to the server while printing out the current uptime and
  * connection attempt status.
  */
+@Sharable
 public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
 
     private final UptimeClient client;
@@ -46,6 +50,26 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+        // Discard received data
+        in.clear();
+    }
+
+    @Override
+    public void userEventTriggered(ChannelInboundHandlerContext<Byte> ctx, Object evt) throws Exception {
+        if (!(evt instanceof IdleStateEvent)) {
+            return;
+        }
+
+        IdleStateEvent e = (IdleStateEvent) evt;
+        if (e.state() == IdleState.READER_IDLE) {
+            // The connection was OK but there was no traffic for last period.
+            println("Disconnecting due to no inbound traffic");
+            ctx.close();
+        }
+    }
+
+    @Override
     public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
         println("Disconnected from: " + ctx.channel().remoteAddress());
     }
@@ -55,7 +79,7 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
             throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
 
-        final EventLoop loop = ctx.channel().eventLoop();
+        final EventLoop loop = ctx.eventLoop();
         loop.schedule(new Runnable() {
             @Override
             public void run() {
@@ -71,13 +95,8 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
             startTime = -1;
             println("Failed to connect: " + cause.getMessage());
         }
-        if (cause instanceof ReadTimeoutException) {
-            // The connection was OK but there was no traffic for last period.
-            println("Disconnecting due to no inbound traffic");
-        } else {
-            cause.printStackTrace();
-        }
-        ctx.channel().close();
+        cause.printStackTrace();
+        ctx.close();
     }
 
     void println(String msg) {

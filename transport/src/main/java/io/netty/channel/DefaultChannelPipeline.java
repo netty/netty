@@ -364,11 +364,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private static void callBeforeAdd(ChannelHandlerContext ctx) {
+        ChannelHandler handler = ctx.handler();
+        if (handler instanceof AbstractChannelHandler) {
+            AbstractChannelHandler h = (AbstractChannelHandler) handler;
+            if (!h.isSharable() && h.added) {
+                throw new ChannelHandlerLifeCycleException(
+                        "Only a @Sharable handler can be added or removed multiple times.");
+            }
+            h.added = true;
+        }
         try {
-            ctx.handler().beforeAdd(ctx);
+            handler.beforeAdd(ctx);
         } catch (Throwable t) {
             throw new ChannelHandlerLifeCycleException(
-                    ctx.handler().getClass().getName() +
+                    handler.getClass().getName() +
                     ".beforeAdd() has thrown an exception; not adding.", t);
         }
     }
@@ -1148,6 +1157,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public ChannelPipeline pipeline() {
             return DefaultChannelPipeline.this;
+        }
+
+        @Override
+        public EventLoop eventLoop() {
+            return channel().eventLoop();
         }
 
         @Override

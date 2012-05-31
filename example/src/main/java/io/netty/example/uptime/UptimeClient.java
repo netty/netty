@@ -21,7 +21,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 
 
 /**
@@ -39,6 +39,10 @@ public class UptimeClient {
 
     private final String host;
     private final int port;
+
+    // A single handler will be reused across multiple connection attempts to keep when the last
+    // successful connection attempt was.
+    private final UptimeClientHandler handler = new UptimeClientHandler(this);
 
     public UptimeClient(String host, int port) {
         this.host = host;
@@ -60,9 +64,7 @@ public class UptimeClient {
          .initializer(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(
-                        new ReadTimeoutHandler(READ_TIMEOUT),
-                        new UptimeClientHandler(UptimeClient.this));
+                ch.pipeline().addLast(new IdleStateHandler(READ_TIMEOUT, 0, 0), handler);
             }
          });
 

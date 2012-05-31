@@ -129,6 +129,7 @@ public interface ChannelHandlerContext
                  ChannelInboundInvoker, ChannelOutboundInvoker {
     Channel channel();
     ChannelPipeline pipeline();
+    EventLoop eventLoop();
 
     String name();
     ChannelHandler handler();

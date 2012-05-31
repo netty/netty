@@ -3,6 +3,7 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -136,7 +137,7 @@ public class ServerBootstrap {
     }
 
     public ChannelFuture bind(ChannelFuture future) {
-        validate();
+        validate(future);
         if (channel.isActive()) {
             future.setFailure(new IllegalStateException("channel already bound: " + channel));
             return future;
@@ -159,6 +160,13 @@ public class ServerBootstrap {
         ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
             future.setFailure(f.cause());
+            return future;
+        }
+
+        if (!channel.isOpen()) {
+            // Registration was successful but the channel was closed due to some failure in
+            // initializer.
+            future.setFailure(new ChannelException("initialization failure"));
             return future;
         }
 
@@ -194,6 +202,17 @@ public class ServerBootstrap {
             logger.warn("localAddress is not set. Using " + DEFAULT_LOCAL_ADDR + " instead.");
             localAddress = DEFAULT_LOCAL_ADDR;
         }
+    }
+
+    private void validate(ChannelFuture future) {
+        if (future == null) {
+            throw new NullPointerException("future");
+        }
+
+        if (future.channel() != channel) {
+            throw new IllegalArgumentException("future.channel() must be the same channel.");
+        }
+        validate();
     }
 
     private class Acceptor extends ChannelInboundHandlerAdapter<Channel> {

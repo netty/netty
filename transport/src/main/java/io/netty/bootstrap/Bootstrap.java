@@ -1,6 +1,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -112,7 +113,7 @@ public class Bootstrap {
     }
 
     public ChannelFuture bind(ChannelFuture future) {
-        validate();
+        validate(future);
         if (localAddress == null) {
             throw new IllegalStateException("localAddress not set");
         }
@@ -121,6 +122,10 @@ public class Bootstrap {
             init();
         } catch (Throwable t) {
             future.setFailure(t);
+            return future;
+        }
+
+        if (!ensureOpen(future)) {
             return future;
         }
 
@@ -133,7 +138,7 @@ public class Bootstrap {
     }
 
     public ChannelFuture connect(ChannelFuture future) {
-        validate();
+        validate(future);
         if (remoteAddress == null) {
             throw new IllegalStateException("remoteAddress not set");
         }
@@ -142,6 +147,10 @@ public class Bootstrap {
             init();
         } catch (Throwable t) {
             future.setFailure(t);
+            return future;
+        }
+
+        if (!ensureOpen(future)) {
             return future;
         }
 
@@ -180,6 +189,16 @@ public class Bootstrap {
         eventLoop.register(channel).syncUninterruptibly();
     }
 
+    private static boolean ensureOpen(ChannelFuture future) {
+        if (!future.channel().isOpen()) {
+            // Registration was successful but the channel was closed due to some failure in
+            // initializer.
+            future.setFailure(new ChannelException("initialization failure"));
+            return false;
+        }
+        return true;
+    }
+
     public void shutdown() {
         if (eventLoop != null) {
             eventLoop.shutdown();
@@ -196,5 +215,16 @@ public class Bootstrap {
         if (initializer == null) {
             throw new IllegalStateException("initializer not set");
         }
+    }
+
+    private void validate(ChannelFuture future) {
+        if (future == null) {
+            throw new NullPointerException("future");
+        }
+
+        if (future.channel() != channel) {
+            throw new IllegalArgumentException("future.channel() must be the same channel.");
+        }
+        validate();
     }
 }

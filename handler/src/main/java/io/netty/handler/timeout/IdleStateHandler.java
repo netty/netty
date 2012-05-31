@@ -15,28 +15,25 @@
  */
 package io.netty.handler.timeout;
 
-import static io.netty.channel.Channels.*;
-
-import java.util.concurrent.TimeUnit;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.Channels;
-import io.netty.channel.LifeCycleAwareChannelHandler;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.channel.WriteCompletionEvent;
-import io.netty.util.ExternalResourceReleasable;
+import io.netty.channel.EventLoop;
 import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
 import io.netty.util.Timer;
-import io.netty.util.TimerTask;
+
+import java.nio.channels.Channels;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Triggers an {@link IdleStateEvent} when a {@link Channel} has not performed
@@ -119,23 +116,28 @@ import io.netty.util.TimerTask;
  * @apiviz.uses io.netty.util.HashedWheelTimer
  * @apiviz.has io.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
-@Sharable
-public class IdleStateHandler extends SimpleChannelUpstreamHandler
-                             implements LifeCycleAwareChannelHandler,
-                                        ExternalResourceReleasable {
+public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
 
-    final Timer timer;
+    private final long readerIdleTimeMillis;
+    private final long writerIdleTimeMillis;
+    private final long allIdleTimeMillis;
 
-    final long readerIdleTimeMillis;
-    final long writerIdleTimeMillis;
-    final long allIdleTimeMillis;
+    volatile ScheduledFuture<?> readerIdleTimeout;
+    volatile long lastReadTime;
+    int readerIdleCount;
+
+    volatile ScheduledFuture<?> writerIdleTimeout;
+    volatile long lastWriteTime;
+    int writerIdleCount;
+
+    volatile ScheduledFuture<?> allIdleTimeout;
+    int allIdleCount;
+
+    volatile boolean destroyed;
 
     /**
      * Creates a new instance.
      *
-     * @param timer
-     *        the {@link Timer} that is used to trigger the scheduled event.
-     *        The recommended {@link Timer} implementation is {@link HashedWheelTimer}.
      * @param readerIdleTimeSeconds
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
      *        will be triggered when no read was performed for the specified
@@ -150,22 +152,17 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
      *        the specified period of time.  Specify {@code 0} to disable.
      */
     public IdleStateHandler(
-            Timer timer,
             int readerIdleTimeSeconds,
             int writerIdleTimeSeconds,
             int allIdleTimeSeconds) {
 
-        this(timer,
-             readerIdleTimeSeconds, writerIdleTimeSeconds, allIdleTimeSeconds,
+        this(readerIdleTimeSeconds, writerIdleTimeSeconds, allIdleTimeSeconds,
              TimeUnit.SECONDS);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param timer
-     *        the {@link Timer} that is used to trigger the scheduled event.
-     *        The recommended {@link Timer} implementation is {@link HashedWheelTimer}.
      * @param readerIdleTime
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
      *        will be triggered when no read was performed for the specified
@@ -183,18 +180,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
      *        {@code writeIdleTime}, and {@code allIdleTime}
      */
     public IdleStateHandler(
-            Timer timer,
             long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
 
-        if (timer == null) {
-            throw new NullPointerException("timer");
-        }
         if (unit == null) {
             throw new NullPointerException("unit");
         }
 
-        this.timer = timer;
         if (readerIdleTime <= 0) {
             readerIdleTimeMillis = 0;
         } else {
@@ -212,148 +204,118 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    /**
-     * Stops the {@link Timer} which was specified in the constructor of this
-     * handler.  You should not call this method if the {@link Timer} is in use
-     * by other objects.
-     */
     @Override
-    public void releaseExternalResources() {
-        timer.stop();
+    public ChannelBufferHolder<Object> newInboundBuffer(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        return ChannelBufferHolders.inboundBypassBuffer(ctx);
+    }
+
+    @Override
+    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+        return ChannelBufferHolders.outboundBypassBuffer(ctx);
     }
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.pipeline().isAttached()) {
-            // channelOpen event has been fired already, which means
-            // this.channelOpen() will not be invoked.
-            // We have to initialize here instead.
+        if (ctx.channel().isActive()) {
+            // channelActvie() event has been fired already, which means this.channelActive() will
+            // not be invoked. We have to initialize here instead.
             initialize(ctx);
         } else {
-            // channelOpen event has not been fired yet.
-            // this.channelOpen() will be invoked and initialization will occur there.
+            // channelActive() event has not been fired yet.  this.channelOpen() will be invoked
+            // and initialization will occur there.
         }
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
     }
 
     @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        destroy(ctx);
+        destroy();
     }
 
     @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
+    public void channelActive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
         // This method will be invoked only if this handler was added
-        // before channelOpen event is fired.  If a user adds this handler
-        // after the channelOpen event, initialize() will be called by beforeAdd().
+        // before channelActive() event is fired.  If a user adds this handler
+        // after the channelActive() event, initialize() will be called by beforeAdd().
         initialize(ctx);
-        ctx.sendUpstream(e);
+        super.channelActive(ctx);
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        destroy(ctx);
-        ctx.sendUpstream(e);
+    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        destroy();
+        super.channelInactive(ctx);
+    }
+
+
+    @Override
+    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        lastReadTime = System.currentTimeMillis();
+        readerIdleCount = allIdleCount = 0;
+        ctx.fireInboundBufferUpdated();
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
-        State state = (State) ctx.getAttachment();
-        state.lastReadTime = System.currentTimeMillis();
-        ctx.sendUpstream(e);
-    }
+    public void flush(final ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                lastWriteTime = System.currentTimeMillis();
+                writerIdleCount = allIdleCount = 0;
+            }
+        });
 
-    @Override
-    public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e)
-            throws Exception {
-        if (e.getWrittenAmount() > 0) {
-            State state = (State) ctx.getAttachment();
-            state.lastWriteTime = System.currentTimeMillis();
-        }
-        ctx.sendUpstream(e);
+        super.flush(ctx, future);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        State state = state(ctx);
-
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        if (state.destroyed) {
+        if (destroyed) {
             return;
         }
 
-        state.lastReadTime = state.lastWriteTime = System.currentTimeMillis();
+        EventLoop loop = ctx.eventLoop();
+
+        lastReadTime = lastWriteTime = System.currentTimeMillis();
         if (readerIdleTimeMillis > 0) {
-            state.readerIdleTimeout = timer.newTimeout(
+            readerIdleTimeout = loop.schedule(
                     new ReaderIdleTimeoutTask(ctx),
                     readerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
         if (writerIdleTimeMillis > 0) {
-            state.writerIdleTimeout = timer.newTimeout(
+            writerIdleTimeout = loop.schedule(
                     new WriterIdleTimeoutTask(ctx),
                     writerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
         if (allIdleTimeMillis > 0) {
-            state.allIdleTimeout = timer.newTimeout(
+            allIdleTimeout = loop.schedule(
                     new AllIdleTimeoutTask(ctx),
                     allIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
     }
 
-    private void destroy(ChannelHandlerContext ctx) {
-        State state;
+    private void destroy() {
+        destroyed = true;
 
-        synchronized (ctx) {
-            state = state(ctx);
-            state.destroyed = true;
+        if (readerIdleTimeout != null) {
+            readerIdleTimeout.cancel(false);
+            readerIdleTimeout = null;
         }
-
-        if (state.readerIdleTimeout != null) {
-            state.readerIdleTimeout.cancel();
-            state.readerIdleTimeout = null;
+        if (writerIdleTimeout != null) {
+            writerIdleTimeout.cancel(false);
+            writerIdleTimeout = null;
         }
-        if (state.writerIdleTimeout != null) {
-            state.writerIdleTimeout.cancel();
-            state.writerIdleTimeout = null;
-        }
-        if (state.allIdleTimeout != null) {
-            state.allIdleTimeout.cancel();
-            state.allIdleTimeout = null;
+        if (allIdleTimeout != null) {
+            allIdleTimeout.cancel(false);
+            allIdleTimeout = null;
         }
     }
-    
-    private State state(ChannelHandlerContext ctx) {
-        State state;
-        synchronized (ctx) {
-            // FIXME: It could have been better if there is setAttachmentIfAbsent().
-            state = (State) ctx.getAttachment();
-            if (state != null) {
-                return state;
-            }
-            state = new State();
-            ctx.setAttachment(state);
-        }
-        return state;
+
+    protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
+        ctx.fireUserEventTriggered(evt);
     }
 
-    protected void channelIdle(
-            ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
-        ctx.sendUpstream(new DefaultIdleStateEvent(ctx.channel(), state, lastActivityTimeMillis));
-    }
-
-    private final class ReaderIdleTimeoutTask implements TimerTask {
+    private final class ReaderIdleTimeoutTask implements Runnable {
 
         private final ChannelHandlerContext ctx;
 
@@ -362,34 +324,33 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         }
 
         @Override
-        public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled() || !ctx.channel().isOpen()) {
+        public void run() {
+            if (!ctx.channel().isOpen()) {
                 return;
             }
 
-            State state = (State) ctx.getAttachment();
             long currentTime = System.currentTimeMillis();
-            long lastReadTime = state.lastReadTime;
+            long lastReadTime = IdleStateHandler.this.lastReadTime;
             long nextDelay = readerIdleTimeMillis - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
-                state.readerIdleTimeout =
-                    timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
+                readerIdleTimeout =
+                    ctx.eventLoop().schedule(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, IdleState.READER_IDLE, lastReadTime);
+                    channelIdle(ctx, new IdleStateEvent(
+                            IdleState.READER_IDLE, readerIdleCount ++, currentTime - lastReadTime));
                 } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
+                    ctx.fireExceptionCaught(t);
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                state.readerIdleTimeout =
-                    timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
+                readerIdleTimeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
 
     }
 
-    private final class WriterIdleTimeoutTask implements TimerTask {
+    private final class WriterIdleTimeoutTask implements Runnable {
 
         private final ChannelHandlerContext ctx;
 
@@ -398,33 +359,32 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         }
 
         @Override
-        public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled() || !ctx.channel().isOpen()) {
+        public void run() {
+            if (!ctx.channel().isOpen()) {
                 return;
             }
 
-            State state = (State) ctx.getAttachment();
             long currentTime = System.currentTimeMillis();
-            long lastWriteTime = state.lastWriteTime;
+            long lastWriteTime = IdleStateHandler.this.lastWriteTime;
             long nextDelay = writerIdleTimeMillis - (currentTime - lastWriteTime);
             if (nextDelay <= 0) {
                 // Writer is idle - set a new timeout and notify the callback.
-                state.writerIdleTimeout =
-                    timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
+                writerIdleTimeout = ctx.eventLoop().schedule(
+                        this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, IdleState.WRITER_IDLE, lastWriteTime);
+                    channelIdle(ctx, new IdleStateEvent(
+                            IdleState.WRITER_IDLE, writerIdleCount ++, currentTime - lastWriteTime));
                 } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
+                    ctx.fireExceptionCaught(t);
                 }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                state.writerIdleTimeout =
-                    timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
+                writerIdleTimeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
     }
 
-    private final class AllIdleTimeoutTask implements TimerTask {
+    private final class AllIdleTimeoutTask implements Runnable {
 
         private final ChannelHandlerContext ctx;
 
@@ -433,46 +393,30 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         }
 
         @Override
-        public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled() || !ctx.channel().isOpen()) {
+        public void run() {
+            if (!ctx.channel().isOpen()) {
                 return;
             }
 
-            State state = (State) ctx.getAttachment();
             long currentTime = System.currentTimeMillis();
-            long lastIoTime = Math.max(state.lastReadTime, state.lastWriteTime);
+            long lastIoTime = Math.max(lastReadTime, lastWriteTime);
             long nextDelay = allIdleTimeMillis - (currentTime - lastIoTime);
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
-                state.allIdleTimeout =
-                    timer.newTimeout(this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
+                allIdleTimeout = ctx.eventLoop().schedule(
+                        this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, IdleState.ALL_IDLE, lastIoTime);
+                    channelIdle(ctx, new IdleStateEvent(
+                            IdleState.ALL_IDLE, allIdleCount ++, currentTime - lastIoTime));
                 } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
+                    ctx.fireExceptionCaught(t);
                 }
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.
-                state.allIdleTimeout =
-                    timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
+                allIdleTimeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
-    }
-
-    private static final class State {
-        State() {
-        }
-
-        volatile Timeout readerIdleTimeout;
-        volatile long lastReadTime;
-
-        volatile Timeout writerIdleTimeout;
-        volatile long lastWriteTime;
-
-        volatile Timeout allIdleTimeout;
-
-        volatile boolean destroyed;
     }
 }
