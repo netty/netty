@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.CharsetUtil;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
@@ -25,8 +27,6 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
-
-import io.netty.util.CharsetUtil;
 
 
 /**
@@ -822,8 +822,16 @@ public final class ChannelBuffers {
     }
 
     /**
+     * Creates a new 4-byte buffer that holds the specified 32-bit integer.
+     */
+    public static ChannelBuffer wrapInt(int value) {
+        ChannelBuffer buf = buffer(4);
+        buf.writeInt(value);
+        return buf;
+    }
+
+    /**
      * Create a {@link ChannelBuffer} that holds all the given values as int's
-     * 
      */
     public static ChannelBuffer wrapInt(int... values) {
         if (values == null || values.length == 0) {
@@ -835,10 +843,18 @@ public final class ChannelBuffers {
         }
         return buffer;
     }
-    
+
     /**
-     * Create a {@link ChannelBuffer} that holds all the given values as short's
-     * 
+     * Creates a new 2-byte buffer that holds the specified 16-bit integer.
+     */
+    public static ChannelBuffer wrapShort(int value) {
+        ChannelBuffer buf = buffer(2);
+        buf.writeShort(value);
+        return buf;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified 16-bit integers.
      */
     public static ChannelBuffer wrapShort(int... values) {
         if (values == null || values.length == 0) {
@@ -850,10 +866,18 @@ public final class ChannelBuffers {
         }
         return buffer;
     }
-    
+
     /**
-     * Create a {@link ChannelBuffer} that holds all the given values as medium's
-     * 
+     * Creates a new 3-byte buffer that holds the specified 24-bit integer.
+     */
+    public static ChannelBuffer wrapMedium(int value) {
+        ChannelBuffer buf = buffer(3);
+        buf.writeMedium(value);
+        return buf;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified 24-bit integers.
      */
     public static ChannelBuffer wrapMedium(int... values) {
         if (values == null || values.length == 0) {
@@ -865,10 +889,18 @@ public final class ChannelBuffers {
         }
         return buffer;
     }
-    
+
     /**
-     * Create a {@link ChannelBuffer} that holds all the given values as long's
-     * 
+     * Creates a new 8-byte buffer that holds the specified 64-bit integer.
+     */
+    public static ChannelBuffer wrapLong(long value) {
+        ChannelBuffer buf = buffer(8);
+        buf.writeLong(value);
+        return buf;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified 64-bit integers.
      */
     public static ChannelBuffer wrapLong(long... values) {
         if (values == null || values.length == 0) {
@@ -880,10 +912,18 @@ public final class ChannelBuffers {
         }
         return buffer;
     }
-    
+
     /**
-     * Create a {@link ChannelBuffer} that holds all the given values as boolean's
-     * 
+     * Creates a new single-byte buffer that holds the specified boolean value.
+     */
+    public static ChannelBuffer wrapBoolean(boolean value) {
+        ChannelBuffer buf = buffer(1);
+        buf.writeBoolean(value);
+        return buf;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified boolean values.
      */
     public static ChannelBuffer wrapBoolean(boolean... values) {
         if (values == null || values.length == 0) {
@@ -894,8 +934,54 @@ public final class ChannelBuffers {
             buffer.writeBoolean(v);
         }
         return buffer;
-    }    
-    
+    }
+
+    /**
+     * Creates a new 4-byte buffer that holds the specified 32-bit floating point number.
+     */
+    public static ChannelBuffer wrapFloat(float value) {
+        ChannelBuffer buf = buffer(4);
+        buf.writeFloat(value);
+        return buf;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified 32-bit floating point numbers.
+     */
+    public static ChannelBuffer wrapFloat(float... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 4);
+        for (float v: values) {
+            buffer.writeFloat(v);
+        }
+        return buffer;
+    }
+
+    /**
+     * Creates a new 8-byte buffer that holds the specified 64-bit floating point number.
+     */
+    public static ChannelBuffer wrapDouble(double value) {
+        ChannelBuffer buf = buffer(8);
+        buf.writeDouble(value);
+        return buf;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified 64-bit floating point numbers.
+     */
+    public static ChannelBuffer wrapDouble(double... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 8);
+        for (double v: values) {
+            buffer.writeDouble(v);
+        }
+        return buffer;
+    }
+
     /**
      * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
