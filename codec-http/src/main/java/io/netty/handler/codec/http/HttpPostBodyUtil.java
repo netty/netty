@@ -119,7 +119,7 @@ final class HttpPostBodyUtil {
     /**
      * Exception when NO Backend Array is found
      */
-    static class SeekAheadNoBackArrayException extends Exception {
+    static final class SeekAheadNoBackArrayException extends Exception {
 
         static final SeekAheadNoBackArrayException INSTANCE = new SeekAheadNoBackArrayException();
 

@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.channel;
 
 import io.netty.logging.InternalLogger;
@@ -736,7 +737,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    static abstract class FlushCheckpoint {
+    abstract static class FlushCheckpoint {
         abstract long flushCheckpoint();
         abstract void flushCheckpoint(long checkpoint);
         abstract ChannelFuture future();

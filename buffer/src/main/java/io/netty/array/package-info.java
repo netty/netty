@@ -14,8 +14,8 @@
  * under the License.
  */
 
-package io.netty.util;
+/**
+ * FIXME I need documentation!
+ */
 
-public interface AttributeMap {
-    <T> Attribute<T> attr(AttributeKey<T> key);
-}
+package io.netty.array;
