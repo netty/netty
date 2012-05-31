@@ -21,6 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
@@ -57,8 +58,28 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
         }
     }
 
+    private static DatagramChannel newSocket(InternetProtocolFamily ipFamily) {
+        if (ipFamily == null) {
+            return newSocket();
+        }
+
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        }
+
+        try {
+            return DatagramChannel.open(ProtocolFamilyConverter.convert(ipFamily));
+        } catch (IOException e) {
+            throw new ChannelException("Failed to open a socket.", e);
+        }
+    }
+
     public NioDatagramChannel() {
         this(newSocket());
+    }
+
+    public NioDatagramChannel(InternetProtocolFamily ipFamily) {
+        this(newSocket(ipFamily));
     }
 
     public NioDatagramChannel(DatagramChannel socket) {
