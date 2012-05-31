@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
@@ -93,10 +94,10 @@ public class SpdySessionHandlerTest {
         assertHeaderBlock(spdyHeadersFrame, headers);
     }
 
-    private void testSpdySessionHandler(boolean server) {
+    private void testSpdySessionHandler(int version, boolean server) {
         DecoderEmbedder<Object> sessionHandler =
             new DecoderEmbedder<Object>(
-                    new SpdySessionHandler(3, server), new EchoHandler(closeSignal, server));
+                    new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
         sessionHandler.pollAll();
 
         int localStreamID = server ? 1 : 2;
@@ -250,12 +251,16 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        testSpdySessionHandler(false);
+        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+            testSpdySessionHandler(version, false);
+        }
     }
 
     @Test
     public void testSpdyServerSessionHandler() {
-        testSpdySessionHandler(true);
+        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+            testSpdySessionHandler(version, true);
+        }
     }
 
     // Echo Handler opens 4 half-closed streams on session connection
