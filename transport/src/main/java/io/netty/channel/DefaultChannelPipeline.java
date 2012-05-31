@@ -742,7 +742,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             notifyHandlerException(t);
         } finally {
             ChannelBufferHolder<Object> inbound = ctx.inbound();
-            if (inbound.isEmpty() && inbound.hasByteBuffer()) {
+            if (!inbound.isBypass() && inbound.isEmpty() && inbound.hasByteBuffer()) {
                 inbound.byteBuffer().discardReadBytes();
             }
         }
