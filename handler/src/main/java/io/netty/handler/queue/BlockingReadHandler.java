@@ -15,21 +15,20 @@
  */
 package io.netty.handler.queue;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.BlockingOperationException;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.internal.QueueFactory;
+
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.util.internal.DeadLockProofWorker;
-import io.netty.util.internal.QueueFactory;
 
 /**
  * Emulates blocking read operation.  This handler stores all received messages
@@ -71,9 +70,12 @@ import io.netty.util.internal.QueueFactory;
  *
  * @param <E> the type of the received messages
  */
-public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
+public class BlockingReadHandler<E> extends ChannelInboundHandlerAdapter<Object> {
 
-    private final BlockingQueue<ChannelEvent> queue;
+    private static final Object INACTIVE = new Object();
+
+    private volatile ChannelHandlerContext ctx;
+    private final BlockingQueue<Object> queue;
     private volatile boolean closed;
 
     /**
@@ -81,33 +83,29 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
      * implementation.
      */
     public BlockingReadHandler() {
-        this(QueueFactory.createQueue(ChannelEvent.class));
+        this(QueueFactory.createQueue());
     }
 
     /**
      * Creates a new instance with the specified {@link BlockingQueue}.
      */
-    public BlockingReadHandler(BlockingQueue<ChannelEvent> queue) {
+    public BlockingReadHandler(BlockingQueue<Object> queue) {
         if (queue == null) {
             throw new NullPointerException("queue");
         }
         this.queue = queue;
     }
 
-    /**
-     * Returns the queue which stores the received messages.  The default
-     * implementation returns the queue which was specified in the constructor.
-     */
-    protected BlockingQueue<ChannelEvent> getQueue() {
-        return queue;
+    @Override
+    public ChannelBufferHolder<Object> newInboundBuffer(
+            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        this.ctx = ctx;
+        return ChannelBufferHolders.catchAllBuffer();
     }
 
     /**
      * Returns {@code true} if and only if the {@link Channel} associated with
      * this handler has been closed.
-     *
-     * @throws IllegalStateException
-     *         if this handler was not added to a {@link ChannelPipeline} yet
      */
     public boolean isClosed() {
         return closed;
@@ -125,18 +123,7 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
      *         if the operation has been interrupted
      */
     public E read() throws IOException, InterruptedException {
-        ChannelEvent e = readEvent();
-        if (e == null) {
-            return null;
-        }
-
-        if (e instanceof MessageEvent) {
-            return getMessage((MessageEvent) e);
-        } else if (e instanceof ExceptionEvent) {
-            throw (IOException) new IOException().initCause(((ExceptionEvent) e).cause());
-        } else {
-            throw new IllegalStateException();
-        }
+        return filter(readEvent());
     }
 
     /**
@@ -160,115 +147,73 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
      *         if the operation has been interrupted
      */
     public E read(long timeout, TimeUnit unit) throws IOException, InterruptedException {
-        ChannelEvent e = readEvent(timeout, unit);
-        if (e == null) {
+        return filter(readEvent(timeout, unit));
+    }
+
+    @SuppressWarnings("unchecked")
+    private E filter(Object e) throws IOException {
+        if (e == null || e == INACTIVE) {
             return null;
         }
 
-        if (e instanceof MessageEvent) {
-            return getMessage((MessageEvent) e);
-        } else if (e instanceof ExceptionEvent) {
-            throw (IOException) new IOException().initCause(((ExceptionEvent) e).cause());
-        } else {
-            throw new IllegalStateException();
+        if (e instanceof Throwable) {
+            throw (IOException) new IOException().initCause((Throwable) e);
         }
+
+        return (E) e;
     }
 
-    /**
-     * Waits until a new {@link ChannelEvent} is received or the associated
-     * {@link Channel} is closed.
-     *
-     * @return a {@link MessageEvent} or an {@link ExceptionEvent}.
-     *         {@code null} if the associated {@link Channel} has been closed
-     * @throws InterruptedException
-     *         if the operation has been interrupted
-     */
-    public ChannelEvent readEvent() throws InterruptedException {
+    private Object readEvent() throws InterruptedException {
         detectDeadLock();
         if (isClosed()) {
-            if (getQueue().isEmpty()) {
-                return null;
-            }
-        }
-
-        ChannelEvent e = getQueue().take();
-        if (e instanceof ChannelStateEvent) {
-            // channelClosed has been triggered.
-            assert closed;
             return null;
-        } else {
-            return e;
         }
+
+        return queue.take();
     }
 
-    /**
-     * Waits until a new {@link ChannelEvent} is received or the associated
-     * {@link Channel} is closed.
-     *
-     * @param timeout
-     *        the amount time to wait until a new {@link ChannelEvent} is
-     *        received.  If no message is received within the timeout,
-     *        {@link BlockingReadTimeoutException} is thrown.
-     * @param unit
-     *        the unit of {@code timeout}
-     *
-     * @return a {@link MessageEvent} or an {@link ExceptionEvent}.
-     *         {@code null} if the associated {@link Channel} has been closed
-     * @throws BlockingReadTimeoutException
-     *         if no event was received within the specified timeout
-     * @throws InterruptedException
-     *         if the operation has been interrupted
-     */
-    public ChannelEvent readEvent(long timeout, TimeUnit unit) throws InterruptedException, BlockingReadTimeoutException {
+    private Object readEvent(long timeout, TimeUnit unit) throws InterruptedException, BlockingReadTimeoutException {
         detectDeadLock();
         if (isClosed()) {
-            if (getQueue().isEmpty()) {
-                return null;
-            }
+            return null;
         }
 
-        ChannelEvent e = getQueue().poll(timeout, unit);
-        if (e == null) {
+        Object o = queue.poll(timeout, unit);
+        if (o == null) {
             throw new BlockingReadTimeoutException();
-        } else if (e instanceof ChannelStateEvent) {
-            // channelClosed has been triggered.
-            assert closed;
-            return null;
         } else {
-            return e;
+            return o;
         }
     }
 
     private void detectDeadLock() {
-        if (DeadLockProofWorker.PARENT.get() != null) {
-            throw new IllegalStateException(
-                    "read*(...) in I/O thread causes a dead lock or " +
-                    "sudden performance drop. Implement a state machine or " +
-                    "call read*() from a different thread.");
+        if (ctx.eventLoop().inEventLoop()) {
+            throw new BlockingOperationException();
         }
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
-        getQueue().put(e);
+    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        addEvent(INACTIVE);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-        getQueue().put(e);
+    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
+            Throwable cause) throws Exception {
+        addEvent(cause);
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        closed = true;
-        getQueue().put(e);
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        addEvent(INACTIVE);
     }
 
-    @SuppressWarnings("unchecked")
-    private E getMessage(MessageEvent e) {
-        return (E) e.getMessage();
+    private void addEvent(Object e) {
+        if (!closed) {
+            if (e == INACTIVE) {
+                closed = true;
+            }
+            queue.add(e);
+        }
     }
 }
