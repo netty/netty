@@ -17,6 +17,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.SocketAddresses;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -120,6 +121,11 @@ public class ServerBootstrap {
     }
 
     public ServerBootstrap localAddress(String host, int port) {
+        localAddress = new InetSocketAddress(host, port);
+        return this;
+    }
+
+    public ServerBootstrap localAddress(InetAddress host, int port) {
         localAddress = new InetSocketAddress(host, port);
         return this;
     }

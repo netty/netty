@@ -10,6 +10,7 @@ import io.netty.channel.EventLoop;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -85,12 +86,22 @@ public class Bootstrap {
         return this;
     }
 
+    public Bootstrap localAddress(InetAddress host, int port) {
+        localAddress = new InetSocketAddress(host, port);
+        return this;
+    }
+
     public Bootstrap remoteAddress(SocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
         return this;
     }
 
     public Bootstrap remoteAddress(String host, int port) {
+        remoteAddress = new InetSocketAddress(host, port);
+        return this;
+    }
+
+    public Bootstrap remoteAddress(InetAddress host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
         return this;
     }
