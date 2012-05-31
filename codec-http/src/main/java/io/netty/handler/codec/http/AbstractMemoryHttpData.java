@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -23,9 +26,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 
 /**
  * Abstract Memory HttpData implementation
@@ -212,8 +212,8 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int written = 0;
         while (written < length) {
             written += fileChannel.write(byteBuffer);
-            fileChannel.force(false);
         }
+        fileChannel.force(false);
         fileChannel.close();
         isRenamed = true;
         return written == length;
