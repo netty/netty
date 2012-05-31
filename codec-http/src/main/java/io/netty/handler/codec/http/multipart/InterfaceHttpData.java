@@ -13,26 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
 
-import java.io.Serializable;
-import java.util.Comparator;
-
-final class CaseIgnoringComparator implements Comparator<String>, Serializable {
-
-    private static final long serialVersionUID = 4582133183775373862L;
-
-    static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
-
-    private CaseIgnoringComparator() {
+/**
+ * Interface for all Objects that could be encoded/decoded using HttpPostRequestEncoder/Decoder
+ */
+public interface InterfaceHttpData extends Comparable<InterfaceHttpData> {
+    enum HttpDataType {
+        Attribute, FileUpload, InternalAttribute
     }
 
-    @Override
-    public int compare(String o1, String o2) {
-        return o1.compareToIgnoreCase(o2);
-    }
+    /**
+     * Returns the name of this InterfaceHttpData.
+     */
+    String getName();
 
-    private Object readResolve() {
-        return INSTANCE;
-    }
+    /**
+     *
+     * @return The HttpDataType
+     */
+    HttpDataType getHttpDataType();
 }

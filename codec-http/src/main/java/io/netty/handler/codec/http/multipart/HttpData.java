@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
 
 import java.io.File;
 import java.io.IOException;

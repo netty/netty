@@ -13,7 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
+
+import io.netty.handler.codec.http.HttpConstants;
 
 import java.nio.charset.Charset;
 
@@ -25,7 +27,7 @@ public abstract class AbstractHttpData implements HttpData {
     protected final String name;
     protected long definedSize;
     protected long size;
-    protected Charset charset = HttpCodecUtil.DEFAULT_CHARSET;
+    protected Charset charset = HttpConstants.DEFAULT_CHARSET;
     protected boolean completed;
 
     public AbstractHttpData(String name, Charset charset, long size) {

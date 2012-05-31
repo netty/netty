@@ -28,18 +28,18 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.handler.codec.http.CookieEncoder;
-import io.netty.handler.codec.http.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DiskAttribute;
-import io.netty.handler.codec.http.DiskFileUpload;
-import io.netty.handler.codec.http.HttpDataFactory;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpPostRequestEncoder;
-import io.netty.handler.codec.http.HttpPostRequestEncoder.ErrorDataEncoderException;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.DiskAttribute;
+import io.netty.handler.codec.http.multipart.DiskFileUpload;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.multipart.InterfaceHttpData;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.InterfaceHttpData;
 import io.netty.handler.codec.http.QueryStringEncoder;
 
 /**

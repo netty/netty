@@ -13,12 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
-
-import java.io.IOException;
+package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.http.HttpConstants;
+
+import java.io.IOException;
 
 /**
  * Memory implementation of Attributes
@@ -26,7 +27,7 @@ import io.netty.buffer.ChannelBuffers;
 public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute {
 
     public MemoryAttribute(String name) {
-        super(name, HttpCodecUtil.DEFAULT_CHARSET, 0);
+        super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
     /**
      *
@@ -37,7 +38,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
      * @throws IOException
      */
     public MemoryAttribute(String name, String value) throws IOException {
-        super(name, HttpCodecUtil.DEFAULT_CHARSET, 0); // Attribute have no default size
+        super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
     }
 

@@ -194,7 +194,7 @@ public class CookieDecoder {
         return cookies;
     }
 
-    private void extractKeyValuePairs(
+    private static void extractKeyValuePairs(
             String header, List<String> names, List<String> values) {
         Matcher m = PATTERN.matcher(header);
         int pos = 0;
@@ -243,7 +243,7 @@ public class CookieDecoder {
         }
     }
 
-    private String decodeValue(String value) {
+    private static String decodeValue(String value) {
         if (value == null) {
             return value;
         }

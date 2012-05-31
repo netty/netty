@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.internal.CaseIgnoringComparator;
+
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;

@@ -334,12 +334,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         case READ_CHUNK_DELIMITER: {
             for (;;) {
                 byte next = buffer.readByte();
-                if (next == HttpCodecUtil.CR) {
-                    if (buffer.readByte() == HttpCodecUtil.LF) {
+                if (next == HttpConstants.CR) {
+                    if (buffer.readByte() == HttpConstants.LF) {
                         checkpoint(State.READ_CHUNK_SIZE);
                         return null;
                     }
-                } else if (next == HttpCodecUtil.LF) {
+                } else if (next == HttpConstants.LF) {
                     checkpoint(State.READ_CHUNK_SIZE);
                     return null;
                 }
@@ -522,14 +522,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             headerSize ++;
 
             switch (nextByte) {
-            case HttpCodecUtil.CR:
+            case HttpConstants.CR:
                 nextByte = (char) buffer.readByte();
                 headerSize ++;
-                if (nextByte == HttpCodecUtil.LF) {
+                if (nextByte == HttpConstants.LF) {
                     break loop;
                 }
                 break;
-            case HttpCodecUtil.LF:
+            case HttpConstants.LF:
                 break loop;
             }
 
@@ -573,12 +573,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
-            if (nextByte == HttpCodecUtil.CR) {
+            if (nextByte == HttpConstants.CR) {
                 nextByte = buffer.readByte();
-                if (nextByte == HttpCodecUtil.LF) {
+                if (nextByte == HttpConstants.LF) {
                     return sb.toString();
                 }
-            } else if (nextByte == HttpCodecUtil.LF) {
+            } else if (nextByte == HttpConstants.LF) {
                 return sb.toString();
             } else {
                 if (lineLength >= maxLineLength) {

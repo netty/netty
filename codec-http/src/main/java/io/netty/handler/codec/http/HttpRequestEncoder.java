@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpCodecUtil.*;
-
+import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ChannelBuffer;
 
 /**

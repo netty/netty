@@ -13,7 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
+
+import io.netty.handler.codec.http.HttpRequest;
 
 import java.io.IOException;
 import java.nio.charset.Charset;

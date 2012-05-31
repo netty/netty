@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -145,7 +146,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public String getString() {
-        return getString(HttpCodecUtil.DEFAULT_CHARSET);
+        return getString(HttpConstants.DEFAULT_CHARSET);
     }
 
     @Override
@@ -154,7 +155,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             return "";
         }
         if (encoding == null) {
-            return getString(HttpCodecUtil.DEFAULT_CHARSET);
+            return getString(HttpConstants.DEFAULT_CHARSET);
         }
         return channelBuffer.toString(encoding);
     }

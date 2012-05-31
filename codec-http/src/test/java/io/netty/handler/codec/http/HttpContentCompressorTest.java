@@ -15,10 +15,10 @@
 */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.compression.ZlibWrapper;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import io.netty.handler.codec.compression.ZlibWrapper;
 
 public class HttpContentCompressorTest {
     @Test
@@ -51,9 +51,7 @@ public class HttpContentCompressorTest {
                     targetEncoding = "deflate";
                     break;
                 default:
-                    if (targetWrapper != null) {
-                        Assert.fail();
-                    }
+                    Assert.fail();
                 }
             }
             Assert.assertEquals(contentEncoding, targetEncoding);

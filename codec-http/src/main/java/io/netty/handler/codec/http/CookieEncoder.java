@@ -131,11 +131,11 @@ public class CookieEncoder {
             }
             if (cookie.isSecure()) {
                 sb.append(CookieHeaderNames.SECURE);
-                sb.append((char) HttpCodecUtil.SEMICOLON);
+                sb.append((char) HttpConstants.SEMICOLON);
             }
             if (cookie.isHttpOnly()) {
                 sb.append(CookieHeaderNames.HTTPONLY);
-                sb.append((char) HttpCodecUtil.SEMICOLON);
+                sb.append((char) HttpConstants.SEMICOLON);
             }
             if (cookie.getVersion() >= 1) {
                 if (cookie.getComment() != null) {
@@ -150,18 +150,18 @@ public class CookieEncoder {
 
                 if (!cookie.getPorts().isEmpty()) {
                     sb.append(CookieHeaderNames.PORT);
-                    sb.append((char) HttpCodecUtil.EQUALS);
-                    sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.EQUALS);
+                    sb.append((char) HttpConstants.DOUBLE_QUOTE);
                     for (int port: cookie.getPorts()) {
                         sb.append(port);
-                        sb.append((char) HttpCodecUtil.COMMA);
+                        sb.append((char) HttpConstants.COMMA);
                     }
-                    sb.setCharAt(sb.length() - 1, (char) HttpCodecUtil.DOUBLE_QUOTE);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                    sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.SEMICOLON);
                 }
                 if (cookie.isDiscard()) {
                     sb.append(CookieHeaderNames.DISCARD);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                    sb.append((char) HttpConstants.SEMICOLON);
                 }
             }
         }
@@ -195,14 +195,14 @@ public class CookieEncoder {
                 if (!cookie.getPorts().isEmpty()) {
                     sb.append('$');
                     sb.append(CookieHeaderNames.PORT);
-                    sb.append((char) HttpCodecUtil.EQUALS);
-                    sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.EQUALS);
+                    sb.append((char) HttpConstants.DOUBLE_QUOTE);
                     for (int port: cookie.getPorts()) {
                         sb.append(port);
-                        sb.append((char) HttpCodecUtil.COMMA);
+                        sb.append((char) HttpConstants.COMMA);
                     }
-                    sb.setCharAt(sb.length() - 1, (char) HttpCodecUtil.DOUBLE_QUOTE);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                    sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.SEMICOLON);
                 }
             }
         }
@@ -237,9 +237,9 @@ public class CookieEncoder {
 
     private static void addUnquoted(StringBuilder sb, String name, String val) {
         sb.append(name);
-        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
-        sb.append((char) HttpCodecUtil.SEMICOLON);
+        sb.append((char) HttpConstants.SEMICOLON);
     }
 
     private static void addQuoted(StringBuilder sb, String name, String val) {
@@ -248,17 +248,17 @@ public class CookieEncoder {
         }
 
         sb.append(name);
-        sb.append((char) HttpCodecUtil.EQUALS);
-        sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+        sb.append((char) HttpConstants.EQUALS);
+        sb.append((char) HttpConstants.DOUBLE_QUOTE);
         sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
-        sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
-        sb.append((char) HttpCodecUtil.SEMICOLON);
+        sb.append((char) HttpConstants.DOUBLE_QUOTE);
+        sb.append((char) HttpConstants.SEMICOLON);
     }
 
     private static void add(StringBuilder sb, String name, int val) {
         sb.append(name);
-        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
-        sb.append((char) HttpCodecUtil.SEMICOLON);
+        sb.append((char) HttpConstants.SEMICOLON);
     }
 }

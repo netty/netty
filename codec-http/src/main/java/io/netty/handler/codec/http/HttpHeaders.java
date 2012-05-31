@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.internal.CaseIgnoringComparator;
+
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
@@ -324,7 +326,7 @@ public class HttpHeaders {
         /**
          * {@code "boundary"}
          */
-        static final String BOUNDARY = "boundary";
+        public static final String BOUNDARY = "boundary";
         /**
          * {@code "bytes"}
          */
@@ -380,7 +382,7 @@ public class HttpHeaders {
         /**
          * {@code "multipart/form-data"}
          */
-        static final String MULTIPART_FORM_DATA = "multipart/form-data";
+        public static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
          * {@code "must-revalidate"}
          */

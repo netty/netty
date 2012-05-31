@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.CharsetUtil;
+
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -23,8 +25,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import io.netty.util.CharsetUtil;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -73,7 +73,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(String uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -81,7 +81,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, boolean hasPath) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET, hasPath);
+        this(uri, HttpConstants.DEFAULT_CHARSET, hasPath);
     }
 
     /**
@@ -128,7 +128,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(URI uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -154,7 +154,7 @@ public class QueryStringDecoder {
             throw new IllegalArgumentException(
                     "maxParams: " + maxParams + " (expected: a positive integer)");
         }
-        
+
         String rawPath = uri.getRawPath();
         if (rawPath != null) {
             hasPath = true;
@@ -162,7 +162,7 @@ public class QueryStringDecoder {
             rawPath = "";
             hasPath = false;
         }
-        // Also take care of cut of things like "http://localhost" 
+        // Also take care of cut of things like "http://localhost"
         String newUri = rawPath + "?" + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
@@ -288,7 +288,7 @@ public class QueryStringDecoder {
      * escape sequence.
      */
     public static String decodeComponent(final String s) {
-        return decodeComponent(s, HttpCodecUtil.DEFAULT_CHARSET);
+        return decodeComponent(s, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**

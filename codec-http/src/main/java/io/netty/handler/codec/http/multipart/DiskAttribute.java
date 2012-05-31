@@ -13,12 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
-
-import java.io.IOException;
+package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.http.HttpConstants;
+
+import java.io.IOException;
 
 /**
  * Disk implementation of Attributes
@@ -37,7 +38,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
      * @param name
      */
     public DiskAttribute(String name) {
-        super(name, HttpCodecUtil.DEFAULT_CHARSET, 0);
+        super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
     /**
      *
@@ -48,7 +49,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
      * @throws IOException
      */
     public DiskAttribute(String name, String value) throws IOException {
-        super(name, HttpCodecUtil.DEFAULT_CHARSET, 0); // Attribute have no default size
+        super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
     }
 

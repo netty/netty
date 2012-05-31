@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -269,7 +270,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public String getString() throws IOException {
-        return getString(HttpCodecUtil.DEFAULT_CHARSET);
+        return getString(HttpConstants.DEFAULT_CHARSET);
     }
 
     @Override
@@ -279,7 +280,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         if (encoding == null) {
             byte[] array = readFrom(file);
-            return new String(array, HttpCodecUtil.DEFAULT_CHARSET);
+            return new String(array, HttpConstants.DEFAULT_CHARSET);
         }
         byte[] array = readFrom(file);
         return new String(array, encoding);
@@ -325,7 +326,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
      * @return the array of bytes
      * @throws IOException
      */
-    private byte[] readFrom(File src) throws IOException {
+    private static byte[] readFrom(File src) throws IOException {
         long srcsize = src.length();
         if (srcsize > Integer.MAX_VALUE) {
             throw new IllegalArgumentException(

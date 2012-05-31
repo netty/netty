@@ -13,7 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec.http.multipart;
+
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.http.DefaultHttpChunk;
+import io.netty.handler.codec.http.HttpChunk;
+import io.netty.handler.codec.http.HttpConstants;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.stream.ChunkedInput;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,10 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.handler.stream.ChunkedInput;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -56,11 +62,11 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     /**
      * InterfaceHttpData for Body (without encoding)
      */
-    private List<InterfaceHttpData> bodyListDatas;
+    private final List<InterfaceHttpData> bodyListDatas;
     /**
      * The final Multipart List of InterfaceHttpData including encoding
      */
-    private List<InterfaceHttpData> multipartHttpDatas;
+    private final List<InterfaceHttpData> multipartHttpDatas;
 
     /**
      * Does this request is a Multipart request
@@ -92,7 +98,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     public HttpPostRequestEncoder(HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
-                request, multipart, HttpCodecUtil.DEFAULT_CHARSET);
+                request, multipart, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -105,7 +111,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
-        this(factory, request, multipart, HttpCodecUtil.DEFAULT_CHARSET);
+        this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -201,7 +207,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      *
      * @return a newly generated Delimiter (either for DATA or MIXED)
      */
-    private String getNewMultipartDelimiter() {
+    private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
         Random random = new Random();
         return Long.toHexString(random.nextLong()).toLowerCase();

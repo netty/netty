@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.buffer.ChannelBuffers.*;
-import static io.netty.handler.codec.http.HttpCodecUtil.*;
+import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
@@ -111,9 +111,11 @@ public abstract class HttpMessageEncoder extends MessageToStreamEncoder<Object> 
                     ChannelBuffer content = chunk.getContent();
                     int contentLength = content.readableBytes();
                     out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
-                    out.writeBytes(CRLF);
+                    out.writeByte(CR);
+                    out.writeByte(LF);
                     out.writeBytes(content, content.readerIndex(), contentLength);
-                    out.writeBytes(CRLF);
+                    out.writeByte(CR);
+                    out.writeByte(LF);
                 }
             } else {
                 if (!chunk.isLast()) {
