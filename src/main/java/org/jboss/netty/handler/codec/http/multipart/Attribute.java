@@ -13,24 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
+
+import java.io.IOException;
 
 /**
- * Interface for all Objects that could be encoded/decoded using HttpPostRequestEncoder/Decoder
+ * Attribute interface
  */
-public interface InterfaceHttpData extends Comparable<InterfaceHttpData> {
-    enum HttpDataType {
-        Attribute, FileUpload, InternalAttribute
-    }
+public interface Attribute extends HttpData {
+    /**
+     * Returns the value of this HttpData.
+     */
+    String getValue() throws IOException;
 
     /**
-     * Returns the name of this InterfaceHttpData.
+     * Sets the value of this HttpData.
+     * @param value
      */
-    String getName();
-
-    /**
-     *
-     * @return The HttpDataType
-     */
-    HttpDataType getHttpDataType();
+    void setValue(String value) throws IOException;
 }

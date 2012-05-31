@@ -15,7 +15,10 @@
  */
 package org.jboss.netty.handler.execution;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -23,10 +26,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.Test;
 
 public class ExecutionHandlerTest {
@@ -34,25 +33,25 @@ public class ExecutionHandlerTest {
     @Test
     public void testReleaseExternalResourceViaUpstreamEvent() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        
+
         OrderedMemoryAwareThreadPoolExecutor executor = new OrderedMemoryAwareThreadPoolExecutor(10, 0L, 0L);
         final ExecutionHandler handler = new ExecutionHandler(executor, true, true);
         handler.handleUpstream(new TestChannelHandlerContext(handler, latch), new DummyChannelEvent());
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
-    
+
     @Test
     public void testReleaseExternalResourceViaDownstreamEvent() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        
+
         OrderedMemoryAwareThreadPoolExecutor executor = new OrderedMemoryAwareThreadPoolExecutor(10, 0L, 0L);
         final ExecutionHandler handler = new ExecutionHandler(executor, true, true);
         handler.handleDownstream(new TestChannelHandlerContext(handler, latch), new DummyChannelEvent());
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
-    
+
     private static final class DummyChannelEvent implements ChannelEvent {
 
         public Channel getChannel() {
@@ -62,9 +61,9 @@ public class ExecutionHandlerTest {
         public ChannelFuture getFuture() {
             return null;
         }
-        
+
     }
-    
+
     private static final class TestChannelHandlerContext implements ChannelHandlerContext {
 
         private final CountDownLatch latch;
@@ -74,8 +73,8 @@ public class ExecutionHandlerTest {
             this.latch = latch;
             this.handler = handler;
         }
-        
-        
+
+
         public Channel getChannel() {
             return null;
         }
@@ -121,8 +120,8 @@ public class ExecutionHandlerTest {
         }
 
         public void setAttachment(Object attachment) {
-            
+            // NOOP
         }
-        
+
     }
 }

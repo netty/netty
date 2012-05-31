@@ -13,10 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.File;
 import java.nio.charset.Charset;
+
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 /**
  * Disk FileUpload implementation that stores file into real files
