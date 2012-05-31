@@ -23,7 +23,6 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.channel.socket.InternetProtocolFamily;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
@@ -44,9 +43,7 @@ public class QuoteOfTheMomentServer {
     }
 
     public void run() {
-        DatagramChannelFactory f =
-            new NioDatagramChannelFactory((InternetProtocolFamily) null);
-
+        DatagramChannelFactory f = new NioDatagramChannelFactory();
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
 
         // Configure the pipeline factory.
