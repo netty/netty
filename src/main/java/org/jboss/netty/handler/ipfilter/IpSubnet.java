@@ -142,26 +142,4 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
     public int compareTo(IpSubnet o) {
         return cidr.toString().compareTo(o.cidr.toString());
     }
-
-    /**
-     * Simple test functions
-     *
-     * @param args where args[0] is the netmask (standard or CIDR notation) and optional args[1] is
-     *             the inetAddress to test with this IpSubnet
-     */
-    public static void main(String[] args) throws Exception {
-        if (args.length != 0) {
-            IpSubnet ipSubnet = null;
-            try {
-                ipSubnet = new IpSubnet(args[0]);
-            } catch (UnknownHostException e) {
-                return;
-            }
-            logger.debug("IpSubnet: " + ipSubnet.toString() + " from " + ipSubnet.cidr.getBaseAddress() + " to "
-                    + ipSubnet.cidr.getEndAddress() + " mask " + ipSubnet.cidr.getMask());
-            if (args.length > 1) {
-                logger.debug("Is IN: " + args[1] + " " + ipSubnet.contains(args[1]));
-            }
-        }
-    }
 }

@@ -252,24 +252,4 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
         }
         return 1;
     }
-
-    /**
-     * Simple test functions
-     *
-     * @param args where args[0] is the netmask (standard or CIDR notation) and optional args[1] is
-     *             the inetAddress to test with this IpV4Subnet
-     */
-    public static void main(String[] args) throws Exception {
-        if (args.length != 0) {
-            IpV4Subnet ipV4Subnet = null;
-            try {
-                ipV4Subnet = new IpV4Subnet(args[0]);
-            } catch (UnknownHostException e) {
-                return;
-            }
-            if (args.length > 1) {
-                logger.debug("Is IN: " + args[1] + " " + ipV4Subnet.contains(args[1]));
-            }
-        }
-    }
 }
