@@ -563,6 +563,32 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code index + 2} is greater than {@code this.capacity}
      */
     char  getChar(int index);
+    
+    /**
+     * Gets a number of 2-byte UTF-16 characters at the specified absolute
+     * {@code index} in this buffer, the number of which is defined by {@code 
+     * characterCount}.  This method does not modify {@code readerIndex} or 
+     * {@code writerIndex} of this buffer.
+     *
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         the characters go beyond the current capacity.
+     */
+    String getChars(int index, int characterCount);
+    
+    /**
+     * Gets a string of 2-byte UTF-16 characters at the specified absolute
+     * {@code index} in this buffer, the number of which is defined by a
+     * single short that is located before the string data.
+     * This method does not modify {@code readerIndex} or {@code writerIndex}
+     * of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         the characters go beyond the current capacity.
+     */
+    String getString(int index);
 
     /**
      * Gets a 32-bit floating point number at the specified absolute
@@ -811,6 +837,31 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code index + 2} is greater than {@code this.capacity}
      */
     void setChar(int index, int value);
+    
+    /**
+     * Sets the specified string of UTF-16 character at the specified absolute
+     * {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         the index becomes larger than the {@code capacity}
+     */
+    void setChars(int index, String value);
+    
+    /**
+     * Sets the specified string of UTF-16 character at the specified absolute
+     * {@code index} in this buffer. This also writes a short defining the length
+     * of the string.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         the index becomes larger than the {@code capacity}
+     */
+    void setString(int index, String value);
 
     /**
      * Sets the specified 32-bit floating-point number at the specified
@@ -1085,6 +1136,27 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code this.readableBytes} is less than {@code 2}
      */
     char  readChar();
+    
+    /**
+     * Gets a number of 2-byte UTF-16 character at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 2} in this buffer. The
+     * number of characters is defined by {@code characterCount}
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code characterCount * 2}
+     */
+    String readChars(int characterCount);
+    
+    /**
+     * Gets a string of 2-byte UTF-16 character at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 2} in this buffer. The
+     * number of characters is defined by a single short located before the
+     * string payload.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code String.length * 2}
+     */
+    String readString();
 
     /**
      * Gets a 32-bit floating point number at the current {@code readerIndex}
@@ -1322,6 +1394,28 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code this.writableBytes} is less than {@code 2}
      */
     void writeChar(int value);
+    
+    /**
+     * Sets the specified string of 2-byte UTF-16 character at the current
+     * {@code writerIndex} and increases the {@code writerIndex} by the required
+     * amount.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than the string's length * 2
+     */
+    void writeChars(String value);
+    
+    /**
+     * Sets the specified string of 2-byte UTF-16 character at the current
+     * {@code writerIndex} and increases the {@code writerIndex} by the required
+     * amount. This also writes a single short in order to store the number of
+     * characters to be read
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than (the string's 
+     *         length * 2) + 2
+     */
+    void writeString(String value);
 
     /**
      * Sets the specified 32-bit floating point number at the current
