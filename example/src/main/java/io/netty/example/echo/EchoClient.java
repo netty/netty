@@ -22,8 +22,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
 import java.net.InetSocketAddress;
 
@@ -57,7 +55,7 @@ public class EchoClient {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(
-                             new LoggingHandler(LogLevel.INFO),
+                             //new LoggingHandler(LogLevel.INFO),
                              new EchoClientHandler(firstMessageSize));
                  }
              });
