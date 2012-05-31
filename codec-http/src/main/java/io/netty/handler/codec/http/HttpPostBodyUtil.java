@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.util.CharsetUtil;
+
+import java.nio.charset.Charset;
 
 /**
  * Shared Static object between HttpMessageDecoder, HttpPostRequestDecoder and HttpPostRequestEncoder
@@ -118,13 +118,25 @@ final class HttpPostBodyUtil {
 
     /**
      * Exception when NO Backend Array is found
-     */ 
+     */
     static class SeekAheadNoBackArrayException extends Exception {
+
+        static final SeekAheadNoBackArrayException INSTANCE = new SeekAheadNoBackArrayException();
+
         private static final long serialVersionUID = -630418804938699495L;
+
+        private SeekAheadNoBackArrayException() {
+            // Hide
+        }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
     }
 
     /**
-     * This class intends to decrease the CPU in seeking ahead some bytes in 
+     * This class intends to decrease the CPU in seeking ahead some bytes in
      * HttpPostRequestDecoder
      */
     static class SeekAheadOptimize {
@@ -144,30 +156,30 @@ final class HttpPostBodyUtil {
         SeekAheadOptimize(ChannelBuffer buffer)
                 throws SeekAheadNoBackArrayException {
             if (! buffer.hasArray()) {
-                throw new SeekAheadNoBackArrayException();
+                throw SeekAheadNoBackArrayException.INSTANCE;
             }
             this.buffer = buffer;
-            this.bytes = buffer.array();
-            this.pos = this.readerIndex = buffer.readerIndex();
-            this.limit = buffer.writerIndex();
+            bytes = buffer.array();
+            pos = readerIndex = buffer.readerIndex();
+            limit = buffer.writerIndex();
         }
         /**
-         * 
+         *
          * @param minus this value will be used as (currentPos - minus) to set
-         *      the current readerIndex in the buffer. 
+         *      the current readerIndex in the buffer.
          */
         void setReadPosition(int minus) {
             pos -= minus;
             readerIndex = pos;
             buffer.readerIndex(readerIndex);
         }
-        
+
         void clear() {
-            this.buffer = null;
-            this.bytes = null;
-            this.limit = 0;
-            this.pos = 0;
-            this.readerIndex = 0;
+            buffer = null;
+            bytes = null;
+            limit = 0;
+            pos = 0;
+            readerIndex = 0;
         }
     }
 
