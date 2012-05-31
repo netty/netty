@@ -649,7 +649,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public void fireChannelInactive() {
         DefaultChannelHandlerContext ctx = firstInboundContext();
         if (ctx != null) {
-            firedChannelActive = false;
+            // Some implementations such as EmbeddedChannel can trigger inboundBufferUpdated()
+            // after deactivation, so it's safe not to revert the firedChannelActive flag here.
+            // Also, all known transports never get re-activated.
+            //firedChannelActive = false;
             fireChannelInactive(ctx);
         }
     }
