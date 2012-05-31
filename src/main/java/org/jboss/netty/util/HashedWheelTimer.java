@@ -454,9 +454,9 @@ public class HashedWheelTimer implements Timer {
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (DetectionUtil.isWindows()) {
-                    sleepTime = (sleepTime / 10) * 10;
+                    sleepTime = sleepTime / 10 * 10;
                 }
-                
+
                 if (sleepTime <= 0) {
                     break;
                 }
@@ -505,7 +505,7 @@ public class HashedWheelTimer implements Timer {
                 // TODO return false
                 return;
             }
-            
+
             wheel[stopIndex].remove(this);
         }
 

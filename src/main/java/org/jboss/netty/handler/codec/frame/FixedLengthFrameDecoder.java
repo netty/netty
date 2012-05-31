@@ -40,21 +40,21 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
 
     private final int frameLength;
     private final boolean allocateFullBuffer;
-    
+
     /**
      * Calls {@link #FixedLengthFrameDecoder(int, boolean)} with <code>false</code>
      */
     public FixedLengthFrameDecoder(int frameLength) {
         this(frameLength, false);
     }
-    
+
     /**
      * Creates a new instance.
      *
      * @param frameLength  the length of the frame
      * @param allocateFullBuffer <code>true</code> if the cumulative {@link ChannelBuffer} should use the {@link #frameLength} as its initial size
      */
-    public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {        
+    public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {
         if (frameLength <= 0) {
             throw new IllegalArgumentException(
                     "frameLength must be a positive integer: " + frameLength);
@@ -72,7 +72,7 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
             return buffer.readBytes(frameLength);
         }
     }
-    
+
     @Override
     protected ChannelBuffer newCumulationBuffer(ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();

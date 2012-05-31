@@ -16,14 +16,15 @@
 package org.jboss.netty.channel.socket.oio;
 
 import static org.jboss.netty.channel.Channels.*;
+
+import java.io.IOException;
+import java.util.Queue;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.util.internal.QueueFactory;
-
-import java.io.IOException;
-import java.util.Queue;
 
 /**
  * Abstract base class for Oio-Worker implementations
@@ -33,7 +34,7 @@ import java.util.Queue;
 abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker {
 
     private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
-    
+
     protected final C channel;
 
     /**
@@ -41,15 +42,15 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
      * used when starting. i.e. the current thread when the run method is executed.
      */
     protected volatile Thread thread;
-    
+
     private volatile boolean done;
-    
+
     public AbstractOioWorker(C channel) {
         this.channel = channel;
         channel.worker = this;
     }
 
-    
+
     public void run() {
         thread = channel.workerThread = Thread.currentThread();
 
@@ -67,7 +68,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
                     }
                 }
             }
-            
+
             boolean cont = false;
             try {
                 cont = process();
@@ -77,7 +78,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
                 }
             } finally {
                 processEventQueue();
-                
+
                 if (!cont) {
                     break;
                 }
@@ -90,37 +91,37 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
         // Clean up.
         close(channel, succeededFuture(channel), true);
-        
+
         // Mark the worker event loop as done so we know that we need to run tasks directly and not queue them
         // See #287
         done = true;
-        
+
         // just to make we don't have something left
         processEventQueue();
 
     }
-    
+
     static boolean isIoThread(AbstractOioChannel channel) {
         return Thread.currentThread() == channel.workerThread;
     }
-    
-    
+
+
     public void executeInIoThread(Runnable task) {
         // check if the current thread is the worker thread
         //
-        // Also check if the event loop of the worker is complete. If so we need to run the task now. 
+        // Also check if the event loop of the worker is complete. If so we need to run the task now.
         // See #287
         if (Thread.currentThread() == thread || done) {
             task.run();
         } else {
             boolean added = eventQueue.offer(task);
-            
+
             if (added) {
                 // as we set the SO_TIMEOUT to 1 second this task will get picked up in 1 second at latest
             }
         }
     }
-    
+
     private void processEventQueue() {
         for (;;) {
             final Runnable task = eventQueue.poll();
@@ -130,21 +131,21 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             task.run();
         }
     }
-    
+
 
     /**
      * Process the incoming messages and also is responsible for call {@link Channels#fireMessageReceived(Channel, Object)} once a message
-     * was processed without errors. 
-     * 
+     * was processed without errors.
+     *
      * @return continue returns <code>true</code> as long as this worker should continue to try processing incoming messages
      * @throws IOException
      */
     abstract boolean process() throws IOException;
-    
+
     static void setInterestOps(
             AbstractOioChannel channel, ChannelFuture future, int interestOps) {
         boolean iothread = isIoThread(channel);
-        
+
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
         interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
@@ -187,15 +188,15 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             }
         }
     }
-    
+
     static void close(AbstractOioChannel channel, ChannelFuture future) {
         close(channel, future, isIoThread(channel));
     }
-    
+
     private static void close(AbstractOioChannel channel, ChannelFuture future, boolean iothread) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
-        
+
         try {
             channel.closeSocket();
             if (channel.setClosed()) {

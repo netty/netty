@@ -17,17 +17,17 @@ package org.jboss.netty.handler.codec.marshalling;
 
 import org.jboss.marshalling.Marshaller;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
- * {@link OneToOneEncoder} implementation which uses JBoss Marshalling to marshal 
+ * {@link OneToOneEncoder} implementation which uses JBoss Marshalling to marshal
  * an Object.
- * 
- * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a> 
+ *
+ * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a>
  * for more informations
- * 
+ *
  * Use {@link MarshallingEncoder} if possible.
  *
  */
@@ -39,14 +39,14 @@ public class CompatibleMarshallingEncoder extends OneToOneEncoder {
 
     /**
      * Create a new instance of the {@link CompatibleMarshallingEncoder}
-     * 
+     *
      * @param provider  the {@link MarshallerProvider} to use to get the {@link Marshaller} for a {@link Channel}
      */
     public CompatibleMarshallingEncoder(MarshallerProvider provider) {
         this.provider = provider;
     }
-    
-    
+
+
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         Marshaller marshaller = provider.getMarshaller(ctx);
@@ -55,7 +55,7 @@ public class CompatibleMarshallingEncoder extends OneToOneEncoder {
         marshaller.writeObject(msg);
         marshaller.finish();
         marshaller.close();
-        
+
         return output.getBuffer();
     }
 

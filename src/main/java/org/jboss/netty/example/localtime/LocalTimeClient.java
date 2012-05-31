@@ -36,7 +36,7 @@ public class LocalTimeClient {
     private final String host;
     private final int port;
     private final Collection<String> cities;
-    
+
     public LocalTimeClient(String host, int port, Collection<String> cities) {
         this.host = host;
         this.port = port;

@@ -27,7 +27,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 public class HttpUploadClientHandler extends SimpleChannelUpstreamHandler {
-    
+
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HttpUploadClientHandler.class);
 

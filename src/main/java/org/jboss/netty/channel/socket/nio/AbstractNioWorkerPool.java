@@ -16,13 +16,13 @@
 
 package org.jboss.netty.channel.socket.nio;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
-
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract base class for {@link WorkerPool} implementations that create the {@link Worker}'s up-front and return them in a "fair" fashion when calling
@@ -34,10 +34,10 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
-    
+
     /**
      * Create a new instance
-     * 
+     *
      * @param workerExecutor the {@link Executor} to use for the {@link Worker}'s
      * @param allowShutdownOnIdle allow the {@link Worker}'s to shutdown when there is not {@link Channel} is registered with it
      * @param workerCount the count of {@link Worker}'s to create
@@ -50,7 +50,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
             throw new IllegalArgumentException(
                     "workerCount (" + workerCount + ") " +
                     "must be a positive integer.");
-        }        
+        }
         workers = new AbstractNioWorker[workerCount];
 
         for (int i = 0; i < workers.length; i++) {
@@ -62,11 +62,11 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
 
     /**
      * Create a new {@link Worker} which uses the given {@link Executor} to service IO
-     * 
-     * 
+     *
+     *
      * @param executor the {@link Executor} to use
      * @param allowShutdownOnIdle allow the {@link Worker} to shutdown when there is not {@link Channel} is registered with it
-     * @return worker the new {@link Worker} 
+     * @return worker the new {@link Worker}
      */
     protected abstract E createWorker(Executor executor, boolean allowShutdownOnIdle);
 

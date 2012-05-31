@@ -20,7 +20,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.util.EstimatableObjectWrapper;
 
 public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
-    
+
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;
     int estimatedSize;

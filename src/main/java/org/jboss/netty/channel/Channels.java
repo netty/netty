@@ -304,15 +304,15 @@ public final class Channels {
      */
     public static ChannelFuture fireWriteCompleteLater(final Channel channel, final long amount) {
         return channel.getPipeline().execute(new Runnable() {
-            
+
             public void run() {
                 fireWriteComplete(channel, amount);
             }
         });
-        
+
     }
 
-    
+
     /**
      * Sends a {@code "writeComplete"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -336,7 +336,7 @@ public final class Channels {
     public static void fireWriteComplete(ChannelHandlerContext ctx, long amount) {
         ctx.sendUpstream(new DefaultWriteCompletionEvent(ctx.getChannel(), amount));
     }
-    
+
     /**
      * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -344,14 +344,14 @@ public final class Channels {
      */
     public static ChannelFuture fireChannelInterestChangedLater(final Channel channel) {
         return channel.getPipeline().execute(new Runnable() {
-            
+
             public void run() {
                 fireChannelInterestChanged(channel);
-                
+
             }
         });
     }
-    
+
     /**
      * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -384,7 +384,7 @@ public final class Channels {
      */
     public static ChannelFuture fireChannelDisconnectedLater(final Channel channel) {
         return channel.getPipeline().execute(new Runnable() {
-            
+
             public void run() {
                 fireChannelDisconnected(channel);
             }
@@ -419,14 +419,14 @@ public final class Channels {
      */
     public static ChannelFuture fireChannelUnboundLater(final Channel channel) {
         return channel.getPipeline().execute(new Runnable() {
-            
+
             public void run() {
                 fireChannelUnbound(channel);
             }
         });
     }
-    
-    
+
+
     /**
      * Sends a {@code "channelUnbound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -449,8 +449,8 @@ public final class Channels {
                 ctx.getChannel(), ChannelState.BOUND, null));
     }
 
-    
-    
+
+
     /**
      * Sends a {@code "channelClosed"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -458,15 +458,15 @@ public final class Channels {
      */
     public static ChannelFuture fireChannelClosedLater(final Channel channel) {
         return channel.getPipeline().execute(new Runnable() {
-            
+
             public void run() {
                 fireChannelClosed(channel);
             }
         });
-      
+
     }
-    
-    
+
+
     /**
      * Sends a {@code "channelClosed"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -502,7 +502,7 @@ public final class Channels {
      */
     public static ChannelFuture fireExceptionCaughtLater(final Channel channel, final Throwable cause) {
         return channel.getPipeline().execute(new Runnable() {
-            
+
             public void run() {
                 fireExceptionCaught(channel, cause);
             }

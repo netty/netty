@@ -15,9 +15,8 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.junit.Assert.*;
-
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -32,11 +31,11 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -54,7 +53,7 @@ public abstract class AbstractSocketSpdyEchoTest {
     private static ExecutorService executor;
 
     private static ChannelBuffer createFrames(int version) {
-        int length = (version < 3) ? 1176 : 1174;
+        int length = version < 3 ? 1176 : 1174;
         ChannelBuffer frames = ChannelBuffers.buffer(length);
 
         // SPDY UNKNOWN Frame

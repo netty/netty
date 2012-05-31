@@ -402,14 +402,14 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             long tooLongFrameLength = this.tooLongFrameLength;
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
-            if ((!failFast) ||
-                (failFast && firstDetectionOfTooLongFrame)) {
+            if (!failFast ||
+                failFast && firstDetectionOfTooLongFrame) {
                 fail(ctx, tooLongFrameLength);
             }
         } else {
             // Keep discarding and notify handlers if necessary.
             if (failFast && firstDetectionOfTooLongFrame) {
-                fail(ctx, this.tooLongFrameLength);
+                fail(ctx, tooLongFrameLength);
             }
         }
 

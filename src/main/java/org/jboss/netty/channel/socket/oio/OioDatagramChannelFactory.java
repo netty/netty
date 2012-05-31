@@ -78,13 +78,13 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
 
     /**
      * Creates a new instance with a {@link Executors#newCachedThreadPool()}
-     * 
+     *
      * See {@link #OioDatagramChannelFactory(Executor)}
      */
     public OioDatagramChannelFactory() {
         this(Executors.newCachedThreadPool());
     }
-    
+
     /**
      * Creates a new instance.
      *

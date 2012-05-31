@@ -38,7 +38,7 @@ public interface ChannelSink {
      * one of its {@link ChannelHandler}s process a {@link ChannelEvent}.
      */
     void exceptionCaught(ChannelPipeline pipeline, ChannelEvent e, ChannelPipelineException cause) throws Exception;
-    
+
     /**
      * Execute the given {@link Runnable} later in the io-thread.
      * Some implementation may not support this and just execute it directly.

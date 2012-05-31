@@ -26,9 +26,9 @@ import java.util.zip.Deflater;
  * Utility that detects various properties specific to the current runtime
  * environment, such as Java version and the availability of the
  * {@code sun.misc.Unsafe} object.
- * 
+ *
  * <br>
- * You can disable the use of {@code sun.misc.Unsafe} if you specify 
+ * You can disable the use of {@code sun.misc.Unsafe} if you specify
  * the System property <strong>org.jboss.netty.tryUnsafe</strong> with
  * value of <code>false</code>. Default is <code>true</code>.
  */
@@ -42,15 +42,15 @@ public final class DetectionUtil {
         // windows
         IS_WINDOWS =  os.indexOf("win") >= 0;
     }
-    
+
     /**
      * Return <code>true</code> if the JVM is running on Windows
-     * 
+     *
      */
     public static boolean isWindows() {
         return IS_WINDOWS;
     }
-    
+
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;
     }
@@ -64,7 +64,7 @@ public final class DetectionUtil {
         if (!useUnsafe) {
             return false;
         }
-        
+
         try {
             Class<?> unsafeClazz = Class.forName("sun.misc.Unsafe", true, loader);
             return hasUnsafeField(unsafeClazz);
@@ -93,7 +93,7 @@ public final class DetectionUtil {
         } catch (ClassNotFoundException e) {
             //Ignore
         }
-        
+
         try {
             Deflater.class.getDeclaredField("SYNC_FLUSH");
             return 7;
@@ -110,7 +110,7 @@ public final class DetectionUtil {
 
         return 5;
     }
-    
+
     private DetectionUtil() {
         // only static method supported
     }

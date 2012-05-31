@@ -56,16 +56,16 @@ public class SslCloseTest {
                 System.out.println("Close channel");
                 ctx.getChannel().close();
             }
-            
+
         });
-        
+
         Channel serverChannel = sb.bind(new InetSocketAddress(0));
-        
+
         Channel cc = cb.connect(serverChannel.getLocalAddress()).awaitUninterruptibly().getChannel();
         cc.write(ChannelBuffers.copiedBuffer("unencrypted", CharsetUtil.US_ASCII)).awaitUninterruptibly();
-        
+
         Assert.assertTrue(cc.getCloseFuture().awaitUninterruptibly(5000));
-        
+
         cb.releaseExternalResources();
         sb.releaseExternalResources();
     }

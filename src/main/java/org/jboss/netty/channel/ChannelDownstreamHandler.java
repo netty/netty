@@ -57,7 +57,7 @@ package org.jboss.netty.channel;
  * You will also find various helper methods in {@link Channels} to be useful
  * to generate and send an artificial or manipulated event.
  * <p>
- * <strong>Caution:</strong> 
+ * <strong>Caution:</strong>
  * <p>
  * Use the *Later(..) methods of the {@link Channels} class if you want to send an upstream event from a {@link ChannelDownstreamHandler} otherwise you may run into threading issues.
  *

@@ -20,9 +20,9 @@ import org.jboss.netty.buffer.DynamicChannelBuffer;
 
 /**
  * This class is not used by {@link ReplayingDecoder} anymore but is still here to not break API.
- * 
+ *
  * This class will get removed in the future.
- * 
+ *
  * @deprecated
  *
  */
@@ -37,7 +37,7 @@ class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
         this(factory, 256);
     }
 
-    
+
     @Override
     protected void checkReadableBytes(int minReaderRemaining) {
         // Do not check here - ReplayingDecoderBuffer will check.

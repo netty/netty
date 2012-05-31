@@ -22,14 +22,14 @@ import org.jboss.marshalling.ByteInput;
 /**
  * {@link ByteInput} implementation which wraps another {@link ByteInput} and throws a {@link TooBigObjectException}
  * if the read limit was reached.
- * 
+ *
  *
  */
 class LimitingByteInput implements ByteInput {
-    
+
     // Use a static instance here to remove the overhead of fillStacktrace
     private static final TooBigObjectException EXCEPTION = new TooBigObjectException();
-    
+
     private final ByteInput input;
     private final long limit;
     private long read;
@@ -41,7 +41,7 @@ class LimitingByteInput implements ByteInput {
         this.input = input;
         this.limit = limit;
     }
-    
+
     public void close() throws IOException {
         // Nothing todo
     }
@@ -92,7 +92,7 @@ class LimitingByteInput implements ByteInput {
     private int readable(int length) {
         return (int) Math.min(length, limit - read);
     }
-    
+
     /**
      * Exception that will get thrown if the {@link Object} is to big to unmarshall
      *
@@ -100,9 +100,9 @@ class LimitingByteInput implements ByteInput {
     static final class TooBigObjectException extends IOException {
 
         /**
-         * 
+         *
          */
         private static final long serialVersionUID = 1L;
-        
+
     }
 }

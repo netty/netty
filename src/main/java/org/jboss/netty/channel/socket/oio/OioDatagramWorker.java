@@ -33,7 +33,7 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
         super(channel);
     }
 
-  
+
 
     @Override
     boolean process() throws IOException {
@@ -49,7 +49,7 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
             // Can happen on interruption.
             // Keep receiving unless the channel is closed.
             return true;
-        } 
+        }
 
         fireMessageReceived(
                 channel,
@@ -64,7 +64,7 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
             OioDatagramChannel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
         boolean iothread = isIoThread(channel);
-        
+
         try {
             ChannelBuffer buf = (ChannelBuffer) message;
             int offset = buf.readerIndex();
@@ -102,11 +102,11 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
         }
     }
 
-    
+
     static void disconnect(OioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean iothread = isIoThread(channel);
-        
+
         try {
             channel.socket.disconnect();
             future.setSuccess();

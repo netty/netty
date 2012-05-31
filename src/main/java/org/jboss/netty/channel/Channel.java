@@ -359,11 +359,11 @@ public interface Channel extends Comparable<Channel> {
      *         {@code interestOps} change request succeeds or fails
      */
     ChannelFuture setReadable(boolean readable);
-    
+
     /**
      * Retrieves an object which is {@link #setAttachment(Object) attached} to
      * this {@link Channel}.
-     * 
+     *
      * @return {@code null} if no object was attached or {@code null} was
      *         attached
      */

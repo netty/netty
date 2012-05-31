@@ -78,14 +78,14 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
     final OioClientSocketPipelineSink sink;
 
     /**
-     * Creates a new instance with a {@link Executors#newCachedThreadPool()} as worker executor. 
-     * 
+     * Creates a new instance with a {@link Executors#newCachedThreadPool()} as worker executor.
+     *
      * See {@link #OioClientSocketChannelFactory(Executor)}
      */
     public OioClientSocketChannelFactory() {
         this(Executors.newCachedThreadPool());
     }
-    
+
     /**
      * Creates a new instance.
      *

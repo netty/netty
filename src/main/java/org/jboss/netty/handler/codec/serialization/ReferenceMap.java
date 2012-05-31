@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Set;
 
 abstract class ReferenceMap<K, V> implements Map<K, V> {
-    
+
     private final Map<K, Reference<V>> delegate;
 
     protected ReferenceMap(Map<K, Reference<V>> delegate) {

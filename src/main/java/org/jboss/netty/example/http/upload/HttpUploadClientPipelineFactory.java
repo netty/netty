@@ -54,7 +54,7 @@ public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
 
         // to be used since huge file transfer
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
-        
+
         pipeline.addLast("handler", new HttpUploadClientHandler());
         return pipeline;
     }

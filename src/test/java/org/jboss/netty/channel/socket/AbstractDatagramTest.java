@@ -15,16 +15,7 @@
  */
 package org.jboss.netty.channel.socket;
 
-import static org.junit.Assert.assertTrue;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import static org.junit.Assert.*;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +24,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -60,7 +59,7 @@ public abstract class AbstractDatagramTest {
     public void testSimpleSend() throws Throwable {
         ConnectionlessBootstrap sb = new ConnectionlessBootstrap(newServerSocketChannelFactory(executor));
         ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
-        
+
         final CountDownLatch latch = new CountDownLatch(1);
         sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler() {
 
@@ -71,7 +70,7 @@ public abstract class AbstractDatagramTest {
 
                 latch.countDown();
             }
-            
+
         });
         cb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
@@ -85,6 +84,6 @@ public abstract class AbstractDatagramTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
-      
+
     }
 }

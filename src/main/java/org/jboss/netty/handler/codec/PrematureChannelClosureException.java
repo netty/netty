@@ -16,33 +16,33 @@
 package org.jboss.netty.handler.codec;
 
 /**
- * Exception which should get thrown if a Channel got closed before it is expected 
+ * Exception which should get thrown if a Channel got closed before it is expected
  */
 public class PrematureChannelClosureException extends Exception {
-    
+
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 233460005724966593L;
 
     public PrematureChannelClosureException() {
         super();
     }
-    
+
     public PrematureChannelClosureException(String msg) {
         super(msg);
     }
-    
-    
+
+
     public PrematureChannelClosureException(String msg, Throwable t) {
         super(msg, t);
     }
-    
-    
+
+
     public PrematureChannelClosureException(Throwable t) {
         super(t);
     }
-    
+
 
 
 }

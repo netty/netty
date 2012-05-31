@@ -36,10 +36,10 @@ import org.jboss.netty.util.internal.QueueFactory;
  * {@link HttpResponseDecoder} to learn what additional state management needs
  * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
  * {@link HttpResponseDecoder} can not handle it by itself.
- * 
+ *
  * If the {@link Channel} gets closed and there are requests missing for a response
  * a {@link PrematureChannelClosureException} is thrown.
- * 
+ *
  * @see HttpServerCodec
  *
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpResponseDecoder
@@ -64,7 +64,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
      * Creates a new instance with the default decoder options
      * ({@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}).
-     * 
+     *
      */
     public HttpClientCodec() {
         this(4096, 8192, 8192, false);
@@ -109,9 +109,9 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
-            
+
             Object obj =  super.encode(ctx, channel, msg);
-            
+
             if (failOnMissingResponse) {
                 // check if the request is chunked if so do not increment
                 if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
@@ -149,7 +149,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (msg == null) {
                 return;
             }
-        
+
             // check if its a HttpMessage and its not chunked
             if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
                 requestResponseCounter.decrementAndGet();
@@ -212,7 +212,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
 
             return super.isContentAlwaysEmpty(msg);
         }
-        
+
         @Override
         public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
             super.channelClosed(ctx, e);

@@ -410,7 +410,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             return new DefaultSpdyPingFrame(ID);
 
         case SPDY_GOAWAY_FRAME:
-            int minLength = (version < 3) ? 4 : 8;
+            int minLength = version < 3 ? 4 : 8;
             if (buffer.readableBytes() < minLength) {
                 return null;
             }
@@ -448,7 +448,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
         int streamID;
         switch (type) {
         case SPDY_SYN_STREAM_FRAME:
-            minLength = (version < 3) ? 12 : 10;
+            minLength = version < 3 ? 12 : 10;
             if (buffer.readableBytes() < minLength) {
                 return null;
             }
@@ -477,7 +477,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             return spdySynStreamFrame;
 
         case SPDY_SYN_REPLY_FRAME:
-            minLength = (version < 3) ? 8 : 4;
+            minLength = version < 3 ? 8 : 4;
             if (buffer.readableBytes() < minLength) {
                 return null;
             }
@@ -575,7 +575,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             return;
         }
 
-        int lengthFieldSize = (version < 3) ? 2 : 4;
+        int lengthFieldSize = version < 3 ? 2 : 4;
 
         if (numHeaders == -1) {
             // Read number of Name/Value pairs
@@ -690,10 +690,10 @@ public class SpdyFrameDecoder extends FrameDecoder {
     private boolean isValidControlFrameHeader() {
         switch (type) {
         case SPDY_SYN_STREAM_FRAME:
-            return (version < 3) ? length >= 12 : length >= 10;
+            return version < 3 ? length >= 12 : length >= 10;
 
         case SPDY_SYN_REPLY_FRAME:
-            return (version < 3) ? length >= 8 : length >= 4;
+            return version < 3 ? length >= 8 : length >= 4;
 
         case SPDY_RST_STREAM_FRAME:
             return flags == 0 && length == 8;
@@ -708,7 +708,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             return length == 4;
 
         case SPDY_GOAWAY_FRAME:
-            return (version < 3) ? length == 4 : length == 8;
+            return version < 3 ? length == 4 : length == 8;
 
         case SPDY_HEADERS_FRAME:
             if (version < 3) {

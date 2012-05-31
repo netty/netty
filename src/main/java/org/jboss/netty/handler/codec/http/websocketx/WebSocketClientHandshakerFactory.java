@@ -25,7 +25,7 @@ public class WebSocketClientHandshakerFactory {
 
     /**
      * Instances a new handshaker
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -43,10 +43,10 @@ public class WebSocketClientHandshakerFactory {
             boolean allowExtensions, Map<String, String> customHeaders) throws WebSocketHandshakeException {
         return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
     }
-    
+
     /**
      * Instances a new handshaker
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -78,5 +78,5 @@ public class WebSocketClientHandshakerFactory {
         throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
 
     }
-    
+
 }

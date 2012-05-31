@@ -37,10 +37,10 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink {
                 channel.worker.executeInIoThread(wrapper);
                 return wrapper;
             }
-        } 
-            
+        }
+
         return super.execute(pipeline, task);
-        
+
 
     }
 

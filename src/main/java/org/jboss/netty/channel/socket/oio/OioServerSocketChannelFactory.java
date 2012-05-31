@@ -92,13 +92,13 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     /**
      * Create a new {@link OioServerSocketChannelFactory} with a {@link Executors#newCachedThreadPool()} for the boss and worker executor.
-     * 
+     *
      * See {@link #OioServerSocketChannelFactory(Executor, Executor)}
      */
     public OioServerSocketChannelFactory() {
         this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
     }
-    
+
     /**
      * Creates a new instance.
      *

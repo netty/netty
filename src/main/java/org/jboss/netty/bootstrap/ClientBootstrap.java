@@ -229,12 +229,12 @@ public class ClientBootstrap extends Bootstrap {
         // Connect.
         return ch.connect(remoteAddress);
     }
-    
+
     /**
      * Attempts to bind a channel with the specified {@code localAddress}. later the channel can be connected
      * to a remoteAddress by calling {@link Channel#connect(SocketAddress)}.This method is useful where bind and connect
-     * need to be done in separate steps. 
-     * 
+     * need to be done in separate steps.
+     *
      * This can also be useful if you want to set an attachment to the {@link Channel} via
      * {@link Channel#setAttachment(Object)} so you can use it after the {@link #bind(SocketAddress)} was done.
      * <br>
@@ -247,7 +247,7 @@ public class ClientBootstrap extends Bootstrap {
      *  bootstrap.connect(new InetSocketAddress("192.168.0.30", 8080));
      * </pre>
      * <br>
-     * 
+     *
      * You can use it then in your handlers like this:
      *
      * <pre>
@@ -256,7 +256,7 @@ public class ClientBootstrap extends Bootstrap {
      *          Object dataObject = ctx.getChannel().getAttachment();
      *      }
      *  }
-     *  
+     *
      * </pre>
      *
      * @return a future object which notifies when this bind attempt

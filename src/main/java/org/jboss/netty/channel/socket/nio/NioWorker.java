@@ -15,16 +15,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelBound;
-import static org.jboss.netty.channel.Channels.fireChannelConnected;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
-import static org.jboss.netty.channel.Channels.succeededFuture;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -35,6 +26,12 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+
 public class NioWorker extends AbstractNioWorker {
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
@@ -42,7 +39,7 @@ public class NioWorker extends AbstractNioWorker {
     public NioWorker(Executor executor) {
         super(executor);
     }
-    
+
     public NioWorker(Executor executor, boolean allowShutdownOnIdle) {
         super(executor, allowShutdownOnIdle);
     }
@@ -141,13 +138,13 @@ public class NioWorker extends AbstractNioWorker {
 
         return false;
     }
-    
+
     @Override
     protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean server = !(channel instanceof NioClientSocketChannel);
         return new RegisterTask((NioSocketChannel) channel, future, server);
     }
-    
+
     private final class RegisterTask implements Runnable {
         private final NioSocketChannel channel;
         private final ChannelFuture future;
@@ -186,7 +183,7 @@ public class NioWorker extends AbstractNioWorker {
                     channel.setConnected();
                     future.setSuccess();
                 }
-                
+
                 if (server || !((NioClientSocketChannel) channel).boundManually) {
                     fireChannelBound(channel, localAddress);
                 }

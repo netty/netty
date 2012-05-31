@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * {@link UnmarshallerProvider} implementation which use a {@link ThreadLocal} to store references
  * to {@link Unmarshaller} instances. This may give you some performance boost if you need to unmarshall
  * many small {@link Object}'s.
- * 
+ *
  *
  */
 public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
@@ -32,10 +32,10 @@ public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
 
     private final MarshallerFactory factory;
     private final MarshallingConfiguration config;
-    
+
     /**
      * Create a new instance of the {@link ThreadLocalUnmarshallerProvider}
-     * 
+     *
      * @param factory   the {@link MarshallerFactory} to use to create {@link Unmarshaller}'s if needed
      * @param config    the {@link MarshallingConfiguration} to use
      */
@@ -52,5 +52,5 @@ public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
         }
         return unmarshaller;
     }
-    
+
 }

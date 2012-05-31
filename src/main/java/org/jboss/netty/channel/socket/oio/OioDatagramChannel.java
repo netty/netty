@@ -61,7 +61,7 @@ final class OioDatagramChannel extends AbstractOioChannel
                     "Failed to configure the datagram socket timeout.", e);
         }
         config = new DefaultDatagramChannelConfig(socket);
-        
+
         fireChannelOpen(this);
 
     }
@@ -147,6 +147,6 @@ final class OioDatagramChannel extends AbstractOioChannel
     boolean isSocketClosed() {
         return socket.isClosed();
     }
-    
-    
+
+
 }

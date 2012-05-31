@@ -143,21 +143,21 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     private void discard(ChannelHandlerContext ctx, boolean fireNow) {
         ClosedChannelException cause = null;
-           
+
         for (;;) {
             MessageEvent currentEvent = this.currentEvent;
-                
-            if (this.currentEvent == null) { 
-                currentEvent = queue.poll(); 
+
+            if (this.currentEvent == null) {
+                currentEvent = queue.poll();
             } else {
-                this.currentEvent = null; 
+                this.currentEvent = null;
             }
 
-            if (currentEvent == null) { 
-                break; 
+            if (currentEvent == null) {
+                break;
             }
-            
-              
+
+
             Object m = currentEvent.getMessage();
             if (m instanceof ChunkedInput) {
                 closeInput((ChunkedInput) m);
@@ -171,7 +171,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
             currentEvent = null;
         }
-        
+
 
         if (cause != null) {
             if (fireNow) {
@@ -189,7 +189,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         // use CAS to see if the have flush already running, if so we don't need to take futher actions
         if (acquired = flush.compareAndSet(false, true)) {
             try {
-        
+
                 if (!channel.isConnected()) {
                     discard(ctx, fireNow);
                     return;
@@ -251,12 +251,12 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                                     this.currentEvent = null;
                                     writeFuture = currentEvent.getFuture();
 
-                                    // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have 
+                                    // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have
                                     // some resource bound that can not be closed before its not written
                                     //
                                     // See https://github.com/netty/netty/issues/303
                                     writeFuture.addListener(new ChannelFutureListener() {
-                                
+
                                         public void operationComplete(ChannelFuture future) throws Exception {
                                             closeInput(chunks);
                                         }
@@ -292,10 +292,10 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 // mark the flush as done
                 flush.set(false);
             }
-            
+
         }
-        
-        if (acquired && (!channel.isConnected() || (channel.isWritable() && !queue.isEmpty()))) {
+
+        if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty())) {
             flush(ctx, fireNow);
         }
     }
@@ -312,12 +312,12 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // nothing to do
-        
+
     }
 
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // nothing to do
-        
+
     }
 
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
@@ -329,7 +329,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Fail all MessageEvent's that are left. This is needed because otherwise we would never notify the 
+        // Fail all MessageEvent's that are left. This is needed because otherwise we would never notify the
         // ChannelFuture and the registered FutureListener. See #304
         //
         Throwable cause = null;

@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 public class HttpSnoopClient {
 
     private final URI uri;
-    
+
     public HttpSnoopClient(URI uri) {
         this.uri = uri;
     }

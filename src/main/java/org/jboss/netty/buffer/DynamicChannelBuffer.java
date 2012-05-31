@@ -73,8 +73,8 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         int minNewCapacity = writerIndex() + minWritableBytes;
         while (newCapacity < minNewCapacity) {
             newCapacity <<= 1;
-            
-            // Check if we exceeded the maximum size of 2gb if this is the case then 
+
+            // Check if we exceeded the maximum size of 2gb if this is the case then
             // newCapacity == 0
             //
             // https://github.com/netty/netty/issues/258

@@ -187,7 +187,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         this.stripDelimiter = stripDelimiter;
         this.failFast = failFast;
     }
-    
+
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {

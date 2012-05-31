@@ -15,7 +15,7 @@
  */
 package org.jboss.netty.example.http.upload;
 
-import static org.jboss.netty.channel.Channels.pipeline;
+import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;

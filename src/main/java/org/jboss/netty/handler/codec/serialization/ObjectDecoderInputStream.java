@@ -98,7 +98,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         } else {
             this.in = new DataInputStream(in);
         }
-        this.classResolver = ClassResolvers.weakCachingResolver(classLoader);
+        classResolver = ClassResolvers.weakCachingResolver(classLoader);
         this.maxObjectSize = maxObjectSize;
     }
 

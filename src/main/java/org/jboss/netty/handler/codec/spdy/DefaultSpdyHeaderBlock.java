@@ -40,7 +40,7 @@ public class DefaultSpdyHeaderBlock implements SpdyHeaderBlock {
     }
 
     public void setInvalid() {
-        this.invalid = true;
+        invalid = true;
     }
 
     public void addHeader(final String name, final Object value) {

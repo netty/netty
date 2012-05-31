@@ -52,7 +52,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     /**
      * Constructor with default values
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -62,10 +62,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     public WebSocketServerHandshaker00(String webSocketURL, String subprotocols) {
         this(webSocketURL, subprotocols, Long.MAX_VALUE);
     }
-    
+
     /**
       * Constructor specifying the destination web socket location
-      * 
+      *
       * @param webSocketURL
       *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
       *            sent to this URL.
@@ -86,11 +86,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * is really a rehash of <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76" >hixie-76</a> and
      * <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75" >hixie-75</a>.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -100,14 +100,14 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, sample
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -115,10 +115,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -158,7 +158,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                     throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
                 } else {
                     res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                    this.setSelectedSubprotocol(selectedSubprotocol);
+                    setSelectedSubprotocol(selectedSubprotocol);
                 }
             }
 
@@ -190,7 +190,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             p.remove(HttpChunkAggregator.class);
         }
         p.replace(HttpRequestDecoder.class, "wsdecoder",
-                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
+                new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
 
         ChannelFuture future = channel.write(res);
 
@@ -201,7 +201,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

@@ -72,14 +72,14 @@ public class ReplayingDecoderTest {
                             fail.set(false);
                             throw new Exception();
 
-                        
+
                         }
-       
-                        
+
+
                         buffer.readByte();
                         return new Object();
                     }
-                    
+
                 });
         try {
             e.offer(ChannelBuffers.copiedBuffer("TESTME!!!!", CharsetUtil.US_ASCII));
@@ -87,8 +87,8 @@ public class ReplayingDecoderTest {
         } catch (CodecEmbedderException ex) {
             // expected
         }
-        
-        // this will trigger an assert error when asserts are enabled via the -ea 
+
+        // this will trigger an assert error when asserts are enabled via the -ea
         // jvm switch. This is the default when run via the maven sunfire plugin
         e.offer(ChannelBuffers.copiedBuffer("TESTME!!!!", CharsetUtil.US_ASCII));
         e.finish();

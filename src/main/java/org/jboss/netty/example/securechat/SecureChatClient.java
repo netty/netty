@@ -34,7 +34,7 @@ public class SecureChatClient {
 
     private final String host;
     private final int port;
-    
+
     public SecureChatClient(String host, int port) {
         this.host = host;
         this.port = port;

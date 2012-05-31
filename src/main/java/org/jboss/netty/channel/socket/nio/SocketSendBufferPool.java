@@ -72,7 +72,7 @@ final class SocketSendBufferPool {
         if (src instanceof CompositeChannelBuffer && DetectionUtil.javaVersion() >= 7) {
             return new GatheringSendBuffer(src.toByteBuffers());
         }
-        
+
         if (src.isDirect()) {
             return new UnpooledSendBuffer(src.toByteBuffer());
         }
@@ -257,7 +257,7 @@ final class SocketSendBufferPool {
             }
         }
     }
-    
+
     class GatheringSendBuffer implements SendBuffer {
 
         private final ByteBuffer[] buffers;
@@ -267,14 +267,14 @@ final class SocketSendBufferPool {
 
         GatheringSendBuffer(ByteBuffer[] buffers) {
             this.buffers = buffers;
-            this.last = buffers.length - 1;
+            last = buffers.length - 1;
             int total = 0;
             for (ByteBuffer buf: buffers) {
                 total += buf.remaining();
             }
             this.total = total;
         }
-        
+
         public boolean finished() {
             return !buffers[last].hasRemaining();
         }
@@ -329,7 +329,7 @@ final class SocketSendBufferPool {
         public void release() {
             // nothing todo
         }
-        
+
     }
 
     final class FileSendBuffer implements SendBuffer {

@@ -17,11 +17,11 @@ package org.jboss.netty.handler.codec.http.websocketx;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 
 /**
  * Instances the appropriate handshake class to use for servers
@@ -35,10 +35,10 @@ public class WebSocketServerHandshakerFactory {
     private final boolean allowExtensions;
 
     private final long maxFramePayloadLength;
-    
+
     /**
      * Constructor
-     
+
      * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
      * @param allowExtensions
@@ -50,7 +50,7 @@ public class WebSocketServerHandshakerFactory {
 
     /**
      * Constructor
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -62,17 +62,17 @@ public class WebSocketServerHandshakerFactory {
      *            Maximum allowable frame payload length. Setting this value to your application's requirement may
      *            reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshakerFactory(String webSocketURL, String subprotocols, boolean allowExtensions, 
+    public WebSocketServerHandshakerFactory(String webSocketURL, String subprotocols, boolean allowExtensions,
             long maxFramePayloadLength) {
         this.webSocketURL = webSocketURL;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
-    
+
     /**
      * Instances a new handshaker
-     * 
+     *
      * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web socket version is not
      *         supported.
      */
@@ -97,7 +97,7 @@ public class WebSocketServerHandshakerFactory {
 
     /**
      * Return that we need cannot not support the web socket version
-     * 
+     *
      * @param channel
      *            Channel
      */

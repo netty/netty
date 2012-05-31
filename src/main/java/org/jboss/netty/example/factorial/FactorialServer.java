@@ -28,11 +28,11 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class FactorialServer {
 
     private final int port;
-    
+
     public FactorialServer(int port) {
         this.port = port;
     }
-    
+
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(

@@ -85,7 +85,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 
     /**
      * Constructor
-     * 
+     *
      * @param maskPayload
      *            Web socket clients must set this to true to mask payload. Server implementations must set this to
      *            false.

@@ -29,7 +29,7 @@ public final class TestUtil {
     private static final InetAddress LOCALHOST;
     private final static int START_PORT = 20000;
     private final static int END_PORT = 30000;
-    
+
     static {
         InetAddress localhost = null;
         try {
@@ -57,10 +57,10 @@ public final class TestUtil {
         return LOCALHOST;
     }
 
-    
+
     /**
      * Return a free port which can be used to bind to
-     * 
+     *
      * @return port
      */
     public static int getFreePort() {
@@ -71,9 +71,9 @@ public final class TestUtil {
                 socket.close();
                 return start;
             } catch (IOException e) {
-                // ignore 
+                // ignore
             }
-            
+
         }
         throw new RuntimeException("Unable to find a free port....");
     }

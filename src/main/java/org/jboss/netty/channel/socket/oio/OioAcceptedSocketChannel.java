@@ -15,8 +15,7 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.fireChannelBound;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -53,7 +52,7 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
         } catch (IOException e) {
             throw new ChannelException("Failed to obtain an OutputStream.", e);
         }
-        
+
         fireChannelOpen(this);
         fireChannelBound(this, getLocalAddress());
     }

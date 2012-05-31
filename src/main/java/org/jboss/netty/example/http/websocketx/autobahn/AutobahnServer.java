@@ -26,13 +26,13 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * suite
  */
 public class AutobahnServer {
-    
+
     private final int port;
 
     public AutobahnServer(int port) {
         this.port = port;
     }
-    
+
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(

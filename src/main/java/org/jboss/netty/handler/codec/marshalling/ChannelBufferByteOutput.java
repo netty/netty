@@ -24,28 +24,28 @@ import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * {@link ByteOutput} implementation which writes the data to a {@link ChannelBuffer}
- * 
+ *
  *
  */
 class ChannelBufferByteOutput implements ByteOutput {
-    
+
     private final ChannelBuffer buffer;
 
-    
+
     /**
      * Create a new instance which use the given {@link ChannelBuffer}
      */
     public ChannelBufferByteOutput(ChannelBuffer buffer) {
         this.buffer = buffer;
     }
-    
+
     /**
-     * Calls {@link #ChannelBufferByteOutput(ChannelBuffer)} with a dynamic {@link ChannelBuffer} 
+     * Calls {@link #ChannelBufferByteOutput(ChannelBuffer)} with a dynamic {@link ChannelBuffer}
      */
     public ChannelBufferByteOutput(ChannelBufferFactory factory, int estimatedLength) {
         this(ChannelBuffers.dynamicBuffer(estimatedLength, factory));
     }
-    
+
     public void close() throws IOException {
         // Nothing todo
     }
@@ -65,10 +65,10 @@ class ChannelBufferByteOutput implements ByteOutput {
     public void write(byte[] bytes, int srcIndex, int length) throws IOException {
         buffer.writeBytes(bytes, srcIndex, length);
     }
-    
+
     /**
      * Return the {@link ChannelBuffer} which contains the written content
-     * 
+     *
      */
     public ChannelBuffer getBuffer() {
         return buffer;

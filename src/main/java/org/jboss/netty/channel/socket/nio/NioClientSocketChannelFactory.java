@@ -88,14 +88,14 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final NioClientSocketPipelineSink sink;
 
     /**
-     * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()} for the worker and boss executors. 
-     * 
+     * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()} for the worker and boss executors.
+     *
      * See {@link #NioClientSocketChannelFactory(Executor, Executor)}
      */
     public NioClientSocketChannelFactory() {
         this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
     }
-    
+
     /**
      * Creates a new instance.  Calling this constructor is same with calling
      * {@link #NioClientSocketChannelFactory(Executor, Executor, int, int)} with
@@ -163,7 +163,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
                     "bossCount (" + bossCount + ") " +
                     "must be a positive integer.");
         }
-        
+
 
         this.bossExecutor = bossExecutor;
         this.workerPool = workerPool;

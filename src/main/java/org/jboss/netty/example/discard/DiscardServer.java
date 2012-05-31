@@ -34,7 +34,7 @@ public class DiscardServer {
     public DiscardServer(int port) {
         this.port = port;
     }
-    
+
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(

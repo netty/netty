@@ -37,7 +37,7 @@ import org.jboss.netty.logging.InternalLogLevel;
 public class LocalExample {
 
     private final String port;
-    
+
     public LocalExample(String port) {
         this.port = port;
     }

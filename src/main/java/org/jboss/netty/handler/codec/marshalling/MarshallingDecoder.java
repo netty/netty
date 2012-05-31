@@ -26,7 +26,7 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 /**
  * Decoder which MUST be used with {@link MarshallingEncoder}.
- * 
+ *
  * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
  *
  */
@@ -39,12 +39,12 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
      * bytes.  If the size of the received object is greater than
      * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
      * raised.
-     * 
+     *
      */
     public MarshallingDecoder(UnmarshallerProvider provider) {
         this(provider, 1048576);
     }
-    
+
     /**
      * Creates a new decoder with the specified maximum object size.
      *
@@ -57,8 +57,8 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
         super(maxObjectSize, 0, 4, 0, 4);
         this.provider = provider;
     }
-    
-    
+
+
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
@@ -70,7 +70,7 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
 
         Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
         ByteInput input = new ChannelBufferByteInput(frame);
-        
+
         try {
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
