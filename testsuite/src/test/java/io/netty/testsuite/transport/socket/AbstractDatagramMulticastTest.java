@@ -98,12 +98,12 @@ public abstract class AbstractDatagramMulticastTest {
 
         assertTrue(cc.joinGroup(groupAddress, iface).awaitUninterruptibly().isSuccess());
  
-        assertTrue(sc.write(ChannelBuffers.wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
+        assertTrue(sc.write(ChannelBuffers.copyInt(1), groupAddress).awaitUninterruptibly().isSuccess());
         
         
         assertTrue(mhandler.await());
       
-        assertTrue(sc.write(ChannelBuffers.wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
+        assertTrue(sc.write(ChannelBuffers.copyInt(1), groupAddress).awaitUninterruptibly().isSuccess());
 
 
         // leave the group
@@ -113,7 +113,7 @@ public abstract class AbstractDatagramMulticastTest {
         Thread.sleep(1000);
         
         // we should not receive a message anymore as we left the group before
-        assertTrue(sc.write(ChannelBuffers.wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
+        assertTrue(sc.write(ChannelBuffers.copyInt(1), groupAddress).awaitUninterruptibly().isSuccess());
 
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();

@@ -79,7 +79,7 @@ public abstract class AbstractDatagramTest {
         Channel sc = sb.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
 
         Channel cc = cb.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
-        assertTrue(cc.write(ChannelBuffers.wrapInt(1), sc.getLocalAddress()).awaitUninterruptibly().isSuccess());
+        assertTrue(cc.write(ChannelBuffers.copyInt(1), sc.getLocalAddress()).awaitUninterruptibly().isSuccess());
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         sc.close().awaitUninterruptibly();

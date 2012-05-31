@@ -196,7 +196,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         while (read > 0) {
             byteBuffer.position(read).flip();
             written += localfileChannel.write(byteBuffer);
-            localfileChannel.force(false);
             read = inputStream.read(bytes);
         }
         localfileChannel.force(false);
