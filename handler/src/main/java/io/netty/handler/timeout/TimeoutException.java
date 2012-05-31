@@ -25,30 +25,10 @@ public class TimeoutException extends ChannelException {
 
     private static final long serialVersionUID = 4673641882869672533L;
 
-    /**
-     * Creates a new instance.
-     */
-    public TimeoutException() {
-    }
+    TimeoutException() {}
 
-    /**
-     * Creates a new instance.
-     */
-    public TimeoutException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public TimeoutException(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public TimeoutException(Throwable cause) {
-        super(cause);
+    @Override
+    public Throwable fillInStackTrace() {
+        return this;
     }
 }

@@ -15,39 +15,15 @@
  */
 package io.netty.handler.timeout;
 
-
 /**
  * A {@link TimeoutException} raised by {@link WriteTimeoutHandler} when no data
  * was written within a certain period of time.
  */
 public class WriteTimeoutException extends TimeoutException {
 
-    private static final long serialVersionUID = -7746685254523245218L;
+    private static final long serialVersionUID = -144786655770296065L;
 
-    /**
-     * Creates a new instance.
-     */
-    public WriteTimeoutException() {
-    }
+    public static final WriteTimeoutException INSTANCE = new WriteTimeoutException();
 
-    /**
-     * Creates a new instance.
-     */
-    public WriteTimeoutException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public WriteTimeoutException(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public WriteTimeoutException(Throwable cause) {
-        super(cause);
-    }
+    private WriteTimeoutException() {}
 }

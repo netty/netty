@@ -73,17 +73,14 @@ import java.util.concurrent.TimeUnit;
  */
 public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
 
-    private static final ReadTimeoutException EXCEPTION = new ReadTimeoutException();
-
-    static {
-        EXCEPTION.setStackTrace(new StackTraceElement[0]);
-    }
-
     private final long timeoutMillis;
 
     private volatile ScheduledFuture<?> timeout;
     private volatile long lastReadTime;
+
     private volatile boolean destroyed;
+
+    private boolean closed;
 
     /**
      * Creates a new instance.
@@ -187,7 +184,11 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
     }
 
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireExceptionCaught(EXCEPTION);
+        if (!closed) {
+            ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);
+            ctx.close();
+            closed = true;
+        }
     }
 
     private final class ReadTimeoutTask implements Runnable {
@@ -210,8 +211,6 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
                 // Read timed out - set a new timeout and notify the callback.
                 timeout = ctx.eventLoop().schedule(this, timeoutMillis, TimeUnit.MILLISECONDS);
                 try {
-                    // FIXME This should be called from an I/O thread.
-                    //       To be fixed in Netty 4.
                     readTimedOut(ctx);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
