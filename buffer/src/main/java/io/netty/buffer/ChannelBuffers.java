@@ -824,7 +824,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new 4-byte buffer that holds the specified 32-bit integer.
      */
-    public static ChannelBuffer wrapInt(int value) {
+    public static ChannelBuffer copyInt(int value) {
         ChannelBuffer buf = buffer(4);
         buf.writeInt(value);
         return buf;
@@ -833,7 +833,7 @@ public final class ChannelBuffers {
     /**
      * Create a {@link ChannelBuffer} that holds all the given values as int's
      */
-    public static ChannelBuffer wrapInt(int... values) {
+    public static ChannelBuffer copyInt(int... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
@@ -847,7 +847,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new 2-byte buffer that holds the specified 16-bit integer.
      */
-    public static ChannelBuffer wrapShort(int value) {
+    public static ChannelBuffer copyShort(int value) {
         ChannelBuffer buf = buffer(2);
         buf.writeShort(value);
         return buf;
@@ -856,7 +856,21 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 16-bit integers.
      */
-    public static ChannelBuffer wrapShort(int... values) {
+    public static ChannelBuffer copyShort(short... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 2);
+        for (int v: values) {
+            buffer.writeShort(v);
+        }
+        return buffer;
+    }
+
+    /**
+     * Create a new buffer that holds a sequence of the specified 16-bit integers.
+     */
+    public static ChannelBuffer copyShort(int... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
@@ -870,7 +884,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new 3-byte buffer that holds the specified 24-bit integer.
      */
-    public static ChannelBuffer wrapMedium(int value) {
+    public static ChannelBuffer copyMedium(int value) {
         ChannelBuffer buf = buffer(3);
         buf.writeMedium(value);
         return buf;
@@ -879,7 +893,7 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 24-bit integers.
      */
-    public static ChannelBuffer wrapMedium(int... values) {
+    public static ChannelBuffer copyMedium(int... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
@@ -893,7 +907,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new 8-byte buffer that holds the specified 64-bit integer.
      */
-    public static ChannelBuffer wrapLong(long value) {
+    public static ChannelBuffer copyLong(long value) {
         ChannelBuffer buf = buffer(8);
         buf.writeLong(value);
         return buf;
@@ -902,7 +916,7 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 64-bit integers.
      */
-    public static ChannelBuffer wrapLong(long... values) {
+    public static ChannelBuffer copyLong(long... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
@@ -916,7 +930,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new single-byte buffer that holds the specified boolean value.
      */
-    public static ChannelBuffer wrapBoolean(boolean value) {
+    public static ChannelBuffer copyBoolean(boolean value) {
         ChannelBuffer buf = buffer(1);
         buf.writeBoolean(value);
         return buf;
@@ -925,7 +939,7 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified boolean values.
      */
-    public static ChannelBuffer wrapBoolean(boolean... values) {
+    public static ChannelBuffer copyBoolean(boolean... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
@@ -939,7 +953,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new 4-byte buffer that holds the specified 32-bit floating point number.
      */
-    public static ChannelBuffer wrapFloat(float value) {
+    public static ChannelBuffer copyFloat(float value) {
         ChannelBuffer buf = buffer(4);
         buf.writeFloat(value);
         return buf;
@@ -948,7 +962,7 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 32-bit floating point numbers.
      */
-    public static ChannelBuffer wrapFloat(float... values) {
+    public static ChannelBuffer copyFloat(float... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
@@ -962,7 +976,7 @@ public final class ChannelBuffers {
     /**
      * Creates a new 8-byte buffer that holds the specified 64-bit floating point number.
      */
-    public static ChannelBuffer wrapDouble(double value) {
+    public static ChannelBuffer copyDouble(double value) {
         ChannelBuffer buf = buffer(8);
         buf.writeDouble(value);
         return buf;
@@ -971,7 +985,7 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 64-bit floating point numbers.
      */
-    public static ChannelBuffer wrapDouble(double... values) {
+    public static ChannelBuffer copyDouble(double... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }

@@ -425,70 +425,149 @@ public class ChannelBuffersTest {
             // Expected
         }
     }
-    
+
+    @Test
+    public void testWrapSingleInt() {
+        ChannelBuffer buffer = ChannelBuffers.copyInt(42);
+        assertEquals(4, buffer.capacity());
+        assertEquals(42, buffer.readInt());
+        assertFalse(buffer.readable());
+    }
+
     @Test
     public void testWrapInt() {
-        ChannelBuffer buffer = ChannelBuffers.wrapInt(1,4);
+        ChannelBuffer buffer = ChannelBuffers.copyInt(1, 4);
         assertEquals(8, buffer.capacity());
         assertEquals(1, buffer.readInt());
         assertEquals(4, buffer.readInt());
         assertFalse(buffer.readable());
-        
-        assertEquals(0, ChannelBuffers.wrapInt(null).capacity());
-        assertEquals(0, ChannelBuffers.wrapInt(new int[0]).capacity());
 
+        assertEquals(0, ChannelBuffers.copyInt(null).capacity());
+        assertEquals(0, ChannelBuffers.copyInt(new int[0]).capacity());
     }
-    
+
     @Test
-    public void testWrapShort() {
-        ChannelBuffer buffer = ChannelBuffers.wrapShort(1,4);
+    public void testWrapSingleShort() {
+        ChannelBuffer buffer = ChannelBuffers.copyShort(42);
+        assertEquals(2, buffer.capacity());
+        assertEquals(42, buffer.readShort());
+        assertFalse(buffer.readable());
+    }
+
+    @Test
+    public void testWrapShortFromShortArray() {
+        ChannelBuffer buffer = ChannelBuffers.copyShort(new short[] { 1, 4 });
         assertEquals(4, buffer.capacity());
         assertEquals(1, buffer.readShort());
         assertEquals(4, buffer.readShort());
         assertFalse(buffer.readable());
-        
-        assertEquals(0, ChannelBuffers.wrapShort(null).capacity());
-        assertEquals(0, ChannelBuffers.wrapShort(new int[0]).capacity());
 
+        assertEquals(0, ChannelBuffers.copyShort((short[]) null).capacity());
+        assertEquals(0, ChannelBuffers.copyShort(new short[0]).capacity());
     }
-    
+
+    @Test
+    public void testWrapShortFromIntArray() {
+        ChannelBuffer buffer = ChannelBuffers.copyShort(1, 4);
+        assertEquals(4, buffer.capacity());
+        assertEquals(1, buffer.readShort());
+        assertEquals(4, buffer.readShort());
+        assertFalse(buffer.readable());
+
+        assertEquals(0, ChannelBuffers.copyShort((int[]) null).capacity());
+        assertEquals(0, ChannelBuffers.copyShort(new int[0]).capacity());
+    }
+
+    @Test
+    public void testWrapSingleMedium() {
+        ChannelBuffer buffer = ChannelBuffers.copyMedium(42);
+        assertEquals(3, buffer.capacity());
+        assertEquals(42, buffer.readMedium());
+        assertFalse(buffer.readable());
+    }
+
     @Test
     public void testWrapMedium() {
-        ChannelBuffer buffer = ChannelBuffers.wrapMedium(1,4);
+        ChannelBuffer buffer = ChannelBuffers.copyMedium(1, 4);
         assertEquals(6, buffer.capacity());
         assertEquals(1, buffer.readMedium());
         assertEquals(4, buffer.readMedium());
         assertFalse(buffer.readable());
-        
-        assertEquals(0, ChannelBuffers.wrapMedium(null).capacity());
-        assertEquals(0, ChannelBuffers.wrapMedium(new int[0]).capacity());
 
+        assertEquals(0, ChannelBuffers.copyMedium(null).capacity());
+        assertEquals(0, ChannelBuffers.copyMedium(new int[0]).capacity());
     }
-    
-    
+
+    @Test
+    public void testWrapSingleLong() {
+        ChannelBuffer buffer = ChannelBuffers.copyLong(42);
+        assertEquals(8, buffer.capacity());
+        assertEquals(42, buffer.readLong());
+        assertFalse(buffer.readable());
+    }
+
     @Test
     public void testWrapLong() {
-        ChannelBuffer buffer = ChannelBuffers.wrapLong(1,4);
+        ChannelBuffer buffer = ChannelBuffers.copyLong(1, 4);
         assertEquals(16, buffer.capacity());
         assertEquals(1, buffer.readLong());
         assertEquals(4, buffer.readLong());
         assertFalse(buffer.readable());
-        
-        assertEquals(0, ChannelBuffers.wrapLong(null).capacity());
-        assertEquals(0, ChannelBuffers.wrapLong(new long[0]).capacity());
 
+        assertEquals(0, ChannelBuffers.copyLong(null).capacity());
+        assertEquals(0, ChannelBuffers.copyLong(new long[0]).capacity());
     }
-    
+
+    @Test
+    public void testWrapSingleFloat() {
+        ChannelBuffer buffer = ChannelBuffers.copyFloat(42);
+        assertEquals(4, buffer.capacity());
+        assertEquals(42, buffer.readFloat(), 0.01);
+        assertFalse(buffer.readable());
+    }
+
+    @Test
+    public void testWrapFloat() {
+        ChannelBuffer buffer = ChannelBuffers.copyFloat(1, 4);
+        assertEquals(8, buffer.capacity());
+        assertEquals(1, buffer.readFloat(), 0.01);
+        assertEquals(4, buffer.readFloat(), 0.01);
+        assertFalse(buffer.readable());
+
+        assertEquals(0, ChannelBuffers.copyFloat(null).capacity());
+        assertEquals(0, ChannelBuffers.copyFloat(new float[0]).capacity());
+    }
+
+    @Test
+    public void testWrapSingleDouble() {
+        ChannelBuffer buffer = ChannelBuffers.copyDouble(42);
+        assertEquals(8, buffer.capacity());
+        assertEquals(42, buffer.readDouble(), 0.01);
+        assertFalse(buffer.readable());
+    }
+
+    @Test
+    public void testWrapDouble() {
+        ChannelBuffer buffer = ChannelBuffers.copyDouble(1, 4);
+        assertEquals(16, buffer.capacity());
+        assertEquals(1, buffer.readDouble(), 0.01);
+        assertEquals(4, buffer.readDouble(), 0.01);
+        assertFalse(buffer.readable());
+
+        assertEquals(0, ChannelBuffers.copyDouble(null).capacity());
+        assertEquals(0, ChannelBuffers.copyDouble(new double[0]).capacity());
+    }
+
     @Test
     public void testWrapBoolean() {
-        ChannelBuffer buffer = ChannelBuffers.wrapBoolean(true, false);
+        ChannelBuffer buffer = ChannelBuffers.copyBoolean(true, false);
         assertEquals(2, buffer.capacity());
         assertEquals(true, buffer.readBoolean());
         assertEquals(false, buffer.readBoolean());
         assertFalse(buffer.readable());
-        
-        assertEquals(0, ChannelBuffers.wrapBoolean(null).capacity());
-        assertEquals(0, ChannelBuffers.wrapBoolean(new boolean[0]).capacity());
+
+        assertEquals(0, ChannelBuffers.copyBoolean(null).capacity());
+        assertEquals(0, ChannelBuffers.copyBoolean(new boolean[0]).capacity());
 
     }
 }
