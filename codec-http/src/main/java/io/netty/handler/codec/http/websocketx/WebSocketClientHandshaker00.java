@@ -152,7 +152,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         request.addHeader(Names.ORIGIN, originValue);
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
-        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
@@ -223,9 +223,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(subprotocol);
 
-        channel.pipeline().replace(
-                HttpResponseDecoder.class, "ws-decoder",
-                new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
+        channel.pipeline().get(HttpResponseDecoder.class).replace(
+                "ws-decoder", new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }
