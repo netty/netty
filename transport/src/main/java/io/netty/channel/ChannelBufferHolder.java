@@ -184,7 +184,7 @@ public final class ChannelBufferHolder<E> {
             if (msgBuf != null) {
                 return msgBuf.isEmpty();
             } else {
-                return byteBuf.readable();
+                return !byteBuf.readable();
             }
         case 1:
         case 2:
