@@ -145,7 +145,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need "
-                    + (index + length) + ", maximum is " + data.limit());
+                    + (index + length) + ", maximum is " + buffer.limit());
         }
         tmpBuf.get(dst, dstIndex, length);
     }
@@ -157,7 +157,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             tmpBuf.clear().position(index).limit(index + bytesToCopy);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need "
-                    + (index + bytesToCopy) + ", maximum is " + data.limit());
+                    + (index + bytesToCopy) + ", maximum is " + buffer.limit());
         }
         dst.put(tmpBuf);
     }
