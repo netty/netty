@@ -228,7 +228,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Needs "
-                    + (index + length) + ", maximum is " + capacity() + " or " 
+                    + (index + length) + ", maximum is " + capacity() + " or "
                     + dst.length);
         }
 
@@ -308,7 +308,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throws IOException {
         int componentId = componentId(index);
         if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to be read - needs " 
+            throw new IndexOutOfBoundsException("Too many bytes to be read - needs "
                     + (index + length) + ", maximum of " + capacity());
         }
 
@@ -675,13 +675,13 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
 
         // If the list is empty we need to assign a new one because
-        // we get a List that is immutable. 
+        // we get a List that is immutable.
         //
         // See https://github.com/netty/netty/issues/325
         if (list.isEmpty()) {
             list = new ArrayList<ChannelBuffer>(1);
         }
-        
+
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.

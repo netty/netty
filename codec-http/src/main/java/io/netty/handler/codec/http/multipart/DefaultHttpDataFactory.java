@@ -37,9 +37,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      */
     public static long MINSIZE = 0x4000;
 
-    private boolean useDisk;
+    private final boolean useDisk;
 
-    private boolean checkSize;
+    private final boolean checkSize;
 
     private long minSize;
 
@@ -55,7 +55,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public DefaultHttpDataFactory() {
         useDisk = false;
         checkSize = true;
-        this.minSize = MINSIZE;
+        minSize = MINSIZE;
     }
 
     /**
@@ -79,7 +79,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /**
-     * 
+     *
      * @param request
      * @return the associated list of Files for the request
      */
@@ -91,7 +91,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
         return list;
     }
-    
+
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {

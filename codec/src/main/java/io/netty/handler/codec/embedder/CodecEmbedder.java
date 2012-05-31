@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.embedder;
 
-import java.util.Collection;
-
 import io.netty.channel.ChannelPipeline;
+
+import java.util.Collection;
 
 /**
  * A helper that wraps an encoder or a decoder (codec) so that they can be used

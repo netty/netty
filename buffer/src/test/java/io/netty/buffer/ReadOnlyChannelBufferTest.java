@@ -15,8 +15,8 @@
  */
 package io.netty.buffer;
 
-import static org.easymock.EasyMock.*;
 import static io.netty.buffer.ChannelBuffers.*;
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import java.io.IOException;

@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.internal.StringUtil;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * The default {@link HttpMessage} implementation.

@@ -33,7 +33,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new empty close frame with closing status code and reason text
-     * 
+     *
      * @param statusCode
      *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
@@ -46,7 +46,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new close frame with no losing status code and no reason text
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -58,7 +58,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new close frame with closing status code and reason text
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -90,7 +90,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new close frame
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -113,7 +113,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * a status code is set, -1 is returned.
      */
     public int getStatusCode() {
-        ChannelBuffer binaryData = this.getBinaryData();
+        ChannelBuffer binaryData = getBinaryData();
         if (binaryData == null || binaryData.capacity() == 0) {
             return -1;
         }
@@ -130,7 +130,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * text is not supplied, an empty string is returned.
      */
     public String getReasonText() {
-        ChannelBuffer binaryData = this.getBinaryData();
+        ChannelBuffer binaryData = getBinaryData();
         if (binaryData == null || binaryData.capacity() <= 2) {
             return "";
         }

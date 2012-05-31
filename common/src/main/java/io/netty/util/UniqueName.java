@@ -29,6 +29,9 @@ public class UniqueName implements Comparable<UniqueName> {
         this.name = name;
     }
 
+    /**
+     * @param args arguments to validate
+     */
     protected void validateArgs(Object... args) {
         // Subclasses will override.
     }

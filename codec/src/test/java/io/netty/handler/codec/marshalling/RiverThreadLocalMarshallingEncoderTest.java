@@ -16,7 +16,7 @@
 package io.netty.handler.codec.marshalling;
 
 public class RiverThreadLocalMarshallingEncoderTest extends RiverMarshallingEncoderTest {
-    
+
     @Override
     protected MarshallerProvider createProvider() {
         return new ThreadLocalMarshallerProvider(createMarshallerFactory(), createMarshallingConfig());

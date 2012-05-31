@@ -33,7 +33,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new ping frame with the specified binary data.
-     * 
+     *
      * @param binaryData
      *            the content of the frame.
      */
@@ -43,7 +43,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new ping frame with the specified binary data
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv

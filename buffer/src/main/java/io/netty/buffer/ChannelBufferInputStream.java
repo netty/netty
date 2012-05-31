@@ -243,7 +243,7 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
             throw new IndexOutOfBoundsException("fieldSize cannot be a negative number");
         }
         if (fieldSize > available()) {
-            throw new EOFException("fieldSize is too long! Length is " + fieldSize 
+            throw new EOFException("fieldSize is too long! Length is " + fieldSize
                     + ", but maximum is " + available());
         }
     }

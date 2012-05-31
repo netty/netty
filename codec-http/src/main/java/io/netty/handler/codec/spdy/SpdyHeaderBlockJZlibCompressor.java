@@ -16,7 +16,6 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.handler.codec.compression.CompressionException;
 import io.netty.util.internal.jzlib.JZlib;

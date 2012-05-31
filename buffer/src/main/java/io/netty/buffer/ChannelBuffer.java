@@ -442,12 +442,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         not a dynamic buffer
      */
     void ensureWritableBytes(int writableBytes);
-    
+
     /**
      * Gets a boolean at the specified absolute (@code index) in this buffer.
      * This method does not modify the {@code readerIndex} or {@code writerIndex}
      * of this buffer.
-     * 
+     *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 1} is greater than {@code this.capacity}
@@ -736,7 +736,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code index + 1} is greater than {@code this.capacity}
      */
     void setBoolean(int index, boolean value);
-    
+
     /**
      * Sets the specified byte at the specified absolute {@code index} in this
      * buffer.  The 24 high-order bits of the specified value are ignored.
@@ -986,7 +986,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code index + length} is greater than {@code this.capacity}
      */
     void setZero(int index, int length);
-    
+
     /**
      * Gets a boolean at the current {@code readerIndex} and increases
      * the {@code readerIndex} by {@code 1} in this buffer.
@@ -1263,7 +1263,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code this.writableBytes} is less than {@code 1}
      */
     void writeBoolean(boolean value);
-    
+
     /**
      * Sets the specified byte at the current {@code writerIndex}
      * and increases the {@code writerIndex} by {@code 1} in this buffer.

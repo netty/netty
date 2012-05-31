@@ -456,7 +456,7 @@ final class InfCodes {
     // at least ten.  The ten bytes are six bytes for the longest length/
     // distance pair plus four bytes for overloading the bit buffer.
 
-    int inflate_fast(int bl, int bd, int[] tl, int tl_index, int[] td,
+    static int inflate_fast(int bl, int bd, int[] tl, int tl_index, int[] td,
             int td_index, InfBlocks s, ZStream z) {
         int t; // temporary pointer
         int[] tp; // temporary pointer

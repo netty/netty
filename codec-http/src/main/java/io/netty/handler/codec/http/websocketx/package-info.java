@@ -30,8 +30,8 @@
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServerX</tt> example located in the
  * {@code io.netty.example.http.websocket} package.
- * </p> 
- * 
+ * </p>
+ *
  * @apiviz.exclude OneToOne(Encoder|Decoder)$
  * @apiviz.exclude \.codec\.replay\.
  * @apiviz.exclude \.Default

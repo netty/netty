@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import io.netty.handler.codec.http.HttpMethod;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import io.netty.handler.codec.http.HttpMethod;
 
 /**
  * The request method of RTSP.

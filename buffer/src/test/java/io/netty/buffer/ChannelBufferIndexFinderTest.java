@@ -16,8 +16,8 @@
 package io.netty.buffer;
 
 import static org.junit.Assert.*;
-
 import io.netty.util.CharsetUtil;
+
 import org.junit.Test;
 
 

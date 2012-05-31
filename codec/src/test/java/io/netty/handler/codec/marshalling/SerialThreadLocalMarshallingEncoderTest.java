@@ -16,7 +16,7 @@
 package io.netty.handler.codec.marshalling;
 
 public class SerialThreadLocalMarshallingEncoderTest extends SerialMarshallingEncoderTest {
-    
+
     @Override
     protected MarshallerProvider createProvider() {
         return new ThreadLocalMarshallerProvider(createMarshallerFactory(), createMarshallingConfig());

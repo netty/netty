@@ -23,7 +23,7 @@ import java.io.ObjectStreamClass;
 import java.io.StreamCorruptedException;
 
 class CompactObjectInputStream extends ObjectInputStream {
-    
+
     private final ClassResolver classResolver;
 
     CompactObjectInputStream(InputStream in, ClassResolver classResolver) throws IOException {

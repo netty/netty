@@ -15,11 +15,11 @@
  */
 package io.netty.util.internal;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Warn when user creates too many instances to avoid {@link OutOfMemoryError}.

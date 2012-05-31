@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 
 /**
  * An HTTP message which provides common properties for {@link HttpRequest} and

@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelPipeline;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelPipeline;
 
 /**
  * An HTTP chunk which is used for HTTP chunked transfer-encoding.

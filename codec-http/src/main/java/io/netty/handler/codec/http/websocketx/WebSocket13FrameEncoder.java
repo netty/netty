@@ -62,7 +62,7 @@ public class WebSocket13FrameEncoder extends WebSocket08FrameEncoder {
 
     /**
      * Constructor
-     * 
+     *
      * @param maskPayload
      *            Web socket clients must set this to true to mask payload. Server implementations must set this to
      *            false.

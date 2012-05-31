@@ -15,11 +15,10 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.zip.Deflater;
-
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ChannelBuffer;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import java.util.zip.Deflater;
 
 class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
 

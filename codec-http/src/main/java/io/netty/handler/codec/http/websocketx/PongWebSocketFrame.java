@@ -32,7 +32,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new pong frame with the specified binary data.
-     * 
+     *
      * @param binaryData
      *            the content of the frame.
      */
@@ -42,7 +42,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new pong frame with the specified binary data
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv

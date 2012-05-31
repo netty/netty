@@ -139,7 +139,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                 throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                this.setSelectedSubprotocol(selectedSubprotocol);
+                setSelectedSubprotocol(selectedSubprotocol);
             }
         }
 

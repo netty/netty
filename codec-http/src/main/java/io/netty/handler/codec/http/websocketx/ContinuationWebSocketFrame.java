@@ -36,7 +36,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new continuation frame with the specified binary data. The final fragment flag is set to true.
-     * 
+     *
      * @param binaryData
      *            the content of the frame.
      */
@@ -46,7 +46,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new continuation frame with the specified binary data
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -62,7 +62,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new continuation frame with the specified binary data
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -81,7 +81,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new continuation frame with the specified text data
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -107,7 +107,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     /**
      * Sets the string for this frame
-     * 
+     *
      * @param text
      *            text to store
      */

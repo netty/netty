@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * TODO Document me.

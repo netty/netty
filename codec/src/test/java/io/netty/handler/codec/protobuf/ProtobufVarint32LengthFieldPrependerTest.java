@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static org.hamcrest.core.Is.*;
 import static io.netty.buffer.ChannelBuffers.*;
+import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
-
 import io.netty.buffer.ChannelBuffer;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
+
 import org.junit.Before;
 import org.junit.Test;
 

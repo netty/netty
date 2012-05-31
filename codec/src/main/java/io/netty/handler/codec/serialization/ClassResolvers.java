@@ -40,7 +40,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingResolver(ClassLoader classLoader) {
         return new CachingClassResolver(new ClassLoaderClassResolver(defaultClassLoader(classLoader)), new WeakReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
     }
-    
+
     /**
      * agressive non-concurrent cache
      * good for non-shared cache, when we're not worried about class unloading

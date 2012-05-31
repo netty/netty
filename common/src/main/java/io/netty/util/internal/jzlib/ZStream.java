@@ -114,7 +114,7 @@ public final class ZStream {
         if (istate == null) {
             return JZlib.Z_STREAM_ERROR;
         }
-        return istate.inflateSetDictionary(this, dictionary, dictLength);
+        return Inflate.inflateSetDictionary(this, dictionary, dictLength);
     }
 
     public int deflateInit(int level) {

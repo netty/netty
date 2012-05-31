@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import static io.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
+import io.netty.util.CharsetUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,7 +27,6 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -140,7 +140,7 @@ public abstract class AbstractChannelBufferTest {
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY);
     }
-    
+
     @Test(expected = IndexOutOfBoundsException.class)
     public void getBooleanBoundaryCheck1() {
         buffer.getBoolean(-1);
@@ -1641,7 +1641,7 @@ public abstract class AbstractChannelBufferTest {
         assertFalse(set.contains(elemB));
         assertEquals(0, set.size());
     }
-    
+
     // Test case for https://github.com/netty/netty/issues/325
     @Test
     public void testDiscardAllReadBytes() {

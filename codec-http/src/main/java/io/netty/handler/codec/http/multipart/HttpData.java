@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ChannelBuffer;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-
-import io.netty.buffer.ChannelBuffer;
 
 /**
  * Extended interface for InterfaceHttpData

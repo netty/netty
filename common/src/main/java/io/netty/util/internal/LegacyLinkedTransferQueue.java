@@ -40,7 +40,7 @@ import java.util.concurrent.locks.LockSupport;
  * </strong>
  * <br>
  * <br>
- * 
+ *
  * An unbounded {@link BlockingQueue} based on linked nodes.
  * This queue orders elements FIFO (first-in-first-out) with respect
  * to any given producer.  The <em>head</em> of the queue is that
@@ -672,7 +672,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                     continue retry;           // lost race vs opposite mode
                 }
                 if (how != ASYNC) {
-                    return awaitMatch(s, pred, e, (how == TIMED), nanos);
+                    return awaitMatch(s, pred, e, how == TIMED, nanos);
                 }
             }
             return e; // not waiting
@@ -1351,7 +1351,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
         throws java.io.IOException, ClassNotFoundException {
         s.defaultReadObject();
         for (;;) {
-            @SuppressWarnings("unchecked") E item = (E) s.readObject();
+            E item = (E) s.readObject();
             if (item == null) {
                 break;
             } else {

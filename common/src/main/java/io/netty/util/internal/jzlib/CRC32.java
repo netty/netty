@@ -92,7 +92,7 @@ final class CRC32 {
         crc32 ^= 0xffffffff;
         return crc32;
     }
-    
+
     private CRC32() {
         // Utility Class
     }

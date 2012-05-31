@@ -99,7 +99,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
             return null;
         }
-                
+
         ZlibWrapper wrapper = determineWrapper(acceptEncoding);
         if (wrapper == null) {
             return null;

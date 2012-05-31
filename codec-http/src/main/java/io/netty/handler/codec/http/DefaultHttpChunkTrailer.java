@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 
 /**
  * The default {@link HttpChunkTrailer} implementation.

@@ -105,7 +105,7 @@ public final class JZlib {
     enum WrapperType {
         NONE, ZLIB, GZIP, ZLIB_OR_NONE
     }
-    
+
     private JZlib() {
         // Utility class
     }

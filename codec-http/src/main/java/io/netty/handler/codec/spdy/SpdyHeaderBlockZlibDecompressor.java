@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.zip.DataFormatException;
-import java.util.zip.Inflater;
-
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ChannelBuffer;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
 
