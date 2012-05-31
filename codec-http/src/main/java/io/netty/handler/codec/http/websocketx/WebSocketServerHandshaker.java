@@ -35,7 +35,7 @@ public abstract class WebSocketServerHandshaker {
 
     private final int maxFramePayloadLength;
 
-    private String selectedSubprotocol = null;
+    private String selectedSubprotocol;
 
     /**
      * Constructor specifying the destination web socket location
