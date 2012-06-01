@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import io.netty.channel.FileRegion;
-
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk using
  * NIO {@link FileChannel}.

@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.handler.codec.embedder.EncoderEmbedder;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -89,7 +90,9 @@ public class ChunkedWriteHandlerTest {
     }
 
     private static void check(ChunkedInput... inputs) {
-        EncoderEmbedder<ChannelBuffer> embedder = new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler());
+        EncoderEmbedder<ChannelBuffer> embedder =
+                new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler());
+
         for (ChunkedInput input: inputs) {
             embedder.offer(input);
         }

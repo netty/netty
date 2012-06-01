@@ -21,8 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import io.netty.channel.FileRegion;
-
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
  * <p>
