@@ -15,28 +15,23 @@
  */
 package org.jboss.netty.handler.execution;
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.util.EstimatableObjectWrapper;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
 
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;
     int estimatedSize;
-    private final Executor executor;
 
     /**
      * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
      * upstream via the specified {@link ChannelHandlerContext}.
      */
-    public ChannelEventRunnable(ChannelHandlerContext ctx, ChannelEvent e, Executor executor) {
+    public ChannelEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
         this.ctx = ctx;
         this.e = e;
-        this.executor = executor;
     }
 
     /**
@@ -57,19 +52,4 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     public Object unwrap() {
         return e;
     }
-
-    public final void run() {
-        try {
-            DeadLockProofWorker.PARENT.set(executor);
-            runTask();
-        } finally {
-            DeadLockProofWorker.PARENT.remove();
-        }
-
-    }
-    
-    /**
-     * Run the task
-     */
-    protected abstract void runTask();
 }

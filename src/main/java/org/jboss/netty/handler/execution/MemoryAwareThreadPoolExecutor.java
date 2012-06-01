@@ -45,7 +45,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
@@ -442,12 +441,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
      * Executes the specified task without maintaining the event order.
      */
     protected final void doUnorderedExecute(Runnable task) {
-        try {
-            DeadLockProofWorker.PARENT.set(this);
-            super.execute(task);
-        } finally {
-            DeadLockProofWorker.PARENT.remove();
-        }
+        super.execute(task);
     }
 
     @Override

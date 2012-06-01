@@ -16,8 +16,6 @@
 package org.jboss.netty.handler.execution;
 
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
@@ -26,15 +24,14 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  */
 public class ChannelDownstreamEventRunnable extends ChannelEventRunnable {
 
-    public ChannelDownstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e, Executor executor) {
-        super(ctx, e, executor);
+    public ChannelDownstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
+        super(ctx, e);
     }
 
     /**
      * Send the {@link ChannelEvent} downstream
      */
-    @Override
-    public void runTask() {
+    public void run() {
         ctx.sendDownstream(e);
     }
 }
