@@ -363,21 +363,21 @@ public final class ChannelBuffers {
                     components.add(wrappedBuffer(endianness, a));
                 }
             }
-            return compositeBuffer(endianness, components);
+            return compositeBuffer(endianness, components, false);
         }
 
         return EMPTY_BUFFER;
     }
 
     private static ChannelBuffer compositeBuffer(
-            ByteOrder endianness, List<ChannelBuffer> components) {
+            ByteOrder endianness, List<ChannelBuffer> components, boolean gathering) {
         switch (components.size()) {
         case 0:
             return EMPTY_BUFFER;
         case 1:
             return components.get(0);
         default:
-            return new CompositeChannelBuffer(endianness, components);
+            return new CompositeChannelBuffer(endianness, components, gathering);
         }
     }
 
@@ -385,12 +385,26 @@ public final class ChannelBuffers {
      * Creates a new composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
-     *
+     * 
      * @throws IllegalArgumentException
      *         if the specified buffers' endianness are different from each
      *         other
      */
     public static ChannelBuffer wrappedBuffer(ChannelBuffer... buffers) {
+        return wrappedBuffer(false, buffers);
+    }
+    /**
+     * Creates a new composite buffer which wraps the readable bytes of the
+     * specified buffers without copying them.  A modification on the content
+     * of the specified buffers will be visible to the returned buffer.
+     * If gathering is <code>true</code> then gathering writes will be used when ever
+     * possible.
+     * 
+     * @throws IllegalArgumentException
+     *         if the specified buffers' endianness are different from each
+     *         other
+     */
+    public static ChannelBuffer wrappedBuffer(boolean gathering, ChannelBuffer... buffers) {
         switch (buffers.length) {
         case 0:
             break;
@@ -426,10 +440,11 @@ public final class ChannelBuffers {
                     }
                 }
             }
-            return compositeBuffer(order, components);
+            return compositeBuffer(order, components, gathering);
         }
         return EMPTY_BUFFER;
     }
+    
 
     /**
      * Creates a new composite buffer which wraps the slices of the specified
@@ -441,6 +456,21 @@ public final class ChannelBuffers {
      *         other
      */
     public static ChannelBuffer wrappedBuffer(ByteBuffer... buffers) {
+        return wrappedBuffer(false, buffers);
+    }
+
+    /**
+     * Creates a new composite buffer which wraps the slices of the specified
+     * NIO buffers without copying them.  A modification on the content of the
+     * specified buffers will be visible to the returned buffer.
+     * If gathering is <code>true</code> then gathering writes will be used when ever
+     * possible.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified buffers' endianness are different from each
+     *         other
+     */
+    public static ChannelBuffer wrappedBuffer(boolean gathering, ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
             break;
@@ -468,7 +498,7 @@ public final class ChannelBuffers {
                     components.add(wrappedBuffer(b));
                 }
             }
-            return compositeBuffer(order, components);
+            return compositeBuffer(order, components, gathering);
         }
 
         return EMPTY_BUFFER;
@@ -642,7 +672,7 @@ public final class ChannelBuffers {
         for (int i = 0; i < buffers.length; i ++) {
             copiedBuffers[i] = copiedBuffer(buffers[i]);
         }
-        return wrappedBuffer(copiedBuffers);
+        return wrappedBuffer(false, copiedBuffers);
     }
 
     /**
@@ -667,7 +697,7 @@ public final class ChannelBuffers {
         for (int i = 0; i < buffers.length; i ++) {
             copiedBuffers[i] = copiedBuffer(buffers[i]);
         }
-        return wrappedBuffer(copiedBuffers);
+        return wrappedBuffer(false, copiedBuffers);
     }
 
     /**
