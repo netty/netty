@@ -169,7 +169,12 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     public void handleUpstream(
             ChannelHandlerContext context, ChannelEvent e) throws Exception {
         if (handleUpstream) {
-            executor.execute(new ChannelUpstreamEventRunnable(context, e));
+            try {
+                executor.execute(new ChannelUpstreamEventRunnable(context, e, executor));
+
+            } finally {
+                
+            }
         } else {
             context.sendUpstream(e);
         }
@@ -180,7 +185,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
         // check if the read was suspend
         if (!handleReadSuspend(ctx, e)) {
             if (handleDownstream) {
-                executor.execute(new ChannelDownstreamEventRunnable(ctx, e));
+                executor.execute(new ChannelDownstreamEventRunnable(ctx, e, executor));
             } else {
                 ctx.sendDownstream(e);
             }

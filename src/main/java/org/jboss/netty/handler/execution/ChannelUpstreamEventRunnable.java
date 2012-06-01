@@ -32,15 +32,16 @@ public class ChannelUpstreamEventRunnable extends ChannelEventRunnable {
      * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
      * upstream via the specified {@link ChannelHandlerContext}.
      */
-    public ChannelUpstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
-        super(ctx, e);
+    public ChannelUpstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e, Executor executor) {
+        super(ctx, e, executor);
     }
 
    
     /**
      * Sends the event upstream.
      */
-    public void run() {
+    @Override
+    protected void runTask() {
         ctx.sendUpstream(e);
     }
 }

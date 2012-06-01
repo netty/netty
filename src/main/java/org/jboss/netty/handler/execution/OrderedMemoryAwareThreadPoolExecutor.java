@@ -31,6 +31,7 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
 /**
@@ -302,6 +303,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                 acquired = true;
                 try {
                     Thread thread = Thread.currentThread();
+                    DeadLockProofWorker.PARENT.set(OrderedMemoryAwareThreadPoolExecutor.this);
                     for (;;) {
                         final Runnable task = tasks.poll();
                         // if the task is null we should exit the loop
@@ -323,6 +325,8 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                         }
                     }
                 } finally {
+                    DeadLockProofWorker.PARENT.remove();
+
                     // set it back to not running
                     isRunning.set(false);
                 }
