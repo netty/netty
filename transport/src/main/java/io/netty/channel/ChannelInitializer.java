@@ -1,8 +1,10 @@
 package io.netty.channel;
 
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+@Sharable
 public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter<Object> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
