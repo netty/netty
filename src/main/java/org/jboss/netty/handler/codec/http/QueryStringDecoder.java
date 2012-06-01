@@ -60,7 +60,7 @@ import org.jboss.netty.util.CharsetUtil;
 public class QueryStringDecoder {
 
     private static final int DEFAULT_MAX_PARAMS = 1024;
-    
+
     private final Charset charset;
     private final String uri;
     private final boolean hasPath;
@@ -74,7 +74,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(String uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -82,7 +82,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, boolean hasPath) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET, hasPath);
+        this(uri, HttpConstants.DEFAULT_CHARSET, hasPath);
     }
 
     /**
@@ -137,7 +137,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(URI uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -147,7 +147,7 @@ public class QueryStringDecoder {
     public QueryStringDecoder(URI uri, Charset charset) {
         this(uri, charset, DEFAULT_MAX_PARAMS);
     }
-    
+
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
@@ -163,7 +163,7 @@ public class QueryStringDecoder {
             throw new IllegalArgumentException(
                     "maxParams: " + maxParams + " (expected: a positive integer)");
         }
-        
+
         String rawPath = uri.getRawPath();
         if (rawPath != null) {
             hasPath = true;
@@ -171,7 +171,7 @@ public class QueryStringDecoder {
             rawPath = "";
             hasPath = false;
         }
-        // Also take care of cut of things like "http://localhost" 
+        // Also take care of cut of things like "http://localhost"
         String newUri = rawPath + "?" + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
@@ -305,7 +305,7 @@ public class QueryStringDecoder {
      * escape sequence.
      */
     public static String decodeComponent(final String s) {
-        return decodeComponent(s, HttpCodecUtil.DEFAULT_CHARSET);
+        return decodeComponent(s, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**

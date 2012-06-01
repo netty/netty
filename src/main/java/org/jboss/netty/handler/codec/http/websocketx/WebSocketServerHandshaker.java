@@ -54,7 +54,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Constructor using default values
-     * 
+     *
      * @param version
      *            the protocol version
      * @param webSocketUrl
@@ -71,7 +71,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param version
      *            the protocol version
      * @param webSocketUrl
@@ -112,7 +112,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p : this.subprotocols) {
+        for (String p : subprotocols) {
             ret.add(p);
         }
         return ret;
@@ -134,7 +134,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the opening handshake
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -144,7 +144,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the closing handshake
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame
@@ -154,7 +154,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Selects the first matching supported sub protocol
-     * 
+     *
      * @param requestedSubprotocols
      *            CSV of protocols to be supported. e.g. "chat, superchat"
      * @return First matching supported sub protocol. Null if not found.
@@ -178,9 +178,9 @@ public abstract class WebSocketServerHandshaker {
         // No match found
         return null;
     }
-    
+
     /**
-     * Returns the selected subprotocol. Null if no subprotocol has been selected. 
+     * Returns the selected subprotocol. Null if no subprotocol has been selected.
      * <p>
      * This is only available AFTER <tt>handshake()</tt> has been called.
      * </p>
@@ -188,9 +188,9 @@ public abstract class WebSocketServerHandshaker {
     public String getSelectedSubprotocol() {
         return selectedSubprotocol;
     }
-    
+
     protected void setSelectedSubprotocol(String value) {
         selectedSubprotocol = value;
     }
-    
+
 }

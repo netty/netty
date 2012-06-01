@@ -33,7 +33,7 @@ public class TelnetClient {
 
     private final String host;
     private final int port;
-    
+
     public TelnetClient(String host, int port) {
         this.host = host;
         this.port = port;

@@ -15,29 +15,29 @@
  */
 package org.jboss.netty.handler.execution;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.util.ObjectSizeEstimator;
-
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.util.ObjectSizeEstimator;
+
 /**
  * {@link Executor} which should be used for downstream {@link ChannelEvent}'s. This implementation will take care of preserve the order of the events in a {@link Channel}.
  * If you don't need to preserve the order just use one of the {@link Executor} implementations provided by the static methods of {@link Executors}.
  * <br>
  * <br>
- * 
+ *
  * For more informations about how the order is preserved see {@link OrderedMemoryAwareThreadPoolExecutor}
  *
  */
 public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwareThreadPoolExecutor {
-    
+
     /**
      * Creates a new instance.
      *
@@ -73,7 +73,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
                 keepAliveTime, unit, threadFactory);
     }
 
-    
+
     /**
      * Return <code>null</code>
      */
@@ -129,17 +129,17 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     protected boolean shouldCount(Runnable task) {
         return false;
     }
-    
+
     @Override
     public void execute(Runnable command) {
-        
+
         // check if the Runnable was of an unsupported type
         if (command instanceof ChannelUpstreamEventRunnable) {
             throw new RejectedExecutionException("command must be enclosed with an downstream event.");
         }
         doExecute(command);
     }
-    
+
     @Override
     protected Executor getChildExecutor(ChannelEvent e) {
         final Object key = getChildExecutorKey(e);
@@ -150,10 +150,10 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
             if (oldExecutor != null) {
                 executor = oldExecutor;
             } else {
-                
+
                 // register a listener so that the ChildExecutor will get removed once the channel was closed
                 e.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
-                    
+
                     public void operationComplete(ChannelFuture future) throws Exception {
                         removeChildExecutor(key);
                     }
@@ -164,5 +164,5 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
         return executor;
     }
 
-    
+
 }

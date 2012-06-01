@@ -52,7 +52,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void writerIndex(int writerIndex) {
         if (writerIndex < readerIndex || writerIndex > capacity()) {
-            throw new IndexOutOfBoundsException("Invalid readerIndex: " 
+            throw new IndexOutOfBoundsException("Invalid readerIndex: "
                     + readerIndex + " - Maximum is " + writerIndex);
         }
         this.writerIndex = writerIndex;
@@ -60,7 +60,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void setIndex(int readerIndex, int writerIndex) {
         if (readerIndex < 0 || readerIndex > writerIndex || writerIndex > capacity()) {
-            throw new IndexOutOfBoundsException("Invalid writerIndex: " 
+            throw new IndexOutOfBoundsException("Invalid writerIndex: "
                     + writerIndex + " - Maximum is " + readerIndex + " or " + capacity());
         }
         this.readerIndex = readerIndex;
@@ -116,7 +116,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void ensureWritableBytes(int writableBytes) {
         if (writableBytes > writableBytes()) {
-            throw new IndexOutOfBoundsException("Writable bytes exceeded: Got " 
+            throw new IndexOutOfBoundsException("Writable bytes exceeded: Got "
                     + writableBytes + ", maximum is " + writableBytes());
         }
     }

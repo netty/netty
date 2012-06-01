@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 
 /**
  * Default implementation which hands of {@link NioWorker}'s
- * 
+ *
  *
  */
 public class NioWorkerPool extends AbstractNioWorkerPool<NioWorker> {

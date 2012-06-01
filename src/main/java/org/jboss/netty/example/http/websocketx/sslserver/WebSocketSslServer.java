@@ -23,14 +23,14 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * A HTTP server which serves Web Socket requests at:
- * 
+ *
  * https://localhost:8081/websocket
- * 
+ *
  * Open your browser at https://localhost:8081/, then the demo page will be loaded and a Web Socket connection will be
  * made automatically.
- * 
+ *
  * This server illustrates support for the different web socket specification versions and will work with:
- * 
+ *
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
  * <li>Chrome 6-13 (draft-ietf-hybi-thewebsocketprotocol-00)
@@ -40,7 +40,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * </ul>
  */
 public class WebSocketSslServer {
-    
+
     private final int port;
 
     public WebSocketSslServer(int port) {
@@ -81,7 +81,7 @@ public class WebSocketSslServer {
             System.out.println("ERROR: System property keystore.file.password not set. Exiting now!");
             System.exit(1);
         }
-        
+
         new WebSocketSslServer(port).run();
     }
 }

@@ -141,9 +141,9 @@ public abstract class CIDR implements Comparable<CIDR> {
         if (!(arg0 instanceof CIDR)) {
             return false;
         }
-        return this.compareTo((CIDR) arg0) == 0;
+        return compareTo((CIDR) arg0) == 0;
     }
-    
+
     @Override
     public int hashCode() {
         return baseAddress.hashCode();

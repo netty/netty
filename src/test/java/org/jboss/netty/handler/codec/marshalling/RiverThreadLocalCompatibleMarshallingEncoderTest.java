@@ -16,7 +16,7 @@
 package org.jboss.netty.handler.codec.marshalling;
 
 public class RiverThreadLocalCompatibleMarshallingEncoderTest extends RiverCompatibleMarshallingEncoderTest {
-    
+
     @Override
     protected MarshallerProvider createProvider() {
         return new ThreadLocalMarshallerProvider(createMarshallerFactory(), createMarshallingConfig());

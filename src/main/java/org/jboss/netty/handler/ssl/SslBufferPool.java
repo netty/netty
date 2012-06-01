@@ -91,15 +91,15 @@ public class SslBufferPool {
 
     /**
      * Acquire a new {@link ByteBuffer} out of the {@link SslBufferPool}
-     * 
+     *
      */
     public ByteBuffer acquireBuffer() {
         return acquire();
     }
-    
+
     /**
      * Will get removed. Please use {@link #acquireBuffer()}
-     * 
+     *
      */
     @Deprecated
     synchronized ByteBuffer acquire() {
@@ -109,11 +109,11 @@ public class SslBufferPool {
             return (ByteBuffer) pool[-- index].clear();
         }
     }
-    
+
 
     /**
      * Release a previous acquired {@link ByteBuffer}
-     * 
+     *
      * @param buffer
      */
     public void releaseBuffer(ByteBuffer buffer) {
@@ -122,9 +122,9 @@ public class SslBufferPool {
 
     /**
      * Will get removed. Please use {@link #releaseBuffer(ByteBuffer)}
-     * 
+     *
      * @deprecated
-     * 
+     *
      */
     @Deprecated
     synchronized void release(ByteBuffer buffer) {

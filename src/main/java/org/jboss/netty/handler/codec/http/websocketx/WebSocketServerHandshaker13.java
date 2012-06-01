@@ -15,8 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Values.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 import java.io.UnsupportedEncodingException;
 
@@ -25,14 +25,14 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
@@ -56,7 +56,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     /**
      * Constructor using defaults
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g
      *            "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -73,7 +73,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g
      *            "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -100,11 +100,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi
      * versions 13-17</a>. Versions 13-17 share the same wire protocol.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -115,11 +115,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -127,7 +127,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -170,7 +170,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                 throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                this.setSelectedSubprotocol(selectedSubprotocol);
+                setSelectedSubprotocol(selectedSubprotocol);
             }
         }
 
@@ -183,7 +183,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         }
 
         p.replace(HttpRequestDecoder.class, "wsdecoder",
-                new WebSocket13FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
+                new WebSocket13FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
 
         return future;
@@ -191,7 +191,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame and close the connection
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

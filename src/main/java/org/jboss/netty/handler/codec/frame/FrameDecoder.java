@@ -31,6 +31,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -265,7 +266,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
 
                 }
             }
-            
+
         }
     }
 
@@ -369,7 +370,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
 
     /**
      * Gets called on {@link #channelDisconnected(ChannelHandlerContext, ChannelStateEvent)} and {@link #channelClosed(ChannelHandlerContext, ChannelStateEvent)}
-     * 
+     *
      */
     protected void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
@@ -410,12 +411,12 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
         return factory.getBuffer(Math.max(minimumCapacity, 256));
     }
-    
+
     /**
-     * Replace this {@link FrameDecoder} in the {@link ChannelPipeline} with the given {@link ChannelHandler}. All 
+     * Replace this {@link FrameDecoder} in the {@link ChannelPipeline} with the given {@link ChannelHandler}. All
      * remaining bytes in the {@link ChannelBuffer} will get send to the new {@link ChannelHandler} that was used
      * as replacement
-     * 
+     *
      */
     public void replace(String handlerName, ChannelHandler handler) {
         if (ctx == null) {
@@ -423,7 +424,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         }
         ChannelPipeline pipeline = ctx.getPipeline();
         pipeline.addAfter(ctx.getName(), handlerName, handler);
-                
+
         try {
             if (cumulation != null) {
                 Channels.fireMessageReceived(ctx, cumulation.readBytes(actualReadableBytes()));
@@ -431,9 +432,9 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         } finally {
             pipeline.remove(this);
         }
-        
+
     }
-    
+
     /**
      * Returns the actual number of readable bytes in the internal cumulative
      * buffer of this decoder.  You usually do not need to rely on this value
@@ -443,7 +444,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     protected int actualReadableBytes() {
         return internalBuffer().readableBytes();
     }
-    
+
 
 
     /**
@@ -452,7 +453,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
      * Use it only when you must use it at your own risk.
      */
     protected ChannelBuffer internalBuffer() {
-        ChannelBuffer buf = this.cumulation;
+        ChannelBuffer buf = cumulation;
         if (buf == null) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
@@ -465,17 +466,14 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
 
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // Nothing to do..
-        
     }
 
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // Nothing to do..
-        
     }
 
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // Nothing to do..
-        
     }
 
 }

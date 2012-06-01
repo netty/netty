@@ -111,7 +111,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     private final Executor executor;
     private final boolean handleDownstream;
     private final boolean handleUpstream;
-    
+
     /**
      * Creates a new instance with the specified {@link Executor}.
      * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
@@ -120,17 +120,17 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
         this(executor, false, true);
     }
 
-    
+
     /**
      * Use {@link #ExecutionHandler(Executor, boolean, boolean)}
-     * 
+     *
      * {@link Deprecated}
      */
     @Deprecated
     public ExecutionHandler(Executor executor, boolean handleDownstream) {
         this(executor, handleDownstream, true);
     }
-    
+
     /**
      * Creates a new instance with the specified {@link Executor}.
      * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.

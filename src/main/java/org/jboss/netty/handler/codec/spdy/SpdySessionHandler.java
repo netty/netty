@@ -93,7 +93,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                     "unsupported version: " + version);
         }
         this.server = server;
-        this.flowControl = version >= 3;
+        flowControl = version >= 3;
     }
 
     @Override

@@ -33,7 +33,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
-     * 
+     *
      * @param text
      *            String to put in the frame
      */
@@ -47,7 +47,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new text frame with the specified binary data. The final fragment flag is set to true.
-     * 
+     *
      * @param binaryData
      *            the content of the frame. Must be UTF-8 encoded
      */
@@ -57,7 +57,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -77,7 +77,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new text frame with the specified binary data. The final fragment flag is set to true.
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -103,7 +103,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     /**
      * Sets the string for this frame
-     * 
+     *
      * @param text
      *            text to store
      */

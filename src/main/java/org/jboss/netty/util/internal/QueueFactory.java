@@ -26,18 +26,18 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * instance for the running JVM.
  */
 public final class QueueFactory {
-    
+
     private static final boolean useUnsafe = DetectionUtil.hasUnsafe();
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QueueFactory.class);
-    
+
     private QueueFactory() {
         // only use static methods!
     }
-    
-    
+
+
     /**
-     * Create a new unbound {@link BlockingQueue} 
-     * 
+     * Create a new unbound {@link BlockingQueue}
+     *
      * @param itemClass  the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue     the {@link BlockingQueue} implementation
      */
@@ -47,7 +47,7 @@ public final class QueueFactory {
         if (DetectionUtil.javaVersion() >= 7)  {
             return new java.util.concurrent.LinkedTransferQueue<T>();
         }
-        
+
         try {
             if (useUnsafe) {
                 return new LinkedTransferQueue<T>();
@@ -61,14 +61,14 @@ public final class QueueFactory {
                 LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
             }
         }
-        
+
         return new LegacyLinkedTransferQueue<T>();
-       
+
     }
-    
+
     /**
-     * Create a new unbound {@link BlockingQueue} 
-     * 
+     * Create a new unbound {@link BlockingQueue}
+     *
      * @param collection  the collection which should get copied to the newly created {@link BlockingQueue}
      * @param itemClass   the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue      the {@link BlockingQueue} implementation
@@ -79,7 +79,7 @@ public final class QueueFactory {
         if (DetectionUtil.javaVersion() >= 7)  {
             return new java.util.concurrent.LinkedTransferQueue<T>();
         }
-        
+
         try {
             if (useUnsafe) {
                 return new LinkedTransferQueue<T>(collection);
@@ -91,10 +91,10 @@ public final class QueueFactory {
             // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
-            } 
+            }
         }
-         
+
         return new LegacyLinkedTransferQueue<T>(collection);
-        
+
     }
 }

@@ -29,10 +29,10 @@ public class DefaultUnmarshallerProvider implements UnmarshallerProvider {
 
     private final MarshallerFactory factory;
     private final MarshallingConfiguration config;
-    
+
     /**
-     * Create a new instance of {@link DefaultMarshallerProvider} 
-     * 
+     * Create a new instance of {@link DefaultMarshallerProvider}
+     *
      * @param factory   the {@link MarshallerFactory} to use to create {@link Unmarshaller}
      * @param config    the {@link MarshallingConfiguration}
      */
@@ -40,7 +40,7 @@ public class DefaultUnmarshallerProvider implements UnmarshallerProvider {
         this.factory = factory;
         this.config = config;
     }
-    
+
     public Unmarshaller getUnmarshaller(ChannelHandlerContext ctx) throws Exception {
         return factory.createUnmarshaller(config);
     }

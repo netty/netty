@@ -53,7 +53,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     /**
      * Constructor with default values
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -70,10 +70,10 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             boolean allowExtensions, Map<String, String> customHeaders) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
     }
-    
+
     /**
      * Constructor
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -100,7 +100,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -111,7 +111,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 8
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -151,16 +151,16 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ":" + wsPort;
         }
-        
+
         // Use Sec-WebSocket-Origin
         // See https://github.com/netty/netty/issues/264
         request.addHeader(Names.SEC_WEBSOCKET_ORIGIN, originValue);
-      
-        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+
+        String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
-        
+
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
 
         if (customHeaders != null) {
@@ -180,7 +180,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -188,7 +188,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
@@ -205,14 +205,14 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
         String upgrade = response.getHeader(Names.UPGRADE);
         // Upgrade header should be matched case-insensitive.
-        // See https://github.com/netty/netty/issues/278 
+        // See https://github.com/netty/netty/issues/278
         if (upgrade == null || !upgrade.toLowerCase().equals(Values.WEBSOCKET.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
         // Connection header should be matched case-insensitive.
-        // See https://github.com/netty/netty/issues/278 
+        // See https://github.com/netty/netty/issues/278
         String connection = response.getHeader(Names.CONNECTION);
         if (connection == null || !connection.toLowerCase().equals(Values.UPGRADE.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
@@ -227,13 +227,13 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
         String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(subprotocol);
-               
+
 
         setHandshakeComplete();
 
         channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
-                new WebSocket08FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));
-        
+                new WebSocket08FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
+
 
     }
 }

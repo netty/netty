@@ -58,7 +58,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
 
     private boolean localhost;
 
-    private String pattern;
+    private final String pattern;
 
     /**
      * Instantiates a new pattern rule.
@@ -67,7 +67,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
      * @param pattern the filter pattern
      */
     public PatternRule(boolean allow, String pattern) {
-        this.isAllowRule = allow;
+        isAllowRule = allow;
         this.pattern = pattern;
         parse(pattern);
     }
@@ -78,7 +78,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
      * @return the pattern
      */
     public String getPattern() {
-        return this.pattern;
+        return pattern;
     }
 
     public boolean isAllowRule() {
@@ -120,7 +120,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         for (String c : acls) {
             c = c.trim();
             if (c.equals("n:localhost")) {
-                this.localhost = true;
+                localhost = true;
             } else if (c.startsWith("n:")) {
                 name = addRule(name, c.substring(2));
             } else if (c.startsWith("i:")) {
@@ -135,7 +135,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         }
     }
 
-    private String addRule(String pattern, String rule) {
+    private static String addRule(String pattern, String rule) {
         if (rule == null || rule.length() == 0) {
             return pattern;
         }
@@ -149,7 +149,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         return pattern;
     }
 
-    private boolean isLocalhost(InetAddress address) {
+    private static boolean isLocalhost(InetAddress address) {
         try {
             if (address.equals(InetAddress.getLocalHost())) {
                 return true;
@@ -183,14 +183,14 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
             return -1;
         }
         PatternRule p = (PatternRule) o;
-        if (p.isAllowRule() && !this.isAllowRule) {
+        if (p.isAllowRule() && !isAllowRule) {
             return -1;
         }
-        if (this.pattern == null && p.pattern == null) {
+        if (pattern == null && p.pattern == null) {
             return 0;
         }
-        if (this.pattern != null) {
-            return this.pattern.compareTo(p.getPattern());
+        if (pattern != null) {
+            return pattern.compareTo(p.getPattern());
         }
         return -1;
     }

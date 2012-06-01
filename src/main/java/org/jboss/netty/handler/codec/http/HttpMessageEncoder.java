@@ -16,7 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import static org.jboss.netty.buffer.ChannelBuffers.*;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
+import static org.jboss.netty.handler.codec.http.HttpConstants.*;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
@@ -46,6 +46,7 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
+    private static final byte[] CRLF = new byte[] { CR, LF };
     private static final ChannelBuffer LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
 

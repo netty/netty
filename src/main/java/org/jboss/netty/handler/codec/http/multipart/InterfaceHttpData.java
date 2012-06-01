@@ -13,22 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package org.jboss.netty.handler.codec.http.multipart;
 
-import java.util.concurrent.Executor;
-
-import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
-
-public class OioNioDatagramMulticastTest extends AbstractDatagramMulticastTest {
-
-    @Override
-    protected DatagramChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor, InternetProtocolFamily.IPv4);
+/**
+ * Interface for all Objects that could be encoded/decoded using HttpPostRequestEncoder/Decoder
+ */
+public interface InterfaceHttpData extends Comparable<InterfaceHttpData> {
+    enum HttpDataType {
+        Attribute, FileUpload, InternalAttribute
     }
 
-    @Override
-    protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor, InternetProtocolFamily.IPv4);
-    }
+    /**
+     * Returns the name of this InterfaceHttpData.
+     */
+    String getName();
 
+    /**
+     *
+     * @return The HttpDataType
+     */
+    HttpDataType getHttpDataType();
 }

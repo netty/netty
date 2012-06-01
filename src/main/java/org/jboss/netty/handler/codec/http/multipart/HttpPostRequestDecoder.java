@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -26,9 +26,15 @@ import java.util.TreeMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadNoBackArrayException;
-import org.jboss.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadOptimize;
-import org.jboss.netty.handler.codec.http.HttpPostBodyUtil.TransferEncodingMechanism;
+import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpConstants;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
+import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
+import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
+import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
@@ -126,7 +132,7 @@ public class HttpPostRequestDecoder {
     public HttpPostRequestDecoder(HttpRequest request)
             throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
-                request, HttpCodecUtil.DEFAULT_CHARSET);
+                request, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -139,7 +145,7 @@ public class HttpPostRequestDecoder {
      */
     public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request)
             throws ErrorDataDecoderException, IncompatibleDataDecoderException {
-        this(factory, request, HttpCodecUtil.DEFAULT_CHARSET);
+        this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -471,11 +477,11 @@ public class HttpPostRequestDecoder {
                         setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = true;
-                    } else if (read == HttpCodecUtil.CR) {
+                    } else if (read == HttpConstants.CR) {
                         if (undecodedChunk.readable()) {
                             read = (char) undecodedChunk.readUnsignedByte();
                             currentpos++;
-                            if (read == HttpCodecUtil.LF) {
+                            if (read == HttpConstants.LF) {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
                                 setFinalBuffer(
@@ -490,7 +496,7 @@ public class HttpPostRequestDecoder {
                         } else {
                             currentpos--;
                         }
-                    } else if (read == HttpCodecUtil.LF) {
+                    } else if (read == HttpConstants.LF) {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
                         setFinalBuffer(
@@ -597,11 +603,11 @@ public class HttpPostRequestDecoder {
                         setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = true;
-                    } else if (read == HttpCodecUtil.CR) {
+                    } else if (read == HttpConstants.CR) {
                         if (sao.pos < sao.limit) {
                             read = (char) (sao.bytes[sao.pos ++] & 0xFF);
                             currentpos++;
-                            if (read == HttpCodecUtil.LF) {
+                            if (read == HttpConstants.LF) {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
                                 sao.setReadPosition(0);
@@ -621,7 +627,7 @@ public class HttpPostRequestDecoder {
                                 currentpos --;
                             }
                         }
-                    } else if (read == HttpCodecUtil.LF) {
+                    } else if (read == HttpConstants.LF) {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
                         sao.setReadPosition(0);
@@ -1212,12 +1218,12 @@ public class HttpPostRequestDecoder {
             StringBuilder sb = new StringBuilder(64);
             while (undecodedChunk.readable()) {
                 byte nextByte = undecodedChunk.readByte();
-                if (nextByte == HttpCodecUtil.CR) {
+                if (nextByte == HttpConstants.CR) {
                     nextByte = undecodedChunk.readByte();
-                    if (nextByte == HttpCodecUtil.LF) {
+                    if (nextByte == HttpConstants.LF) {
                         return sb.toString();
                     }
-                } else if (nextByte == HttpCodecUtil.LF) {
+                } else if (nextByte == HttpConstants.LF) {
                     return sb.toString();
                 } else {
                     sb.append((char) nextByte);
@@ -1248,17 +1254,17 @@ public class HttpPostRequestDecoder {
             StringBuilder sb = new StringBuilder(64);
             while (sao.pos < sao.limit) {
                 byte nextByte = sao.bytes[sao.pos ++];
-                if (nextByte == HttpCodecUtil.CR) {
+                if (nextByte == HttpConstants.CR) {
                     if (sao.pos < sao.limit) {
                         nextByte = sao.bytes[sao.pos ++];
-                        if (nextByte == HttpCodecUtil.LF) {
+                        if (nextByte == HttpConstants.LF) {
                             sao.setReadPosition(0);
                             return sb.toString();
                         }
                     } else {
                         sb.append((char) nextByte);
                     }
-                } else if (nextByte == HttpCodecUtil.LF) {
+                } else if (nextByte == HttpConstants.LF) {
                     sao.setReadPosition(0);
                     return sb.toString();
                 } else {
@@ -1304,16 +1310,16 @@ public class HttpPostRequestDecoder {
                     newLine = false;
                     index = 0;
                     // continue until end of line
-                    if (nextByte == HttpCodecUtil.CR) {
+                    if (nextByte == HttpConstants.CR) {
                         if (undecodedChunk.readable()) {
                             nextByte = undecodedChunk.readByte();
-                            if (nextByte == HttpCodecUtil.LF) {
+                            if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
                                 lastPosition = undecodedChunk.readerIndex() - 2;
                             }
                         }
-                    } else if (nextByte == HttpCodecUtil.LF) {
+                    } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
                         lastPosition = undecodedChunk.readerIndex() - 1;
@@ -1324,16 +1330,16 @@ public class HttpPostRequestDecoder {
                 }
             } else {
                 // continue until end of line
-                if (nextByte == HttpCodecUtil.CR) {
+                if (nextByte == HttpConstants.CR) {
                     if (undecodedChunk.readable()) {
                         nextByte = undecodedChunk.readByte();
-                        if (nextByte == HttpCodecUtil.LF) {
+                        if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
                             lastPosition = undecodedChunk.readerIndex() - 2;
                         }
                     }
-                } else if (nextByte == HttpCodecUtil.LF) {
+                } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
                     index = 0;
                     lastPosition = undecodedChunk.readerIndex() - 1;
@@ -1407,10 +1413,10 @@ public class HttpPostRequestDecoder {
                     newLine = false;
                     index = 0;
                     // continue until end of line
-                    if (nextByte == HttpCodecUtil.CR) {
+                    if (nextByte == HttpConstants.CR) {
                         if (sao.pos < sao.limit) {
                             nextByte = sao.bytes[sao.pos ++];
-                            if (nextByte == HttpCodecUtil.LF) {
+                            if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
                                 sao.setReadPosition(0);
@@ -1421,7 +1427,7 @@ public class HttpPostRequestDecoder {
                             sao.setReadPosition(0);
                             lastPosition = undecodedChunk.readerIndex();
                         }
-                    } else if (nextByte == HttpCodecUtil.LF) {
+                    } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
                         sao.setReadPosition(0);
@@ -1434,10 +1440,10 @@ public class HttpPostRequestDecoder {
                 }
             } else {
                 // continue until end of line
-                if (nextByte == HttpCodecUtil.CR) {
+                if (nextByte == HttpConstants.CR) {
                     if (sao.pos < sao.limit) {
                         nextByte = sao.bytes[sao.pos ++];
-                        if (nextByte == HttpCodecUtil.LF) {
+                        if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
                             sao.setReadPosition(0);
@@ -1448,7 +1454,7 @@ public class HttpPostRequestDecoder {
                         sao.setReadPosition(0);
                         lastPosition = undecodedChunk.readerIndex();
                     }
-                } else if (nextByte == HttpCodecUtil.LF) {
+                } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
                     index = 0;
                     sao.setReadPosition(0);
@@ -1512,16 +1518,16 @@ public class HttpPostRequestDecoder {
                         newLine = false;
                         index = 0;
                         // continue until end of line
-                        if (nextByte == HttpCodecUtil.CR) {
+                        if (nextByte == HttpConstants.CR) {
                             if (undecodedChunk.readable()) {
                                 nextByte = undecodedChunk.readByte();
-                                if (nextByte == HttpCodecUtil.LF) {
+                                if (nextByte == HttpConstants.LF) {
                                     newLine = true;
                                     index = 0;
                                     lastPosition = undecodedChunk.readerIndex() - 2;
                                 }
                             }
-                        } else if (nextByte == HttpCodecUtil.LF) {
+                        } else if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
                             lastPosition = undecodedChunk.readerIndex() - 1;
@@ -1531,16 +1537,16 @@ public class HttpPostRequestDecoder {
                     }
                 } else {
                     // continue until end of line
-                    if (nextByte == HttpCodecUtil.CR) {
+                    if (nextByte == HttpConstants.CR) {
                         if (undecodedChunk.readable()) {
                             nextByte = undecodedChunk.readByte();
-                            if (nextByte == HttpCodecUtil.LF) {
+                            if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
                                 lastPosition = undecodedChunk.readerIndex() - 2;
                             }
                         }
-                    } else if (nextByte == HttpCodecUtil.LF) {
+                    } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
                         lastPosition = undecodedChunk.readerIndex() - 1;
@@ -1616,10 +1622,10 @@ public class HttpPostRequestDecoder {
                         newLine = false;
                         index = 0;
                         // continue until end of line
-                        if (nextByte == HttpCodecUtil.CR) {
+                        if (nextByte == HttpConstants.CR) {
                             if (sao.pos < sao.limit) {
                                 nextByte = sao.bytes[sao.pos ++];
-                                if (nextByte == HttpCodecUtil.LF) {
+                                if (nextByte == HttpConstants.LF) {
                                     newLine = true;
                                     index = 0;
                                     sao.setReadPosition(0);
@@ -1629,7 +1635,7 @@ public class HttpPostRequestDecoder {
                                 sao.setReadPosition(0);
                                 lastPosition = undecodedChunk.readerIndex();
                             }
-                        } else if (nextByte == HttpCodecUtil.LF) {
+                        } else if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
                             sao.setReadPosition(0);
@@ -1641,10 +1647,10 @@ public class HttpPostRequestDecoder {
                     }
                 } else {
                     // continue until end of line
-                    if (nextByte == HttpCodecUtil.CR) {
+                    if (nextByte == HttpConstants.CR) {
                         if (sao.pos < sao.limit) {
                             nextByte = sao.bytes[sao.pos ++];
-                            if (nextByte == HttpCodecUtil.LF) {
+                            if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
                                 sao.setReadPosition(0);
@@ -1654,7 +1660,7 @@ public class HttpPostRequestDecoder {
                             sao.setReadPosition(0);
                             lastPosition = undecodedChunk.readerIndex();
                         }
-                    } else if (nextByte == HttpCodecUtil.LF) {
+                    } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
                         sao.setReadPosition(0);
@@ -1701,17 +1707,17 @@ public class HttpPostRequestDecoder {
         int i = 0;
         for (i = 0; i < field.length(); i ++) {
             char nextChar = field.charAt(i);
-            if (nextChar == HttpCodecUtil.COLON) {
-                sb.append(HttpCodecUtil.SP);
-            } else if (nextChar == HttpCodecUtil.COMMA) {
-                sb.append(HttpCodecUtil.SP);
-            } else if (nextChar == HttpCodecUtil.EQUALS) {
-                sb.append(HttpCodecUtil.SP);
-            } else if (nextChar == HttpCodecUtil.SEMICOLON) {
-                sb.append(HttpCodecUtil.SP);
-            } else if (nextChar == HttpCodecUtil.HT) {
-                sb.append(HttpCodecUtil.SP);
-            } else if (nextChar == HttpCodecUtil.DOUBLE_QUOTE) {
+            if (nextChar == HttpConstants.COLON) {
+                sb.append(HttpConstants.SP);
+            } else if (nextChar == HttpConstants.COMMA) {
+                sb.append(HttpConstants.SP);
+            } else if (nextChar == HttpConstants.EQUALS) {
+                sb.append(HttpConstants.SP);
+            } else if (nextChar == HttpConstants.SEMICOLON) {
+                sb.append(HttpConstants.SP);
+            } else if (nextChar == HttpConstants.HT) {
+                sb.append(HttpConstants.SP);
+            } else if (nextChar == HttpConstants.DOUBLE_QUOTE) {
                 // nothing added, just removes it
             } else {
                 sb.append(nextChar);
@@ -1729,18 +1735,18 @@ public class HttpPostRequestDecoder {
             return false;
         }
         byte nextByte = undecodedChunk.readByte();
-        if (nextByte == HttpCodecUtil.CR) {
+        if (nextByte == HttpConstants.CR) {
             if (!undecodedChunk.readable()) {
                 undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
                 return false;
             }
             nextByte = undecodedChunk.readByte();
-            if (nextByte == HttpCodecUtil.LF) {
+            if (nextByte == HttpConstants.LF) {
                 return true;
             }
             undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 2);
             return false;
-        } else if (nextByte == HttpCodecUtil.LF) {
+        } else if (nextByte == HttpConstants.LF) {
             return true;
         }
         undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);

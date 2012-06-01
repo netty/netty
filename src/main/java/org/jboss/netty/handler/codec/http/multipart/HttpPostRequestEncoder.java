@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +27,12 @@ import java.util.Random;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpConstants;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
 /**
@@ -92,7 +98,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     public HttpPostRequestEncoder(HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
-                request, multipart, HttpCodecUtil.DEFAULT_CHARSET);
+                request, multipart, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -105,7 +111,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
-        this(factory, request, multipart, HttpCodecUtil.DEFAULT_CHARSET);
+        this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**

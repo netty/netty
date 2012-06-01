@@ -20,17 +20,17 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 
 public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
-    
+
     @Override
     protected ChannelBuffer input(byte[] input) {
         ChannelBuffer length = ChannelBuffers.buffer(4);
         length.writeInt(input.length);
         return ChannelBuffers.wrappedBuffer(length, ChannelBuffers.wrappedBuffer(input));
     }
-    
+
     @Override
     protected ChannelUpstreamHandler createDecoder(int maxObjectSize) {
         return new MarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
-    
+
 }

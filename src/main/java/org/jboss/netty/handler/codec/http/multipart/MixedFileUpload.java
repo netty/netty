@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,9 +28,9 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public class MixedFileUpload implements FileUpload {
     private FileUpload fileUpload;
 
-    private long limitSize;
+    private final long limitSize;
 
-    private long definedSize;
+    private final long definedSize;
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,

@@ -18,7 +18,6 @@ package org.jboss.netty.handler.codec.spdy;
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -104,7 +103,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
                 }
 
-                String URL = SpdyHeaders.getUrl(spdySynStreamFrame);
+                String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
 
                 // If a client receives a SYN_STREAM without a 'url' header
                 // it must reply with a RST_STREAM with error code PROTOCOL_ERROR

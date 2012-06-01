@@ -22,13 +22,13 @@ public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runn
 
     private final Runnable task;
     private boolean started;
-    
+
     public ChannelRunnableWrapper(Channel channel, Runnable task) {
         super(channel, true);
         this.task = task;
     }
 
-    
+
     public void run() {
         synchronized (this) {
             if (!isCancelled()) {
@@ -52,7 +52,7 @@ public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runn
         }
         return super.cancel();
     }
-    
-    
+
+
 
 }

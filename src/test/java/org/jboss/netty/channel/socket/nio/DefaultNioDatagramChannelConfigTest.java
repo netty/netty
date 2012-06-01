@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import org.jboss.netty.util.internal.DetectionUtil;
-
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -27,6 +25,7 @@ import java.util.Enumeration;
 
 import junit.framework.Assert;
 
+import org.jboss.netty.util.internal.DetectionUtil;
 import org.junit.Test;
 
 public class DefaultNioDatagramChannelConfigTest {
@@ -37,7 +36,7 @@ public class DefaultNioDatagramChannelConfigTest {
         if (DetectionUtil.javaVersion() < 7) {
             return;
         }
-        
+
         StandardProtocolFamily family = null;
         NetworkInterface inf = null;
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
@@ -58,19 +57,19 @@ public class DefaultNioDatagramChannelConfigTest {
             // No usable interface found so just skip the test
             return;
         }
-        
+
         DefaultNioDatagramChannelConfig config = new DefaultNioDatagramChannelConfig(DatagramChannel.open(family));
 
         config.setNetworkInterface(inf);
         Assert.assertEquals(inf, config.getNetworkInterface());
-            
+
         InetAddress localhost = inf.getInetAddresses().nextElement();
         config.setInterface(localhost);
         Assert.assertEquals(localhost, config.getInterface());
-            
+
         config.setTimeToLive(100);
         Assert.assertEquals(100, config.getTimeToLive());
-            
+
         config.setLoopbackModeDisabled(false);
         Assert.assertEquals(false, config.isLoopbackModeDisabled());
     }

@@ -289,7 +289,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private T state;
     private int checkpoint;
     private boolean needsCleanup;
-    
+
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -389,14 +389,14 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     }
 
     /**
-     * Calls {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer, Enum)}. This method should be never used by {@link ReplayingDecoder} itself. 
+     * Calls {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer, Enum)}. This method should be never used by {@link ReplayingDecoder} itself.
      * But to be safe we should handle it anyway
      */
     @Override
     protected final Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         return decode(ctx, channel, buffer, state);
     }
-    
+
     @Override
     protected final Object decodeLast(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
@@ -419,16 +419,16 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
 
         needsCleanup = true;
-        
+
         if (cumulation == null) {
             // the cumulation buffer is not created yet so just pass the input
             // to callDecode(...) method
-            this.cumulation = input;
+            cumulation = input;
             replayable = new ReplayingDecoderBuffer(input);
 
             int oldReaderIndex = input.readerIndex();
             int inputSize = input.readableBytes();
-            
+
             // Wrap in try / finally.
             //
             // See https://github.com/netty/netty/issues/364
@@ -461,15 +461,15 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                     }
                     replayable = new ReplayingDecoderBuffer(cumulation);
                 } else {
-                    this.cumulation = null;
+                    cumulation = null;
                     replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
                 }
             }
-           
+
         } else {
             assert cumulation.readable();
             boolean fit = false;
-            
+
             int readable = input.readableBytes();
             int writable = cumulation.writableBytes();
             int w = writable - readable;
@@ -485,16 +485,16 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 // ok the input fit into the cumulation buffer
                 fit = true;
             }
-            
+
             ChannelBuffer buf;
             if (fit) {
                 // the input fit in the cumulation buffer so copy it over
-                buf = this.cumulation;
+                buf = cumulation;
                 buf.writeBytes(input);
             } else {
-                // wrap the cumulation and input 
+                // wrap the cumulation and input
                 buf = ChannelBuffers.wrappedBuffer(cumulation, input);
-                this.cumulation = buf;
+                cumulation = buf;
                 replayable = new ReplayingDecoderBuffer(cumulation);
             }
 
@@ -506,17 +506,17 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             } finally {
                 if (!buf.readable()) {
                     // nothing readable left so reset the state
-                    this.cumulation = null;
+                    cumulation = null;
                     replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
                 } else {
                     // create a new buffer and copy the readable buffer into it
-                    this.cumulation = newCumulationBuffer(ctx, buf.readableBytes());
-                    this.cumulation.writeBytes(buf);
-                    replayable = new ReplayingDecoderBuffer(this.cumulation);
+                    cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                    cumulation.writeBytes(buf);
+                    replayable = new ReplayingDecoderBuffer(cumulation);
 
                 }
             }
-            
+
         }
     }
 
@@ -599,5 +599,5 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             ctx.sendUpstream(e);
         }
     }
-    
+
 }

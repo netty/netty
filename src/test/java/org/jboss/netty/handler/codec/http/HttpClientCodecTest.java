@@ -15,8 +15,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -31,7 +30,7 @@ public class HttpClientCodecTest {
 
     private static final String RESPONSE = "HTTP/1.0 200 OK\r\n" + "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" + "Content-Type: text/html\r\n" + "Content-Length: 28\r\n" + "\r\n"
             + "<html><body></body></html>\r\n";
-    private static final String INCOMPLETE_CHUNKED_RESPONSE = "HTTP/1.1 200 OK\r\n" + "Content-Type: text/plain\r\n" + "Transfer-Encoding: chunked\r\n" + "\r\n" 
+    private static final String INCOMPLETE_CHUNKED_RESPONSE = "HTTP/1.1 200 OK\r\n" + "Content-Type: text/plain\r\n" + "Transfer-Encoding: chunked\r\n" + "\r\n"
             +"5\r\n" + "first\r\n" + "6\r\n" + "second\r\n" + "0\r\n";
     private static final String CHUNKED_RESPONSE = INCOMPLETE_CHUNKED_RESPONSE + "\r\n";
 
@@ -40,34 +39,34 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
+
         encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         decoder.offer(ChannelBuffers.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
 
         encoder.finish();
         decoder.finish();
-   
+
     }
-    
+
     @Test
     public void testFailsNotOnRequestResponseChunked() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
+
         encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         decoder.offer(ChannelBuffers.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
 
         encoder.finish();
         decoder.finish();
-   
+
     }
-    
+
     @Test
     public void testFailsOnMissingResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
+
         encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
 
         try {
@@ -76,16 +75,16 @@ public class HttpClientCodecTest {
         } catch (CodecEmbedderException e) {
             assertTrue(e.getCause() instanceof PrematureChannelClosureException);
         }
-        
+
     }
-    
+
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
 
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
+
         encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         decoder.offer(ChannelBuffers.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
 
@@ -96,6 +95,6 @@ public class HttpClientCodecTest {
         } catch (CodecEmbedderException e) {
             assertTrue(e.getCause() instanceof PrematureChannelClosureException);
         }
-        
+
     }
 }

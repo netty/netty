@@ -23,7 +23,7 @@ import org.jboss.netty.util.EstimatableObjectWrapper;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
-    
+
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;
     int estimatedSize;

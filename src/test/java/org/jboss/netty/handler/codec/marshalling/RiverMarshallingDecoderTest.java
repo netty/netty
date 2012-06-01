@@ -27,11 +27,11 @@ public class RiverMarshallingDecoderTest extends RiverCompatibleMarshallingDecod
         length.writeInt(input.length);
         return ChannelBuffers.wrappedBuffer(length, ChannelBuffers.wrappedBuffer(input));
     }
-    
+
     @Override
     protected ChannelUpstreamHandler createDecoder(int maxObjectSize) {
         return new MarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
-    
+
 
 }

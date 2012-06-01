@@ -30,11 +30,11 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class EchoServer {
 
     private final int port;
-    
+
     public EchoServer(int port) {
         this.port = port;
     }
-    
+
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(

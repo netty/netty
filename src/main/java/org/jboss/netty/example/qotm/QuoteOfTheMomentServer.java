@@ -16,7 +16,6 @@
 package org.jboss.netty.example.qotm;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -44,9 +43,7 @@ public class QuoteOfTheMomentServer {
     }
 
     public void run() {
-        DatagramChannelFactory f =
-            new NioDatagramChannelFactory(Executors.newCachedThreadPool());
-
+        DatagramChannelFactory f = new NioDatagramChannelFactory();
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
 
         // Configure the pipeline factory.

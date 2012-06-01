@@ -21,8 +21,8 @@ import org.jboss.netty.util.ExternalResourceReleasable;
 /**
  * This implementation of a {@link WorkerPool} should be used if you plan to share a {@link WorkerPool} between different Factories. You will need to call {@link #destroy()} by your own once
  * you want to release any resources of it.
- * 
- * 
+ *
+ *
  */
 public final class ShareableWorkerPool<E extends Worker> implements WorkerPool<E> {
 

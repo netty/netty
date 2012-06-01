@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.nio.charset.Charset;
 
@@ -147,9 +147,9 @@ final class HttpPostBodyUtil {
                 throw new SeekAheadNoBackArrayException();
             }
             this.buffer = buffer;
-            this.bytes = buffer.array();
-            this.pos = this.readerIndex = buffer.readerIndex();
-            this.limit = buffer.writerIndex();
+            bytes = buffer.array();
+            pos = readerIndex = buffer.readerIndex();
+            limit = buffer.writerIndex();
         }
 
         /**
@@ -164,11 +164,11 @@ final class HttpPostBodyUtil {
         }
 
         void clear() {
-            this.buffer = null;
-            this.bytes = null;
-            this.limit = 0;
-            this.pos = 0;
-            this.readerIndex = 0;
+            buffer = null;
+            bytes = null;
+            limit = 0;
+            pos = 0;
+            readerIndex = 0;
         }
     }
 

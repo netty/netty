@@ -58,7 +58,7 @@ public abstract class WebSocketClientHandshaker {
             Map<String, String> customHeaders) {
         this(webSocketUrl, version, subprotocol, customHeaders, Long.MAX_VALUE);
     }
-    
+
     /**
      * Base constructor
      *
@@ -78,7 +78,7 @@ public abstract class WebSocketClientHandshaker {
             Map<String, String> customHeaders, long maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
-        this.expectedSubprotocol = subprotocol;
+        expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
@@ -98,12 +98,12 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Returns the max length for any frame's payload 
+     * Returns the max length for any frame's payload
      */
     public long getMaxFramePayloadLength() {
         return maxFramePayloadLength;
     }
-    
+
     /**
      * Flag to indicate if the opening handshake is complete
      */
@@ -136,7 +136,7 @@ public abstract class WebSocketClientHandshaker {
 
     /**
      * Begins the opening handshake
-     * 
+     *
      * @param channel
      *            Channel
      */
@@ -144,7 +144,7 @@ public abstract class WebSocketClientHandshaker {
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
-     * 
+     *
      * @param channel
      *            Channel
      * @param response

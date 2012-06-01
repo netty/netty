@@ -110,7 +110,7 @@ public class QueryStringDecoderTest {
         }
         Assert.assertEquals(1024, new QueryStringDecoder(buf.toString()).getParameters().size());
     }
-    
+
     @Test
     public void testHasPath() throws Exception {
         QueryStringDecoder decoder = new QueryStringDecoder("1=2", false);
@@ -167,7 +167,7 @@ public class QueryStringDecoderTest {
         Assert.assertEquals(ed.getPath(), ad.getPath());
         Assert.assertEquals(ed.getParameters(), ad.getParameters());
     }
-    
+
     // See #189
     @Test
     public void testURI() {
@@ -177,26 +177,26 @@ public class QueryStringDecoderTest {
         Map<String, List<String>> params =  decoder.getParameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
-        
+
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-        
+
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value2", entry.getValue().get(0));
-        
+
         entry = entries.next();
         Assert.assertEquals("param3", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value3", entry.getValue().get(0));
-        
+
         Assert.assertFalse(entries.hasNext());
     }
-    
+
     // See #189
     @Test
     public void testURISlashPath() {
@@ -206,26 +206,26 @@ public class QueryStringDecoderTest {
         Map<String, List<String>> params =  decoder.getParameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
-        
+
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-        
+
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value2", entry.getValue().get(0));
-        
+
         entry = entries.next();
         Assert.assertEquals("param3", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value3", entry.getValue().get(0));
-        
+
         Assert.assertFalse(entries.hasNext());
     }
-    
+
     // See #189
     @Test
     public void testURINoPath() {
@@ -235,23 +235,23 @@ public class QueryStringDecoderTest {
         Map<String, List<String>> params =  decoder.getParameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
-        
+
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-        
+
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value2", entry.getValue().get(0));
-        
+
         entry = entries.next();
         Assert.assertEquals("param3", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value3", entry.getValue().get(0));
-        
+
         Assert.assertFalse(entries.hasNext());
     }
 }

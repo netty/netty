@@ -29,7 +29,7 @@ public class HexDumpProxy {
     private final int localPort;
     private final String remoteHost;
     private final int remotePort;
-    
+
     public HexDumpProxy(int localPort, String remoteHost, int remotePort) {
         this.localPort = localPort;
         this.remoteHost = remoteHost;

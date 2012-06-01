@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.jboss.netty.util.internal.CaseIgnoringComparator;
+
 
 /**
  * Provides the constants for the standard HTTP header names and values and
@@ -321,7 +323,7 @@ public class HttpHeaders {
         /**
          * {@code "boundary"}
          */
-        static final String BOUNDARY = "boundary";        
+        public static final String BOUNDARY = "boundary";
         /**
          * {@code "bytes"}
          */
@@ -377,7 +379,7 @@ public class HttpHeaders {
         /**
          * {@code "multipart/form-data"}
          */
-        static final String MULTIPART_FORM_DATA = "multipart/form-data";        
+        public static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
          * {@code "must-revalidate"}
          */

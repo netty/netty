@@ -192,7 +192,7 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
      * and the specified preset dictionary.  The wrapper is always
      * {@link ZlibWrapper#ZLIB} because it is the only format that supports
      * the preset dictionary.
-     * 
+     *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default

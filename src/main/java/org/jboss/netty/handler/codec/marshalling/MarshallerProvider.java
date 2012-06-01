@@ -19,8 +19,8 @@ import org.jboss.marshalling.Marshaller;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * This provider is responsible to get a {@link Marshaller} for the given {@link ChannelHandlerContext}. 
- * 
+ * This provider is responsible to get a {@link Marshaller} for the given {@link ChannelHandlerContext}.
+ *
  *
  */
 public interface MarshallerProvider {

@@ -22,7 +22,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * {@link ByteInput} implementation which reads its data from a {@link ChannelBuffer}
- * 
+ *
  *
  */
 class ChannelBufferByteInput implements ByteInput {
@@ -32,7 +32,7 @@ class ChannelBufferByteInput implements ByteInput {
     public ChannelBufferByteInput(ChannelBuffer buffer) {
         this.buffer = buffer;
     }
-    
+
     public void close() throws IOException {
         // nothing to do
     }

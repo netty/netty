@@ -283,11 +283,11 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     protected final class ChildExecutor implements Executor, Runnable {
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
         private final AtomicBoolean isRunning = new AtomicBoolean();
-        
+
         public void execute(Runnable command) {
             // TODO: What todo if the add return false ?
             tasks.add(command);
-            
+
 
             if (!isRunning.get()) {
                 doUnorderedExecute(this);
@@ -310,7 +310,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                         if (task == null) {
                             break;
                         }
-                        
+
                         boolean ran = false;
                         beforeExecute(thread, task);
                         try {
@@ -330,7 +330,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                     // set it back to not running
                     isRunning.set(false);
                 }
-                
+
                 if (acquired && !isRunning.get() && tasks.peek() != null) {
                     doUnorderedExecute(this);
                 }

@@ -38,6 +38,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
+import org.jboss.netty.channel.socket.InternetProtocolFamily;
 import org.jboss.netty.util.internal.DetectionUtil;
 
 /**
@@ -47,33 +48,14 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                                 implements org.jboss.netty.channel.socket.DatagramChannel {
 
     /**
-     * The supported ProtocolFamily by UDP
-     *
-     */
-    public enum ProtocolFamily {
-        INET,
-        INET6
-    }
-
-    /**
      * The {@link DatagramChannelConfig}.
      */
     private final NioDatagramChannelConfig config;
     private Map<InetAddress, List<MembershipKey>> memberships;
 
-    /**
-     * Use {@link #NioDatagramChannel(ChannelFactory, ChannelPipeline, ChannelSink, NioDatagramWorker, ProtocolFamily)}
-     */
-    @Deprecated
     NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
-            final NioDatagramWorker worker) {
-        this(factory, pipeline, sink, worker, null);
-    }
-
-    NioDatagramChannel(final ChannelFactory factory,
-            final ChannelPipeline pipeline, final ChannelSink sink,
-            final NioDatagramWorker worker, ProtocolFamily family) {
+            final NioDatagramWorker worker, InternetProtocolFamily family) {
         super(null, factory, pipeline, sink, worker, openNonBlockingChannel(family));
         config = new DefaultNioDatagramChannelConfig(channel);
 
@@ -81,7 +63,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
 
     }
 
-    private static DatagramChannel openNonBlockingChannel(ProtocolFamily family) {
+    private static DatagramChannel openNonBlockingChannel(InternetProtocolFamily family) {
         try {
             final DatagramChannel channel;
 
@@ -95,11 +77,11 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                 //
                 // See #368
                 switch (family) {
-                case INET:
+                case IPv4:
                     channel = DatagramChannel.open(ProtocolFamilyConverter.convert(family));
                     break;
 
-                case INET6:
+                case IPv6:
                     channel = DatagramChannel.open(ProtocolFamilyConverter.convert(family));
                     break;
 

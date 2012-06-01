@@ -17,18 +17,6 @@ package org.jboss.netty.channel.socket.nio;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.Worker;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.QueueFactory;
-
 import java.io.IOException;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
@@ -47,8 +35,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.socket.Worker;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
+import org.jboss.netty.util.internal.QueueFactory;
+
 abstract class AbstractNioWorker implements Worker {
-    
+
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -64,7 +64,7 @@ abstract class AbstractNioWorker implements Worker {
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
-    
+
     /**
      * Executor used to execute {@link Runnable}s such as channel registration
      * task.
@@ -117,7 +117,7 @@ abstract class AbstractNioWorker implements Worker {
 
     private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
 
-    
+
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
@@ -132,16 +132,16 @@ abstract class AbstractNioWorker implements Worker {
         this.executor = executor;
         this.allowShutdownOnIdle = allowShutdownOnIdle;
     }
-    
+
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
 
         Runnable registerTask = createRegisterTask(channel, future);
         Selector selector = start();
 
-        
+
         boolean offered = registerTaskQueue.offer(registerTask);
         assert offered;
-        
+
         if (wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
@@ -149,7 +149,7 @@ abstract class AbstractNioWorker implements Worker {
 
     /**
      * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for the {@link AbstractNioChannel}'s when they get registered
-     * 
+     *
      * @return selector
      */
     private Selector start() {
@@ -157,7 +157,7 @@ abstract class AbstractNioWorker implements Worker {
             if (!started) {
                 // Open a selector if this worker didn't start yet.
                 try {
-                    this.selector = Selector.open();
+                    selector = Selector.open();
                 } catch (Throwable t) {
                     throw new ChannelException("Failed to create a selector.", t);
                 }
@@ -175,7 +175,7 @@ abstract class AbstractNioWorker implements Worker {
                         } catch (Throwable t) {
                             logger.warn("Failed to close a selector.", t);
                         }
-                        this.selector = null;
+                        selector = null;
                         // The method will return to the caller at this point.
                     }
                 }
@@ -297,10 +297,10 @@ abstract class AbstractNioWorker implements Worker {
     public void executeInIoThread(Runnable task) {
         executeInIoThread(task, false);
     }
-    
+
     /**
      * Execute the {@link Runnable} in a IO-Thread
-     * 
+     *
      * @param task
      *            the {@link Runnable} to execute
      * @param alwaysAsync
@@ -325,8 +325,8 @@ abstract class AbstractNioWorker implements Worker {
         }
 
     }
-    
-    
+
+
     private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
@@ -350,7 +350,7 @@ abstract class AbstractNioWorker implements Worker {
             cleanUpCancelledKeys();
         }
     }
-    
+
     private void processEventQueue() throws IOException {
         for (;;) {
             final Runnable task = eventQueue.poll();
@@ -361,7 +361,7 @@ abstract class AbstractNioWorker implements Worker {
             cleanUpCancelledKeys();
         }
     }
-    
+
     private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
@@ -395,9 +395,9 @@ abstract class AbstractNioWorker implements Worker {
         }
         return false;
     }
-    
 
-    
+
+
     private void close(SelectionKey k) {
         AbstractNioChannel<?> ch = (AbstractNioChannel<?>) k.attachment();
         close(ch, succeededFuture(ch));
@@ -431,7 +431,7 @@ abstract class AbstractNioWorker implements Worker {
             write0(ch);
         }
     }
-    
+
     void writeFromSelectorLoop(final SelectionKey k) {
         AbstractNioChannel<?> ch = (AbstractNioChannel<?>) k.attachment();
         ch.writeSuspended = false;
@@ -552,7 +552,7 @@ abstract class AbstractNioWorker implements Worker {
     static boolean isIoThread(AbstractNioChannel<?> channel) {
         return Thread.currentThread() == channel.worker.thread;
     }
-    
+
     protected void setOpWrite(AbstractNioChannel<?> channel) {
         Selector selector = this.selector;
         SelectionKey key = channel.channel.keyFor(selector);
@@ -598,13 +598,13 @@ abstract class AbstractNioWorker implements Worker {
             }
         }
     }
-    
+
 
     void close(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         boolean iothread = isIoThread(channel);
-        
+
         try {
             channel.channel.close();
             cancelledKeys ++;
@@ -688,7 +688,7 @@ abstract class AbstractNioWorker implements Worker {
                 }
                 evt.getFuture().setFailure(cause);
 
-               
+
             }
         }
 
@@ -714,16 +714,16 @@ abstract class AbstractNioWorker implements Worker {
                 // Override OP_WRITE flag - a user cannot change this flag.
                 interestOps &= ~Channel.OP_WRITE;
                 interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
-                
+
                 if (key == null || selector == null) {
                     if (channel.getRawInterestOps() != interestOps) {
                         changed = true;
                     }
-                    
+
                     // Not registered to the worker yet.
                     // Set the rawInterestOps immediately; RegisterTask will pick it up.
                     channel.setRawInterestOpsNow(interestOps);
-                    
+
                     future.setSuccess();
                     if (changed) {
                         if (iothread) {
@@ -732,7 +732,7 @@ abstract class AbstractNioWorker implements Worker {
                             fireChannelInterestChangedLater(channel);
                         }
                     }
-                    
+
                     return;
                 }
 
@@ -802,7 +802,7 @@ abstract class AbstractNioWorker implements Worker {
             }
         }
     }
-    
+
     /**
      * Read is called when a Selector has been notified that the underlying channel
      * was something to be read. The channel would previously have registered its interest
@@ -814,11 +814,11 @@ abstract class AbstractNioWorker implements Worker {
 
     /**
      * Create a new {@link Runnable} which will register the {@link AbstractNioWorker} with the {@link Channel}
-     * 
+     *
      * @param channel
      * @param future
      * @return task
      */
     protected abstract Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future);
-    
+
 }

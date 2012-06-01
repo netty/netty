@@ -13,13 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -35,9 +37,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      */
     public static long MINSIZE = 0x4000;
 
-    private boolean useDisk;
+    private final boolean useDisk;
 
-    private boolean checkSize;
+    private final boolean checkSize;
 
     private long minSize;
 
@@ -53,7 +55,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public DefaultHttpDataFactory() {
         useDisk = false;
         checkSize = true;
-        this.minSize = MINSIZE;
+        minSize = MINSIZE;
     }
 
     /**
@@ -77,7 +79,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /**
-     * 
+     *
      * @param request
      * @return the associated list of Files for the request
      */
@@ -89,7 +91,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
         return list;
     }
-    
+
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);

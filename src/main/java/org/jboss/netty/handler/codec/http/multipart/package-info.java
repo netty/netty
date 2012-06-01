@@ -13,22 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
 
-import java.util.concurrent.Executor;
-
-import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
-
-public class OioNioDatagramMulticastTest extends AbstractDatagramMulticastTest {
-
-    @Override
-    protected DatagramChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor, InternetProtocolFamily.IPv4);
-    }
-
-    @Override
-    protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor, InternetProtocolFamily.IPv4);
-    }
-
-}
+/**
+ * HTTP multipart support.
+ */
+package org.jboss.netty.handler.codec.http.multipart;

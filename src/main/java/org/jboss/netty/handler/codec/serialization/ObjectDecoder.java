@@ -45,7 +45,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      * bytes.  If the size of the received object is greater than
      * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
      * raised.
-     * 
+     *
      * @deprecated use {@link #ObjectDecoder(ClassResolver)}
      */
     @Deprecated
@@ -59,13 +59,13 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      * bytes.  If the size of the received object is greater than
      * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
      * raised.
-     * 
+     *
      * @param classResolver  the {@link ClassResolver} to use for this decoder
      */
     public ObjectDecoder(ClassResolver classResolver) {
         this(1048576, classResolver);
     }
-    
+
     /**
      * Creates a new decoder with the specified maximum object size.
      *
@@ -110,7 +110,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
     public ObjectDecoder(int maxObjectSize, ClassLoader classLoader) {
         this(maxObjectSize, ClassResolvers.weakCachingResolver(classLoader));
     }
-    
+
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {

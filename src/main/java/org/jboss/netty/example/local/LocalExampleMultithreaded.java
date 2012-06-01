@@ -35,7 +35,7 @@ import org.jboss.netty.logging.InternalLogLevel;
 public class LocalExampleMultithreaded {
 
     private final String port;
-    
+
     public LocalExampleMultithreaded(String port) {
         this.port = port;
     }

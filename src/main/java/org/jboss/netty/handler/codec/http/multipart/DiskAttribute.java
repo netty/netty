@@ -13,20 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.IOException;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpConstants;
 
 /**
- * Memory implementation of Attributes
+ * Disk implementation of Attributes
  */
-public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute {
+public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
+    public static String baseDirectory;
 
-    public MemoryAttribute(String name) {
-        super(name, HttpCodecUtil.DEFAULT_CHARSET, 0);
+    public static boolean deleteOnExitTemporaryFile = true;
+
+    public static String prefix = "Attr_";
+
+    public static String postfix = ".att";
+
+    /**
+     * Constructor used for huge Attribute
+     * @param name
+     */
+    public DiskAttribute(String name) {
+        super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
     /**
      *
@@ -36,8 +48,8 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
      * @throws IllegalArgumentException
      * @throws IOException
      */
-    public MemoryAttribute(String name, String value) throws IOException {
-        super(name, HttpCodecUtil.DEFAULT_CHARSET, 0); // Attribute have no default size
+    public DiskAttribute(String name, String value) throws IOException {
+        super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
     }
 
@@ -45,8 +57,9 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         return HttpDataType.Attribute;
     }
 
-    public String getValue() {
-        return getChannelBuffer().toString(charset);
+    public String getValue() throws IOException {
+        byte [] bytes = get();
+        return new String(bytes, charset.name());
     }
 
     public void setValue(String value) throws IOException {
@@ -69,7 +82,6 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         }
         super.addContent(buffer, last);
     }
-
     @Override
     public int hashCode() {
         return getName().hashCode();
@@ -98,7 +110,35 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public String toString() {
-        return getName() + "=" + getValue();
+        try {
+            return getName() + "=" + getValue();
+        } catch (IOException e) {
+            return getName() + "=IoException";
+        }
     }
 
+    @Override
+    protected boolean deleteOnExit() {
+        return deleteOnExitTemporaryFile;
+    }
+
+    @Override
+    protected String getBaseDirectory() {
+        return baseDirectory;
+    }
+
+    @Override
+    protected String getDiskFilename() {
+        return getName() + postfix;
+    }
+
+    @Override
+    protected String getPostfix() {
+        return postfix;
+    }
+
+    @Override
+    protected String getPrefix() {
+        return prefix;
+    }
 }

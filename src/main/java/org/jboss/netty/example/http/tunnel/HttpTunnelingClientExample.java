@@ -44,7 +44,7 @@ import org.jboss.netty.logging.InternalLogLevel;
 public class HttpTunnelingClientExample {
 
     private final URI uri;
-    
+
     public HttpTunnelingClientExample(URI uri) {
         this.uri = uri;
     }

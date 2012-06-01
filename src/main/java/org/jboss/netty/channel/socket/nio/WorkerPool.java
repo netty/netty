@@ -26,10 +26,10 @@ public interface WorkerPool<E extends Worker> {
 
     /**
      * Return the next {@link Worker} to use
-     * 
+     *
      * @return worker
      */
     E nextWorker();
-    
+
 
 }

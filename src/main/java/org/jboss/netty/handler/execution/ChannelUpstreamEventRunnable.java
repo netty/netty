@@ -36,7 +36,7 @@ public class ChannelUpstreamEventRunnable extends ChannelEventRunnable {
         super(ctx, e, executor);
     }
 
-   
+
     /**
      * Sends the event upstream.
      */

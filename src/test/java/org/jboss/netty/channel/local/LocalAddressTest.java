@@ -15,21 +15,17 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
-import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
-import org.jboss.netty.channel.local.LocalAddress;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class LocalAddressTest {
     private static String LOCAL_ADDR_ID = "test.id";
@@ -67,7 +63,7 @@ public class LocalAddressTest {
 
         // Start server
         sb.bind(addr);
-        
+
         // Connect to the server
         ChannelFuture connectFuture = cb.connect(addr);
         connectFuture.awaitUninterruptibly();
@@ -80,7 +76,7 @@ public class LocalAddressTest {
 
         // Wait until the connection is closed, or the connection attempt fails
         connectFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-                
+
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 

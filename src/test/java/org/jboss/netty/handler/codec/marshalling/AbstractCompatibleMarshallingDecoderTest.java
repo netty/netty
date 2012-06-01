@@ -15,9 +15,7 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -43,68 +41,68 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
     public void testSimpleUnmarshalling() throws IOException {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
-        
+
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(Integer.MAX_VALUE));
-        
+
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
         marshaller.start(Marshalling.createByteOutput(bout));
         marshaller.writeObject(testObject);
         marshaller.finish();
         marshaller.close();
-        
+
         byte[] testBytes = bout.toByteArray();
-        
+
         decoder.offer(input(testBytes));
         assertTrue(decoder.finish());
-        
+
         String unmarshalled = (String) decoder.poll();
-        
+
         Assert.assertEquals(testObject, unmarshalled);
-        
+
         Assert.assertNull(decoder.poll());
     }
-    
+
     protected ChannelBuffer input(byte[] input) {
         return ChannelBuffers.wrappedBuffer(input);
     }
-    
+
     @Test
     public void testFragmentedUnmarshalling() throws IOException {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
-        
+
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(Integer.MAX_VALUE));
-        
+
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
         marshaller.start(Marshalling.createByteOutput(bout));
         marshaller.writeObject(testObject);
         marshaller.finish();
         marshaller.close();
-        
+
         byte[] testBytes = bout.toByteArray();
-        
+
         ChannelBuffer buffer = input(testBytes);
         ChannelBuffer slice = buffer.readSlice(2);
-        
+
         decoder.offer(slice);
         decoder.offer(buffer);
         assertTrue(decoder.finish());
-        
-        
+
+
         String unmarshalled = (String) decoder.poll();
-        
+
         Assert.assertEquals(testObject, unmarshalled);
-        
+
         Assert.assertNull(decoder.poll());
     }
-    
+
     @Test
     public void testTooBigObject() throws IOException {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
-        
+
         ChannelUpstreamHandler mDecoder = createDecoder(4);
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(mDecoder);
 
@@ -114,7 +112,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         marshaller.writeObject(testObject);
         marshaller.finish();
         marshaller.close();
-        
+
         byte[] testBytes = bout.toByteArray();
 
         try {
@@ -122,21 +120,21 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
             fail();
         } catch (CodecEmbedderException e) {
             assertEquals(TooLongFrameException.class, e.getCause().getClass());
-            
-        
-        }        
+
+
+        }
 
     }
-    
+
     protected ChannelUpstreamHandler createDecoder(int maxObjectSize) {
         return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
     }
-    
+
     protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
         return new DefaultUnmarshallerProvider(factory, config);
 
     }
-    
+
     protected abstract MarshallerFactory createMarshallerFactory();
     protected abstract MarshallingConfiguration createMarshallingConfig();
 

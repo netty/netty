@@ -18,10 +18,10 @@ package org.jboss.netty.handler.execution;
 import java.util.concurrent.Executor;
 
 public interface ChannelEventRunnableFilter {
-    
+
     /**
      * Return <code>true</code> if the {@link ChannelEventRunnable} should get handled by the {@link Executor}
-     * 
+     *
      */
     boolean filter(ChannelEventRunnable event);
 }

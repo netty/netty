@@ -18,19 +18,19 @@ package org.jboss.netty.handler.codec.marshalling;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
- * {@link OneToOneEncoder} implementation which uses JBoss Marshalling to marshal 
- * an Object. Be aware that this {@link OneToOneEncoder} is not compatible with 
- * an other client that just use JBoss Marshalling as it includes the size of every 
+ * {@link OneToOneEncoder} implementation which uses JBoss Marshalling to marshal
+ * an Object. Be aware that this {@link OneToOneEncoder} is not compatible with
+ * an other client that just use JBoss Marshalling as it includes the size of every
  * {@link Object} that gets serialized in front of the {@link Object} itself.
- * 
+ *
  * Use this with {@link MarshallingDecoder}
- * 
- * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a> 
+ *
+ * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a>
  * for more informations
  *
  */
@@ -43,7 +43,7 @@ public class MarshallingEncoder extends OneToOneEncoder {
 
     /**
      * Creates a new encoder with the estimated length of 512 bytes.
-     * 
+     *
      * @param provider the {@link MarshallerProvider} to use
      */
     public MarshallingEncoder(MarshallerProvider provider) {
@@ -54,7 +54,7 @@ public class MarshallingEncoder extends OneToOneEncoder {
      * Creates a new encoder.
      *
      * @param provider
-     *        the {@link MarshallerProvider} to use 
+     *        the {@link MarshallerProvider} to use
      * @param estimatedLength
      *        the estimated byte length of the serialized form of an object.
      *        If the length of the serialized form exceeds this value, the
@@ -81,11 +81,11 @@ public class MarshallingEncoder extends OneToOneEncoder {
         marshaller.writeObject(msg);
         marshaller.finish();
         marshaller.close();
-        
-        
+
+
         ChannelBuffer encoded = output.getBuffer();
         encoded.setInt(0, encoded.writerIndex() - 4);
-        
+
         return encoded;
     }
 

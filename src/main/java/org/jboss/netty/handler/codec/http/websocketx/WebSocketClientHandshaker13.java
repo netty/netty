@@ -53,7 +53,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
     /**
      * Constructor with default values
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -70,10 +70,10 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             boolean allowExtensions, Map<String, String> customHeaders) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
     }
-    
+
     /**
      * Constructor
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -99,7 +99,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -110,7 +110,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -152,11 +152,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
         request.addHeader(Names.ORIGIN, originValue);
 
-        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
-        
+
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "13");
 
         if (customHeaders != null) {
@@ -164,7 +164,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
                 request.addHeader(header, customHeaders.get(header));
             }
         }
-        
+
         ChannelFuture future = channel.write(request);
 
         channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
@@ -176,7 +176,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -184,7 +184,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
@@ -201,14 +201,14 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         String upgrade = response.getHeader(Names.UPGRADE);
         // Upgrade header should be matched case-insensitive.
-        // See https://github.com/netty/netty/issues/278 
+        // See https://github.com/netty/netty/issues/278
         if (upgrade == null || !upgrade.toLowerCase().equals(Values.WEBSOCKET.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
         // Connection header should be matched case-insensitive.
-        // See https://github.com/netty/netty/issues/278 
+        // See https://github.com/netty/netty/issues/278
         String connection = response.getHeader(Names.CONNECTION);
         if (connection == null || !connection.toLowerCase().equals(Values.UPGRADE.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
@@ -227,8 +227,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         setHandshakeComplete();
 
         channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
-                new WebSocket13FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));
-        
+                new WebSocket13FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
+
 
     }
 }

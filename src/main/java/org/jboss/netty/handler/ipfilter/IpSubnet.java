@@ -15,10 +15,11 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * This class allows to check if an IP V4 or V6 Address is contained in a subnet.<BR>
@@ -54,12 +55,12 @@ import java.net.UnknownHostException;
  * where inetAddress2 is 1fff:0:0a88:85a3:0:0:ac1f:8001<BR>
  */
 public class IpSubnet implements IpSet, Comparable<IpSubnet> {
-    
+
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(IpSubnet.class);
-    
+
     /** Internal representation */
-    private CIDR cidr;
+    private final CIDR cidr;
 
     /** Create IpSubnet for ALL (used for ALLOW or DENY ALL) */
     public IpSubnet() {
@@ -140,27 +141,5 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
     /** Compare two IpSubnet */
     public int compareTo(IpSubnet o) {
         return cidr.toString().compareTo(o.cidr.toString());
-    }
-
-    /**
-     * Simple test functions
-     *
-     * @param args where args[0] is the netmask (standard or CIDR notation) and optional args[1] is
-     *             the inetAddress to test with this IpSubnet
-     */
-    public static void main(String[] args) throws Exception {
-        if (args.length != 0) {
-            IpSubnet ipSubnet = null;
-            try {
-                ipSubnet = new IpSubnet(args[0]);
-            } catch (UnknownHostException e) {
-                return;
-            }
-            logger.debug("IpSubnet: " + ipSubnet.toString() + " from " + ipSubnet.cidr.getBaseAddress() + " to "
-                    + ipSubnet.cidr.getEndAddress() + " mask " + ipSubnet.cidr.getMask());
-            if (args.length > 1) {
-                logger.debug("Is IN: " + args[1] + " " + ipSubnet.contains(args[1]));
-            }
-        }
     }
 }

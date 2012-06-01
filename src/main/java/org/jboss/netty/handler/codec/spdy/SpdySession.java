@@ -128,12 +128,12 @@ final class SpdySession {
 
     public int getSendWindowSize(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) ? state.getSendWindowSize() : -1;
+        return state != null ? state.getSendWindowSize() : -1;
     }
 
     public int updateSendWindowSize(int streamID, int deltaWindowSize) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) ? state.updateSendWindowSize(deltaWindowSize) : -1;
+        return state != null ? state.updateSendWindowSize(deltaWindowSize) : -1;
     }
 
     public int updateReceiveWindowSize(int streamID, int deltaWindowSize) {
@@ -141,12 +141,12 @@ final class SpdySession {
         if (deltaWindowSize > 0) {
             state.setReceiveWindowSizeLowerBound(0);
         }
-        return (state != null) ? state.updateReceiveWindowSize(deltaWindowSize) : -1;
+        return state != null ? state.updateReceiveWindowSize(deltaWindowSize) : -1;
     }
 
     public int getReceiveWindowSizeLowerBound(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) ? state.getReceiveWindowSizeLowerBound() : 0;
+        return state != null ? state.getReceiveWindowSizeLowerBound() : 0;
     }
 
     public void updateAllReceiveWindowSizes(int deltaWindowSize) {
@@ -165,12 +165,12 @@ final class SpdySession {
 
     public MessageEvent getPendingWrite(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) ? state.getPendingWrite() : null;
+        return state != null ? state.getPendingWrite() : null;
     }
 
     public MessageEvent removePendingWrite(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) ? state.removePendingWrite() : null;
+        return state != null ? state.removePendingWrite() : null;
     }
 
     private static final class StreamState {
@@ -179,10 +179,10 @@ final class SpdySession {
         private volatile boolean remoteSideClosed;
         private volatile boolean localSideClosed;
         private boolean receivedReply;
-        private AtomicInteger sendWindowSize;
-        private AtomicInteger receiveWindowSize;
+        private final AtomicInteger sendWindowSize;
+        private final AtomicInteger receiveWindowSize;
         private volatile int receiveWindowSizeLowerBound;
-        private ConcurrentLinkedQueue<MessageEvent> pendingWriteQueue =
+        private final ConcurrentLinkedQueue<MessageEvent> pendingWriteQueue =
                 new ConcurrentLinkedQueue<MessageEvent>();
 
         public StreamState(

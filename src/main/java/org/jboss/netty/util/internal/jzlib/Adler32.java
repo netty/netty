@@ -113,7 +113,7 @@ final class Adler32 {
         }
         return s2 << 16 | s1;
     }
-    
+
     private Adler32() {
         // Utility class
     }

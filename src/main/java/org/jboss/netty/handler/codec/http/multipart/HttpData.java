@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +28,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public interface HttpData extends InterfaceHttpData {
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
-     * 
+     *
      * @param buffer
      *            must be not null
      * @exception IOException
@@ -37,7 +37,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Add the content from the ChannelBuffer
-     * 
+     *
      * @param buffer
      *            must be not null except if last is set to False
      * @param last
@@ -48,7 +48,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Set the content from the file (erase any previous data)
-     * 
+     *
      * @param file
      *            must be not null
      * @exception IOException
@@ -57,7 +57,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Set the content from the inputStream (erase any previous data)
-     * 
+     *
      * @param inputStream
      *            must be not null
      * @exception IOException
@@ -65,14 +65,14 @@ public interface HttpData extends InterfaceHttpData {
     void setContent(InputStream inputStream) throws IOException;
 
     /**
-     * 
+     *
      * @return True if the InterfaceHttpData is completed (all data are stored)
      */
     boolean isCompleted();
 
     /**
      * Returns the size in byte of the InterfaceHttpData
-     * 
+     *
      * @return the size of the InterfaceHttpData
      */
     long length();
@@ -85,7 +85,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Returns the contents of the file item as an array of bytes.
-     * 
+     *
      * @return the contents of the file item as an array of bytes.
      * @exception IOException
      */
@@ -93,7 +93,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Returns the content of the file item as a ChannelBuffer
-     * 
+     *
      * @return the content of the file item as a ChannelBuffer
      * @throws IOException
      */
@@ -104,7 +104,7 @@ public interface HttpData extends InterfaceHttpData {
      * most length read bytes, increasing the current position of the Bytes
      * read. Once it arrives at the end, it returns an EMPTY_BUFFER and it
      * resets the current position to 0.
-     * 
+     *
      * @param length
      * @return a ChannelBuffer for the content from the current position or an
      *         EMPTY_BUFFER if there is no more data to return
@@ -115,7 +115,7 @@ public interface HttpData extends InterfaceHttpData {
     /**
      * Returns the contents of the file item as a String, using the default
      * character encoding.
-     * 
+     *
      * @return the contents of the file item as a String, using the default
      *         character encoding.
      * @exception IOException
@@ -125,7 +125,7 @@ public interface HttpData extends InterfaceHttpData {
     /**
      * Returns the contents of the file item as a String, using the specified
      * charset.
-     * 
+     *
      * @param encoding
      *            the charset to use
      * @return the contents of the file item as a String, using the specified
@@ -136,7 +136,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Set the Charset passed by the browser if defined
-     * 
+     *
      * @param charset
      *            Charset to set - must be not null
      */
@@ -144,7 +144,7 @@ public interface HttpData extends InterfaceHttpData {
 
     /**
      * Returns the Charset passed by the browser or null if not defined.
-     * 
+     *
      * @return the Charset passed by the browser or null if not defined.
      */
     Charset getCharset();
@@ -154,7 +154,7 @@ public interface HttpData extends InterfaceHttpData {
      * exists, it will be deleted. Once this method is called, if successful,
      * the new file will be out of the cleaner of the factory that creates the
      * original InterfaceHttpData object.
-     * 
+     *
      * @param dest
      *            destination file - must be not null
      * @return True if the write is successful
@@ -165,13 +165,13 @@ public interface HttpData extends InterfaceHttpData {
     /**
      * Provides a hint as to whether or not the file contents will be read from
      * memory.
-     * 
+     *
      * @return True if the file contents is in memory.
      */
     boolean isInMemory();
 
     /**
-     * 
+     *
      * @return the associated File if this data is represented in a file
      * @exception IOException
      *                if this data is not represented by a file

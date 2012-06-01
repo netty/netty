@@ -32,7 +32,7 @@ public class FactorialClient {
     private final String host;
     private final int port;
     private final int count;
-    
+
     public FactorialClient(String host, int port, int count) {
         this.host = host;
         this.port = port;

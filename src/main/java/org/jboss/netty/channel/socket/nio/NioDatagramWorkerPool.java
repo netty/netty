@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 
 /**
  * Default implementation which hands of {@link NioDatagramWorker}'s
- * 
+ *
  *
  */
 public class NioDatagramWorkerPool extends AbstractNioWorkerPool<NioDatagramWorker> {

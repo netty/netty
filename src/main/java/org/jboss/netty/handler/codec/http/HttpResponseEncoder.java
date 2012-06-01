@@ -15,7 +15,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
+import static org.jboss.netty.handler.codec.http.HttpConstants.*;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 

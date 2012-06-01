@@ -47,7 +47,7 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
              // Fire the channelConnected event for OioAcceptedSocketChannel.
             // See #287
             fireChannelConnected(channel, channel.getRemoteAddress());
-            
+
         }
         super.run();
     }
@@ -70,7 +70,7 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
             return true;
         }
         fireMessageReceived(channel, channel.getConfig().getBufferFactory().getBuffer(buf, 0, readBytes));
-        
+
         return true;
     }
 
@@ -94,14 +94,14 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
         try {
             int length = 0;
 
-            // Add support to write a FileRegion. This in fact will not give any performance gain but at least it not fail and 
+            // Add support to write a FileRegion. This in fact will not give any performance gain but at least it not fail and
             // we did the best to emulate it
             if (message instanceof FileRegion) {
                 FileRegion fr = (FileRegion) message;
                 try {
                     synchronized (out) {
                         WritableByteChannel  bchannel = Channels.newChannel(out);
-                        
+
                         long i = 0;
                         while ((i = fr.transferTo(bchannel, length)) > 0) {
                             length += i;
@@ -126,14 +126,14 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                     a.getBytes(a.readerIndex(), out, length);
                 }
             }
-            
+
             future.setSuccess();
             if (iothread) {
                 fireWriteComplete(channel, length);
             } else {
                 fireWriteCompleteLater(channel, length);
             }
- 
+
         } catch (Throwable t) {
             // Convert 'SocketException: Socket closed' to
             // ClosedChannelException.

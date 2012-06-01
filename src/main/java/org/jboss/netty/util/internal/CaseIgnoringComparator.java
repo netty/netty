@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.util.internal;
 
 import java.io.Serializable;
 import java.util.Comparator;
 
-final class CaseIgnoringComparator implements Comparator<String>, Serializable {
+public final class CaseIgnoringComparator implements Comparator<String>, Serializable {
 
     private static final long serialVersionUID = 4582133183775373862L;
 
-    static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
+    public static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
 
     private CaseIgnoringComparator() {
         super();

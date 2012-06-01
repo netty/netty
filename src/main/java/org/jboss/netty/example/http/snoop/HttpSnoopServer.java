@@ -26,7 +26,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * in a pretty plaintext form.
  */
 public class HttpSnoopServer {
-    
+
     private final int port;
 
     public HttpSnoopServer(int port) {

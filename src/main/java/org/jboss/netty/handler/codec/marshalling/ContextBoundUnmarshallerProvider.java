@@ -23,11 +23,11 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * {@link UnmarshallerProvider} which store a reference to the {@link Unmarshaller} in the 
- * {@link ChannelHandlerContext} via the {@link ChannelHandlerContext#setAttachment(Object)} 
+ * {@link UnmarshallerProvider} which store a reference to the {@link Unmarshaller} in the
+ * {@link ChannelHandlerContext} via the {@link ChannelHandlerContext#setAttachment(Object)}
  * method. So the same {@link Unmarshaller} will be used during the life-time of a {@link Channel}
  * for the {@link ChannelHandler}'s {@link ChannelHandlerContext}.
- * 
+ *
  *
  */
 public class ContextBoundUnmarshallerProvider extends DefaultUnmarshallerProvider {

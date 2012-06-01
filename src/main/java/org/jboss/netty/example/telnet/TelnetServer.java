@@ -27,11 +27,11 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class TelnetServer {
 
     private final int port;
-    
+
     public TelnetServer(int port) {
         this.port = port;
     }
-    
+
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.handler.codec.http.multipart;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpConstants;
 
 /**
  * Abstract Disk HttpData implementation
@@ -259,7 +260,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     }
 
     public String getString() throws IOException {
-        return getString(HttpCodecUtil.DEFAULT_CHARSET);
+        return getString(HttpConstants.DEFAULT_CHARSET);
     }
 
     public String getString(Charset encoding) throws IOException {
@@ -268,7 +269,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         if (encoding == null) {
             byte[] array = readFrom(file);
-            return new String(array, HttpCodecUtil.DEFAULT_CHARSET.name());
+            return new String(array, HttpConstants.DEFAULT_CHARSET.name());
         }
         byte[] array = readFrom(file);
         return new String(array, encoding.name());

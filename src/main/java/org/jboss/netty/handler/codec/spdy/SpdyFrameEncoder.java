@@ -128,7 +128,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             int headerBlockLength = data.readableBytes();
             int length;
             if (version < 3) {
-                length = (headerBlockLength == 0) ? 12 : 10 + headerBlockLength;
+                length = headerBlockLength == 0 ? 12 : 10 + headerBlockLength;
             } else {
                 length = 10 + headerBlockLength;
             }
@@ -164,7 +164,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             int headerBlockLength = data.readableBytes();
             int length;
             if (version < 3) {
-                length = (headerBlockLength == 0) ? 8 : 6 + headerBlockLength;
+                length = headerBlockLength == 0 ? 8 : 6 + headerBlockLength;
             } else {
                 length = 4 + headerBlockLength;
             }
@@ -259,7 +259,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
         } else if (msg instanceof SpdyGoAwayFrame) {
 
             SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-            int length = (version < 3) ? 4 : 8;
+            int length = version < 3 ? 4 : 8;
             ChannelBuffer frame = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + length);
             frame.writeShort(version | 0x8000);
@@ -280,7 +280,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             int headerBlockLength = data.readableBytes();
             int length;
             if (version < 3) {
-                length = (headerBlockLength == 0) ? 4 : 6 + headerBlockLength;
+                length = headerBlockLength == 0 ? 4 : 6 + headerBlockLength;
             } else {
                 length = 4 + headerBlockLength;
             }

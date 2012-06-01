@@ -15,18 +15,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
-import static org.jboss.netty.channel.Channels.fireChannelDisconnectedLater;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
-import static org.jboss.netty.channel.Channels.fireExceptionCaughtLater;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
-import static org.jboss.netty.channel.Channels.succeededFuture;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -38,6 +27,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Queue;
 import java.util.concurrent.Executor;
+
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 /**
  * A class responsible for registering channels with {@link Selector}.
@@ -58,7 +54,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
     NioDatagramWorker(final Executor executor, boolean allowShutdownOnIdle) {
         super(executor, allowShutdownOnIdle);
     }
-    
+
     @Override
     protected boolean read(final SelectionKey key) {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();
@@ -110,7 +106,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
         return true;
     }
-    
+
 
     @Override
     protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
@@ -163,7 +159,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
     protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
         return new ChannelRegistionTask((NioDatagramChannel) channel, future);
     }
-    
+
     /**
      * RegisterTask is a task responsible for registering a channel with a
      * selector.
@@ -206,7 +202,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
                     future.setFailure(e);
                 }
                 close(channel, succeededFuture(channel));
-                
+
                 if (!(e instanceof ClosedChannelException)) {
                     throw new ChannelException(
                             "Failed to register a socket to the selector.", e);
@@ -214,7 +210,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
             }
         }
     }
-    
+
     @Override
     public void writeFromUserCode(final AbstractNioChannel<?> channel) {
         /*
@@ -243,7 +239,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
         write0(channel);
     }
-    
+
     @Override
     protected void write0(final AbstractNioChannel<?> channel) {
 
