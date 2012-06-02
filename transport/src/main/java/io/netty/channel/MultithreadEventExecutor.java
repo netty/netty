@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
@@ -15,8 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class MultithreadEventExecutor implements EventExecutor {
 
-    protected static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
-    protected static final ThreadFactory DEFAULT_THREAD_FACTORY = Executors.defaultThreadFactory();
+    private static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    private static final AtomicInteger poolId = new AtomicInteger();
 
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
@@ -32,7 +31,7 @@ public abstract class MultithreadEventExecutor implements EventExecutor {
     }
 
     protected MultithreadEventExecutor(int nThreads, Object... args) {
-        this(nThreads, DEFAULT_THREAD_FACTORY, args);
+        this(nThreads, null, args);
     }
 
     protected MultithreadEventExecutor(int nThreads, ThreadFactory threadFactory, Object... args) {
@@ -40,8 +39,9 @@ public abstract class MultithreadEventExecutor implements EventExecutor {
             throw new IllegalArgumentException(String.format(
                     "nThreads: %d (expected: > 0)", nThreads));
         }
+
         if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
+            threadFactory = new DefaultThreadFactory();
         }
 
         children = new SingleThreadEventExecutor[nThreads];
@@ -200,5 +200,32 @@ public abstract class MultithreadEventExecutor implements EventExecutor {
             throw new IllegalStateException("not called from an event loop thread");
         }
         return loop;
+    }
+
+    private final class DefaultThreadFactory implements ThreadFactory {
+        private final AtomicInteger nextId = new AtomicInteger();
+        private final String prefix;
+
+        DefaultThreadFactory() {
+            String typeName = MultithreadEventExecutor.this.getClass().getSimpleName();
+            typeName = "" + Character.toLowerCase(typeName.charAt(0)) + typeName.substring(1);
+            prefix = typeName + '-' + poolId.incrementAndGet() + '-';
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, prefix + nextId.incrementAndGet());
+            try {
+                if (t.isDaemon()) {
+                    t.setDaemon(false);
+                }
+                if (t.getPriority() != Thread.MAX_PRIORITY) {
+                    t.setPriority(Thread.MAX_PRIORITY);
+                }
+            } catch (Exception ignored) {
+                // Doesn't matter even if failed to set.
+            }
+            return t;
+        }
     }
 }

@@ -4,8 +4,6 @@ import java.util.concurrent.ThreadFactory;
 
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
-    protected SingleThreadEventLoop() {}
-
     protected SingleThreadEventLoop(ThreadFactory threadFactory) {
         super(threadFactory);
     }

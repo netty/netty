@@ -16,7 +16,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
-import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
@@ -67,10 +66,6 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private volatile int state;
     private long lastCheckTimeNanos;
     private long lastPurgeTimeNanos;
-
-    protected SingleThreadEventExecutor() {
-        this(Executors.defaultThreadFactory());
-    }
 
     protected SingleThreadEventExecutor(ThreadFactory threadFactory) {
         thread = threadFactory.newThread(new Runnable() {
