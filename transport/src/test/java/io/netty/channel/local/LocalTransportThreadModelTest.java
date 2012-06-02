@@ -68,18 +68,21 @@ public class LocalTransportThreadModelTest {
         TestHandler h3 = new TestHandler();
 
         Channel ch = new LocalChannel();
+        // With no EventExecutor specified, h1 will be always invoked by EventLoop 'l'.
         ch.pipeline().addLast(h1);
+        // h2 will be always invoked by EventExecutor 'e1'.
         ch.pipeline().addLast(e1, h2);
+        // h3 will be always invoked by EventExecutor 'e2'.
         ch.pipeline().addLast(e2, h3);
 
-        l.register(ch).sync();
+        l.register(ch).sync().channel().connect(ADDR).sync();
 
-        ch.connect(ADDR).sync();
-
+        // Fire inbound events from all possible starting points.
         ch.pipeline().fireInboundBufferUpdated();
         ch.pipeline().context(h1).fireInboundBufferUpdated();
         ch.pipeline().context(h2).fireInboundBufferUpdated();
         ch.pipeline().context(h3).fireInboundBufferUpdated();
+        // Fire outbound events from all possible starting points.
         ch.pipeline().flush();
         ch.pipeline().context(h3).flush();
         ch.pipeline().context(h2).flush();
