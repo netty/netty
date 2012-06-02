@@ -17,6 +17,8 @@ package io.netty.handler.ssl;
 
 import java.nio.ByteBuffer;
 
+import javax.net.ssl.SSLEngine;
+
 /**
  * A {@link ByteBuffer} pool dedicated for {@link SslHandler} performance
  * improvement.
