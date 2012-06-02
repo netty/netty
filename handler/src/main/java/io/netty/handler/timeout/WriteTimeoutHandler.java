@@ -113,7 +113,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter<Object> {
     public void flush(final ChannelOutboundHandlerContext<Object> ctx, final ChannelFuture future) throws Exception {
         if (timeoutMillis > 0) {
             // Schedule a timeout.
-            final ScheduledFuture<?> sf = ctx.eventLoop().schedule(new Runnable() {
+            final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
                     if (future.setFailure(WriteTimeoutException.INSTANCE)) {

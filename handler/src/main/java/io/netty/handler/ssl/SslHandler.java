@@ -21,8 +21,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelFuture;
+import io.netty.handler.codec.StreamToStreamCodec;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.NonReentrantLock;
@@ -139,9 +141,7 @@ import javax.net.ssl.SSLException;
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.ssl.SslBufferPool
  */
-public class SslHandler extends FrameDecoder
-                        implements ChannelDownstreamHandler,
-                                   LifeCycleAwareChannelHandler {
+public class SslHandler extends StreamToStreamCodec {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SslHandler.class);
@@ -421,38 +421,21 @@ public class SslHandler extends FrameDecoder
     }
 
     @Override
-    public void handleDownstream(
-            final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
-        if (evt instanceof ChannelStateEvent) {
-            ChannelStateEvent e = (ChannelStateEvent) evt;
-            switch (e.getState()) {
-            case OPEN:
-            case CONNECTED:
-            case BOUND:
-                if (Boolean.FALSE.equals(e.getValue()) || e.getValue() == null) {
-                    closeOutboundAndChannel(context, e);
-                    return;
-                }
-            }
-        }
-        if (!(evt instanceof MessageEvent)) {
-            context.sendDownstream(evt);
-            return;
-        }
+    public void disconnect(ChannelOutboundHandlerContext<Byte> ctx,
+            ChannelFuture future) throws Exception {
+        closeOutboundAndChannel(ctx, e);
+        super.disconnect(ctx, future);
+    }
 
-        MessageEvent e = (MessageEvent) evt;
-        if (!(e.getMessage() instanceof ChannelBuffer)) {
-            context.sendDownstream(evt);
-            return;
-        }
+    @Override
+    public void close(ChannelOutboundHandlerContext<Byte> ctx,
+            ChannelFuture future) throws Exception {
+        closeOutboundAndChannel(ctx, e);
+        super.close(ctx, future);
+    }
 
-        // Do not encrypt the first write request if this handler is
-        // created with startTLS flag turned on.
-        if (startTls && sentFirstMessage.compareAndSet(false, true)) {
-            context.sendDownstream(evt);
-            return;
-        }
-
+    @Override
+    public void encode(ChannelOutboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
         // Otherwise, all messages are encrypted.
         ChannelBuffer msg = (ChannelBuffer) e.getMessage();
         PendingWrite pendingWrite;

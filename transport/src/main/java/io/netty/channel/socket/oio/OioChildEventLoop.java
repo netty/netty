@@ -8,12 +8,10 @@ import io.netty.channel.SingleThreadEventLoop;
 
 class OioChildEventLoop extends SingleThreadEventLoop {
 
-    private final OioEventLoop parent;
     private AbstractOioChannel ch;
 
     OioChildEventLoop(OioEventLoop parent) {
-        super(parent.threadFactory);
-        this.parent = parent;
+        super(parent, parent.threadFactory);
     }
 
     @Override
@@ -71,6 +69,7 @@ class OioChildEventLoop extends SingleThreadEventLoop {
 
     private void deregister() {
         ch = null;
+        OioEventLoop parent = (OioEventLoop) parent();
         parent.activeChildren.remove(this);
         parent.idleChildren.add(this);
     }

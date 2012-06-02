@@ -2,6 +2,7 @@ package io.netty.handler.codec.embedder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
 
 import java.util.Collections;
@@ -12,7 +13,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 class EmbeddedEventLoop extends AbstractExecutorService implements
-        EventLoop {
+        EventLoop, EventExecutor.Unsafe {
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay,
@@ -84,5 +85,20 @@ class EmbeddedEventLoop extends AbstractExecutorService implements
     @Override
     public boolean inEventLoop() {
         return true;
+    }
+
+    @Override
+    public EventLoop parent() {
+        return null;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
+    }
+
+    @Override
+    public EventExecutor nextChild() {
+        return this;
     }
 }

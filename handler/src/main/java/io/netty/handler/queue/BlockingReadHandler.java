@@ -187,7 +187,7 @@ public class BlockingReadHandler<E> extends ChannelInboundHandlerAdapter<Object>
     }
 
     private void detectDeadLock() {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (ctx.executor().inEventLoop()) {
             throw new BlockingOperationException();
         }
     }

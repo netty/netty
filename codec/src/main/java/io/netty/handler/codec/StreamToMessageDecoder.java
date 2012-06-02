@@ -100,7 +100,7 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
      * inbound buffer.
      */
     public void replace(String newHandlerName, ChannelInboundHandler<Byte> newHandler) {
-        if (!ctx.eventLoop().inEventLoop()) {
+        if (!ctx.executor().inEventLoop()) {
             throw new IllegalStateException("not in event loop");
         }
 

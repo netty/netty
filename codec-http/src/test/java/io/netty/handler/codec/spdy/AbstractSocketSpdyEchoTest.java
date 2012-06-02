@@ -169,7 +169,7 @@ public abstract class AbstractSocketSpdyEchoTest {
     protected abstract ServerBootstrap newServerBootstrap();
     protected abstract Bootstrap newClientBootstrap();
 
-    @Test
+    @Test(timeout = 10000)
     public void testSpdyEcho() throws Throwable {
         for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
             sb = newServerBootstrap();

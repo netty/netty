@@ -18,11 +18,11 @@ package io.netty.channel;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.DefaultAttributeMap;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,13 +37,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
-    private final Channel channel;
+    final Channel channel;
     private volatile DefaultChannelHandlerContext head;
     private volatile DefaultChannelHandlerContext tail;
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
     private boolean firedChannelActive;
     private boolean fireInboundBufferUpdatedOnActivation;
+
+    final Map<EventExecutor, EventExecutor> childExecutors =
+            new IdentityHashMap<EventExecutor, EventExecutor>();
 
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
@@ -58,13 +61,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelPipeline addFirst(String name, ChannelHandler handler) {
+    public ChannelPipeline addFirst(String name, ChannelHandler handler) {
+        return addFirst(null, name, handler);
+    }
+
+    @Override
+    public synchronized ChannelPipeline addFirst(EventExecutor executor, String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
-            init(name, handler);
+            init(executor, name, handler);
         } else {
             checkDuplicateName(name);
             DefaultChannelHandlerContext oldHead = head;
-            DefaultChannelHandlerContext newHead = new DefaultChannelHandlerContext(null, oldHead, name, handler);
+            DefaultChannelHandlerContext newHead =
+                    new DefaultChannelHandlerContext(this, executor, null, oldHead, name, handler);
 
             callBeforeAdd(newHead);
 
@@ -79,13 +88,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelPipeline addLast(String name, ChannelHandler handler) {
+    public ChannelPipeline addLast(String name, ChannelHandler handler) {
+        return addLast(null, name, handler);
+    }
+
+    @Override
+    public synchronized ChannelPipeline addLast(EventExecutor executor, String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
-            init(name, handler);
+            init(executor, name, handler);
         } else {
             checkDuplicateName(name);
             DefaultChannelHandlerContext oldTail = tail;
-            DefaultChannelHandlerContext newTail = new DefaultChannelHandlerContext(oldTail, null, name, handler);
+            DefaultChannelHandlerContext newTail =
+                    new DefaultChannelHandlerContext(this, executor, oldTail, null, name, handler);
 
             callBeforeAdd(newTail);
 
@@ -100,13 +115,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
+    public ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
+        return addBefore(null, baseName, name, handler);
+    }
+
+    @Override
+    public synchronized ChannelPipeline addBefore(EventExecutor executor, String baseName, String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
         if (ctx == head) {
             addFirst(name, handler);
         } else {
             checkDuplicateName(name);
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(ctx.prev, ctx, name, handler);
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, executor, ctx.prev, ctx, name, handler);
 
             callBeforeAdd(newCtx);
 
@@ -121,13 +142,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
+    public ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
+        return addAfter(null, baseName, name, handler);
+    }
+
+    @Override
+    public synchronized ChannelPipeline addAfter(EventExecutor executor, String baseName, String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
         if (ctx == tail) {
             addLast(name, handler);
         } else {
             checkDuplicateName(name);
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(ctx, ctx.next, name, handler);
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, executor, ctx, ctx.next, name, handler);
 
             callBeforeAdd(newCtx);
 
@@ -143,6 +170,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addFirst(ChannelHandler... handlers) {
+        return addFirst(null, handlers);
+    }
+
+    @Override
+    public ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -159,7 +191,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         for (int i = size - 1; i >= 0; i --) {
             ChannelHandler h = handlers[i];
-            addFirst(generateName(h), h);
+            addFirst(executor, generateName(h), h);
         }
 
         return this;
@@ -167,6 +199,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addLast(ChannelHandler... handlers) {
+        return addLast(null, handlers);
+    }
+
+    @Override
+    public ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -175,7 +212,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (h == null) {
                 break;
             }
-            addLast(generateName(h), h);
+            addLast(executor, generateName(h), h);
         }
 
         return this;
@@ -202,7 +239,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public synchronized <T extends ChannelHandler> T remove(Class<T> handlerType) {
         return (T) remove(getContextOrDie(handlerType)).handler();
     }
@@ -315,7 +351,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             DefaultChannelHandlerContext prev = ctx.prev;
             DefaultChannelHandlerContext next = ctx.next;
-            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(prev, next, newName, newHandler);
+            DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, ctx.executor, prev, next, newName, newHandler);
 
             callBeforeRemove(ctx);
             callBeforeAdd(newCtx);
@@ -582,21 +619,87 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelBufferHolder<Object> inbound() {
-        DefaultChannelHandlerContext ctx = firstInboundContext();
-        if (ctx != null) {
-            return ctx.inbound();
-        }
-        return null;
+    public Queue<Object> inboundMessageBuffer() {
+        return nextInboundMessageBuffer(head);
     }
 
     @Override
-    public ChannelBufferHolder<Object> outbound() {
-        DefaultChannelHandlerContext ctx = firstOutboundContext();
-        if (ctx != null) {
-            return ctx.outbound();
+    public ChannelBuffer inboundByteBuffer() {
+        return nextInboundByteBuffer(head);
+    }
+
+    @Override
+    public Queue<Object> outboundMessageBuffer() {
+        return nextOutboundMessageBuffer(tail);
+    }
+
+    @Override
+    public ChannelBuffer outboundByteBuffer() {
+        return nextOutboundByteBuffer(tail);
+    }
+
+    static ChannelBuffer nextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                throw NoSuchBufferException.INSTANCE;
+            }
+            ChannelBufferHolder<Object> in = ctx.in;
+            if (in != null && !in.isBypass() && in.hasByteBuffer()) {
+                return in.byteBuffer();
+            }
+            ctx = ctx.next;
         }
-        return channel().unsafe().directOutbound();
+    }
+
+    static Queue<Object> nextInboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                throw NoSuchBufferException.INSTANCE;
+            }
+            ChannelBufferHolder<Object> in = ctx.inbound();
+            if (in != null && !in.isBypass() && in.hasMessageBuffer()) {
+                return in.messageBuffer();
+            }
+            ctx = ctx.next;
+        }
+    }
+
+    ChannelBuffer nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
+                if (lastOut.hasByteBuffer()) {
+                    return lastOut.byteBuffer();
+                } else {
+                    throw NoSuchBufferException.INSTANCE;
+                }
+            }
+
+            ChannelBufferHolder<Object> out = ctx.outbound();
+            if (out != null && !out.isBypass() && out.hasByteBuffer()) {
+                return out.byteBuffer();
+            }
+            ctx = ctx.prev;
+        }
+    }
+
+    Queue<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
+                if (lastOut.hasMessageBuffer()) {
+                    return lastOut.messageBuffer();
+                } else {
+                    throw NoSuchBufferException.INSTANCE;
+                }
+            }
+
+            ChannelBufferHolder<Object> out = ctx.outbound();
+            if (out != null && !out.isBypass() && out.hasMessageBuffer()) {
+                return out.messageBuffer();
+            }
+            ctx = ctx.prev;
+        }
     }
 
     @Override
@@ -607,12 +710,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireChannelRegistered(DefaultChannelHandlerContext ctx) {
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).channelRegistered(ctx);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+    static void fireChannelRegistered(DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            ctx.fireChannelRegisteredTask.run();
+        } else {
+            executor.execute(ctx.fireChannelRegisteredTask);
         }
     }
 
@@ -624,12 +727,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireChannelUnregistered(DefaultChannelHandlerContext ctx) {
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).channelUnregistered(ctx);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+    static void fireChannelUnregistered(DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            ctx.fireChannelUnregisteredTask.run();
+        } else {
+            executor.execute(ctx.fireChannelUnregisteredTask);
         }
     }
 
@@ -646,14 +749,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireChannelActive(DefaultChannelHandlerContext ctx) {
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).channelActive(ctx);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+    static void fireChannelActive(DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            ctx.fireChannelActiveTask.run();
+        } else {
+            executor.execute(ctx.fireChannelActiveTask);
         }
     }
+
     @Override
     public void fireChannelInactive() {
         DefaultChannelHandlerContext ctx = firstInboundContext();
@@ -666,12 +770,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireChannelInactive(DefaultChannelHandlerContext ctx) {
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).channelInactive(ctx);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+    static void fireChannelInactive(DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            ctx.fireChannelInactiveTask.run();
+        } else {
+            executor.execute(ctx.fireChannelInactiveTask);
         }
     }
 
@@ -685,28 +789,37 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static void logTerminalException(Throwable cause) {
+    static void logTerminalException(Throwable cause) {
         logger.warn(
                 "An exceptionCaught() event was fired, and it reached at the end of the " +
                 "pipeline.  It usually means the last inbound handler in the pipeline did not " +
                 "handle the exception.", cause);
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireExceptionCaught(DefaultChannelHandlerContext ctx, Throwable cause) {
+    void fireExceptionCaught(final DefaultChannelHandlerContext ctx, final Throwable cause) {
         if (cause == null) {
             throw new NullPointerException("cause");
         }
 
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).exceptionCaught(ctx, cause);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler's " +
-                        "exceptionCaught() method while handling the following exception:", cause);
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            try {
+                ((ChannelInboundHandler<Object>) ctx.handler()).exceptionCaught(ctx, cause);
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "An exception was thrown by a user handler's " +
+                            "exceptionCaught() method while handling the following exception:", cause);
+                }
+                notifyHandlerException(t);
             }
-            notifyHandlerException(t);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    fireExceptionCaught(ctx, cause);
+                }
+            });
         }
     }
 
@@ -718,16 +831,25 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireUserEventTriggered(DefaultChannelHandlerContext ctx, Object event) {
+    void fireUserEventTriggered(final DefaultChannelHandlerContext ctx, final Object event) {
         if (event == null) {
             throw new NullPointerException("event");
         }
 
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).userEventTriggered(ctx, event);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            try {
+                ((ChannelInboundHandler<Object>) ctx.handler()).userEventTriggered(ctx, event);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    fireUserEventTriggered(ctx, event);
+                }
+            });
         }
     }
 
@@ -743,17 +865,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void fireInboundBufferUpdated(DefaultChannelHandlerContext ctx) {
-        try {
-            ((ChannelInboundHandler<Object>) ctx.handler()).inboundBufferUpdated(ctx);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
-        } finally {
-            ChannelBufferHolder<Object> inbound = ctx.inbound();
-            if (!inbound.isBypass() && inbound.isEmpty() && inbound.hasByteBuffer()) {
-                inbound.byteBuffer().discardReadBytes();
-            }
+    static void fireInboundBufferUpdated(DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            ctx.fireInboundBufferUpdatedTask.run();
+        } else {
+            executor.execute(ctx.fireInboundBufferUpdatedTask);
         }
     }
 
@@ -802,18 +919,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return bind(firstOutboundContext(), localAddress, future);
     }
 
-    @SuppressWarnings("unchecked")
-    private ChannelFuture bind(DefaultChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) {
+    ChannelFuture bind(final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelFuture future) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
         validateFuture(future);
 
         if (ctx != null) {
-            try {
-                ((ChannelOutboundHandler<Object>) ctx.handler()).bind(ctx, localAddress, future);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    ((ChannelOutboundHandler<Object>) ctx.handler()).bind(ctx, localAddress, future);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        bind(ctx, localAddress, future);
+                    }
+                });
             }
         } else {
             channel().unsafe().bind(localAddress, future);
@@ -831,18 +957,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return connect(firstOutboundContext(), remoteAddress, localAddress, future);
     }
 
-    @SuppressWarnings("unchecked")
-    private ChannelFuture connect(DefaultChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+    ChannelFuture connect(final DefaultChannelHandlerContext ctx, final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
         validateFuture(future);
 
         if (ctx != null) {
-            try {
-                ((ChannelOutboundHandler<Object>) ctx.handler()).connect(ctx, remoteAddress, localAddress, future);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    ((ChannelOutboundHandler<Object>) ctx.handler()).connect(ctx, remoteAddress, localAddress, future);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        connect(ctx, remoteAddress, localAddress, future);
+                    }
+                });
             }
         } else {
             channel().unsafe().connect(remoteAddress,  localAddress, future);
@@ -856,14 +991,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return disconnect(firstOutboundContext(), future);
     }
 
-    @SuppressWarnings("unchecked")
-    private ChannelFuture disconnect(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
         validateFuture(future);
         if (ctx != null) {
-            try {
-                ((ChannelOutboundHandler<Object>) ctx.handler()).disconnect(ctx, future);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    ((ChannelOutboundHandler<Object>) ctx.handler()).disconnect(ctx, future);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        disconnect(ctx, future);
+                    }
+                });
             }
         } else {
             channel().unsafe().disconnect(future);
@@ -877,14 +1021,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return close(firstOutboundContext(), future);
     }
 
-    @SuppressWarnings("unchecked")
-    private ChannelFuture close(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
         validateFuture(future);
         if (ctx != null) {
-            try {
-                ((ChannelOutboundHandler<Object>) ctx.handler()).close(ctx, future);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    ((ChannelOutboundHandler<Object>) ctx.handler()).close(ctx, future);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        close(ctx, future);
+                    }
+                });
             }
         } else {
             channel().unsafe().close(future);
@@ -898,14 +1051,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return deregister(firstOutboundContext(), future);
     }
 
-    @SuppressWarnings("unchecked")
-    private ChannelFuture deregister(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
         validateFuture(future);
         if (ctx != null) {
-            try {
-                ((ChannelOutboundHandler<Object>) ctx.handler()).deregister(ctx, future);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    ((ChannelOutboundHandler<Object>) ctx.handler()).deregister(ctx, future);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        deregister(ctx, future);
+                    }
+                });
             }
         } else {
             channel().unsafe().deregister(future);
@@ -919,19 +1081,28 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return flush(firstOutboundContext(), future);
     }
 
-    @SuppressWarnings("unchecked")
-    private ChannelFuture flush(DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
         validateFuture(future);
         if (ctx != null) {
-            try {
-                ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
-            } finally {
-                ChannelBufferHolder<Object> outbound = ctx.outbound();
-                if (!outbound.isBypass() && outbound.isEmpty() && outbound.hasByteBuffer()) {
-                    outbound.byteBuffer().discardReadBytes();
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
+                } finally {
+                    ChannelBufferHolder<Object> outbound = ctx.outbound();
+                    if (!outbound.isBypass() && outbound.isEmpty() && outbound.hasByteBuffer()) {
+                        outbound.byteBuffer().discardReadBytes();
+                    }
                 }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        flush(ctx, future);
+                    }
+                });
             }
         } else {
             channel().unsafe().flush(future);
@@ -942,24 +1113,47 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
+        return write(firstOutboundContext(), message, future);
+    }
+
+    ChannelFuture write(final DefaultChannelHandlerContext ctx, final Object message, final ChannelFuture future) {
         if (message == null) {
             throw new NullPointerException("message");
         }
         validateFuture(future);
 
-        ChannelBufferHolder<Object> out = outbound();
-        if (out.hasMessageBuffer()) {
-            out.messageBuffer().add(message);
-        } else if (message instanceof ChannelBuffer) {
-            ChannelBuffer m = (ChannelBuffer) message;
-            out.byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
+        EventExecutor executor;
+        ChannelBufferHolder<Object> out;
+        if (ctx != null) {
+            executor = ctx.executor();
+            out = ctx.outbound();
         } else {
-            throw new IllegalArgumentException(
-                    "cannot write a message whose type is not " +
-                    ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
+            executor = channel().eventLoop();
+            out = channel().unsafe().directOutbound();
         }
 
-        return flush(future);
+        if (executor.inEventLoop()) {
+            if (out.hasMessageBuffer()) {
+                out.messageBuffer().add(message);
+            } else if (message instanceof ChannelBuffer) {
+                ChannelBuffer m = (ChannelBuffer) message;
+                out.byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
+            } else {
+                throw new IllegalArgumentException(
+                        "cannot write a message whose type is not " +
+                        ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
+            }
+            return flush(ctx, future);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    write(ctx, message, future);
+                }
+            });
+        }
+
+        return future;
     }
 
     private void validateFuture(ChannelFuture future) {
@@ -986,7 +1180,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return nextOutboundContext(tail);
     }
 
-    private static DefaultChannelHandlerContext nextInboundContext(DefaultChannelHandlerContext ctx) {
+    static DefaultChannelHandlerContext nextInboundContext(DefaultChannelHandlerContext ctx) {
         if (ctx == null) {
             return null;
         }
@@ -1002,7 +1196,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return realCtx;
     }
 
-    private static DefaultChannelHandlerContext nextOutboundContext(DefaultChannelHandlerContext ctx) {
+    static DefaultChannelHandlerContext nextOutboundContext(DefaultChannelHandlerContext ctx) {
         if (ctx == null) {
             return null;
         }
@@ -1052,8 +1246,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return inExceptionCaught(cause.getCause());
     }
 
-    private void init(String name, ChannelHandler handler) {
-        DefaultChannelHandlerContext ctx = new DefaultChannelHandlerContext(null, null, name, handler);
+    private void init(EventExecutor executor, String name, ChannelHandler handler) {
+        DefaultChannelHandlerContext ctx =
+                new DefaultChannelHandlerContext(this, executor, null, null, name, handler);
         callBeforeAdd(ctx);
         head = tail = ctx;
         name2ctx.clear();
@@ -1091,341 +1286,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchElementException(handlerType.getName());
         } else {
             return ctx;
-        }
-    }
-
-    private final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelInboundHandlerContext<Object>, ChannelOutboundHandlerContext<Object> {
-        volatile DefaultChannelHandlerContext next;
-        volatile DefaultChannelHandlerContext prev;
-        private final String name;
-        private final ChannelHandler handler;
-        private final boolean canHandleInbound;
-        private final boolean canHandleOutbound;
-        private final ChannelBufferHolder<Object> in;
-        private final ChannelBufferHolder<Object> out;
-
-        @SuppressWarnings("unchecked")
-        DefaultChannelHandlerContext(
-                DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
-                String name, ChannelHandler handler) {
-
-            if (name == null) {
-                throw new NullPointerException("name");
-            }
-            if (handler == null) {
-                throw new NullPointerException("handler");
-            }
-            canHandleInbound = handler instanceof ChannelInboundHandler;
-            canHandleOutbound = handler instanceof ChannelOutboundHandler;
-
-            if (!canHandleInbound && !canHandleOutbound) {
-                throw new IllegalArgumentException(
-                        "handler must be either " +
-                        ChannelInboundHandler.class.getName() + " or " +
-                        ChannelOutboundHandler.class.getName() + '.');
-            }
-
-            this.prev = prev;
-            this.next = next;
-            this.name = name;
-            this.handler = handler;
-
-            if (canHandleInbound) {
-                try {
-                    in = ((ChannelInboundHandler<Object>) handler).newInboundBuffer(this);
-                } catch (Exception e) {
-                    throw new ChannelPipelineException("A user handler failed to create a new inbound buffer.", e);
-                }
-            } else {
-                in = null;
-            }
-            if (canHandleOutbound) {
-                try {
-                    out = ((ChannelOutboundHandler<Object>) handler).newOutboundBuffer(this);
-                } catch (Exception e) {
-                    throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
-                } finally {
-                    if (in != null) {
-                        // TODO Release the inbound buffer once pooling is implemented.
-                    }
-                }
-            } else {
-                out = null;
-            }
-        }
-
-        @Override
-        public Channel channel() {
-            return DefaultChannelPipeline.this.channel();
-        }
-
-        @Override
-        public ChannelPipeline pipeline() {
-            return DefaultChannelPipeline.this;
-        }
-
-        @Override
-        public EventLoop eventLoop() {
-            return channel().eventLoop();
-        }
-
-        @Override
-        public ChannelHandler handler() {
-            return handler;
-        }
-
-        @Override
-        public String name() {
-            return name;
-        }
-
-        @Override
-        public boolean canHandleInbound() {
-            return canHandleInbound;
-        }
-
-        @Override
-        public boolean canHandleOutbound() {
-            return canHandleOutbound;
-        }
-
-        @Override
-        public ChannelBufferHolder<Object> inbound() {
-            return in;
-        }
-
-        @Override
-        public ChannelBufferHolder<Object> outbound() {
-            return out;
-        }
-
-        @Override
-        public ChannelBuffer nextInboundByteBuffer() {
-            DefaultChannelHandlerContext ctx = this;
-            for (;;) {
-                ctx = nextInboundContext(ctx.next);
-                if (ctx == null) {
-                    throw NoSuchBufferException.INSTANCE;
-                }
-                ChannelBufferHolder<Object> nextIn = ctx.inbound();
-                if (nextIn.hasByteBuffer()) {
-                    return nextIn.byteBuffer();
-                }
-            }
-        }
-
-        @Override
-        public Queue<Object> nextInboundMessageBuffer() {
-            DefaultChannelHandlerContext ctx = this;
-            for (;;) {
-                ctx = nextInboundContext(ctx.next);
-                if (ctx == null) {
-                    throw NoSuchBufferException.INSTANCE;
-                }
-                ChannelBufferHolder<Object> nextIn = ctx.inbound();
-                if (nextIn.hasMessageBuffer()) {
-                    return nextIn.messageBuffer();
-                }
-            }
-        }
-
-        @Override
-        public ChannelBuffer nextOutboundByteBuffer() {
-            DefaultChannelHandlerContext ctx = this;
-            for (;;) {
-                ctx = nextOutboundContext(ctx.prev);
-                if (ctx == null) {
-                    ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
-                    if (lastOut.hasByteBuffer()) {
-                        return lastOut.byteBuffer();
-                    } else {
-                        throw NoSuchBufferException.INSTANCE;
-                    }
-                }
-                ChannelBufferHolder<Object> nextOut = ctx.outbound();
-                if (nextOut.hasByteBuffer()) {
-                    return nextOut.byteBuffer();
-                }
-            }
-        }
-
-        @Override
-        public Queue<Object> nextOutboundMessageBuffer() {
-            DefaultChannelHandlerContext ctx = this;
-            for (;;) {
-                ctx = nextOutboundContext(ctx.prev);
-                if (ctx == null) {
-                    ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
-                    if (lastOut.hasMessageBuffer()) {
-                        return lastOut.messageBuffer();
-                    } else {
-                        throw NoSuchBufferException.INSTANCE;
-                    }
-                }
-                ChannelBufferHolder<Object> nextOut = ctx.outbound();
-                if (nextOut.hasMessageBuffer()) {
-                    return nextOut.messageBuffer();
-                }
-            }
-        }
-
-        @Override
-        public void fireChannelRegistered() {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireChannelRegistered(next);
-            }
-        }
-
-        @Override
-        public void fireChannelUnregistered() {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireChannelUnregistered(next);
-            }
-        }
-
-        @Override
-        public void fireChannelActive() {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireChannelActive(next);
-            }
-        }
-
-        @Override
-        public void fireChannelInactive() {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireChannelInactive(next);
-            }
-        }
-
-        @Override
-        public void fireExceptionCaught(Throwable cause) {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireExceptionCaught(next, cause);
-            } else {
-                logTerminalException(cause);
-            }
-        }
-
-        @Override
-        public void fireUserEventTriggered(Object event) {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireUserEventTriggered(next, event);
-            }
-        }
-
-        @Override
-        public void fireInboundBufferUpdated() {
-            DefaultChannelHandlerContext next = nextInboundContext(this.next);
-            if (next != null) {
-                DefaultChannelPipeline.this.fireInboundBufferUpdated(next);
-            }
-        }
-
-        @Override
-        public ChannelFuture bind(SocketAddress localAddress) {
-            return bind(localAddress, newFuture());
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress) {
-            return connect(remoteAddress, newFuture());
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            return connect(remoteAddress, localAddress, newFuture());
-        }
-
-        @Override
-        public ChannelFuture disconnect() {
-            return disconnect(newFuture());
-        }
-
-        @Override
-        public ChannelFuture close() {
-            return close(newFuture());
-        }
-
-        @Override
-        public ChannelFuture deregister() {
-            return deregister(newFuture());
-        }
-
-        @Override
-        public ChannelFuture flush() {
-            return flush(newFuture());
-        }
-
-        @Override
-        public ChannelFuture write(Object message) {
-            return write(message, newFuture());
-        }
-
-        @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-            return DefaultChannelPipeline.this.bind(nextOutboundContext(prev), localAddress, future);
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
-            return connect(remoteAddress, null, future);
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-            return DefaultChannelPipeline.this.connect(nextOutboundContext(prev), remoteAddress, localAddress, future);
-        }
-
-        @Override
-        public ChannelFuture disconnect(ChannelFuture future) {
-            return DefaultChannelPipeline.this.disconnect(nextOutboundContext(prev), future);
-        }
-
-        @Override
-        public ChannelFuture close(ChannelFuture future) {
-            return DefaultChannelPipeline.this.close(nextOutboundContext(prev), future);
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelFuture future) {
-            return DefaultChannelPipeline.this.deregister(nextOutboundContext(prev), future);
-        }
-
-        @Override
-        public ChannelFuture flush(ChannelFuture future) {
-            return DefaultChannelPipeline.this.flush(nextOutboundContext(prev), future);
-        }
-
-        @Override
-        public ChannelFuture write(Object message, ChannelFuture future) {
-            if (message instanceof ChannelBuffer) {
-                ChannelBuffer m = (ChannelBuffer) message;
-                nextOutboundByteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
-            } else {
-                nextOutboundMessageBuffer().add(message);
-            }
-            return flush(future);
-        }
-
-        @Override
-        public ChannelFuture newFuture() {
-            return channel().newFuture();
-        }
-
-        @Override
-        public ChannelFuture newSucceededFuture() {
-            return channel().newSucceededFuture();
-        }
-
-        @Override
-        public ChannelFuture newFailedFuture(Throwable cause) {
-            return channel().newFailedFuture(cause);
         }
     }
 }

@@ -246,6 +246,10 @@ public class SingleThreadEventLoopTest {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
+        SingleThreadEventLoopImpl() {
+            super(null);
+        }
+
         @Override
         protected void run() {
             for (;;) {

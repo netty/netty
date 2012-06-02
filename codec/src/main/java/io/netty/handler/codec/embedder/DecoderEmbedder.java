@@ -17,7 +17,6 @@ package io.netty.handler.codec.embedder;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.CodecException;
@@ -57,11 +56,10 @@ public class DecoderEmbedder<E> extends AbstractCodecEmbedder<E> {
 
     @Override
     public boolean offer(Object input) {
-        ChannelBufferHolder<Object> in = pipeline().inbound();
-        if (in.hasByteBuffer()) {
-            in.byteBuffer().writeBytes((ChannelBuffer) input);
+        if (input instanceof ChannelBuffer) {
+            pipeline().inboundByteBuffer().writeBytes((ChannelBuffer) input);
         } else {
-            in.messageBuffer().add(input);
+            pipeline().inboundMessageBuffer().add(input);
         }
 
         pipeline().fireInboundBufferUpdated();

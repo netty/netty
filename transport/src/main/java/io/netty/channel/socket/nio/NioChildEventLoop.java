@@ -60,8 +60,8 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean cleanedCancelledKeys;
 
-    NioChildEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
-        super(threadFactory);
+    NioChildEventLoop(NioEventLoop parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+        super(parent, threadFactory);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }

@@ -186,7 +186,7 @@ public class LocalChannel extends AbstractChannel {
         assert peer != null;
 
         Queue<Object> in = buf.messageBuffer();
-        Queue<Object> out = peer.pipeline().inbound().messageBuffer();
+        Queue<Object> out = peer.pipeline().inboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {

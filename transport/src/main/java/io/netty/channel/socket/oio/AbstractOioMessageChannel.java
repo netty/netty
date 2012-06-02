@@ -25,11 +25,10 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             assert eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = pipeline();
-            final ChannelBufferHolder<Object> buf = pipeline.inbound();
+            final Queue<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
             try {
-                Queue<Object> msgBuf = buf.messageBuffer();
                 int localReadAmount = doReadMessages(msgBuf);
                 if (localReadAmount > 0) {
                     read = true;

@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 
@@ -164,11 +163,9 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
             return;
         }
 
-        EventLoop loop = ctx.eventLoop();
-
         lastReadTime = System.currentTimeMillis();
         if (timeoutMillis > 0) {
-            timeout = loop.schedule(
+            timeout = ctx.executor().schedule(
                     new ReadTimeoutTask(ctx),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
@@ -209,7 +206,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
             long nextDelay = timeoutMillis - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Read timed out - set a new timeout and notify the callback.
-                timeout = ctx.eventLoop().schedule(this, timeoutMillis, TimeUnit.MILLISECONDS);
+                timeout = ctx.executor().schedule(this, timeoutMillis, TimeUnit.MILLISECONDS);
                 try {
                     readTimedOut(ctx);
                 } catch (Throwable t) {
@@ -217,7 +214,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                timeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+                timeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
     }

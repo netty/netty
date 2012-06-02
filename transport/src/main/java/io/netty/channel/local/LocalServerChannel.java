@@ -119,7 +119,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     private void serve0(final LocalChannel child) {
         if (eventLoop().inEventLoop()) {
-            pipeline().inbound().messageBuffer().add(child);
+            pipeline().inboundMessageBuffer().add(child);
             pipeline().fireInboundBufferUpdated();
         } else {
             eventLoop().execute(new Runnable() {

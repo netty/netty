@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -23,6 +24,7 @@ import io.netty.util.AttributeMap;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
+import java.util.Queue;
 
 
 /**
@@ -136,7 +138,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     boolean isRegistered();
     boolean isActive();
 
-    ChannelBufferHolder<Object> outbound();
+    ChannelBuffer outboundByteBuffer();
+    Queue<Object> outboundMessageBuffer();
 
     /**
      * Returns the local address where this channel is bound to.  The returned

@@ -70,7 +70,7 @@ public class LocalChannelRegistryTest {
             Channel cc = cb.connect().sync().channel();
 
             // Send a message event up the pipeline.
-            cc.pipeline().inbound().messageBuffer().add("Hello, World");
+            cc.pipeline().inboundMessageBuffer().add("Hello, World");
             cc.pipeline().fireInboundBufferUpdated();
 
             // Close the channel

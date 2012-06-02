@@ -158,10 +158,10 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
         }
 
         if (fireExceptionCaught) {
-            if (ctx.eventLoop().inEventLoop()) {
+            if (ctx.executor().inEventLoop()) {
                 ctx.fireExceptionCaught(cause);
             } else {
-                ctx.eventLoop().execute(new Runnable() {
+                ctx.executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ctx.fireExceptionCaught(cause);
@@ -212,10 +212,10 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
                         } catch (final Throwable t) {
                             this.currentEvent = null;
 
-                            if (ctx.eventLoop().inEventLoop()) {
+                            if (ctx.executor().inEventLoop()) {
                                 ctx.fireExceptionCaught(t);
                             } else {
-                                ctx.eventLoop().execute(new Runnable() {
+                                ctx.executor().execute(new Runnable() {
                                     @Override
                                     public void run() {
                                         ctx.fireExceptionCaught(t);

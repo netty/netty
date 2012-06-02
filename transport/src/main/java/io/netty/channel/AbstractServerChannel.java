@@ -15,7 +15,10 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuffer;
+
 import java.net.SocketAddress;
+import java.util.Queue;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
@@ -37,8 +40,13 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelBufferHolder<Object> outbound() {
-        return ChannelBufferHolders.discardBuffer();
+    public ChannelBuffer outboundByteBuffer() {
+        throw new NoSuchBufferException();
+    }
+
+    @Override
+    public Queue<Object> outboundMessageBuffer() {
+        throw new NoSuchBufferException();
     }
 
     @Override

@@ -46,7 +46,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
 
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
-        b.eventLoop(ctx.eventLoop())
+        b.eventLoop(inboundChannel.eventLoop())
          .channel(new NioSocketChannel())
          .remoteAddress(remoteHost, remotePort)
          .initializer(new ChannelInitializer<SocketChannel>() {
@@ -75,7 +75,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
     @Override
     public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
         ChannelBuffer in = ctx.inbound().byteBuffer();
-        ChannelBuffer out = outboundChannel.outbound().byteBuffer();
+        ChannelBuffer out = outboundChannel.outboundByteBuffer();
         out.discardReadBytes();
         out.writeBytes(in);
         in.clear();

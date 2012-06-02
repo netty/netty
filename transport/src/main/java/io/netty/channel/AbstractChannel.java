@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
@@ -24,6 +25,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -266,8 +268,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelBufferHolder<Object> outbound() {
-        return pipeline().outbound();
+    public ChannelBuffer outboundByteBuffer() {
+        return pipeline().outboundByteBuffer();
+    }
+
+    @Override
+    public Queue<Object> outboundMessageBuffer() {
+        return pipeline().outboundMessageBuffer();
     }
 
     @Override

@@ -79,7 +79,7 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
             throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
 
-        final EventLoop loop = ctx.eventLoop();
+        final EventLoop loop = ctx.channel().eventLoop();
         loop.schedule(new Runnable() {
             @Override
             public void run() {

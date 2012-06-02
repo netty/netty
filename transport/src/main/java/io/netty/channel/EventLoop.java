@@ -1,9 +1,8 @@
 package io.netty.channel;
 
-import java.util.concurrent.ScheduledExecutorService;
-
-public interface EventLoop extends ScheduledExecutorService {
+public interface EventLoop extends EventExecutor {
+    @Override
+    EventLoop parent();
     ChannelFuture register(Channel channel);
     ChannelFuture register(Channel channel, ChannelFuture future);
-    boolean inEventLoop();
 }

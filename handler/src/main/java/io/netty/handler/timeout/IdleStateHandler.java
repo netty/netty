@@ -27,7 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
+import io.netty.channel.EventExecutor;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 
@@ -274,7 +274,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
             return;
         }
 
-        EventLoop loop = ctx.eventLoop();
+        EventExecutor loop = ctx.executor();
 
         lastReadTime = lastWriteTime = System.currentTimeMillis();
         if (readerIdleTimeMillis > 0) {
@@ -335,7 +335,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout =
-                    ctx.eventLoop().schedule(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
+                    ctx.executor().schedule(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, new IdleStateEvent(
                             IdleState.READER_IDLE, readerIdleCount ++, currentTime - lastReadTime));
@@ -344,7 +344,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                readerIdleTimeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+                readerIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
 
@@ -369,7 +369,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
             long nextDelay = writerIdleTimeMillis - (currentTime - lastWriteTime);
             if (nextDelay <= 0) {
                 // Writer is idle - set a new timeout and notify the callback.
-                writerIdleTimeout = ctx.eventLoop().schedule(
+                writerIdleTimeout = ctx.executor().schedule(
                         this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, new IdleStateEvent(
@@ -379,7 +379,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
                 }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                writerIdleTimeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+                writerIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -404,7 +404,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
-                allIdleTimeout = ctx.eventLoop().schedule(
+                allIdleTimeout = ctx.executor().schedule(
                         this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, new IdleStateEvent(
@@ -415,7 +415,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.
-                allIdleTimeout = ctx.eventLoop().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
+                allIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
     }

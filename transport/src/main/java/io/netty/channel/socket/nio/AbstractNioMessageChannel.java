@@ -27,11 +27,10 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = pipeline();
-            final ChannelBufferHolder<Object> buf = pipeline.inbound();
+            final Queue<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
             try {
-                Queue<Object> msgBuf = buf.messageBuffer();
                 for (;;) {
                     int localReadAmount = doReadMessages(msgBuf);
                     if (localReadAmount > 0) {

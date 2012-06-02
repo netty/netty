@@ -1,21 +1,9 @@
-package io.netty.channel.socket.oio;
-
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventExecutor;
-import io.netty.channel.EventLoop;
-import io.netty.channel.SingleThreadEventExecutor;
-import io.netty.util.internal.QueueFactory;
+package io.netty.channel;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -23,48 +11,61 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class OioEventLoop implements EventLoop {
+public abstract class MultithreadEventExecutor implements EventExecutor {
 
-    private final int maxChannels;
-    final ThreadFactory threadFactory;
-    final Set<OioChildEventLoop> activeChildren = Collections.newSetFromMap(
-            new ConcurrentHashMap<OioChildEventLoop, Boolean>());
-    final Queue<OioChildEventLoop> idleChildren = QueueFactory.createQueue();
-    private final ChannelException tooManyChannels;
+    protected static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    protected static final ThreadFactory DEFAULT_THREAD_FACTORY = Executors.defaultThreadFactory();
+
+    private final EventExecutor[] children;
+    private final AtomicInteger childIndex = new AtomicInteger();
     private final Unsafe unsafe = new Unsafe() {
         @Override
         public EventExecutor nextChild() {
-            throw new UnsupportedOperationException();
+            return children[Math.abs(childIndex.getAndIncrement() % children.length)];
         }
     };
 
-    public OioEventLoop() {
-        this(0);
+    protected MultithreadEventExecutor(Object... args) {
+        this(DEFAULT_POOL_SIZE, args);
     }
 
-    public OioEventLoop(int maxChannels) {
-        this(maxChannels, Executors.defaultThreadFactory());
+    protected MultithreadEventExecutor(int nThreads, Object... args) {
+        this(nThreads, DEFAULT_THREAD_FACTORY, args);
     }
 
-    public OioEventLoop(int maxChannels, ThreadFactory threadFactory) {
-        if (maxChannels < 0) {
+    protected MultithreadEventExecutor(int nThreads, ThreadFactory threadFactory, Object... args) {
+        if (nThreads <= 0) {
             throw new IllegalArgumentException(String.format(
-                    "maxChannels: %d (expected: >= 0)", maxChannels));
+                    "nThreads: %d (expected: > 0)", nThreads));
         }
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
 
-        this.maxChannels = maxChannels;
-        this.threadFactory = threadFactory;
-
-        tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
-        tooManyChannels.setStackTrace(new StackTraceElement[0]);
+        children = new SingleThreadEventExecutor[nThreads];
+        for (int i = 0; i < nThreads; i ++) {
+            boolean success = false;
+            try {
+                children[i] = newChild(threadFactory, args);
+                success = true;
+            } catch (Exception e) {
+                throw new EventLoopException("failed to create a child event loop", e);
+            } finally {
+                if (!success) {
+                    for (int j = 0; j < i; j ++) {
+                        children[j].shutdown();
+                    }
+                }
+            }
+        }
     }
 
+    protected abstract EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception;
+
     @Override
-    public EventLoop parent() {
+    public EventExecutor parent() {
         return null;
     }
 
@@ -75,20 +76,14 @@ public class OioEventLoop implements EventLoop {
 
     @Override
     public void shutdown() {
-        for (EventLoop l: activeChildren) {
-            l.shutdown();
-        }
-        for (EventLoop l: idleChildren) {
+        for (EventExecutor l: children) {
             l.shutdown();
         }
     }
 
     @Override
     public List<Runnable> shutdownNow() {
-        for (EventLoop l: activeChildren) {
-            l.shutdownNow();
-        }
-        for (EventLoop l: idleChildren) {
+        for (EventExecutor l: children) {
             l.shutdownNow();
         }
         return Collections.emptyList();
@@ -96,12 +91,7 @@ public class OioEventLoop implements EventLoop {
 
     @Override
     public boolean isShutdown() {
-        for (EventLoop l: activeChildren) {
-            if (!l.isShutdown()) {
-                return false;
-            }
-        }
-        for (EventLoop l: idleChildren) {
+        for (EventExecutor l: children) {
             if (!l.isShutdown()) {
                 return false;
             }
@@ -111,12 +101,7 @@ public class OioEventLoop implements EventLoop {
 
     @Override
     public boolean isTerminated() {
-        for (EventLoop l: activeChildren) {
-            if (!l.isTerminated()) {
-                return false;
-            }
-        }
-        for (EventLoop l: idleChildren) {
+        for (EventExecutor l: children) {
             if (!l.isTerminated()) {
                 return false;
             }
@@ -128,22 +113,11 @@ public class OioEventLoop implements EventLoop {
     public boolean awaitTermination(long timeout, TimeUnit unit)
             throws InterruptedException {
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        for (EventLoop l: activeChildren) {
+        loop: for (EventExecutor l: children) {
             for (;;) {
                 long timeLeft = deadline - System.nanoTime();
                 if (timeLeft <= 0) {
-                    return isTerminated();
-                }
-                if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                    break;
-                }
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            for (;;) {
-                long timeLeft = deadline - System.nanoTime();
-                if (timeLeft <= 0) {
-                    return isTerminated();
+                    break loop;
                 }
                 if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
                     break;
@@ -221,49 +195,12 @@ public class OioEventLoop implements EventLoop {
     }
 
     @Override
-    public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelFuture future) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel, future);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
-    }
-
-    @Override
     public boolean inEventLoop() {
         return SingleThreadEventExecutor.currentEventLoop() != null;
     }
 
-    private EventLoop nextChild() {
-        OioChildEventLoop loop = idleChildren.poll();
-        if (loop == null) {
-            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
-                throw tooManyChannels;
-            }
-            loop = new OioChildEventLoop(OioEventLoop.this);
-        }
-        activeChildren.add(loop);
-        return loop;
-    }
-
-    private static OioChildEventLoop currentEventLoop() {
-        OioChildEventLoop loop =
-                (OioChildEventLoop) SingleThreadEventExecutor.currentEventLoop();
+    private static EventExecutor currentEventLoop() {
+        EventExecutor loop = SingleThreadEventExecutor.currentEventLoop();
         if (loop == null) {
             throw new IllegalStateException("not called from an event loop thread");
         }
