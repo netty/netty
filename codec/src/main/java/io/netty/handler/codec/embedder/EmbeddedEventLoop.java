@@ -88,11 +88,6 @@ class EmbeddedEventLoop extends AbstractExecutorService implements
     }
 
     @Override
-    public EventLoop parent() {
-        return null;
-    }
-
-    @Override
     public Unsafe unsafe() {
         return this;
     }
