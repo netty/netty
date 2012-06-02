@@ -68,7 +68,7 @@ public final class DetectionUtil {
         if (value == null) {
             value = SystemPropertyUtil.get("org.jboss.netty.tryUnsafe", "true");
         }
-        if ("true".equalsIgnoreCase(value)) {
+        if (!"true".equalsIgnoreCase(value)) {
             return false;
         }
 
