@@ -19,6 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.NoSuchBufferException;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.base64.Base64Decoder;
@@ -57,7 +58,13 @@ public class DecoderEmbedder<E> extends AbstractCodecEmbedder<E> {
     @Override
     public boolean offer(Object input) {
         if (input instanceof ChannelBuffer) {
-            pipeline().inboundByteBuffer().writeBytes((ChannelBuffer) input);
+            try {
+                pipeline().inboundByteBuffer().writeBytes((ChannelBuffer) input);
+            } catch (NoSuchBufferException e) {
+                // Throwing and catching this exception is cheap because we do not fill
+                // stack traces internally (see DefaultChannelPipeline).
+                pipeline().inboundMessageBuffer().add(input);
+            }
         } else {
             pipeline().inboundMessageBuffer().add(input);
         }

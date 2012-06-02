@@ -121,10 +121,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
             fail();
         } catch (CodecException e) {
             assertEquals(TooLongFrameException.class, e.getClass());
-
-
         }
-
     }
 
     protected ChannelHandler createDecoder(int maxObjectSize) {
