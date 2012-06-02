@@ -72,7 +72,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Channel parent;
     private final Integer id;
     private final Unsafe unsafe;
-    private final ChannelPipeline pipeline = new DefaultChannelPipeline(this);
+    private final ChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
     private final ChannelFuture voidFuture = new VoidChannelFuture(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
@@ -131,6 +131,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 allChannels.remove(id());
             }
         });
+
+        pipeline = new DefaultChannelPipeline(this);
     }
 
     @Override
@@ -150,6 +152,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop eventLoop() {
+        EventLoop eventLoop = this.eventLoop;
         if (eventLoop == null) {
             throw new IllegalStateException("channel not registered to an event loop");
         }
@@ -581,13 +584,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 }
 
-                // Attempt/perform outbound I/O if:
-                // - the channel is inactive - flush0() will fail the futures.
-                // - the event loop has no plan to call flushForcibly().
-                if (!inFlushNow) {
+                if (!inFlushNow) { // Avoid re-entrance
                     try {
-                        if (!isActive() || !isFlushPending()) {
+                        if (!isFlushPending()) {
                             flushNow();
+                        } else {
+                            // Event loop will call flushNow() later by itself.
                         }
                     } catch (Throwable t) {
                         notifyFlushFutures(t);
@@ -646,10 +648,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (cause instanceof IOException) {
                         close(voidFuture());
                     }
-                }
-
-                if (!isActive()) {
-                    close(unsafe().voidFuture());
                 }
             } finally {
                 inFlushNow = false;

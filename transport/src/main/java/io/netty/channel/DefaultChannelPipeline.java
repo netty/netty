@@ -38,6 +38,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
     final Channel channel;
+    private final Channel.Unsafe unsafe;
+    private final ChannelBufferHolder<Object> directOutbound;
+
     private volatile DefaultChannelHandlerContext head;
     private volatile DefaultChannelHandlerContext tail;
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
@@ -53,6 +56,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NullPointerException("channel");
         }
         this.channel = channel;
+        unsafe = channel.unsafe();
+        directOutbound = unsafe.directOutbound();
     }
 
     @Override
@@ -667,9 +672,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     ChannelBuffer nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
-                ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
-                if (lastOut.hasByteBuffer()) {
-                    return lastOut.byteBuffer();
+                if (directOutbound.hasByteBuffer()) {
+                    return directOutbound.byteBuffer();
                 } else {
                     throw NoSuchBufferException.INSTANCE;
                 }
@@ -686,9 +690,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     Queue<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
-                ChannelBufferHolder<Object> lastOut = channel().unsafe().directOutbound();
-                if (lastOut.hasMessageBuffer()) {
-                    return lastOut.messageBuffer();
+                if (directOutbound.hasMessageBuffer()) {
+                    return directOutbound.messageBuffer();
                 } else {
                     throw NoSuchBufferException.INSTANCE;
                 }
@@ -942,7 +945,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
             }
         } else {
-            channel().unsafe().bind(localAddress, future);
+            unsafe.bind(localAddress, future);
         }
         return future;
     }
@@ -980,7 +983,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
             }
         } else {
-            channel().unsafe().connect(remoteAddress,  localAddress, future);
+            unsafe.connect(remoteAddress,  localAddress, future);
         }
 
         return future;
@@ -1010,7 +1013,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
             }
         } else {
-            channel().unsafe().disconnect(future);
+            unsafe.disconnect(future);
         }
 
         return future;
@@ -1040,7 +1043,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
             }
         } else {
-            channel().unsafe().close(future);
+            unsafe.close(future);
         }
 
         return future;
@@ -1070,7 +1073,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
             }
         } else {
-            channel().unsafe().deregister(future);
+            unsafe.deregister(future);
         }
 
         return future;
@@ -1086,16 +1089,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (ctx != null) {
             EventExecutor executor = ctx.executor();
             if (executor.inEventLoop()) {
-                try {
-                    ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
-                } catch (Throwable t) {
-                    notifyHandlerException(t);
-                } finally {
-                    ChannelBufferHolder<Object> outbound = ctx.outbound();
-                    if (!outbound.isBypass() && outbound.isEmpty() && outbound.hasByteBuffer()) {
-                        outbound.byteBuffer().discardReadBytes();
-                    }
-                }
+                flush0(ctx, future);
             } else {
                 executor.execute(new Runnable() {
                     @Override
@@ -1105,10 +1099,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
             }
         } else {
-            channel().unsafe().flush(future);
+            unsafe.flush(future);
         }
 
         return future;
+    }
+
+    private void flush0(final DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        try {
+            ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        } finally {
+            ChannelBufferHolder<Object> outbound = ctx.outbound();
+            if (!outbound.isBypass() && outbound.isEmpty() && outbound.hasByteBuffer()) {
+                outbound.byteBuffer().discardReadBytes();
+            }
+        }
     }
 
     @Override
@@ -1129,7 +1136,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             out = ctx.outbound();
         } else {
             executor = channel().eventLoop();
-            out = channel().unsafe().directOutbound();
+            out = directOutbound;
         }
 
         if (executor.inEventLoop()) {
@@ -1143,7 +1150,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         "cannot write a message whose type is not " +
                         ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
             }
-            return flush(ctx, future);
+            if (ctx != null) {
+                flush0(ctx, future);
+            } else {
+                unsafe.flush(future);
+            }
+            return future;
         } else {
             executor.execute(new Runnable() {
                 @Override

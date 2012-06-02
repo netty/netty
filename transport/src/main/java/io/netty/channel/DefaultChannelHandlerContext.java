@@ -9,6 +9,7 @@ import java.util.Queue;
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelInboundHandlerContext<Object>, ChannelOutboundHandlerContext<Object> {
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
+    private final Channel channel;
     private final DefaultChannelPipeline pipeline;
     final EventExecutor executor;
     private final String name;
@@ -110,6 +111,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.prev = prev;
         this.next = next;
 
+        channel = pipeline.channel;
         this.pipeline = pipeline;
         this.name = name;
         this.handler = handler;
@@ -153,7 +155,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public Channel channel() {
-        return pipeline.channel;
+        return channel;
     }
 
     @Override
@@ -164,7 +166,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public EventExecutor executor() {
         if (executor == null) {
-            return channel().eventLoop();
+            return channel.eventLoop();
         } else {
             return executor;
         }
@@ -360,16 +362,16 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture newFuture() {
-        return channel().newFuture();
+        return channel.newFuture();
     }
 
     @Override
     public ChannelFuture newSucceededFuture() {
-        return channel().newSucceededFuture();
+        return channel.newSucceededFuture();
     }
 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
-        return channel().newFailedFuture(cause);
+        return channel.newFailedFuture(cause);
     }
 }
