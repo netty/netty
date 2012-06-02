@@ -49,7 +49,6 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return nanoTime() + delay;
     }
 
-    private final EventExecutor parent;
     private final Unsafe unsafe = new Unsafe() {
         @Override
         public EventExecutor nextChild() {
@@ -69,12 +68,11 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private long lastCheckTimeNanos;
     private long lastPurgeTimeNanos;
 
-    protected SingleThreadEventExecutor(EventExecutor parent) {
-        this(parent, Executors.defaultThreadFactory());
+    protected SingleThreadEventExecutor() {
+        this(Executors.defaultThreadFactory());
     }
 
-    protected SingleThreadEventExecutor(EventExecutor parent, ThreadFactory threadFactory) {
-        this.parent = parent;
+    protected SingleThreadEventExecutor(ThreadFactory threadFactory) {
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
@@ -96,11 +94,6 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                 }
             }
         });
-    }
-
-    @Override
-    public EventExecutor parent() {
-        return parent;
     }
 
     @Override

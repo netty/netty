@@ -19,6 +19,6 @@ public class LocalEventLoop extends MultithreadEventLoop {
 
     @Override
     protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new LocalChildEventLoop(this, threadFactory);
+        return new LocalChildEventLoop(threadFactory);
     }
 }

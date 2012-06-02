@@ -14,6 +14,6 @@ public class DefaultEventExecutor extends MultithreadEventExecutor {
 
     @Override
     protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new DefaultChildEventExecutor(this, threadFactory);
+        return new DefaultChildEventExecutor(threadFactory);
     }
 }

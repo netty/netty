@@ -22,11 +22,6 @@ public abstract class MultithreadEventLoop extends MultithreadEventExecutor impl
     protected abstract EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception;
 
     @Override
-    public EventLoop parent() {
-        return (EventLoop) super.parent();
-    }
-
-    @Override
     public ChannelFuture register(Channel channel) {
         return ((EventLoop) unsafe().nextChild()).register(channel);
     }

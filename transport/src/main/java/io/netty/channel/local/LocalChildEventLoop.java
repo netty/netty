@@ -15,15 +15,14 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
 
 import java.util.concurrent.ThreadFactory;
 
 final class LocalChildEventLoop extends SingleThreadEventLoop {
 
-    LocalChildEventLoop(EventLoop parent, ThreadFactory threadFactory) {
-        super(parent, threadFactory);
+    LocalChildEventLoop(ThreadFactory threadFactory) {
+        super(threadFactory);
     }
 
     @Override

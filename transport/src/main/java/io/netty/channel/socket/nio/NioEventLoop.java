@@ -30,6 +30,6 @@ public class NioEventLoop extends MultithreadEventLoop {
         } else {
             selectorProvider = (SelectorProvider) args[0];
         }
-        return new NioChildEventLoop(this, threadFactory, selectorProvider);
+        return new NioChildEventLoop(threadFactory, selectorProvider);
     }
 }

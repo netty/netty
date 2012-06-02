@@ -60,8 +60,8 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean cleanedCancelledKeys;
 
-    NioChildEventLoop(NioEventLoop parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
-        super(parent, threadFactory);
+    NioChildEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+        super(threadFactory);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -168,39 +168,47 @@ final class NioChildEventLoop extends SingleThreadEventLoop {
         if (selectedKeys.isEmpty()) {
             return;
         }
+
         Iterator<SelectionKey> i;
         cleanedCancelledKeys = false;
-        for (i = selectedKeys.iterator(); i.hasNext();) {
-            final SelectionKey k = i.next();
-            i.remove();
-            final AbstractNioChannel ch = (AbstractNioChannel) k.attachment();
-            final NioUnsafe unsafe = ch.unsafe();
-            try {
-                int readyOps = k.readyOps();
-                if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                    unsafe.read();
-                    if (!ch.isOpen()) {
-                        // Connection already closed - no need to handle write.
-                        continue;
+        boolean clearSelectedKeys = true;
+        try {
+            for (i = selectedKeys.iterator(); i.hasNext();) {
+                final SelectionKey k = i.next();
+                final AbstractNioChannel ch = (AbstractNioChannel) k.attachment();
+                final NioUnsafe unsafe = ch.unsafe();
+                try {
+                    int readyOps = k.readyOps();
+                    if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                        unsafe.read();
+                        if (!ch.isOpen()) {
+                            // Connection already closed - no need to handle write.
+                            continue;
+                        }
+                    }
+                    if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+                        unsafe.flushNow();
+                    }
+                    if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                        unsafe.finishConnect();
+                    }
+                } catch (CancelledKeyException ignored) {
+                    unsafe.close(unsafe.voidFuture());
+                }
+
+                if (cleanedCancelledKeys) {
+                    // Create the iterator again to avoid ConcurrentModificationException
+                    if (selectedKeys.isEmpty()) {
+                        clearSelectedKeys = false;
+                        break;
+                    } else {
+                        i = selectedKeys.iterator();
                     }
                 }
-                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    unsafe.flushNow();
-                }
-                if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
-                    unsafe.finishConnect();
-                }
-            } catch (CancelledKeyException ignored) {
-                unsafe.close(unsafe.voidFuture());
             }
-
-            if (cleanedCancelledKeys) {
-                // Create the iterator again to avoid ConcurrentModificationException
-                if (selectedKeys.isEmpty()) {
-                    break;
-                } else {
-                    i = selectedKeys.iterator();
-                }
+        } finally {
+            if (clearSelectedKeys) {
+                selectedKeys.clear();
             }
         }
     }

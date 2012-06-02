@@ -201,7 +201,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected boolean isFlushPending() {
-        return (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+        SelectionKey selectionKey = this.selectionKey;
+        return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
     }
 
     @Override

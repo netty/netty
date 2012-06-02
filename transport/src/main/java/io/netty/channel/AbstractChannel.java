@@ -625,17 +625,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             inFlushNow = true;
+            final ChannelBufferHolder<Object> out = directOutbound;
             try {
                 Throwable cause = null;
-                ChannelBufferHolder<Object> out = directOutbound();
                 int oldSize = out.size();
                 try {
                     doFlush(out);
                 } catch (Throwable t) {
                     cause = t;
                 } finally {
-                    writeCounter += oldSize - out.size();
-                    if (out.isEmpty() && out.hasByteBuffer()) {
+                    final int newSize = out.size();
+                    writeCounter += oldSize - newSize;
+                    if (newSize == 0 && out.hasByteBuffer()) {
                         out.byteBuffer().discardReadBytes();
                     }
                 }

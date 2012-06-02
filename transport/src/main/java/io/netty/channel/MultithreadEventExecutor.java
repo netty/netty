@@ -65,11 +65,6 @@ public abstract class MultithreadEventExecutor implements EventExecutor {
     protected abstract EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception;
 
     @Override
-    public EventExecutor parent() {
-        return null;
-    }
-
-    @Override
     public Unsafe unsafe() {
         return unsafe;
     }

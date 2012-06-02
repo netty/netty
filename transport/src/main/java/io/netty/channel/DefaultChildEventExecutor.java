@@ -4,8 +4,8 @@ import java.util.concurrent.ThreadFactory;
 
 class DefaultChildEventExecutor extends SingleThreadEventExecutor {
 
-    DefaultChildEventExecutor(EventExecutor parent, ThreadFactory threadFactory) {
-        super(parent, threadFactory);
+    DefaultChildEventExecutor(ThreadFactory threadFactory) {
+        super(threadFactory);
     }
 
     @Override

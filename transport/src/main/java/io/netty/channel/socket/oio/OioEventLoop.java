@@ -64,11 +64,6 @@ public class OioEventLoop implements EventLoop {
     }
 
     @Override
-    public EventLoop parent() {
-        return null;
-    }
-
-    @Override
     public Unsafe unsafe() {
         return unsafe;
     }
