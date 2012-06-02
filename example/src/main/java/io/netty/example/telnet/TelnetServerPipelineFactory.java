@@ -27,6 +27,10 @@ import io.netty.handler.codec.string.StringEncoder;
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  */
 public class TelnetServerPipelineFactory extends ChannelInitializer<SocketChannel> {
+    private static final StringDecoder DECODER = new StringDecoder();
+    private static final StringEncoder ENCODER = new StringEncoder();
+    private static final TelnetServerHandler SERVERHANDLER = new TelnetServerHandler();
+    
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
@@ -34,10 +38,11 @@ public class TelnetServerPipelineFactory extends ChannelInitializer<SocketChanne
         // Add the text line codec combination first,
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
                 8192, Delimiters.lineDelimiter()));
-        pipeline.addLast("decoder", new StringDecoder());
-        pipeline.addLast("encoder", new StringEncoder());
+        // the encoder and decoder are static as these are sharable
+        pipeline.addLast("decoder", DECODER);
+        pipeline.addLast("encoder", ENCODER);
 
         // and then business logic.
-        pipeline.addLast("handler", new TelnetServerHandler());
+        pipeline.addLast("handler", SERVERHANDLER);
     }
 }
