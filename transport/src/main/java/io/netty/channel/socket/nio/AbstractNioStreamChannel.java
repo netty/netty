@@ -5,6 +5,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelType;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
@@ -15,6 +16,11 @@ abstract class AbstractNioStreamChannel extends AbstractNioChannel {
     protected AbstractNioStreamChannel(
             Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id, ChannelBufferHolders.byteBuffer(), ch, SelectionKey.OP_READ);
+    }
+
+    @Override
+    public ChannelType type() {
+        return ChannelType.STREAM;
     }
 
     @Override

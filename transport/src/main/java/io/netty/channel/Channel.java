@@ -113,6 +113,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      */
     Integer id();
 
+    ChannelType type();
+
     EventLoop eventLoop();
 
     /**

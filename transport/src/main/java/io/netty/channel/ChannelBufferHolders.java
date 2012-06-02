@@ -21,8 +21,10 @@ import java.util.Queue;
 
 public final class ChannelBufferHolders {
 
-    private static final ChannelBufferHolder<Object> DISCARD_BUFFER =
-            new ChannelBufferHolder<Object>(new NoopQueue<Object>(), new NoopByteBuf());
+    private static final ChannelBufferHolder<Object> DISCARD_MESSAGE_BUFFER =
+            new ChannelBufferHolder<Object>(new NoopQueue<Object>());
+    private static final ChannelBufferHolder<Byte> DISCARD_BYTE_BUFFER =
+            new ChannelBufferHolder<Byte>(new NoopByteBuf());
 
     public static <E> ChannelBufferHolder<E> messageBuffer() {
         return messageBuffer(new ArrayDeque<E>());
@@ -49,17 +51,14 @@ public final class ChannelBufferHolders {
         return new ChannelBufferHolder<E>(ctx, false);
     }
 
-    public static <E> ChannelBufferHolder<E> catchAllBuffer() {
-        return catchAllBuffer(new ArrayDeque<E>(), ChannelBuffers.dynamicBuffer());
-    }
-
-    public static <E> ChannelBufferHolder<E> catchAllBuffer(Queue<E> msgBuf, ChannelBuffer byteBuf) {
-        return new ChannelBufferHolder<E>(msgBuf, byteBuf);
+    @SuppressWarnings("unchecked")
+    public static <E> ChannelBufferHolder<E> discardMessageBuffer() {
+        return (ChannelBufferHolder<E>) DISCARD_MESSAGE_BUFFER;
     }
 
     @SuppressWarnings("unchecked")
-    public static <E> ChannelBufferHolder<E> discardBuffer() {
-        return (ChannelBufferHolder<E>) DISCARD_BUFFER;
+    public static <E> ChannelBufferHolder<E> discardByteBuffer() {
+        return (ChannelBufferHolder<E>) DISCARD_BYTE_BUFFER;
     }
 
     private ChannelBufferHolders() {

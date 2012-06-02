@@ -60,7 +60,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     public OioServerSocketChannel(Integer id, ServerSocket socket) {
-        super(null, id, ChannelBufferHolders.discardBuffer());
+        super(null, id, ChannelBufferHolders.discardMessageBuffer());
         if (socket == null) {
             throw new NullPointerException("socket");
         }

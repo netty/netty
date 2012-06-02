@@ -625,11 +625,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public Queue<Object> inboundMessageBuffer() {
+        if (channel.type() != ChannelType.MESSAGE) {
+            throw new NoSuchBufferException(
+                    "The first inbound buffer of this channel must be a message buffer.");
+        }
         return nextInboundMessageBuffer(head);
     }
 
     @Override
     public ChannelBuffer inboundByteBuffer() {
+        if (channel.type() != ChannelType.STREAM) {
+            throw new NoSuchBufferException(
+                    "The first inbound buffer of this channel must be a byte buffer.");
+        }
         return nextInboundByteBuffer(head);
     }
 

@@ -43,19 +43,6 @@ public final class ChannelBufferHolder<E> {
         this.byteBuf = byteBuf;
     }
 
-    ChannelBufferHolder(Queue<E> msgBuf, ChannelBuffer byteBuf) {
-        if (msgBuf == null) {
-            throw new NullPointerException("msgBuf");
-        }
-        if (byteBuf == null) {
-            throw new NullPointerException("byteBuf");
-        }
-        ctx = null;
-        bypassDirection = 0;
-        this.msgBuf = msgBuf;
-        this.byteBuf = byteBuf;
-    }
-
     public boolean isBypass() {
         return bypassDirection != 0;
     }
@@ -145,11 +132,7 @@ public final class ChannelBufferHolder<E> {
         switch (bypassDirection) {
         case 0:
             if (msgBuf != null) {
-                if (byteBuf != null) {
-                    return "CatchAllBuffer";
-                } else {
-                    return "MessageBuffer(" + msgBuf.size() + ')';
-                }
+                return "MessageBuffer(" + msgBuf.size() + ')';
             } else {
                 return byteBuf.toString();
             }

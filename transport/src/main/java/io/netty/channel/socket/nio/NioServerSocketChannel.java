@@ -42,7 +42,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     public NioServerSocketChannel() {
-        super(null, null, ChannelBufferHolders.discardBuffer(), newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, null, ChannelBufferHolders.discardMessageBuffer(),
+                newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 

@@ -5,6 +5,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelType;
 
 import java.io.IOException;
 
@@ -12,6 +13,11 @@ abstract class AbstractOioStreamChannel extends AbstractOioChannel {
 
     protected AbstractOioStreamChannel(Channel parent, Integer id) {
         super(parent, id, ChannelBufferHolders.byteBuffer());
+    }
+
+    @Override
+    public ChannelType type() {
+        return ChannelType.STREAM;
     }
 
     @Override
