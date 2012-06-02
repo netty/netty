@@ -1395,6 +1395,7 @@ public class HttpPostRequestDecoder {
         boolean newLine = true;
         int index = 0;
         int lastPosition = undecodedChunk.readerIndex();
+        int setReadPosition = -1;
         boolean found = false;
 
         while (sao.pos < sao.limit) {
@@ -1419,23 +1420,23 @@ public class HttpPostRequestDecoder {
                             if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
-                                sao.setReadPosition(0);
-                                lastPosition = undecodedChunk.readerIndex() - 2;
+                                setReadPosition = sao.pos;
+                                lastPosition = sao.pos - 2;
                             }
                         } else {
                             // save last valid position
-                            sao.setReadPosition(0);
-                            lastPosition = undecodedChunk.readerIndex();
+                            setReadPosition = sao.pos;
+                            lastPosition = sao.pos;
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
-                        sao.setReadPosition(0);
-                        lastPosition = undecodedChunk.readerIndex() - 1;
+                        setReadPosition = sao.pos;
+                        lastPosition = sao.pos - 1;
                     } else {
                         // save last valid position
-                        sao.setReadPosition(0);
-                        lastPosition = undecodedChunk.readerIndex();
+                        setReadPosition = sao.pos;
+                        lastPosition = sao.pos;
                     }
                 }
             } else {
@@ -1446,25 +1447,29 @@ public class HttpPostRequestDecoder {
                         if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
-                            sao.setReadPosition(0);
-                            lastPosition = undecodedChunk.readerIndex() - 2;
+                            setReadPosition = sao.pos;
+                            lastPosition = sao.pos - 2;
                         }
                     } else {
                         // save last valid position
-                        sao.setReadPosition(0);
-                        lastPosition = undecodedChunk.readerIndex();
+                        setReadPosition = sao.pos;
+                        lastPosition = sao.pos;
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
                     index = 0;
-                    sao.setReadPosition(0);
-                    lastPosition = undecodedChunk.readerIndex() - 1;
+                    setReadPosition = sao.pos;
+                    lastPosition = sao.pos - 1;
                 } else {
                     // save last valid position
-                    sao.setReadPosition(0);
-                    lastPosition = undecodedChunk.readerIndex();
+                    setReadPosition = sao.pos;
+                    lastPosition = sao.pos;
                 }
             }
+        }
+        if (setReadPosition > 0) {
+            sao.pos = setReadPosition;
+            sao.setReadPosition(0);
         }
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex);
         if (found) {
@@ -1604,6 +1609,7 @@ public class HttpPostRequestDecoder {
             boolean newLine = true;
             int index = 0;
             int lastPosition = undecodedChunk.readerIndex();
+            int setReadPosition = -1;
             boolean found = false;
 
             while (sao.pos < sao.limit) {
@@ -1628,21 +1634,21 @@ public class HttpPostRequestDecoder {
                                 if (nextByte == HttpConstants.LF) {
                                     newLine = true;
                                     index = 0;
-                                    sao.setReadPosition(0);
-                                    lastPosition = undecodedChunk.readerIndex() - 2;
+                                    lastPosition = sao.pos - 2;
+                                    setReadPosition = sao.pos;
                                 }
                             } else {
-                                sao.setReadPosition(0);
-                                lastPosition = undecodedChunk.readerIndex();
+                                lastPosition = sao.pos;
+                                setReadPosition = sao.pos;
                             }
                         } else if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
-                            sao.setReadPosition(0);
-                            lastPosition = undecodedChunk.readerIndex() - 1;
+                            lastPosition = sao.pos - 1;
+                            setReadPosition = sao.pos;
                         } else {
-                            sao.setReadPosition(0);
-                            lastPosition = undecodedChunk.readerIndex();
+                            lastPosition = sao.pos;
+                            setReadPosition = sao.pos;
                         }
                     }
                 } else {
@@ -1653,23 +1659,27 @@ public class HttpPostRequestDecoder {
                             if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
-                                sao.setReadPosition(0);
-                                lastPosition = undecodedChunk.readerIndex() - 2;
+                                lastPosition = sao.pos - 2;
+                                setReadPosition = sao.pos;
                             }
                         } else {
-                            sao.setReadPosition(0);
-                            lastPosition = undecodedChunk.readerIndex();
+                            lastPosition = sao.pos;
+                            setReadPosition = sao.pos;
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
-                        sao.setReadPosition(0);
-                        lastPosition = undecodedChunk.readerIndex() - 1;
+                        lastPosition = sao.pos - 1;
+                        setReadPosition = sao.pos;
                     } else {
-                        sao.setReadPosition(0);
-                        lastPosition = undecodedChunk.readerIndex();
+                        lastPosition = sao.pos;
+                        setReadPosition = sao.pos;
                     }
                 }
+            }
+            if (setReadPosition > 0) {
+                sao.pos = setReadPosition;
+                sao.setReadPosition(0);
             }
             if (found) {
                 // found so lastPosition is correct
