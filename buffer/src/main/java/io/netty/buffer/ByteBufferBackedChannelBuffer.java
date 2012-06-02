@@ -212,6 +212,10 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
     @Override
     public void setBytes(int index, ByteBuffer src) {
+        if (src == tmpBuf) {
+            src = src.duplicate();
+        }
+
         tmpBuf.clear().position(index).limit(index + src.remaining());
         tmpBuf.put(src);
     }
@@ -273,7 +277,12 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
+    public boolean hasNioBuffer() {
+        return true;
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
         if (index == 0 && length == capacity()) {
             return buffer.duplicate().order(order());
         } else {

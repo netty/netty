@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -1528,71 +1529,36 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testToByteBuffer1() {
+    public void testNioBuffer1() {
+        Assume.assumeTrue(buffer.hasNioBuffer());
+
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
         buffer.clear();
         buffer.writeBytes(value);
 
-        assertEquals(ByteBuffer.wrap(value), buffer.toByteBuffer());
+        assertEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
     }
 
     @Test
     public void testToByteBuffer2() {
+        Assume.assumeTrue(buffer.hasNioBuffer());
+
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
         buffer.clear();
         buffer.writeBytes(value);
 
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.toByteBuffer(i, BLOCK_SIZE));
+            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
         }
     }
 
     @Test
     public void testToByteBuffer3() {
-        assertEquals(buffer.order(), buffer.toByteBuffer().order());
-    }
+        Assume.assumeTrue(buffer.hasNioBuffer());
 
-    @Test
-    public void testToByteBuffers1() {
-        byte[] value = new byte[buffer.capacity()];
-        random.nextBytes(value);
-        buffer.clear();
-        buffer.writeBytes(value);
-
-        ByteBuffer[] nioBuffers = buffer.toByteBuffers();
-        int length = 0;
-        for (ByteBuffer b: nioBuffers) {
-            length += b.remaining();
-        }
-
-        ByteBuffer nioBuffer = ByteBuffer.allocate(length);
-        for (ByteBuffer b: nioBuffers) {
-            nioBuffer.put(b);
-        }
-        nioBuffer.flip();
-
-        assertEquals(ByteBuffer.wrap(value), nioBuffer);
-    }
-
-    @Test
-    public void testToByteBuffers2() {
-        byte[] value = new byte[buffer.capacity()];
-        random.nextBytes(value);
-        buffer.clear();
-        buffer.writeBytes(value);
-
-        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            ByteBuffer[] nioBuffers = buffer.toByteBuffers(i, BLOCK_SIZE);
-            ByteBuffer nioBuffer = ByteBuffer.allocate(BLOCK_SIZE);
-            for (ByteBuffer b: nioBuffers) {
-                nioBuffer.put(b);
-            }
-            nioBuffer.flip();
-
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), nioBuffer);
-        }
+        assertEquals(buffer.order(), buffer.nioBuffer().order());
     }
 
     @Test

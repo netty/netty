@@ -628,25 +628,19 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public ByteBuffer toByteBuffer() {
+    public boolean hasNioBuffer() {
+        return buffer.hasNioBuffer();
+    }
+
+    @Override
+    public ByteBuffer nioBuffer() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
+    public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        return buffer.toByteBuffer(index, length);
-    }
-
-    @Override
-    public ByteBuffer[] toByteBuffers() {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBuffer[] toByteBuffers(int index, int length) {
-        checkIndex(index, length);
-        return buffer.toByteBuffers(index, length);
+        return buffer.nioBuffer(index, length);
     }
 
     @Override

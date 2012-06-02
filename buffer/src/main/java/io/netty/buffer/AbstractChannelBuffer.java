@@ -600,18 +600,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     @Override
-    public ByteBuffer toByteBuffer() {
-        return toByteBuffer(readerIndex, readableBytes());
-    }
-
-    @Override
-    public ByteBuffer[] toByteBuffers() {
-        return toByteBuffers(readerIndex, readableBytes());
-    }
-
-    @Override
-    public ByteBuffer[] toByteBuffers(int index, int length) {
-        return new ByteBuffer[] { toByteBuffer(index, length) };
+    public ByteBuffer nioBuffer() {
+        return nioBuffer(readerIndex, readableBytes());
     }
 
     @Override
@@ -625,8 +615,16 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
             return "";
         }
 
-        return ChannelBuffers.decodeString(
-                toByteBuffer(index, length), charset);
+        ByteBuffer nioBuffer;
+        if (hasNioBuffer()) {
+            nioBuffer = nioBuffer(index, length);
+        } else {
+            nioBuffer = ByteBuffer.allocate(length);
+            getBytes(index, nioBuffer);
+            nioBuffer.flip();
+        }
+
+        return ChannelBuffers.decodeString(nioBuffer, charset);
     }
 
     @Override

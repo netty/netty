@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.DetectionUtil;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -297,10 +299,18 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        // XXX Gathering write is not supported because of a known issue.
-        //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
-        //     This issue appeared in 2004 and is still unresolved!?
-        return out.write(toByteBuffer(index, length));
+        if (DetectionUtil.javaVersion() < 7) {
+            // XXX Gathering write is not supported because of a known issue.
+            //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
+            return out.write(copiedNioBuffer(index, length));
+        } else {
+            long writtenBytes = out.write(nioBuffers(index, length));
+            if (writtenBytes > Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            } else {
+                return (int) writtenBytes;
+            }
+        }
     }
 
     @Override
@@ -593,12 +603,20 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
+    public boolean hasNioBuffer() {
+        return false;
+    }
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        throw new UnsupportedOperationException();
+    }
+
+    private ByteBuffer copiedNioBuffer(int index, int length) {
         if (components.length == 1) {
-            return components[0].toByteBuffer(index, length);
+            return toNioBuffer(components[0], index, length);
         }
 
-        ByteBuffer[] buffers = toByteBuffers(index, length);
+        ByteBuffer[] buffers = nioBuffers(index, length);
         ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         for (ByteBuffer b: buffers) {
             merged.put(b);
@@ -607,8 +625,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return merged;
     }
 
-    @Override
-    public ByteBuffer[] toByteBuffers(int index, int length) {
+    private ByteBuffer[] nioBuffers(int index, int length) {
         int componentId = componentId(index);
         if (index + length > capacity()) {
             throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
@@ -619,16 +636,24 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ChannelBuffer c = components[i];
             int adjustment = indices[i];
-            int localLength = Math.min(length, s.capacity() - (index - adjustment));
-            buffers.add(s.toByteBuffer(index - adjustment, localLength));
+            int localLength = Math.min(length, c.capacity() - (index - adjustment));
+            buffers.add(toNioBuffer(c, index - adjustment, localLength));
             index += localLength;
             length -= localLength;
             i ++;
         }
 
         return buffers.toArray(new ByteBuffer[buffers.size()]);
+    }
+
+    private static ByteBuffer toNioBuffer(ChannelBuffer buf, int index, int length) {
+        if (buf.hasNioBuffer()) {
+            return buf.nioBuffer(index, length);
+        } else {
+            return buf.copy(index, length).nioBuffer(0, length);
+        }
     }
 
     private int componentId(int index) {

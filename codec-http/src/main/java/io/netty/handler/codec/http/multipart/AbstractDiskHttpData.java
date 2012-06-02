@@ -113,12 +113,11 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         FileOutputStream outputStream = new FileOutputStream(file);
         FileChannel localfileChannel = outputStream.getChannel();
-        ByteBuffer byteBuffer = buffer.toByteBuffer();
         int written = 0;
         while (written < size) {
-            written += localfileChannel.write(byteBuffer);
+            written += buffer.readBytes(
+                    localfileChannel, (int) Math.min(size - written, Integer.MAX_VALUE));
         }
-        buffer.readerIndex(buffer.readerIndex() + written);
         localfileChannel.force(false);
         localfileChannel.close();
         completed = true;
@@ -133,7 +132,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 throw new IOException("Out of size: " + (size + localsize) +
                         " > " + definedSize);
             }
-            ByteBuffer byteBuffer = buffer.toByteBuffer();
             int written = 0;
             if (file == null) {
                 file = tempFile();
@@ -143,7 +141,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 fileChannel = outputStream.getChannel();
             }
             while (written < localsize) {
-                written += fileChannel.write(byteBuffer);
+                written += buffer.readBytes(fileChannel, localsize - written);
             }
             size += localsize;
             buffer.readerIndex(buffer.readerIndex() + written);

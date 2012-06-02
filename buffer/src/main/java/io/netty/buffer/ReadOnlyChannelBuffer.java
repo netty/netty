@@ -206,17 +206,13 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
-        return buffer.toByteBuffer(index, length).asReadOnlyBuffer();
+    public boolean hasNioBuffer() {
+        return buffer.hasNioBuffer();
     }
 
     @Override
-    public ByteBuffer[] toByteBuffers(int index, int length) {
-        ByteBuffer[] bufs = buffer.toByteBuffers(index, length);
-        for (int i = 0; i < bufs.length; i ++) {
-            bufs[i] = bufs[i].asReadOnlyBuffer();
-        }
-        return bufs;
+    public ByteBuffer nioBuffer(int index, int length) {
+        return buffer.nioBuffer(index, length).asReadOnlyBuffer();
     }
 
     @Override

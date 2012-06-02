@@ -276,6 +276,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
                         }
                     } else {
                         ctx.nextOutboundMessageBuffer().add(currentEvent);
+                        this.currentEvent = null;
                     }
 
                     if (!channel.isActive()) {

@@ -213,10 +213,9 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h4>NIO Buffers</h4>
  *
- * Various {@link #toByteBuffer()} and {@link #toByteBuffers()} methods convert
- * a {@link ChannelBuffer} into one or more NIO buffers.  These methods avoid
- * buffer allocation and memory copy whenever possible, but there's no
- * guarantee that memory copy will not be involved.
+ * If a {@link ChannelBuffer} can be converted into an NIO {@link ByteBuffer} which shares its
+ * content (i.e. view buffer), you can get it via the {@link #nioBuffer()} method.  To determine
+ * if a buffer can be converted into an NIO buffer, use {@link #nioBuffer()}.
  *
  * <h4>Strings</h4>
  *
@@ -1651,42 +1650,37 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ChannelBuffer duplicate();
 
     /**
-     * Converts this buffer's readable bytes into a NIO buffer.  The returned
-     * buffer might or might not share the content with this buffer, while
-     * they have separate indexes and marks.  This method is identical to
-     * {@code buf.toByteBuffer(buf.readerIndex(), buf.readableBytes())}.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
+     * Returns {@code true} if and only if {@link #nioBuffer()} method will not fail.
      */
-    ByteBuffer toByteBuffer();
+    boolean hasNioBuffer();
 
     /**
-     * Converts this buffer's sub-region into a NIO buffer.  The returned
-     * buffer might or might not share the content with this buffer, while
-     * they have separate indexes and marks.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
+     * Exposes this buffer's readable bytes as an NIO {@link ByteBuffer}.  The returned buffer
+     * shares the content with this buffer, while changing the position and limit of the returned
+     * NIO buffer does not affect the indexes and marks of this buffer.  This method is identical
+     * to {@code buf.asByteBuffer(buf.readerIndex(), buf.readableBytes())}.  This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.  Please note that the
+     * returned NIO buffer will not see the changes of this buffer if this buffer is a dynamic
+     * buffer and it adjusted its capacity.
+     *
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
      */
-    ByteBuffer toByteBuffer(int index, int length);
+    ByteBuffer nioBuffer();
 
     /**
-     * Converts this buffer's readable bytes into an array of NIO buffers.
-     * The returned buffers might or might not share the content with this
-     * buffer, while they have separate indexes and marks.  This method is
-     * identical to {@code buf.toByteBuffers(buf.readerIndex(), buf.readableBytes())}.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
+     * Exposes this buffer's sub-region as an NIO {@link ByteBuffer}.  The returned buffer
+     * shares the content with this buffer, while changing the position and limit of the returned
+     * NIO buffer does not affect the indexes and marks of this buffer.  This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.  Please note that the
+     * returned NIO buffer will not see the changes of this buffer if this buffer is a dynamic
+     * buffer and it adjusted its capacity.
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
      */
-    ByteBuffer[] toByteBuffers();
-
-    /**
-     * Converts this buffer's sub-region into an array of NIO buffers.
-     * The returned buffers might or might not share the content with this
-     * buffer, while they have separate indexes and marks.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     */
-    ByteBuffer[] toByteBuffers(int index, int length);
+    ByteBuffer nioBuffer(int index, int length);
 
     /**
      * Returns {@code true} if and only if this buffer has a backing byte array.

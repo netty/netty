@@ -236,7 +236,12 @@ public final class ChannelBufferHolders {
         }
 
         @Override
-        public ByteBuffer toByteBuffer(int index, int length) {
+        public boolean hasNioBuffer() {
+            return true;
+        }
+
+        @Override
+        public ByteBuffer nioBuffer(int index, int length) {
             return ByteBuffer.allocate(0);
         }
 

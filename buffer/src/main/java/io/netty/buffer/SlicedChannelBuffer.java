@@ -240,9 +240,14 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
+    public boolean hasNioBuffer() {
+        return buffer.hasNioBuffer();
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        return buffer.toByteBuffer(index + adjustment, length);
+        return buffer.nioBuffer(index + adjustment, length);
     }
 
     private void checkIndex(int index) {

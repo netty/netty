@@ -209,10 +209,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int length = channelBuffer.readableBytes();
         FileOutputStream outputStream = new FileOutputStream(dest);
         FileChannel fileChannel = outputStream.getChannel();
-        ByteBuffer byteBuffer = channelBuffer.toByteBuffer();
         int written = 0;
         while (written < length) {
-            written += fileChannel.write(byteBuffer);
+            written += channelBuffer.readBytes(fileChannel, length - written);
         }
         fileChannel.force(false);
         fileChannel.close();

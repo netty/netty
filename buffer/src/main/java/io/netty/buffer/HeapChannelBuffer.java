@@ -190,7 +190,12 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
+    public boolean hasNioBuffer() {
+        return true;
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
         return ByteBuffer.wrap(array, index, length).order(order());
     }
 }

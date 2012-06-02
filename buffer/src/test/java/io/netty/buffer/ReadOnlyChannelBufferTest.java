@@ -89,10 +89,8 @@ public class ReadOnlyChannelBufferTest {
         expect(buf.getLong(21)).andReturn(22L);
 
         ByteBuffer bb = ByteBuffer.allocate(100);
-        ByteBuffer[] bbs = { ByteBuffer.allocate(101), ByteBuffer.allocate(102) };
 
-        expect(buf.toByteBuffer(23, 24)).andReturn(bb);
-        expect(buf.toByteBuffers(25, 26)).andReturn(bbs);
+        expect(buf.nioBuffer(23, 24)).andReturn(bb);
         expect(buf.capacity()).andReturn(27);
 
         replay(buf);
@@ -109,16 +107,10 @@ public class ReadOnlyChannelBufferTest {
         assertEquals(20, roBuf.getInt(19));
         assertEquals(22L, roBuf.getLong(21));
 
-        ByteBuffer roBB = roBuf.toByteBuffer(23, 24);
+        ByteBuffer roBB = roBuf.nioBuffer(23, 24);
         assertEquals(100, roBB.capacity());
         assertTrue(roBB.isReadOnly());
 
-        ByteBuffer[] roBBs = roBuf.toByteBuffers(25, 26);
-        assertEquals(2, roBBs.length);
-        assertEquals(101, roBBs[0].capacity());
-        assertTrue(roBBs[0].isReadOnly());
-        assertEquals(102, roBBs[1].capacity());
-        assertTrue(roBBs[1].isReadOnly());
         assertEquals(27, roBuf.capacity());
 
         verify(buf);

@@ -143,9 +143,9 @@ public abstract class AbstractCompositeChannelBufferTest extends
         assertTrue(payload.readableBytes() == 512);
 
         assertEquals(12 + 512, buffer.readableBytes());
-
-        assertEquals(12 + 512, buffer.toByteBuffer(0, 12 + 512).remaining());
+        assertFalse(buffer.hasNioBuffer());
     }
+
     @Test
     public void testSeveralBuffersEquals() {
         ChannelBuffer a, b;

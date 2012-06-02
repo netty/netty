@@ -322,7 +322,12 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ByteBuffer toByteBuffer(int index, int length) {
-        return buffer.toByteBuffer(index, length);
+    public boolean hasNioBuffer() {
+        return buffer.hasNioBuffer();
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return buffer.nioBuffer(index, length);
     }
 }
