@@ -186,7 +186,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test
-    public void testConcurrentMessageBufferAccess() throws Exception {
+    public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoop l = new LocalEventLoop(4, new PrefixThreadFactory("l"));
         EventExecutor e1 = new DefaultEventExecutor(4, new PrefixThreadFactory("e1"));
         EventExecutor e2 = new DefaultEventExecutor(4, new PrefixThreadFactory("e2"));
@@ -199,10 +199,22 @@ public class LocalTransportThreadModelTest {
 
         l.register(ch).sync().channel().connect(ADDR).sync();
 
-        for (int i = 0; i < 10000; i ++) {
-            ch.pipeline().inboundMessageBuffer().add(Integer.valueOf(i));
+        final int COUNT = 10485760;
+        for (int i = 0; i < COUNT;) {
+            for (int j = 0; i < COUNT && j < COUNT / 8; j ++) {
+                ch.pipeline().inboundMessageBuffer().add(Integer.valueOf(i ++));
+                if (h1.exception.get() != null) {
+                    throw h1.exception.get();
+                }
+                if (h2.exception.get() != null) {
+                    throw h2.exception.get();
+                }
+                if (h3.exception.get() != null) {
+                    throw h3.exception.get();
+                }
+            }
+            ch.pipeline().fireInboundBufferUpdated();
         }
-        ch.pipeline().fireInboundBufferUpdated();
     }
 
     private static class ThreadNameAuditor extends ChannelHandlerAdapter<Object, Object> {
