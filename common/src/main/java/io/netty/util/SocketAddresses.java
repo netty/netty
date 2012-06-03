@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 
 public final class SocketAddresses {
 
@@ -62,9 +63,15 @@ public final class SocketAddresses {
         // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
         // if so fail back the the first interface
         if (loopbackIf == null) {
-            // use nextElement() as NetWorkInterface.getByIndex(0) returns null
             try {
-                loopbackIf = NetworkInterface.getNetworkInterfaces().nextElement();
+                for (Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces();
+                     e.hasMoreElements();) {
+                    NetworkInterface nif = e.nextElement();
+                    if (nif.isLoopback()) {
+                        loopbackIf = nif;
+                        break;
+                    }
+                }
             } catch (SocketException e) {
                 logger.error("Failed to enumerate network interfaces", e);
             }
