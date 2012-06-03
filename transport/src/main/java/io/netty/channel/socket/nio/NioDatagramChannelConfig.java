@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.NetworkChannel;
 import java.util.Enumeration;
 
 /**
@@ -53,7 +54,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         Method setOption = null;
         if (socketOptionType != null) {
             try {
-                ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_TTL").get(null);
+                ipMulticastTtl = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_TTL").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_TTL field", e);
             }
@@ -65,19 +66,19 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             }
 
             try {
-                ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_LOOP").get(null);
+                ipMulticastLoop = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_LOOP").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_LOOP field", e);
             }
 
             try {
-                getOption = DatagramChannel.class.getDeclaredMethod("getOption", socketOptionType);
+                getOption = NetworkChannel.class.getDeclaredMethod("getOption", socketOptionType);
             } catch (Exception e) {
                 throw new Error("cannot locate the getOption() method", e);
             }
 
             try {
-                setOption = DatagramChannel.class.getDeclaredMethod("setOption", socketOptionType, Object.class);
+                setOption = NetworkChannel.class.getDeclaredMethod("setOption", socketOptionType, Object.class);
             } catch (Exception e) {
                 throw new Error("cannot locate the setOption() method", e);
             }

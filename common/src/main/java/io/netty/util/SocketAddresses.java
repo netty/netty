@@ -19,11 +19,14 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 
 public final class SocketAddresses {
 
     public static final InetAddress LOCALHOST;
+    public static final NetworkInterface LOOPBACK_IF;
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SocketAddresses.class);
@@ -48,6 +51,26 @@ public final class SocketAddresses {
         }
 
         LOCALHOST = localhost;
+
+        NetworkInterface loopbackIf;
+        try {
+            loopbackIf = NetworkInterface.getByInetAddress(LOCALHOST);
+        } catch (SocketException e) {
+            loopbackIf = null;
+        }
+
+        // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
+        // if so fail back the the first interface
+        if (loopbackIf == null) {
+            // use nextElement() as NetWorkInterface.getByIndex(0) returns null
+            try {
+                loopbackIf = NetworkInterface.getNetworkInterfaces().nextElement();
+            } catch (SocketException e) {
+                logger.error("Failed to enumerate network interfaces", e);
+            }
+        }
+
+        LOOPBACK_IF = loopbackIf;
     }
 
     private SocketAddresses() {
