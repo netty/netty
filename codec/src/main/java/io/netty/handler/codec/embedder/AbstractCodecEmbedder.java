@@ -15,12 +15,17 @@
  */
 package io.netty.handler.codec.embedder;
 
+import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CodecException;
@@ -45,8 +50,62 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
      * handlers.
      */
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
-        channel.pipeline().addLast(handlers);
-        channel.pipeline().addLast(new LastHandler());
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+
+        int inboundType = 0; // 0 - unknown, 1 - stream, 2 - message
+        int outboundType = 0;
+        int nHandlers = 0;
+        ChannelPipeline p = channel.pipeline();
+        for (ChannelHandler h: handlers) {
+            if (h == null) {
+                break;
+            }
+            nHandlers ++;
+
+            p.addLast(h);
+            ChannelHandlerContext ctx = p.context(h);
+            if (inboundType == 0) {
+                if (ctx.canHandleInbound()) {
+                    ChannelInboundHandlerContext<?> inCtx = (ChannelInboundHandlerContext<?>) ctx;
+                    if (inCtx.inbound().hasByteBuffer()) {
+                        inboundType = 1;
+                    } else {
+                        inboundType = 2;
+                    }
+                }
+            }
+            if (ctx.canHandleOutbound()) {
+                ChannelOutboundHandlerContext<?> outCtx = (ChannelOutboundHandlerContext<?>) ctx;
+                if (outCtx.outbound().hasByteBuffer()) {
+                    outboundType = 1;
+                } else {
+                    outboundType = 2;
+                }
+            }
+        }
+
+        if (nHandlers == 0) {
+            throw new IllegalArgumentException("handlers is empty.");
+        }
+
+        if (inboundType == 0 && outboundType == 0) {
+            throw new IllegalArgumentException("handlers does not provide any buffers.");
+        }
+
+        p.addFirst(StreamToChannelBufferEncoder.INSTANCE);
+
+        if (inboundType == 1) {
+            p.addFirst(ChannelBufferToStreamDecoder.INSTANCE);
+        }
+
+        if (outboundType == 1) {
+            p.addLast(ChannelBufferToStreamEncoder.INSTANCE);
+        }
+
+        p.addLast(new LastHandler());
+
         loop.register(channel);
     }
 
@@ -164,6 +223,87 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         @Override
         public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
             productQueue.add(cause);
+        }
+    }
+
+    @ChannelHandler.Sharable
+    private static final class StreamToChannelBufferEncoder extends ChannelOutboundHandlerAdapter<Byte> {
+
+        static final StreamToChannelBufferEncoder INSTANCE = new StreamToChannelBufferEncoder();
+
+        @Override
+        public ChannelBufferHolder<Byte> newOutboundBuffer(
+                ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+            return ChannelBufferHolders.byteBuffer();
+        }
+
+        @Override
+        public void flush(ChannelOutboundHandlerContext<Byte> ctx, ChannelFuture future) throws Exception {
+            ChannelBuffer in = ctx.outbound().byteBuffer();
+            if (in.readable()) {
+                ctx.nextOutboundMessageBuffer().add(in.readBytes(in.readableBytes()));
+            }
+            ctx.flush(future);
+        }
+    }
+
+    @ChannelHandler.Sharable
+    private static final class ChannelBufferToStreamDecoder extends ChannelInboundHandlerAdapter<Object> {
+
+        static final ChannelBufferToStreamDecoder INSTANCE = new ChannelBufferToStreamDecoder();
+
+        @Override
+        public ChannelBufferHolder<Object> newInboundBuffer(
+                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            return ChannelBufferHolders.messageBuffer();
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            Queue<Object> in = ctx.inbound().messageBuffer();
+            for (;;) {
+                Object msg = in.poll();
+                if (msg == null) {
+                    break;
+                }
+                if (msg instanceof ChannelBuffer) {
+                    ChannelBuffer buf = (ChannelBuffer) msg;
+                    ctx.nextInboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+                } else {
+                    ctx.nextInboundMessageBuffer().add(msg);
+                }
+            }
+            ctx.fireInboundBufferUpdated();
+        }
+    }
+
+    @ChannelHandler.Sharable
+    private static final class ChannelBufferToStreamEncoder extends ChannelOutboundHandlerAdapter<Object> {
+
+        static final ChannelBufferToStreamEncoder INSTANCE = new ChannelBufferToStreamEncoder();
+
+        @Override
+        public ChannelBufferHolder<Object> newOutboundBuffer(
+                ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+            return ChannelBufferHolders.messageBuffer();
+        }
+
+        @Override
+        public void flush(ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
+            Queue<Object> in = ctx.outbound().messageBuffer();
+            for (;;) {
+                Object msg = in.poll();
+                if (msg == null) {
+                    break;
+                }
+                if (msg instanceof ChannelBuffer) {
+                    ChannelBuffer buf = (ChannelBuffer) msg;
+                    ctx.nextOutboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+                } else {
+                    ctx.nextOutboundMessageBuffer().add(msg);
+                }
+            }
+            ctx.flush(future);
         }
     }
 }

@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.embedder;
 
-import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 
@@ -36,8 +36,13 @@ class EmbeddedChannel extends AbstractChannel {
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
 
     EmbeddedChannel(Queue<Object> productQueue) {
-        super(null, null, ChannelBufferHolders.catchAllBuffer());
+        super(null, null, ChannelBufferHolders.messageBuffer());
         this.productQueue = productQueue;
+    }
+
+    @Override
+    public ChannelType type() {
+        return ChannelType.MESSAGE;
     }
 
     @Override
@@ -97,13 +102,6 @@ class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
-        ChannelBuffer byteBuf = buf.byteBuffer();
-        int byteBufLen = byteBuf.readableBytes();
-        if (byteBufLen > 0) {
-            productQueue.add(byteBuf.readBytes(byteBufLen));
-            byteBuf.clear();
-        }
-
         Queue<Object> msgBuf = buf.messageBuffer();
         if (!msgBuf.isEmpty()) {
             productQueue.addAll(msgBuf);
