@@ -233,6 +233,7 @@ public class CookieDecoderTest {
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
+        assertTrue(it.hasNext());
         c = it.next();
         assertEquals(1, c.getVersion());
         assertEquals("session_id", c.getName());
@@ -244,6 +245,7 @@ public class CookieDecoderTest {
         assertTrue(c.getPorts().isEmpty());
         assertEquals(-1, c.getMaxAge());
 
+        assertTrue(it.hasNext());
         c = it.next();
         assertEquals(1, c.getVersion());
         assertEquals("session_id", c.getName());
