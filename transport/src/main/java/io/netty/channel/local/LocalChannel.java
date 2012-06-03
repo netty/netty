@@ -179,7 +179,9 @@ public class LocalChannel extends AbstractChannel {
             return;
         }
 
-        LocalChannelRegistry.unregister(localAddress);
+        if (parent() == null) {
+            LocalChannelRegistry.unregister(localAddress);
+        }
         localAddress = null;
         state = 3;
         if (peer.isActive()) {
