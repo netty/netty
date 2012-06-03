@@ -22,6 +22,7 @@ import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.SocketAddresses;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -44,7 +45,7 @@ public abstract class AbstractDatagramTest {
     protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
 
-    protected void run() throws Exception {
+    protected void run() throws Throwable {
         int i = 0;
         for (Entry<Factory<Bootstrap>, Factory<Bootstrap>> e: COMBO) {
             sb = e.getKey().newInstance();
@@ -60,6 +61,8 @@ public abstract class AbstractDatagramTest {
                 Method m = getClass().getDeclaredMethod(
                         testName.getMethodName(), Bootstrap.class, Bootstrap.class);
                 m.invoke(this, sb, cb);
+            } catch (InvocationTargetException ex) {
+                throw ex.getCause();
             } finally {
                 sb.shutdown();
                 cb.shutdown();

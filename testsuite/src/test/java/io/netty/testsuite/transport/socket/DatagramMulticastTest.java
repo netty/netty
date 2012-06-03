@@ -43,8 +43,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(mhandler);
-        cb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
             @Override
             public void messageReceived(
                     ChannelInboundHandlerContext<DatagramPacket> ctx,
@@ -53,11 +52,13 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             }
         });
 
+        cb.handler(mhandler);
+
         sb.option(ChannelOption.IP_MULTICAST_IF, SocketAddresses.LOOPBACK_IF);
         sb.option(ChannelOption.SO_REUSEADDR, true);
         cb.option(ChannelOption.IP_MULTICAST_IF, SocketAddresses.LOOPBACK_IF);
         cb.option(ChannelOption.SO_REUSEADDR, true);
-        cb.localAddress(addr);
+        cb.localAddress(addr.getPort());
 
         Channel sc = sb.bind().sync().channel();
         DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
@@ -69,7 +70,6 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sc.write(new DatagramPacket(ChannelBuffers.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
-        sc.write(new DatagramPacket(ChannelBuffers.copyInt(1), groupAddress)).sync();
 
         // leave the group
         cc.leaveGroup(groupAddress, SocketAddresses.LOOPBACK_IF).sync();

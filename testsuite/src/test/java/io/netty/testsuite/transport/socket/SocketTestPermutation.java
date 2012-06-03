@@ -2,6 +2,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -94,7 +95,8 @@ final class SocketTestPermutation {
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().eventLoop(new NioEventLoop()).channel(new NioDatagramChannel());
+                return new Bootstrap().eventLoop(new NioEventLoop()).channel(
+                        new NioDatagramChannel(InternetProtocolFamily.IPv4));
             }
         });
         bfs.add(new Factory<Bootstrap>() {
