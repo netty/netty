@@ -52,21 +52,9 @@ public final class ChannelBufferHolder<E> {
         case 0:
             return msgBuf != null;
         case 1:
-            // XXX: Should we introduce hasNext(Inbound|Outbound)(Message|Byte)Buffer()
-            //      just because of this?
-            try {
-                ctx.nextInboundMessageBuffer();
-                return true;
-            } catch (NoSuchBufferException e) {
-                return false;
-            }
+            return ctx.hasNextInboundMessageBuffer();
         case 2:
-            try {
-                ctx.nextOutboundMessageBuffer();
-                return true;
-            } catch (NoSuchBufferException e) {
-                return false;
-            }
+            return ctx.hasNextOutboundMessageBuffer();
         default:
             throw new Error();
         }
@@ -77,19 +65,9 @@ public final class ChannelBufferHolder<E> {
         case 0:
             return byteBuf != null;
         case 1:
-            try {
-                ctx.nextInboundByteBuffer();
-                return true;
-            } catch (NoSuchBufferException e) {
-                return false;
-            }
+            return ctx.hasNextInboundByteBuffer();
         case 2:
-            try {
-                ctx.nextOutboundByteBuffer();
-                return true;
-            } catch (NoSuchBufferException e) {
-                return false;
-            }
+            return ctx.hasNextOutboundByteBuffer();
         default:
             throw new Error();
         }

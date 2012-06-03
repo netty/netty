@@ -651,6 +651,32 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return nextOutboundByteBuffer(tail);
     }
 
+    static boolean hasNextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                return false;
+            }
+            ChannelBufferHolder<Object> in = ctx.in;
+            if (in != null && !in.isBypass() && in.hasByteBuffer()) {
+                return true;
+            }
+            ctx = ctx.next;
+        }
+    }
+
+    static boolean hasNextInboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                return false;
+            }
+            ChannelBufferHolder<Object> in = ctx.inbound();
+            if (in != null && !in.isBypass() && in.hasMessageBuffer()) {
+                return true;
+            }
+            ctx = ctx.next;
+        }
+    }
+
     static ChannelBuffer nextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
@@ -674,6 +700,42 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return in.messageBuffer();
             }
             ctx = ctx.next;
+        }
+    }
+
+    boolean hasNextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                if (directOutbound.hasByteBuffer()) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            ChannelBufferHolder<Object> out = ctx.outbound();
+            if (out != null && !out.isBypass() && out.hasByteBuffer()) {
+                return true;
+            }
+            ctx = ctx.prev;
+        }
+    }
+
+    boolean hasNextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        for (;;) {
+            if (ctx == null) {
+                if (directOutbound.hasMessageBuffer()) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            ChannelBufferHolder<Object> out = ctx.outbound();
+            if (out != null && !out.isBypass() && out.hasMessageBuffer()) {
+                return true;
+            }
+            ctx = ctx.prev;
         }
     }
 

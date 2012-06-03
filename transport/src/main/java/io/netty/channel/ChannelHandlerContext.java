@@ -137,9 +137,13 @@ public interface ChannelHandlerContext
     boolean canHandleInbound();
     boolean canHandleOutbound();
 
+    boolean hasNextInboundByteBuffer();
+    boolean hasNextInboundMessageBuffer();
     ChannelBuffer nextInboundByteBuffer();
     Queue<Object> nextInboundMessageBuffer();
 
+    boolean hasNextOutboundByteBuffer();
+    boolean hasNextOutboundMessageBuffer();
     ChannelBuffer nextOutboundByteBuffer();
     Queue<Object> nextOutboundMessageBuffer();
 }
