@@ -203,6 +203,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
                         SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID);
                         partialDataFrame.setData(spdyDataFrame.getData().readSlice(initialReceiveWindowSize));
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
+                        ctx.flush();
                     }
                 }
 
@@ -704,7 +705,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
         removeStream(ctx, streamID);
 
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamID, status);
-        ctx.nextOutboundMessageBuffer().add(spdyRstStreamFrame);
+        ctx.write(spdyRstStreamFrame);
         if (fireMessageReceived) {
             ctx.nextInboundMessageBuffer().add(spdyRstStreamFrame);
             ctx.fireInboundBufferUpdated();
@@ -884,8 +885,9 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
         }
 
         sendGoAwayFrame(ctx, SpdySessionStatus.OK);
+        ChannelFuture f = ctx.flush();
         if (spdySession.noActiveStreams()) {
-            ctx.flush().addListener(new ClosingChannelFutureListener(ctx));
+            f.addListener(new ClosingChannelFutureListener(ctx));
         } else {
             closeSessionFuture = ctx.newFuture();
             closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx));

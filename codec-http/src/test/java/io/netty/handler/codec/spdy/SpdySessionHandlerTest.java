@@ -19,6 +19,8 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class SpdySessionHandlerTest {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(SpdySessionHandlerTest.class);
 
     private static final int closeSignal = SpdyCodecUtil.SPDY_SETTINGS_MAX_ID;
     private static final SpdySettingsFrame closeMessage = new DefaultSpdySettingsFrame();
@@ -252,6 +257,7 @@ public class SpdySessionHandlerTest {
     @Test
     public void testSpdyClientSessionHandler() {
         for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+            logger.info("Running: testSpdyClientSessionHandler v" + version);
             testSpdySessionHandler(version, false);
         }
     }
@@ -259,6 +265,7 @@ public class SpdySessionHandlerTest {
     @Test
     public void testSpdyServerSessionHandler() {
         for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+            logger.info("Running: testSpdyServerSessionHandler v" + version);
             testSpdySessionHandler(version, true);
         }
     }

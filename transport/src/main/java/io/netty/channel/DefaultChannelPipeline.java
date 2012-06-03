@@ -654,7 +654,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     static ChannelBuffer nextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
-                throw NoSuchBufferException.INSTANCE;
+                throw new NoSuchBufferException();
             }
             ChannelBufferHolder<Object> in = ctx.in;
             if (in != null && !in.isBypass() && in.hasByteBuffer()) {
@@ -667,7 +667,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     static Queue<Object> nextInboundMessageBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
-                throw NoSuchBufferException.INSTANCE;
+                throw new NoSuchBufferException();
             }
             ChannelBufferHolder<Object> in = ctx.inbound();
             if (in != null && !in.isBypass() && in.hasMessageBuffer()) {
@@ -683,7 +683,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 if (directOutbound.hasByteBuffer()) {
                     return directOutbound.byteBuffer();
                 } else {
-                    throw NoSuchBufferException.INSTANCE;
+                    throw new NoSuchBufferException();
                 }
             }
 
@@ -701,7 +701,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 if (directOutbound.hasMessageBuffer()) {
                     return directOutbound.messageBuffer();
                 } else {
-                    throw NoSuchBufferException.INSTANCE;
+                    throw new NoSuchBufferException();
                 }
             }
 
@@ -1131,7 +1131,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return write(firstOutboundContext(), message, future);
     }
 
-    ChannelFuture write(final DefaultChannelHandlerContext ctx, final Object message, final ChannelFuture future) {
+    ChannelFuture write(DefaultChannelHandlerContext ctx, final Object message, final ChannelFuture future) {
         if (message == null) {
             throw new NullPointerException("message");
         }
@@ -1139,24 +1139,42 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         EventExecutor executor;
         ChannelBufferHolder<Object> out;
-        if (ctx != null) {
-            executor = ctx.executor();
+        boolean msgBuf = false;
+        for (;;) {
+            if (ctx == null) {
+                executor = channel.eventLoop();
+                out = directOutbound;
+                if (out.hasByteBuffer()) {
+                    if(!(message instanceof ChannelBuffer)) {
+                        throw new IllegalArgumentException(
+                                "cannot write a message whose type is not " +
+                                ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
+                    }
+                } else {
+                    msgBuf = true;
+                }
+                break;
+            }
+
             out = ctx.outbound();
-        } else {
-            executor = channel().eventLoop();
-            out = directOutbound;
+            if (out.hasMessageBuffer()) {
+                msgBuf = true;
+                executor = ctx.executor();
+                break;
+            } else if (message instanceof ChannelBuffer) {
+                executor = ctx.executor();
+                break;
+            }
+
+            ctx = ctx.prev;
         }
 
         if (executor.inEventLoop()) {
-            if (out.hasMessageBuffer()) {
+            if (msgBuf) {
                 out.messageBuffer().add(message);
-            } else if (message instanceof ChannelBuffer) {
-                ChannelBuffer m = (ChannelBuffer) message;
-                out.byteBuffer().writeBytes(m, m.readerIndex(), m.readableBytes());
             } else {
-                throw new IllegalArgumentException(
-                        "cannot write a message whose type is not " +
-                        ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
+                ChannelBuffer buf = (ChannelBuffer) message;
+                out.byteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
             }
             if (ctx != null) {
                 flush0(ctx, future);
@@ -1165,10 +1183,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             return future;
         } else {
+            final DefaultChannelHandlerContext ctx0 = ctx;
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    write(ctx, message, future);
+                    write(ctx0, message, future);
                 }
             });
         }
