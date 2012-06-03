@@ -13,27 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.socket.oio;
+package io.netty.testsuite.transport.socket.nio.oio;
 
 import java.util.concurrent.Executor;
 
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.channel.socket.oio.OioServerSocketChannelFactory;
-import io.netty.testsuite.transport.socket.AbstractSocketServerBootstrapTest;
+import io.netty.testsuite.transport.socket.AbstractSocketStringEchoTest;
 
-/**
- * A socket server bootstrap test for "Old" I/O
- */
-public class OioSocketServerBootstrapTest extends
-        AbstractSocketServerBootstrapTest {
+public class NioOioSocketStringEchoTest extends AbstractSocketStringEchoTest {
 
-    /**
-     * Creates a new "Old" I/O server socket channel factory
-     * 
-     * @param executor The executor to use
-     */
+    @Override
+    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
+        return new NioClientSocketChannelFactory(executor);
+    }
+
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
         return new OioServerSocketChannelFactory(executor, executor);
     }
+
 }

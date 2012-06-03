@@ -13,15 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.socket;
+package io.netty.testsuite.transport.socket.oio.oio;
 
 import java.util.concurrent.Executor;
 
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import io.netty.channel.socket.oio.OioClientSocketChannelFactory;
+import io.netty.channel.socket.oio.OioServerSocketChannelFactory;
+import io.netty.testsuite.transport.socket.AbstractSocketCompatibleObjectStreamEchoTest;
 
-public class OioNioSocketFixedLengthEchoTest extends AbstractSocketFixedLengthEchoTest {
+public class OioOioSocketCompatibleObjectStreamEchoTest extends AbstractSocketCompatibleObjectStreamEchoTest {
 
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
@@ -30,7 +31,7 @@ public class OioNioSocketFixedLengthEchoTest extends AbstractSocketFixedLengthEc
 
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioServerSocketChannelFactory(executor);
+        return new OioServerSocketChannelFactory(executor, executor);
     }
 
 }
