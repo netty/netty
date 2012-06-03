@@ -16,75 +16,44 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
-
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+
+import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.Test;
 
-public abstract class AbstractSocketEchoTest {
+public class SocketEchoTest extends AbstractSocketTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
-
-    private static ExecutorService executor;
 
     static {
         random.nextBytes(data);
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
-
-    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
-    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
-
     @Test
-    public void testSimpleEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+    public void testSimpleEcho() throws Exception {
+        run();
+    }
 
+    public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.pipeline().addFirst("handler", sh);
-        cb.pipeline().addFirst("handler", ch);
+        sb.childHandler(sh);
+        cb.handler(ch);
 
-        Channel sc = sb.bind(new InetSocketAddress(0));
-        int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect().sync().channel();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-
-        Channel cc = ccf.channel();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
@@ -121,9 +90,9 @@ public abstract class AbstractSocketEchoTest {
             }
         }
 
-        sh.channel.close().awaitUninterruptibly();
-        ch.channel.close().awaitUninterruptibly();
-        sc.close().awaitUninterruptibly();
+        sh.channel.close().sync();
+        ch.channel.close().sync();
+        sc.close().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
@@ -139,7 +108,7 @@ public abstract class AbstractSocketEchoTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelUpstreamHandler {
+    private static class EchoHandler extends ChannelInboundStreamHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -148,35 +117,35 @@ public abstract class AbstractSocketEchoTest {
         }
 
         @Override
-        public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+        public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
                 throws Exception {
-            channel = e.channel();
+            channel = ctx.channel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+        public void inboundBufferUpdated(
+                ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
                 throws Exception {
-            ChannelBuffer m = (ChannelBuffer) e.getMessage();
-            byte[] actual = new byte[m.readableBytes()];
-            m.getBytes(0, actual);
+            byte[] actual = new byte[in.readableBytes()];
+            in.readBytes(actual);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            if (channel.getParent() != null) {
-                channel.write(m);
+            if (channel.parent() != null) {
+                channel.write(ChannelBuffers.wrappedBuffer(actual));
             }
 
             counter += actual.length;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
-            if (exception.compareAndSet(null, e.cause())) {
-                e.channel().close();
+        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+                Throwable cause) throws Exception {
+            if (exception.compareAndSet(null, cause)) {
+                ctx.close();
             }
         }
     }
