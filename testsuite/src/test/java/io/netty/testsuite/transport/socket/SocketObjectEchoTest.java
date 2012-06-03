@@ -16,40 +16,27 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-public abstract class AbstractSocketObjectStreamEchoTest {
+public class SocketObjectEchoTest extends AbstractSocketTest {
 
     static final Random random = new Random();
     static final String[] data = new String[1024];
-
-    private static ExecutorService executor;
 
     static {
         for (int i = 0; i < data.length; i ++) {
@@ -63,44 +50,37 @@ public abstract class AbstractSocketObjectStreamEchoTest {
         }
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
-
-    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
-    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
-
     @Test
     public void testObjectEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        run();
+    }
 
-        EchoHandler sh = new EchoHandler();
-        EchoHandler ch = new EchoHandler();
+    public void testObjectEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final EchoHandler sh = new EchoHandler();
+        final EchoHandler ch = new EchoHandler();
 
-        sb.pipeline().addLast("decoder", new ObjectDecoder(
-                ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-        sb.pipeline().addLast("encoder", new ObjectEncoder());
-        sb.pipeline().addLast("handler", sh);
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel sch) throws Exception {
+                sch.pipeline().addLast(
+                        new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
+                        new ObjectEncoder(),
+                        sh);
+            }
+        });
 
-        cb.pipeline().addLast("decoder", new ObjectDecoder(
-                ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-        cb.pipeline().addLast("encoder", new ObjectEncoder());
-        cb.pipeline().addLast("handler", ch);
+        cb.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel sch) throws Exception {
+                sch.pipeline().addLast(
+                        new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
+                        new ObjectEncoder(),
+                        ch);
+            }
+        });
 
-        Channel sc = sb.bind(new InetSocketAddress(0));
-        int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
-
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-
-        Channel cc = ccf.channel();
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect().sync().channel();
         for (String element : data) {
             cc.write(element);
         }
@@ -135,9 +115,9 @@ public abstract class AbstractSocketObjectStreamEchoTest {
             }
         }
 
-        sh.channel.close().awaitUninterruptibly();
-        ch.channel.close().awaitUninterruptibly();
-        sc.close().awaitUninterruptibly();
+        sh.channel.close().sync();
+        ch.channel.close().sync();
+        sc.close().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
@@ -153,7 +133,7 @@ public abstract class AbstractSocketObjectStreamEchoTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelUpstreamHandler {
+    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<String> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -162,30 +142,28 @@ public abstract class AbstractSocketObjectStreamEchoTest {
         }
 
         @Override
-        public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+        public void channelActive(ChannelInboundHandlerContext<String> ctx)
                 throws Exception {
-            channel = e.channel();
+            channel = ctx.channel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-                throws Exception {
+        public void messageReceived(ChannelInboundHandlerContext<String> ctx,
+                String msg) throws Exception {
+            assertEquals(data[counter], msg);
 
-            String m = (String) e.getMessage();
-            assertEquals(data[counter], m);
-
-            if (channel.getParent() != null) {
-                channel.write(m);
+            if (channel.parent() != null) {
+                channel.write(msg);
             }
 
             counter ++;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
-            if (exception.compareAndSet(null, e.cause())) {
-                e.channel().close();
+        public void exceptionCaught(ChannelInboundHandlerContext<String> ctx,
+                Throwable cause) throws Exception {
+            if (exception.compareAndSet(null, cause)) {
+                ctx.close();
             }
         }
     }

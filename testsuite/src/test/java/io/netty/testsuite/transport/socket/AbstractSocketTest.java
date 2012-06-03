@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.testsuite.transport.socket.SocketTestCombination.Factory;
+import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.SocketAddresses;
 
@@ -34,7 +34,7 @@ import org.junit.rules.TestName;
 public abstract class AbstractSocketTest {
 
     private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
-            SocketTestCombination.all();
+            SocketTestPermutation.socket();
 
     @Rule
     public final TestName testName = new TestName();

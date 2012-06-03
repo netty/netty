@@ -58,8 +58,8 @@ public class SocketStringEchoTest extends AbstractSocketTest {
     }
 
     public void testStringEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final EchoHandler sh = new EchoHandler();
-        final EchoHandler ch = new EchoHandler();
+        final StringEchoHandler sh = new StringEchoHandler();
+        final StringEchoHandler ch = new StringEchoHandler();
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -135,11 +135,10 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    static class StringEchoHandler extends ChannelInboundMessageHandlerAdapter<String> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
-
 
         @Override
         public void channelActive(ChannelInboundHandlerContext<String> ctx)
