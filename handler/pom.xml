@@ -43,6 +43,7 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec</artifactId>
       <version>${project.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
