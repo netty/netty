@@ -256,7 +256,7 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyClientSessionHandler() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+        for (int version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
             logger.info("Running: testSpdyClientSessionHandler v" + version);
             testSpdySessionHandler(version, false);
         }
@@ -264,7 +264,7 @@ public class SpdySessionHandlerTest {
 
     @Test
     public void testSpdyServerSessionHandler() {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
+        for (int version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
             logger.info("Running: testSpdyServerSessionHandler v" + version);
             testSpdySessionHandler(version, true);
         }

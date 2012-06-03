@@ -19,9 +19,6 @@ import io.netty.buffer.ChannelBuffer;
 
 final class SpdyCodecUtil {
 
-    static final int SPDY_MIN_VERSION = 2;
-    static final int SPDY_MAX_VERSION = 3;
-
     static final int SPDY_HEADER_TYPE_OFFSET   = 2;
     static final int SPDY_HEADER_FLAGS_OFFSET  = 4;
     static final int SPDY_HEADER_LENGTH_OFFSET = 5;

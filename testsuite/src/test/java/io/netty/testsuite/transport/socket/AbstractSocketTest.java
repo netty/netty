@@ -46,7 +46,7 @@ public abstract class AbstractSocketTest {
     protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
 
-    protected void run() throws Exception {
+    protected void run() throws Throwable {
         int i = 0;
         for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {
             sb = e.getKey().newInstance();

@@ -28,7 +28,7 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
     private final Inflater decompressor = new Inflater();
 
     public SpdyHeaderBlockZlibDecompressor(int version) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }

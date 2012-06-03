@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.spdy;
+package io.netty.testsuite.transport.socket;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -27,6 +26,9 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.spdy.SpdyConstants;
+import io.netty.handler.codec.spdy.SpdyFrameDecoder;
+import io.netty.handler.codec.spdy.SpdyFrameEncoder;
 import io.netty.util.SocketAddresses;
 
 import java.io.IOException;
@@ -36,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
 
-public abstract class AbstractSocketSpdyEchoTest {
+public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     private static final Random random = new Random();
     static final int ignoredBytes = 20;
@@ -163,27 +165,17 @@ public abstract class AbstractSocketSpdyEchoTest {
         return frames;
     }
 
-    private ServerBootstrap sb;
-    private Bootstrap cb;
+    private int version;
 
-    protected abstract ServerBootstrap newServerBootstrap();
-    protected abstract Bootstrap newClientBootstrap();
-
-    @Test(timeout = 10000)
+    @Test(timeout = 15000)
     public void testSpdyEcho() throws Throwable {
-        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version ++) {
-            sb = newServerBootstrap();
-            cb = newClientBootstrap();
-            try {
-                testSpdyEcho(version);
-            } finally {
-                sb.shutdown();
-                cb.shutdown();
-            }
+        for (version = SpdyConstants.SPDY_MIN_VERSION; version <= SpdyConstants.SPDY_MAX_VERSION; version ++) {
+            logger.info("Testing against SPDY v" + version);
+            run();
         }
     }
 
-    private void testSpdyEcho(final int version) throws Throwable {
+    public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
 
         ChannelBuffer frames = createFrames(version);
 

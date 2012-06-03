@@ -40,7 +40,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     @Test
-    public void testSimpleEcho() throws Exception {
+    public void testSimpleEcho() throws Throwable {
         run();
     }
 

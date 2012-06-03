@@ -51,7 +51,7 @@ public class SpdyFrameEncoder extends MessageToStreamEncoder<Object> {
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
         super();
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
         }

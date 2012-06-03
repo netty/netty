@@ -54,7 +54,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
      */
     public SpdyHttpDecoder(int version, int maxContentLength) {
         super();
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
