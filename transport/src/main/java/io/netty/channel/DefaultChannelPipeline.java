@@ -887,42 +887,42 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, channel().newFuture());
+        return bind(localAddress, channel.newFuture());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, channel().newFuture());
+        return connect(remoteAddress, channel.newFuture());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, channel().newFuture());
+        return connect(remoteAddress, localAddress, channel.newFuture());
     }
 
     @Override
     public ChannelFuture disconnect() {
-        return disconnect(channel().newFuture());
+        return disconnect(channel.newFuture());
     }
 
     @Override
     public ChannelFuture close() {
-        return close(channel().newFuture());
+        return close(channel.newFuture());
     }
 
     @Override
     public ChannelFuture deregister() {
-        return deregister(channel().newFuture());
+        return deregister(channel.newFuture());
     }
 
     @Override
     public ChannelFuture flush() {
-        return flush(channel().newFuture());
+        return flush(channel.newFuture());
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        return write(message, channel().newFuture());
+        return write(message, channel.newFuture());
     }
 
     @Override
@@ -1128,7 +1128,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
-        return write(firstOutboundContext(), message, future);
+        return write(tail, message, future);
     }
 
     ChannelFuture write(DefaultChannelHandlerContext ctx, final Object message, final ChannelFuture future) {
@@ -1156,14 +1156,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 break;
             }
 
-            out = ctx.outbound();
-            if (out.hasMessageBuffer()) {
-                msgBuf = true;
-                executor = ctx.executor();
-                break;
-            } else if (message instanceof ChannelBuffer) {
-                executor = ctx.executor();
-                break;
+            if (ctx.canHandleOutbound()) {
+                out = ctx.outbound();
+                if (out.hasMessageBuffer()) {
+                    msgBuf = true;
+                    executor = ctx.executor();
+                    break;
+                } else if (message instanceof ChannelBuffer) {
+                    executor = ctx.executor();
+                    break;
+                }
             }
 
             ctx = ctx.prev;
@@ -1199,9 +1201,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (future == null) {
             throw new NullPointerException("future");
         }
-        if (future.channel() != channel()) {
+        if (future.channel() != channel) {
             throw new IllegalArgumentException(String.format(
-                    "future.channel does not match: %s (expected: %s)", future.channel(), channel()));
+                    "future.channel does not match: %s (expected: %s)", future.channel(), channel));
         }
         if (future.isDone()) {
             throw new IllegalArgumentException("future already done");

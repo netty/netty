@@ -357,7 +357,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
-        return pipeline.write(DefaultChannelPipeline.nextOutboundContext(prev), message, future);
+        return pipeline.write(prev, message, future);
     }
 
     @Override

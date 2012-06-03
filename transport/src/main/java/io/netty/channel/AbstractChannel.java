@@ -202,87 +202,87 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        return pipeline().bind(localAddress);
+        return pipeline.bind(localAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        return pipeline().connect(remoteAddress);
+        return pipeline.connect(remoteAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline().connect(remoteAddress, localAddress);
+        return pipeline.connect(remoteAddress, localAddress);
     }
 
     @Override
     public ChannelFuture disconnect() {
-        return pipeline().disconnect();
+        return pipeline.disconnect();
     }
 
     @Override
     public ChannelFuture close() {
-        return pipeline().close();
+        return pipeline.close();
     }
 
     @Override
     public ChannelFuture deregister() {
-        return pipeline().deregister();
+        return pipeline.deregister();
     }
 
     @Override
     public ChannelFuture flush() {
-        return pipeline().flush();
+        return pipeline.flush();
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        return pipeline().write(message);
+        return pipeline.write(message);
     }
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-        return pipeline().bind(localAddress, future);
+        return pipeline.bind(localAddress, future);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
-        return pipeline().connect(remoteAddress, future);
+        return pipeline.connect(remoteAddress, future);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        return pipeline().connect(remoteAddress, localAddress, future);
+        return pipeline.connect(remoteAddress, localAddress, future);
     }
 
     @Override
     public ChannelFuture disconnect(ChannelFuture future) {
-        return pipeline().disconnect(future);
+        return pipeline.disconnect(future);
     }
 
     @Override
     public ChannelFuture close(ChannelFuture future) {
-        return pipeline().close(future);
+        return pipeline.close(future);
     }
 
     @Override
     public ChannelFuture deregister(ChannelFuture future) {
-        return pipeline().deregister(future);
+        return pipeline.deregister(future);
     }
 
     @Override
     public ChannelBuffer outboundByteBuffer() {
-        return pipeline().outboundByteBuffer();
+        return pipeline.outboundByteBuffer();
     }
 
     @Override
     public Queue<Object> outboundMessageBuffer() {
-        return pipeline().outboundMessageBuffer();
+        return pipeline.outboundMessageBuffer();
     }
 
     @Override
     public ChannelFuture flush(ChannelFuture future) {
-        return pipeline().flush(future);
+        return pipeline.flush(future);
     }
 
     @Override
@@ -427,9 +427,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 doRegister();
                 registered = true;
                 future.setSuccess();
-                pipeline().fireChannelRegistered();
+                pipeline.fireChannelRegistered();
                 if (isActive()) {
-                    pipeline().fireChannelActive();
+                    pipeline.fireChannelActive();
                 }
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
@@ -440,7 +440,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
+                pipeline.fireExceptionCaught(t);
                 closeFuture().setSuccess();
             }
         }
@@ -457,11 +457,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     doBind(localAddress);
                     future.setSuccess();
                     if (!wasActive && isActive()) {
-                        pipeline().fireChannelActive();
+                        pipeline.fireChannelActive();
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
+                    pipeline.fireExceptionCaught(t);
                     closeIfClosed();
                 }
             } else {
@@ -482,7 +482,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     doDisconnect();
                     future.setSuccess();
                     if (wasActive && !isActive()) {
-                        pipeline().fireChannelInactive();
+                        pipeline.fireChannelInactive();
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
@@ -517,7 +517,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     notifyFlushFutures(closedChannelException);
 
                     if (wasActive && !isActive()) {
-                        pipeline().fireChannelInactive();
+                        pipeline.fireChannelInactive();
                     }
 
                     deregister(voidFuture());
@@ -551,7 +551,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (registered) {
                         registered = false;
                         future.setSuccess();
-                        pipeline().fireChannelUnregistered();
+                        pipeline.fireChannelUnregistered();
                     } else {
                         // Some transports like local and AIO does not allow the deregistration of
                         // an open channel.  Their doDeregister() calls close().  Consequently,
@@ -593,7 +593,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     } catch (Throwable t) {
                         notifyFlushFutures(t);
-                        pipeline().fireExceptionCaught(t);
+                        pipeline.fireExceptionCaught(t);
                         if (t instanceof IOException) {
                             close(voidFuture());
                         }
@@ -645,7 +645,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     notifyFlushFutures();
                 } else {
                     notifyFlushFutures(cause);
-                    pipeline().fireExceptionCaught(cause);
+                    pipeline.fireExceptionCaught(cause);
                     if (cause instanceof IOException) {
                         close(voidFuture());
                     }
@@ -662,7 +662,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             Exception e = new ClosedChannelException();
             future.setFailure(e);
-            pipeline().fireExceptionCaught(e);
+            pipeline.fireExceptionCaught(e);
             return false;
         }
 
