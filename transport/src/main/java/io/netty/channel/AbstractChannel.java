@@ -424,10 +424,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
-                doRegister();
+                Runnable postRegisterTask = doRegister();
                 registered = true;
                 future.setSuccess();
                 pipeline.fireChannelRegistered();
+                if (postRegisterTask != null) {
+                    postRegisterTask.run();
+                }
                 if (isActive()) {
                     pipeline.fireChannelActive();
                 }
@@ -687,7 +690,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract SocketAddress localAddress0();
     protected abstract SocketAddress remoteAddress0();
 
-    protected abstract void doRegister() throws Exception;
+    protected abstract Runnable doRegister() throws Exception;
     protected abstract void doBind(SocketAddress localAddress) throws Exception;
     protected abstract void doDisconnect() throws Exception;
     protected abstract void doClose() throws Exception;

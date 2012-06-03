@@ -124,22 +124,39 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected Runnable doRegister() throws Exception {
+        final LocalChannel peer = this.peer;
+        Runnable postRegisterTask;
+
         if (peer != null) {
             state = 2;
 
             peer.remoteAddress = parent().localAddress();
             peer.state = 2;
-            peer.eventLoop().execute(new Runnable() {
+
+            // Ensure the peer's channelActive event is triggered *after* this channel's
+            // channelRegistered event is triggered, so that this channel's pipeline is fully
+            // initialized by ChannelInitializer.
+            final EventLoop peerEventLoop = peer.eventLoop();
+            postRegisterTask = new Runnable() {
                 @Override
                 public void run() {
-                    peer.connectFuture.setSuccess();
-                    peer.pipeline().fireChannelActive();
+                    peerEventLoop.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            peer.connectFuture.setSuccess();
+                            peer.pipeline().fireChannelActive();
+                        }
+                    });
                 }
-            });
+            };
+        } else {
+            postRegisterTask = null;
         }
 
         ((SingleThreadEventLoop) eventLoop()).addShutdownHook(shutdownHook);
+
+        return postRegisterTask;
     }
 
     @Override

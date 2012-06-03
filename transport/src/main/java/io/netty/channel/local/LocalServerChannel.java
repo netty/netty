@@ -84,8 +84,9 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected Runnable doRegister() throws Exception {
         ((SingleThreadEventLoop) eventLoop()).addShutdownHook(shutdownHook);
+        return null;
     }
 
     @Override

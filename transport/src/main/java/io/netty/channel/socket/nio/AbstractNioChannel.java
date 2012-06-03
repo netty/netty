@@ -206,10 +206,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected Runnable doRegister() throws Exception {
         NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
         selectionKey = javaChannel().register(
                 loop.selector, isActive()? defaultInterestOps : 0, this);
+        return null;
     }
 
     @Override
