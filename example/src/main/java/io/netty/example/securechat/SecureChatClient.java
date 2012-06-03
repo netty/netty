@@ -44,7 +44,7 @@ public class SecureChatClient {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .remoteAddress(host, port)
-             .initializer(new SecureChatClientInitializer());
+             .handler(new SecureChatClientInitializer());
 
             // Start the connection attempt.
             Channel ch = b.connect().sync().channel();

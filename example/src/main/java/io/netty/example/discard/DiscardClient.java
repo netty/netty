@@ -17,8 +17,6 @@ package io.netty.example.discard;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -43,12 +41,7 @@ public class DiscardClient {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .remoteAddress(host, port)
-             .initializer(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new DiscardClientHandler(firstMessageSize));
-                }
-             });
+             .handler(new DiscardClientHandler(firstMessageSize));
 
             // Make the connection attempt.
             ChannelFuture f = b.connect().sync();

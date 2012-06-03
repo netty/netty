@@ -52,13 +52,13 @@ public class LocalEcho {
             sb.eventLoop(new LocalEventLoop(), new LocalEventLoop())
               .channel(new LocalServerChannel())
               .localAddress(addr)
-              .initializer(new ChannelInitializer<LocalServerChannel>() {
+              .handler(new ChannelInitializer<LocalServerChannel>() {
                   @Override
                   public void initChannel(LocalServerChannel ch) throws Exception {
                       ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                   }
               })
-              .childInitializer(new ChannelInitializer<LocalChannel>() {
+              .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
                       ch.pipeline().addLast(
@@ -70,7 +70,7 @@ public class LocalEcho {
             cb.eventLoop(new NioEventLoop())
               .channel(new LocalChannel())
               .remoteAddress(addr)
-              .initializer(new ChannelInitializer<LocalChannel>() {
+              .handler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
                       ch.pipeline().addLast(

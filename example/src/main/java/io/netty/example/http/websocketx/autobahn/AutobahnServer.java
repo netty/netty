@@ -38,7 +38,7 @@ public class AutobahnServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new AutobahnServerInitializer());
+             .childHandler(new AutobahnServerInitializer());
 
             ChannelFuture f = b.bind().sync();
             System.out.println("Web Socket Server started at port " + port);

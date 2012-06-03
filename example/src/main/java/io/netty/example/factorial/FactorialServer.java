@@ -37,7 +37,7 @@ public class FactorialServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new FactorialServerInitializer());
+             .childHandler(new FactorialServerInitializer());
 
             b.bind().sync().channel().closeFuture().sync();
         } finally {

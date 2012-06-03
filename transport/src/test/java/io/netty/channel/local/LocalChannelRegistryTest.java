@@ -45,17 +45,12 @@ public class LocalChannelRegistryTest {
             cb.eventLoop(new LocalEventLoop())
               .channel(new LocalChannel())
               .remoteAddress(addr)
-              .initializer(new ChannelInitializer<LocalChannel>() {
-                  @Override
-                  public void initChannel(LocalChannel ch) throws Exception {
-                      ch.pipeline().addLast(new TestHandler());
-                  }
-              });
+              .handler(new TestHandler());
 
             sb.eventLoop(new LocalEventLoop(), new LocalEventLoop())
               .channel(new LocalServerChannel())
               .localAddress(addr)
-              .childInitializer(new ChannelInitializer<LocalChannel>() {
+              .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
                       ch.pipeline().addLast(new TestHandler());

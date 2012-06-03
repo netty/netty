@@ -52,7 +52,7 @@ public class WebSocketSslServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new WebSocketSslServerInitializer());
+             .childHandler(new WebSocketSslServerInitializer());
 
             Channel ch = b.bind().sync().channel();
             System.out.println("Web socket server started at port " + port + '.');

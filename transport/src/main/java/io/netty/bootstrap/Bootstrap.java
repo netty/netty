@@ -26,7 +26,7 @@ public class Bootstrap {
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private EventLoop eventLoop;
     private Channel channel;
-    private ChannelHandler initializer;
+    private ChannelHandler handler;
     private SocketAddress localAddress;
     private SocketAddress remoteAddress;
 
@@ -64,11 +64,11 @@ public class Bootstrap {
         return this;
     }
 
-    public Bootstrap initializer(ChannelHandler initializer) {
-        if (initializer == null) {
-            throw new NullPointerException("initializer");
+    public Bootstrap handler(ChannelHandler handler) {
+        if (handler == null) {
+            throw new NullPointerException("handler");
         }
-        this.initializer = initializer;
+        this.handler = handler;
         return this;
     }
 
@@ -174,7 +174,7 @@ public class Bootstrap {
         }
 
         ChannelPipeline p = channel.pipeline();
-        p.addLast(initializer);
+        p.addLast(handler);
 
         for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
             try {
@@ -192,7 +192,7 @@ public class Bootstrap {
     private static boolean ensureOpen(ChannelFuture future) {
         if (!future.channel().isOpen()) {
             // Registration was successful but the channel was closed due to some failure in
-            // initializer.
+            // handler.
             future.setFailure(new ChannelException("initialization failure"));
             return false;
         }
@@ -212,8 +212,8 @@ public class Bootstrap {
         if (channel == null) {
             throw new IllegalStateException("channel not set");
         }
-        if (initializer == null) {
-            throw new IllegalStateException("initializer not set");
+        if (handler == null) {
+            throw new IllegalStateException("handler not set");
         }
     }
 

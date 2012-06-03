@@ -53,7 +53,7 @@ public class WebSocketServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new WebSocketServerInitializer());
+             .childHandler(new WebSocketServerInitializer());
 
             Channel ch = b.bind().sync().channel();
             System.out.println("Web socket server started at port " + port + '.');

@@ -16,9 +16,7 @@
 package io.netty.example.qotm;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 
@@ -45,12 +43,7 @@ public class QuoteOfTheMomentServer {
              .channel(new NioDatagramChannel())
              .localAddress(new InetSocketAddress(port))
              .option(ChannelOption.SO_BROADCAST, true)
-             .initializer(new ChannelInitializer<DatagramChannel>() {
-                @Override
-                public void initChannel(DatagramChannel ch) throws Exception {
-                    ch.pipeline().addLast(new QuoteOfTheMomentServerHandler());
-                }
-             });
+             .handler(new QuoteOfTheMomentServerHandler());
 
             b.bind().sync().channel().closeFuture().await();
         } finally {

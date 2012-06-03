@@ -22,8 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdapter {
@@ -49,12 +47,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
         b.eventLoop(inboundChannel.eventLoop())
          .channel(new NioSocketChannel())
          .remoteAddress(remoteHost, remotePort)
-         .initializer(new ChannelInitializer<SocketChannel>() {
-            @Override
-            public void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(new HexDumpProxyBackendHandler(inboundChannel));
-            }
-         });
+         .handler(new HexDumpProxyBackendHandler(inboundChannel));
 
         ChannelFuture f = b.connect();
         outboundChannel = f.channel();

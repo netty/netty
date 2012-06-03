@@ -43,7 +43,7 @@ public class TelnetClient {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .remoteAddress(host, port)
-             .initializer(new TelnetClientInitializer());
+             .handler(new TelnetClientInitializer());
 
             // Start the connection attempt.
             Channel ch = b.connect().sync().channel();

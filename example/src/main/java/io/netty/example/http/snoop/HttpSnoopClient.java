@@ -65,7 +65,7 @@ public class HttpSnoopClient {
         try {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
-             .initializer(new HttpSnoopClientInitializer(ssl))
+             .handler(new HttpSnoopClientInitializer(ssl))
              .remoteAddress(new InetSocketAddress(host, port));
 
             // Make the connection attempt.

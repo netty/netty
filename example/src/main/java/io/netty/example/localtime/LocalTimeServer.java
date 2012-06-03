@@ -37,7 +37,7 @@ public class LocalTimeServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new LocalTimeServerInitializer());
+             .childHandler(new LocalTimeServerInitializer());
 
             b.bind().sync().channel().closeFuture().sync();
 

@@ -48,13 +48,13 @@ public class EchoServer {
              .option(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))
              .childOption(ChannelOption.TCP_NODELAY, true)
-             .initializer(new ChannelInitializer<ServerSocketChannel>() {
+             .handler(new ChannelInitializer<ServerSocketChannel>() {
                 @Override
                 public void initChannel(ServerSocketChannel ch) throws Exception {
                     ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                 }
              })
-             .childInitializer(new ChannelInitializer<SocketChannel>() {
+             .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(

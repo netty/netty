@@ -46,7 +46,7 @@ public class ObjectEchoClient {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .remoteAddress(host, port)
-             .initializer(new ChannelInitializer<SocketChannel>() {
+             .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(

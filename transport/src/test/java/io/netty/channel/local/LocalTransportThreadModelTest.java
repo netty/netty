@@ -38,7 +38,7 @@ public class LocalTransportThreadModelTest {
         sb.eventLoop(new LocalEventLoop(), new LocalEventLoop())
           .channel(new LocalServerChannel())
           .localAddress(LocalAddress.ANY)
-          .childInitializer(new ChannelInitializer<LocalChannel>() {
+          .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundMessageHandlerAdapter<Object>() {

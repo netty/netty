@@ -33,7 +33,7 @@ public class HttpStaticFileServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new HttpStaticFileServerInitializer());
+             .childHandler(new HttpStaticFileServerInitializer());
 
             b.bind().sync().channel().closeFuture().sync();
         } finally {

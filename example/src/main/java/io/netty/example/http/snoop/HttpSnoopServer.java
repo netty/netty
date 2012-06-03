@@ -41,7 +41,7 @@ public class HttpSnoopServer {
         try {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
-             .childInitializer(new HttpSnoopServerInitializer())
+             .childHandler(new HttpSnoopServerInitializer())
              .localAddress(new InetSocketAddress(port));
 
             Channel ch = b.bind().sync().channel();

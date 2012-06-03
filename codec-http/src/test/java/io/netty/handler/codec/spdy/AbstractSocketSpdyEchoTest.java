@@ -190,7 +190,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
         final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames);
 
-        sb.childInitializer(new ChannelInitializer<SocketChannel>() {
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel channel) throws Exception {
                 channel.pipeline().addLast(
@@ -200,12 +200,7 @@ public abstract class AbstractSocketSpdyEchoTest {
             }
         });
 
-        cb.initializer(new ChannelInitializer<SocketChannel>() {
-            @Override
-            public void initChannel(SocketChannel channel) throws Exception {
-                channel.pipeline().addLast(ch);
-            }
-        });
+        cb.handler(ch);
 
         Channel sc = sb.localAddress(0).bind().sync().channel();
         int port = ((InetSocketAddress) sc.localAddress()).getPort();

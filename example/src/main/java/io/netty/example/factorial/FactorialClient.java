@@ -42,7 +42,7 @@ public class FactorialClient {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .remoteAddress(host, port)
-             .initializer(new FactorialClientInitializer(count));
+             .handler(new FactorialClientInitializer(count));
 
             // Make a new connection.
             ChannelFuture f = b.connect().sync();

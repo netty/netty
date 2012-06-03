@@ -61,7 +61,7 @@ public class UptimeClient {
         b.eventLoop(l)
          .channel(new NioSocketChannel())
          .remoteAddress(host, port)
-         .initializer(new ChannelInitializer<SocketChannel>() {
+         .handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast(new IdleStateHandler(READ_TIMEOUT, 0, 0), handler);

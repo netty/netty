@@ -86,7 +86,7 @@ public class WebSocketClient {
             b.eventLoop(new NioEventLoop())
              .channel(new NioSocketChannel())
              .remoteAddress(uri.getHost(), uri.getPort())
-             .initializer(new ChannelInitializer<SocketChannel>() {
+             .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline pipeline = ch.pipeline();

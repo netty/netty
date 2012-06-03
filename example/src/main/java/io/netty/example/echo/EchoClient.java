@@ -51,7 +51,7 @@ public class EchoClient {
              .channel(new NioSocketChannel())
              .option(ChannelOption.TCP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
-             .initializer(new ChannelInitializer<SocketChannel>() {
+             .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(

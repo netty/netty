@@ -44,8 +44,8 @@ public class ServerBootstrap {
     private EventLoop parentEventLoop;
     private EventLoop childEventLoop;
     private ServerChannel channel;
-    private ChannelHandler initializer;
-    private ChannelHandler childInitializer;
+    private ChannelHandler handler;
+    private ChannelHandler childHandler;
     private SocketAddress localAddress;
 
     public ServerBootstrap eventLoop(EventLoop parentEventLoop, EventLoop childEventLoop) {
@@ -95,16 +95,16 @@ public class ServerBootstrap {
         return this;
     }
 
-    public ServerBootstrap initializer(ChannelHandler initializer) {
-        this.initializer = initializer;
+    public ServerBootstrap handler(ChannelHandler handler) {
+        this.handler = handler;
         return this;
     }
 
-    public ServerBootstrap childInitializer(ChannelHandler childInitializer) {
-        if (childInitializer == null) {
-            throw new NullPointerException("childInitializer");
+    public ServerBootstrap childHandler(ChannelHandler childHandler) {
+        if (childHandler == null) {
+            throw new NullPointerException("childHandler");
         }
-        this.childInitializer = childInitializer;
+        this.childHandler = childHandler;
         return this;
     }
 
@@ -152,8 +152,8 @@ public class ServerBootstrap {
         }
 
         ChannelPipeline p = channel.pipeline();
-        if (initializer != null) {
-            p.addLast(initializer);
+        if (handler != null) {
+            p.addLast(handler);
         }
         p.addLast(acceptor);
 
@@ -165,7 +165,7 @@ public class ServerBootstrap {
 
         if (!channel.isOpen()) {
             // Registration was successful but the channel was closed due to some failure in
-            // initializer.
+            // handler.
             future.setFailure(new ChannelException("initialization failure"));
             return future;
         }
@@ -191,8 +191,8 @@ public class ServerBootstrap {
         if (channel == null) {
             throw new IllegalStateException("channel not set");
         }
-        if (childInitializer == null) {
-            throw new IllegalStateException("childInitializer not set");
+        if (childHandler == null) {
+            throw new IllegalStateException("childHandler not set");
         }
         if (childEventLoop == null) {
             logger.warn("childEventLoop is not set. Using eventLoop instead.");
@@ -230,7 +230,7 @@ public class ServerBootstrap {
                     break;
                 }
 
-                child.pipeline().addLast(childInitializer);
+                child.pipeline().addLast(childHandler);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions.entrySet()) {
                     try {

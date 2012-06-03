@@ -36,7 +36,7 @@ public class TelnetServer {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
-             .childInitializer(new TelnetServerPipelineFactory());
+             .childHandler(new TelnetServerPipelineFactory());
 
             b.bind().sync().channel().closeFuture().sync();
         } finally {
