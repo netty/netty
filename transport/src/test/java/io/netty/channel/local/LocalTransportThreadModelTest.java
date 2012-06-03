@@ -14,14 +14,13 @@ import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.DefaultEventExecutor;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
+import io.netty.util.internal.QueueFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -62,7 +61,14 @@ public class LocalTransportThreadModelTest {
         sb.shutdown();
     }
 
-    @Test
+    @Test(timeout = 5000)
+    public void testStagedExecutionMultiple() throws Throwable {
+        for (int i = 0; i < 10; i ++) {
+            testStagedExecution();
+        }
+    }
+
+    @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
         EventLoop l = new LocalEventLoop(4, new PrefixThreadFactory("l"));
         EventExecutor e1 = new DefaultEventExecutor(4, new PrefixThreadFactory("e1"));
@@ -91,6 +97,21 @@ public class LocalTransportThreadModelTest {
         ch.pipeline().context(h3).flush();
         ch.pipeline().context(h2).flush();
         ch.pipeline().context(h1).flush().sync();
+
+        // Wait until all events are handled completely.
+        while (h1.outboundThreadNames.size() < 3 || h3.inboundThreadNames.size() < 3) {
+            if (h1.exception.get() != null) {
+                throw h1.exception.get();
+            }
+            if (h2.exception.get() != null) {
+                throw h2.exception.get();
+            }
+            if (h3.exception.get() != null) {
+                throw h3.exception.get();
+            }
+
+            Thread.sleep(10);
+        }
 
         String currentName = Thread.currentThread().getName();
 
@@ -146,16 +167,6 @@ public class LocalTransportThreadModelTest {
             Assert.assertEquals(3, h1.outboundThreadNames.size());
             Assert.assertEquals(2, h2.outboundThreadNames.size());
             Assert.assertEquals(1, h3.outboundThreadNames.size());
-
-            if (h1.exception.get() != null) {
-                throw h1.exception.get();
-            }
-            if (h2.exception.get() != null) {
-                throw h2.exception.get();
-            }
-            if (h3.exception.get() != null) {
-                throw h3.exception.get();
-            }
         } catch (AssertionError e) {
             System.out.println("H1I: " + h1.inboundThreadNames);
             System.out.println("H2I: " + h2.inboundThreadNames);
@@ -164,6 +175,13 @@ public class LocalTransportThreadModelTest {
             System.out.println("H2O: " + h2.outboundThreadNames);
             System.out.println("H3O: " + h3.outboundThreadNames);
             throw e;
+        } finally {
+            l.shutdown();
+            l.awaitTermination(5, TimeUnit.SECONDS);
+            e1.shutdown();
+            e1.awaitTermination(5, TimeUnit.SECONDS);
+            e2.shutdown();
+            e2.awaitTermination(5, TimeUnit.SECONDS);
         }
     }
 
@@ -183,16 +201,16 @@ public class LocalTransportThreadModelTest {
 
         for (int i = 0; i < 10000; i ++) {
             ch.pipeline().inboundMessageBuffer().add(Integer.valueOf(i));
-            ch.pipeline().fireInboundBufferUpdated();
         }
+        ch.pipeline().fireInboundBufferUpdated();
     }
 
     private static class ThreadNameAuditor extends ChannelHandlerAdapter<Object, Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
-        private final List<String> inboundThreadNames = Collections.synchronizedList(new ArrayList<String>());
-        private final List<String> outboundThreadNames = Collections.synchronizedList(new ArrayList<String>());
+        private final Queue<String> inboundThreadNames = QueueFactory.createQueue();
+        private final Queue<String> outboundThreadNames = QueueFactory.createQueue();
 
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
