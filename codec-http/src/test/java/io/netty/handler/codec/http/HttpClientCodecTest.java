@@ -68,13 +68,15 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
 
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        assertTrue(encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
+        assertNotNull(encoder.poll());
+        assertTrue(encoder.finish());
 
         try {
-            encoder.finish();
+            encoder.poll();
             fail();
         } catch (CodecException e) {
-            assertTrue(e.getCause() instanceof PrematureChannelClosureException);
+            assertTrue(e instanceof PrematureChannelClosureException);
         }
 
     }
