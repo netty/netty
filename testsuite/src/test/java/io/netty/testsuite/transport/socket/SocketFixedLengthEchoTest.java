@@ -16,78 +16,59 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
-
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+
+import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.Test;
 
-public abstract class AbstractSocketFixedLengthEchoTest {
+public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
-
-    private static ExecutorService executor;
 
     static {
         random.nextBytes(data);
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
-
-    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
-    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
-
     @Test
     public void testFixedLengthEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        run();
+    }
 
-        EchoHandler sh = new EchoHandler();
-        EchoHandler ch = new EchoHandler();
+    public void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final EchoHandler sh = new EchoHandler();
+        final EchoHandler ch = new EchoHandler();
 
-        sb.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        sb.pipeline().addAfter("decoder", "handler", sh);
-        cb.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        cb.pipeline().addAfter("decoder", "handler", ch);
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel sch) throws Exception {
+                sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+                sch.pipeline().addAfter("decoder", "handler", sh);
+            }
+        });
 
-        Channel sc = sb.bind(new InetSocketAddress(0));
-        int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
+        cb.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel sch) throws Exception {
+                sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+                sch.pipeline().addAfter("decoder", "handler", ch);
+            }
+        });
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-
-        Channel cc = ccf.channel();
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect().sync().channel();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 3), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
@@ -124,9 +105,9 @@ public abstract class AbstractSocketFixedLengthEchoTest {
             }
         }
 
-        sh.channel.close().awaitUninterruptibly();
-        ch.channel.close().awaitUninterruptibly();
-        sc.close().awaitUninterruptibly();
+        sh.channel.close().sync();
+        ch.channel.close().sync();
+        sc.close().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
@@ -142,46 +123,44 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelUpstreamHandler {
+    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<ChannelBuffer> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
-        EchoHandler() {
+        @Override
+        public void channelActive(ChannelInboundHandlerContext<ChannelBuffer> ctx)
+                throws Exception {
+            channel = ctx.channel();
         }
 
         @Override
-        public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-                throws Exception {
-            channel = e.channel();
-        }
+        public void messageReceived(
+                ChannelInboundHandlerContext<ChannelBuffer> ctx,
+                ChannelBuffer msg) throws Exception {
+            assertEquals(1024, msg.readableBytes());
 
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-                throws Exception {
-            ChannelBuffer m = (ChannelBuffer) e.getMessage();
-            assertEquals(1024, m.readableBytes());
-
-            byte[] actual = new byte[m.readableBytes()];
-            m.getBytes(0, actual);
+            byte[] actual = new byte[msg.readableBytes()];
+            msg.getBytes(0, actual);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            if (channel.getParent() != null) {
-                channel.write(m);
+            if (channel.parent() != null) {
+                channel.write(msg);
             }
 
             counter += actual.length;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+        public void exceptionCaught(
+                ChannelInboundHandlerContext<ChannelBuffer> ctx, Throwable cause)
                 throws Exception {
-            if (exception.compareAndSet(null, e.cause())) {
-                e.channel().close();
+            if (exception.compareAndSet(null, cause)) {
+                ctx.close();
             }
         }
     }

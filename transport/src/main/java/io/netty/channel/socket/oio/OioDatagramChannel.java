@@ -35,6 +35,7 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.Locale;
 import java.util.Queue;
 
 public class OioDatagramChannel extends AbstractOioMessageChannel
@@ -164,6 +165,11 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         } catch (SocketTimeoutException e) {
             // Expected
             return 0;
+        } catch (SocketException e) {
+            if (!e.getMessage().toLowerCase(Locale.US).contains("socket closed")) {
+                throw e;
+            }
+            return -1;
         }
     }
 
