@@ -1146,9 +1146,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 out = directOutbound;
                 if (out.hasByteBuffer()) {
                     if(!(message instanceof ChannelBuffer)) {
-                        throw new IllegalArgumentException(
-                                "cannot write a message whose type is not " +
-                                ChannelBuffer.class.getSimpleName() + ": " + message.getClass().getName());
+                        throw new NoSuchBufferException();
                     }
                 } else {
                     msgBuf = true;
