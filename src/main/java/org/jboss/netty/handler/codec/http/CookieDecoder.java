@@ -113,7 +113,6 @@ public class CookieDecoder {
             }
 
             Cookie c = new DefaultCookie(name, value);
-            cookies.add(c);
 
             boolean discard = false;
             boolean secure = false;
@@ -189,6 +188,8 @@ public class CookieDecoder {
                 c.setPorts(ports);
                 c.setDiscard(discard);
             }
+
+            cookies.add(c);
         }
 
         return cookies;
