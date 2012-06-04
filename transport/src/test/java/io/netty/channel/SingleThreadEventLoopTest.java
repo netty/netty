@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -247,7 +248,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopImpl() {
-            super(null);
+            super(Executors.defaultThreadFactory());
         }
 
         @Override
