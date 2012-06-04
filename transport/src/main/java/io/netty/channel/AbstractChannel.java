@@ -746,7 +746,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    static abstract class FlushCheckpoint {
+    abstract static class FlushCheckpoint {
         abstract long flushCheckpoint();
         abstract void flushCheckpoint(long checkpoint);
         abstract ChannelFuture future();

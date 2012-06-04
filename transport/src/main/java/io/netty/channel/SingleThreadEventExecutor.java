@@ -503,7 +503,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
         private final long id = nextTaskId.getAndIncrement();
         private long deadlineNanos;
-        /** 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
+        /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
         private final long periodNanos;
 
         ScheduledFutureTask(Runnable runnable, V result, long nanoTime) {

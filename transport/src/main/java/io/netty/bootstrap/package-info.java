@@ -13,27 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.local;
 
-import io.netty.channel.EventExecutor;
-import io.netty.channel.MultithreadEventLoop;
-
-import java.util.concurrent.ThreadFactory;
-
-public class LocalEventLoop extends MultithreadEventLoop {
-
-    public LocalEventLoop() { }
-
-    public LocalEventLoop(int nThreads) {
-        super(nThreads);
-    }
-
-    public LocalEventLoop(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
-    }
-
-    @Override
-    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new LocalChildEventLoop(threadFactory);
-    }
-}
+/**
+ * The helper classes with fluent API which enable an easy implementation of
+ * typical client side and server side channel initialization.
+ *
+ * @apiviz.landmark
+ * @apiviz.exclude ^io\.netty\.util\.
+ */
+package io.netty.bootstrap;

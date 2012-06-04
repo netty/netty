@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadFactory;
 
 public class NioEventLoop extends MultithreadEventLoop {
 
-    public NioEventLoop() {}
+    public NioEventLoop() { }
 
     public NioEventLoop(int nThreads) {
         super(nThreads);
