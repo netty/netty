@@ -15,14 +15,26 @@
  */
 package io.netty.handler.stream;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
+import io.netty.util.CharsetUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
@@ -87,6 +99,76 @@ public class ChunkedWriteHandlerTest {
         check(new ChunkedNioFile(TMP));
 
         check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
+    }
+    
+    // Test case which shows that there is not a bug like stated here:
+    // http://stackoverflow.com/questions/10409241/why-is-close-channelfuturelistener-not-notified/10426305#comment14126161_10426305
+    @Test
+    public void testListenerNotifiedWhenIsEnd() {
+        ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+                
+        ChunkedInput input = new ChunkedInput() {
+            private boolean done;
+            private ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            
+            public Object nextChunk() throws Exception {
+                done = true;
+                return buffer.duplicate();
+            }
+            
+            public boolean isEndOfInput() throws Exception {
+                return done;
+            }
+            
+            public void close() throws Exception {
+                
+            }
+        };
+        
+        final AtomicBoolean listenerNotified = new AtomicBoolean(false);
+        final ChannelFutureListener listener = new ChannelFutureListener() {
+            
+            public void operationComplete(ChannelFuture future) throws Exception {
+                listenerNotified.set(true);
+            }
+        };
+        
+        ChannelOutboundHandlerAdapter<ChannelBuffer> testHandler = new ChannelOutboundHandlerAdapter<ChannelBuffer>() {
+
+            @Override
+            public ChannelBufferHolder<ChannelBuffer> newOutboundBuffer(ChannelOutboundHandlerContext<ChannelBuffer> ctx) throws Exception {
+                return ChannelBufferHolders.messageBuffer();
+            }
+
+            @Override
+            public void flush(ChannelOutboundHandlerContext<ChannelBuffer> ctx, ChannelFuture future) throws Exception {
+                super.flush(ctx, future);
+                
+                future.setSuccess();
+            }
+
+        };
+        
+        EncoderEmbedder<ChannelBuffer> handler = new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler(), testHandler) {
+            @Override
+            public boolean offer(Object input) {
+                ChannelFuture future = channel().write(input);
+                future.addListener(listener);
+                future.awaitUninterruptibly();
+                return !isEmpty();
+            }
+            
+        };
+        
+        assertTrue(handler.offer(input));
+        assertTrue(handler.finish());
+        
+        // the listener should have been notified
+        assertTrue(listenerNotified.get());
+        
+        assertEquals(buffer, handler.poll());
+        assertNull(handler.poll());
+        
     }
 
     private static void check(ChunkedInput... inputs) {
