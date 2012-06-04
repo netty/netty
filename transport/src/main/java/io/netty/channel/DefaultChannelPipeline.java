@@ -97,10 +97,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         addFirst0(name, nextCtx, newCtx);
                     }
                 }).get();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Error e) {
+                throw e;
             } catch (Throwable t) {
-                throw new ChannelException(t);
+                throw new ChannelPipelineException(t);
             }
-
         }
 
         return this;
@@ -141,10 +144,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         addLast0(name, oldTail, newTail);
                     }
                 }).get();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Error e) {
+                throw e;
             } catch (Throwable t) {
-                throw new ChannelException(t);
+                throw new ChannelPipelineException(t);
             }
-
         }
         return this;
     }
@@ -182,8 +188,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         addBefore0(name, ctx, newCtx);
                     }
                 }).get();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Error e) {
+                throw e;
             } catch (Throwable t) {
-                throw new ChannelException(t);
+                throw new ChannelPipelineException(t);
             }
         }
         return this;
@@ -225,13 +235,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                             addAfter0(name, ctx, newCtx);
                         }
                     }).get();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Error e) {
+                    throw e;
                 } catch (Throwable t) {
-                    throw new ChannelException(t);
+                    throw new ChannelPipelineException(t);
                 }
             }
-
         }
-
         return this;
     }
 
@@ -335,18 +347,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             } else {
                 try {
                     ctx.executor().submit(new Runnable() {
-
                         @Override
                         public void run() {
                             remove0(ctx);
-
                         }
                     }).get();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Error e) {
+                    throw e;
                 } catch (Throwable t) {
-                    throw new ChannelException(t);
+                    throw new ChannelPipelineException(t);
                 }
             }
-
         }
         return ctx;
     }
@@ -383,19 +396,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             try {
                 oldTail.executor().submit(new Runnable() {
-
                     @Override
                     public void run() {
                         removeLast0(oldTail);
-
                     }
                 }).get();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Error e) {
+                throw e;
             } catch (Throwable t) {
-                throw new ChannelException(t);
+                throw new ChannelPipelineException(t);
             }
-
         }
-
         return oldTail.handler();
     }
 
@@ -451,11 +464,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         @Override
                         public void run() {
                             replace0(ctx, newName, newCtx);
-
                         }
                     }).get();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Error e) {
+                    throw e;
                 } catch (Throwable t) {
-                    throw new ChannelException(t);
+                    throw new ChannelPipelineException(t);
                 }
             }
         }
