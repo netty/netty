@@ -33,7 +33,9 @@ public class DefaultNioDatagramChannelConfigTest {
 
     @Test
     public void testMulticastOptions() throws IOException {
-        if (DetectionUtil.javaVersion() < 7) {
+        if (DetectionUtil.javaVersion() < 7 || DetectionUtil.isWindows()) {
+            // Skip this test on java versions < 7 as its java7 only
+            // and on windows as it may fail because of permission problems
             return;
         }
 
