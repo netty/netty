@@ -152,6 +152,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 pipeline.childExecutors.put(executor, childExecutor);
             }
             this.executor = childExecutor;
+        } else if (channel.isRegistered()) {
+            this.executor = channel.eventLoop();
         } else {
             this.executor = null;
         }
