@@ -1559,6 +1559,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public final void run() {
             try {
                 runTask();
+                
             } catch (Throwable t) {
                 if (t instanceof ChannelException) {
                     cause = (ChannelException) t;
@@ -1577,7 +1578,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         
         void await() {
             try {
-                wait();
+                synchronized (ChannelPipelineModificationRunnable.this) {
+                    wait();
+                }
                 if (cause != null) {
                     throw cause;
                 }
