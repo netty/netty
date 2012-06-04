@@ -14,15 +14,26 @@
  * under the License.
  */package org.jboss.netty.handler.stream;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
@@ -30,6 +41,7 @@ import org.jboss.netty.handler.stream.ChunkedNioFile;
 import org.jboss.netty.handler.stream.ChunkedNioStream;
 import org.jboss.netty.handler.stream.ChunkedStream;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
+import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 public class ChunkedWriteHandlerTest {
@@ -79,6 +91,75 @@ public class ChunkedWriteHandlerTest {
     }
 
 
+    // Test case which shows that there is not a bug like stated here:
+    // http://stackoverflow.com/questions/10409241/why-is-close-channelfuturelistener-not-notified/10426305#comment14126161_10426305
+    @Test
+    public void testListenerNotifiedWhenIsEnd() {
+        ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+                
+        ChunkedInput input = new ChunkedInput() {
+            private boolean done;
+            private ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            
+            public Object nextChunk() throws Exception {
+                done = true;
+                return buffer.duplicate();
+            }
+            
+            public boolean isEndOfInput() throws Exception {
+                return done;
+            }
+            
+            public boolean hasNextChunk() throws Exception {
+                return true;
+            }
+            
+            public void close() throws Exception {
+                
+            }
+        };
+        
+        final AtomicBoolean listenerNotified = new AtomicBoolean(false);
+        final ChannelFutureListener listener = new ChannelFutureListener() {
+            
+            public void operationComplete(ChannelFuture future) throws Exception {
+                listenerNotified.set(true);
+            }
+        };
+        
+        SimpleChannelDownstreamHandler testHandler = new SimpleChannelDownstreamHandler() {
+
+            @Override
+            public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+                super.writeRequested(ctx, e);
+                
+                e.getFuture().setSuccess();
+            }
+            
+        };
+        
+        EncoderEmbedder<ChannelBuffer> handler = new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler(), testHandler) {
+            @Override
+            public boolean offer(Object input) {
+                ChannelFuture future = org.jboss.netty.channel.Channels.write(getChannel(), input);
+                future.addListener(listener);
+                future.awaitUninterruptibly();
+                return !isEmpty();
+            }
+            
+        };
+        
+        assertTrue(handler.offer(input));
+        assertTrue(handler.finish());
+        
+        // the listener should have been notified
+        assertTrue(listenerNotified.get());
+        
+        assertEquals(buffer, handler.poll());
+        assertNull(handler.poll());
+        
+    }
+    
     @Test
     public void testChunkedFile() throws IOException {
         check(new ChunkedFile(TMP));
