@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import static org.junit.Assert.*;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalChannel;
 
 import org.junit.Test;
@@ -47,18 +48,21 @@ public class DefaultChannelPipelineTest {
     }
 
     private static ChannelHandler newHandler() {
-        return new ChannelHandlerAdapter<Byte, Byte>() {
-            @Override
-            public ChannelBufferHolder<Byte> newInboundBuffer(
-                    ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-                return ChannelBufferHolders.byteBuffer();
-            }
-
-            @Override
-            public ChannelBufferHolder<Byte> newOutboundBuffer(
-                    ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
-                return ChannelBufferHolders.byteBuffer();
-            }
-        };
+        return new TestHandler();
     }
+
+    @Sharable
+    private static class TestHandler extends ChannelHandlerAdapter<Byte, Byte> {
+        @Override
+        public ChannelBufferHolder<Byte> newInboundBuffer(
+                ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            return ChannelBufferHolders.byteBuffer();
+        }
+
+        @Override
+        public ChannelBufferHolder<Byte> newOutboundBuffer(
+                ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+            return ChannelBufferHolders.byteBuffer();
+        }
+    };
 }
