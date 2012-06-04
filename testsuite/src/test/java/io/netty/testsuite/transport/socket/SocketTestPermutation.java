@@ -82,6 +82,9 @@ final class SocketTestPermutation {
             }
         }
 
+        // Remove the OIO-OIO case which often leads to a dead lock by its nature.
+        list.remove(list.size() - 1);
+
         return list;
     }
 
