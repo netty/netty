@@ -19,8 +19,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     EventExecutor executor; // not thread-safe but OK because it never changes once set.
     private final String name;
     private final ChannelHandler handler;
-    private final boolean canHandleInbound;
-    private final boolean canHandleOutbound;
     final ChannelBufferHolder<Object> in;
     final ChannelBufferHolder<Object> out;
 
@@ -41,7 +39,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).channelRegistered(ctx);
+                ((ChannelInboundHandler<Object>) ctx.handler).channelRegistered(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
@@ -53,7 +51,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).channelUnregistered(ctx);
+                ((ChannelInboundHandler<Object>) ctx.handler).channelUnregistered(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
@@ -65,7 +63,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).channelActive(ctx);
+                ((ChannelInboundHandler<Object>) ctx.handler).channelActive(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
@@ -77,7 +75,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).channelInactive(ctx);
+                ((ChannelInboundHandler<Object>) ctx.handler).channelInactive(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
@@ -90,13 +88,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             flushBridge();
             try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).inboundBufferUpdated(ctx);
+                ((ChannelInboundHandler<Object>) ctx.handler).inboundBufferUpdated(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             } finally {
-                ChannelBufferHolder<Object> inbound = ctx.inbound();
-                if (!inbound.isBypass() && inbound.isEmpty() && inbound.hasByteBuffer()) {
-                    inbound.byteBuffer().discardReadBytes();
+                if (inByteBridge != null) {
+                    ChannelBuffer buf = ctx.in.byteBuffer();
+                    if (!buf.readable()) {
+                        buf.discardReadBytes();
+                    }
                 }
             }
         }
@@ -125,9 +125,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (handler == null) {
             throw new NullPointerException("handler");
         }
-        canHandleInbound = handler instanceof ChannelInboundHandler;
-        canHandleOutbound = handler instanceof ChannelOutboundHandler;
 
+        boolean canHandleInbound = handler instanceof ChannelInboundHandler;
+        boolean canHandleOutbound = handler instanceof ChannelOutboundHandler;
         if (!canHandleInbound && !canHandleOutbound) {
             throw new IllegalArgumentException(
                     "handler must be either " +
@@ -293,12 +293,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public boolean canHandleInbound() {
-        return canHandleInbound;
+        return in != null;
     }
 
     @Override
     public boolean canHandleOutbound() {
-        return canHandleOutbound;
+        return out != null;
     }
 
     @Override
