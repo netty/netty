@@ -765,8 +765,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (ctx == null) {
                 return false;
             }
-            ChannelBufferHolder<Object> in = ctx.in;
-            if (in != null && !in.isBypass() && in.hasByteBuffer()) {
+            if (ctx.inByteBridge != null) {
                 return true;
             }
             ctx = ctx.next;
@@ -778,8 +777,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (ctx == null) {
                 return false;
             }
-            ChannelBufferHolder<Object> in = ctx.inbound();
-            if (in != null && !in.isBypass() && in.hasMessageBuffer()) {
+            if (ctx.inMsgBridge != null) {
                 return true;
             }
             ctx = ctx.next;
@@ -843,8 +841,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return false;
             }
 
-            ChannelBufferHolder<Object> out = ctx.outbound();
-            if (out != null && !out.isBypass() && out.hasByteBuffer()) {
+            if (ctx.outByteBridge != null) {
                 return true;
             }
             ctx = ctx.prev;
@@ -857,8 +854,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return false;
             }
 
-            ChannelBufferHolder<Object> out = ctx.outbound();
-            if (out != null && !out.isBypass() && out.hasMessageBuffer()) {
+            if (ctx.outMsgBridge != null) {
                 return true;
             }
             ctx = ctx.prev;
