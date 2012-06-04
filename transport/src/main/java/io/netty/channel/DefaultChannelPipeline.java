@@ -16,9 +16,10 @@
 package io.netty.channel;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
+import io.netty.channel.DefaultChannelHandlerContext.StreamBridge;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.QueueFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -29,9 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -595,7 +594,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
-        return nextInboundMessageBuffer(null, head.next);
+        return nextInboundMessageBuffer(SingleThreadEventExecutor.currentEventLoop(), head.next);
     }
 
     @Override
@@ -604,17 +603,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
-        return nextInboundByteBuffer(head.next);
+        return nextInboundByteBuffer(SingleThreadEventExecutor.currentEventLoop(), head.next);
     }
 
     @Override
     public Queue<Object> outboundMessageBuffer() {
-        return nextOutboundMessageBuffer(null, tail);
+        return nextOutboundMessageBuffer(SingleThreadEventExecutor.currentEventLoop(), tail);
     }
 
     @Override
     public ChannelBuffer outboundByteBuffer() {
-        return nextOutboundByteBuffer(tail);
+        return nextOutboundByteBuffer(SingleThreadEventExecutor.currentEventLoop(), tail);
     }
 
     static boolean hasNextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
@@ -643,10 +642,24 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    static ChannelBuffer nextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
+    static ChannelBuffer nextInboundByteBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
+            }
+            if (ctx.inByteBridge != null) {
+                if (currentExecutor == ctx.executor()) {
+                    return ctx.in.byteBuffer();
+                } else {
+                    StreamBridge bridge = ctx.inByteBridge.get();
+                    if (bridge == null) {
+                        bridge = new StreamBridge();
+                        if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.inByteBridge.get();
+                        }
+                    }
+                    return bridge.byteBuf;
+                }
             }
             ChannelBufferHolder<Object> in = ctx.in;
             if (in != null && !in.isBypass() && in.hasByteBuffer()) {
@@ -656,26 +669,24 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    static Queue<Object> nextInboundMessageBuffer(
-            EventExecutor currentExecutor, DefaultChannelHandlerContext ctx) {
+    static Queue<Object> nextInboundMessageBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
             }
 
-            final AtomicReference<BlockingQueue<Object>> inMsgBridge = ctx.inMsgBridge;
-            if (inMsgBridge != null) {
+            if (ctx.inMsgBridge != null) {
                 if (currentExecutor == ctx.executor()) {
                     return ctx.in.messageBuffer();
                 } else {
-                    BlockingQueue<Object> queue = inMsgBridge.get();
-                    if (queue == null) {
-                        queue = QueueFactory.createQueue();
-                        if (!inMsgBridge.compareAndSet(null, queue)) {
-                            queue = inMsgBridge.get();
+                    MessageBridge bridge = ctx.inMsgBridge.get();
+                    if (bridge == null) {
+                        bridge = new MessageBridge();
+                        if (!ctx.inMsgBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.inMsgBridge.get();
                         }
                     }
-                    return queue;
+                    return bridge.msgBuf;
                 }
             }
             ctx = ctx.next;
@@ -710,15 +721,25 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    ChannelBuffer nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+    ChannelBuffer nextOutboundByteBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
             }
 
-            ChannelBufferHolder<Object> out = ctx.outbound();
-            if (out != null && !out.isBypass() && out.hasByteBuffer()) {
-                return out.byteBuffer();
+            if (ctx.outByteBridge != null) {
+                if (currentExecutor == ctx.executor()) {
+                    return ctx.out.byteBuffer();
+                } else {
+                    StreamBridge bridge = ctx.outByteBridge.get();
+                    if (bridge == null) {
+                        bridge = new StreamBridge();
+                        if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.outByteBridge.get();
+                        }
+                    }
+                    return bridge.byteBuf;
+                }
             }
             ctx = ctx.prev;
         }
@@ -730,22 +751,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 throw new NoSuchBufferException();
             }
 
-            final AtomicReference<BlockingQueue<Object>> outMsgBridge = ctx.outMsgBridge;
-            if (outMsgBridge != null) {
+            if (ctx.outMsgBridge != null) {
                 if (currentExecutor == ctx.executor()) {
                     return ctx.out.messageBuffer();
                 } else {
-                    BlockingQueue<Object> queue = outMsgBridge.get();
-                    if (queue == null) {
-                        queue = QueueFactory.createQueue();
-                        if (!outMsgBridge.compareAndSet(null, queue)) {
-                            queue = outMsgBridge.get();
+                    MessageBridge bridge = ctx.outMsgBridge.get();
+                    if (bridge == null) {
+                        bridge = new MessageBridge();
+                        if (!ctx.outMsgBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.outMsgBridge.get();
                         }
                     }
-                    return queue;
+                    return bridge.msgBuf;
                 }
             }
-
             ctx = ctx.prev;
         }
     }
@@ -916,9 +935,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     static void fireInboundBufferUpdated(DefaultChannelHandlerContext ctx) {
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            ctx.fireInboundBufferUpdatedTask.run();
+            ctx.curCtxFireInboundBufferUpdatedTask.run();
         } else {
-            executor.execute(ctx.fireInboundBufferUpdatedTask);
+            executor.execute(ctx.curCtxFireInboundBufferUpdatedTask);
         }
     }
 

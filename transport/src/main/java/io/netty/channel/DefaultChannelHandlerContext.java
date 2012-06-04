@@ -1,9 +1,12 @@
 package io.netty.channel;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.internal.QueueFactory;
 
 import java.net.SocketAddress;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
@@ -13,7 +16,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     volatile DefaultChannelHandlerContext prev;
     private final Channel channel;
     private final DefaultChannelPipeline pipeline;
-    final EventExecutor executor;
+    EventExecutor executor; // not thread-safe but OK because it never changes once set.
     private final String name;
     private final ChannelHandler handler;
     private final boolean canHandleInbound;
@@ -22,14 +25,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     final ChannelBufferHolder<Object> out;
 
     // When the two handlers run in a different thread and they are next to each other,
-    // each other's buffers can be accessed at the same time resuslting in a race condition.
+    // each other's buffers can be accessed at the same time resulting in a race condition.
     // To avoid such situation, we lazily creates an additional thread-safe buffer called
     // 'bridge' so that the two handlers access each other's buffer only via the bridges.
     // The content written into a bridge is flushed into the actual buffer by flushBridge().
-    final AtomicReference<BlockingQueue<Object>> inMsgBridge;
-    final AtomicReference<BlockingQueue<Object>> outMsgBridge;
-    final AtomicReference<ChannelBuffer> inByteBridge;
-    final AtomicReference<ChannelBuffer> outByteBridge;
+    final AtomicReference<MessageBridge> inMsgBridge;
+    final AtomicReference<MessageBridge> outMsgBridge;
+    final AtomicReference<StreamBridge> inByteBridge;
+    final AtomicReference<StreamBridge> outByteBridge;
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {
@@ -80,7 +83,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
     };
-    final Runnable fireInboundBufferUpdatedTask = new Runnable() {
+    final Runnable curCtxFireInboundBufferUpdatedTask = new Runnable() {
         @Override
         @SuppressWarnings("unchecked")
         public void run() {
@@ -95,6 +98,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (!inbound.isBypass() && inbound.isEmpty() && inbound.hasByteBuffer()) {
                     inbound.byteBuffer().discardReadBytes();
                 }
+            }
+        }
+    };
+    private final Runnable nextCtxFireInboundBufferUpdatedTask = new Runnable() {
+        @Override
+        public void run() {
+            DefaultChannelHandlerContext next =
+                    DefaultChannelPipeline.nextInboundContext(DefaultChannelHandlerContext.this.next);
+            if (next != null) {
+                next.fillBridge();
+                DefaultChannelPipeline.fireInboundBufferUpdated(next);
             }
         }
     };
@@ -151,11 +165,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
             if (!in.isBypass()) {
                 if (in.hasByteBuffer()) {
-                    inByteBridge = new AtomicReference<ChannelBuffer>();
+                    inByteBridge = new AtomicReference<StreamBridge>();
                     inMsgBridge = null;
                 } else {
                     inByteBridge = null;
-                    inMsgBridge = new AtomicReference<BlockingQueue<Object>>();
+                    inMsgBridge = new AtomicReference<MessageBridge>();
                 }
             } else {
                 inByteBridge = null;
@@ -179,11 +193,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
             if (!out.isBypass()) {
                 if (out.hasByteBuffer()) {
-                    outByteBridge = new AtomicReference<ChannelBuffer>();
+                    outByteBridge = new AtomicReference<StreamBridge>();
                     outMsgBridge = null;
                 } else {
                     outByteBridge = null;
-                    outMsgBridge = new AtomicReference<BlockingQueue<Object>>();
+                    outMsgBridge = new AtomicReference<MessageBridge>();
                 }
             } else {
                 outByteBridge = null;
@@ -196,17 +210,54 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    void flushBridge() {
+    void fillBridge() {
         if (inMsgBridge != null) {
-            BlockingQueue<Object> bridge = inMsgBridge.get();
+            MessageBridge bridge = inMsgBridge.get();
             if (bridge != null) {
-                bridge.drainTo(in.messageBuffer());
+                bridge.fill();
+            }
+        } else if (inByteBridge != null) {
+            StreamBridge bridge = inByteBridge.get();
+            if (bridge != null) {
+                bridge.fill();
             }
         }
+
         if (outMsgBridge != null) {
-            BlockingQueue<Object> bridge = outMsgBridge.get();
+            MessageBridge bridge = outMsgBridge.get();
             if (bridge != null) {
-                bridge.drainTo(out.messageBuffer());
+                bridge.fill();
+            }
+        } else if (outByteBridge != null) {
+            StreamBridge bridge = outByteBridge.get();
+            if (bridge != null) {
+                bridge.fill();
+            }
+        }
+    }
+
+    void flushBridge() {
+        if (inMsgBridge != null) {
+            MessageBridge bridge = inMsgBridge.get();
+            if (bridge != null) {
+                bridge.flush(in.messageBuffer());
+            }
+        } else if (inByteBridge != null) {
+            StreamBridge bridge = inByteBridge.get();
+            if (bridge != null) {
+                bridge.flush(in.byteBuffer());
+            }
+        }
+
+        if (outMsgBridge != null) {
+            MessageBridge bridge = outMsgBridge.get();
+            if (bridge != null) {
+                bridge.flush(out.messageBuffer());
+            }
+        } else if (outByteBridge != null) {
+            StreamBridge bridge = outByteBridge.get();
+            if (bridge != null) {
+                bridge.flush(out.byteBuffer());
             }
         }
     }
@@ -224,7 +275,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public EventExecutor executor() {
         if (executor == null) {
-            return channel.eventLoop();
+            return executor = channel.eventLoop();
         } else {
             return executor;
         }
@@ -282,7 +333,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelBuffer nextInboundByteBuffer() {
-        return DefaultChannelPipeline.nextInboundByteBuffer(next);
+        return DefaultChannelPipeline.nextInboundByteBuffer(executor(), next);
     }
 
     @Override
@@ -292,7 +343,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelBuffer nextOutboundByteBuffer() {
-        return pipeline.nextOutboundByteBuffer(prev);
+        return pipeline.nextOutboundByteBuffer(executor(), prev);
     }
 
     @Override
@@ -352,9 +403,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireInboundBufferUpdated() {
-        DefaultChannelHandlerContext next = DefaultChannelPipeline.nextInboundContext(this.next);
-        if (next != null) {
-            DefaultChannelPipeline.fireInboundBufferUpdated(next);
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            nextCtxFireInboundBufferUpdatedTask.run();
+        } else {
+            executor.execute(nextCtxFireInboundBufferUpdatedTask);
         }
     }
 
@@ -429,8 +482,22 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture flush(ChannelFuture future) {
-        return pipeline.flush(DefaultChannelPipeline.nextOutboundContext(prev), future);
+    public ChannelFuture flush(final ChannelFuture future) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            DefaultChannelHandlerContext prev = DefaultChannelPipeline.nextOutboundContext(this.prev);
+            prev.fillBridge();
+            pipeline.flush(prev, future);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    flush(future);
+                }
+            });
+        }
+
+        return future;
     }
 
     @Override
@@ -451,5 +518,57 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
         return channel.newFailedFuture(cause);
+    }
+
+    static final class MessageBridge {
+        final Queue<Object> msgBuf = new ArrayDeque<Object>();
+        final BlockingQueue<Object[]> exchangeBuf = QueueFactory.createQueue();
+
+        void fill() {
+            if (msgBuf.isEmpty()) {
+                return;
+            }
+            Object[] data = msgBuf.toArray();
+            msgBuf.clear();
+            exchangeBuf.add(data);
+        }
+
+        void flush(Queue<Object> out) {
+            for (;;) {
+                Object[] data = exchangeBuf.poll();
+                if (data == null) {
+                    break;
+                }
+
+                for (Object d: data) {
+                    out.add(d);
+                }
+            }
+        }
+    }
+
+    static final class StreamBridge {
+        final ChannelBuffer byteBuf = ChannelBuffers.dynamicBuffer();
+        final BlockingQueue<ChannelBuffer> exchangeBuf = QueueFactory.createQueue();
+
+        void fill() {
+            if (!byteBuf.readable()) {
+                return;
+            }
+            ChannelBuffer data = byteBuf.readBytes(byteBuf.readableBytes());
+            byteBuf.discardReadBytes();
+            exchangeBuf.add(data);
+        }
+
+        void flush(ChannelBuffer out) {
+            for (;;) {
+                ChannelBuffer data = exchangeBuf.poll();
+                if (data == null) {
+                    break;
+                }
+
+                out.writeBytes(data);
+            }
+        }
     }
 }

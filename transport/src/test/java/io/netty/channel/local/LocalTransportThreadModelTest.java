@@ -1,6 +1,7 @@
 package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -18,7 +19,7 @@ import io.netty.util.internal.QueueFactory;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -185,27 +186,58 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    @Test(timeout = 50000)
+    @Test(timeout = 10000)
     public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoop l = new LocalEventLoop(4, new PrefixThreadFactory("l"));
         EventExecutor e1 = new DefaultEventExecutor(4, new PrefixThreadFactory("e1"));
         EventExecutor e2 = new DefaultEventExecutor(4, new PrefixThreadFactory("e2"));
-        MessageForwarder h1 = new MessageForwarder();
-        MessageForwarder h2 = new MessageForwarder();
-        MessageDiscarder h3 = new MessageDiscarder();
+        EventExecutor e3 = new DefaultEventExecutor(4, new PrefixThreadFactory("e3"));
+        EventExecutor e4 = new DefaultEventExecutor(4, new PrefixThreadFactory("e4"));
+        EventExecutor e5 = new DefaultEventExecutor(4, new PrefixThreadFactory("e5"));
 
-        Channel ch = new LocalChannel();
-        ch.pipeline().addLast(h1).addLast(e1, h2).addLast(e2, h3);
+        try {
+            final MessageForwarder1 h1 = new MessageForwarder1();
+            final MessageForwarder2 h2 = new MessageForwarder2();
+            final MessageForwarder3 h3 = new MessageForwarder3();
+            final MessageForwarder1 h4 = new MessageForwarder1();
+            final MessageForwarder2 h5 = new MessageForwarder2();
+            final MessageDiscarder  h6 = new MessageDiscarder();
 
-        l.register(ch).sync().channel().connect(ADDR).sync();
+            final Channel ch = new LocalChannel();
 
-        final int COUNT = 1048576 * 4;
-        for (int i = 0; i < COUNT;) {
-            Queue<Object> buf = ch.pipeline().inboundMessageBuffer();
-            // Thread-safe bridge must be returned.
-            Assert.assertTrue(buf instanceof BlockingQueue);
-            for (int j = 0; i < COUNT && j < COUNT / 8; j ++) {
-                buf.add(Integer.valueOf(i ++));
+            // inbound:  int -> byte[4] -> int -> int -> byte[4] -> int -> /dev/null
+            // outbound: int -> int -> byte[4] -> int -> int -> byte[4] -> /dev/null
+            ch.pipeline().addLast(h1)
+                         .addLast(e1, h2)
+                         .addLast(e2, h3)
+                         .addLast(e3, h4)
+                         .addLast(e4, h5)
+                         .addLast(e5, h6);
+
+            l.register(ch).sync().channel().connect(ADDR).sync();
+
+            final int ROUNDS = 1024;
+            final int ELEMS_PER_ROUNDS = 8192;
+            final int TOTAL_CNT = ROUNDS * ELEMS_PER_ROUNDS;
+            for (int i = 0; i < TOTAL_CNT;) {
+                final int start = i;
+                final int end = i + ELEMS_PER_ROUNDS;
+                i = end;
+
+                ch.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        Queue<Object> buf = ch.pipeline().inboundMessageBuffer();
+                        for (int j = start; j < end; j ++) {
+                            buf.add(Integer.valueOf(j));
+                        }
+                        ch.pipeline().fireInboundBufferUpdated();
+                    }
+                });
+            }
+
+            while (h1.inCnt < TOTAL_CNT || h2.inCnt < TOTAL_CNT || h3.inCnt < TOTAL_CNT ||
+                    h4.inCnt < TOTAL_CNT || h5.inCnt < TOTAL_CNT || h6.inCnt < TOTAL_CNT) {
                 if (h1.exception.get() != null) {
                     throw h1.exception.get();
                 }
@@ -215,28 +247,37 @@ public class LocalTransportThreadModelTest {
                 if (h3.exception.get() != null) {
                     throw h3.exception.get();
                 }
-            }
-            ch.pipeline().fireInboundBufferUpdated();
-        }
-
-        while (h1.inCnt < COUNT || h2.inCnt < COUNT || h3.inCnt < COUNT) {
-            if (h1.exception.get() != null) {
-                throw h1.exception.get();
-            }
-            if (h2.exception.get() != null) {
-                throw h2.exception.get();
-            }
-            if (h3.exception.get() != null) {
-                throw h3.exception.get();
+                if (h4.exception.get() != null) {
+                    throw h4.exception.get();
+                }
+                if (h5.exception.get() != null) {
+                    throw h5.exception.get();
+                }
+                if (h6.exception.get() != null) {
+                    throw h6.exception.get();
+                }
+                Thread.sleep(10);
             }
 
-            Thread.sleep(10);
-        }
+            for (int i = 0; i < TOTAL_CNT;) {
+                final int start = i;
+                final int end = i + ELEMS_PER_ROUNDS;
+                i = end;
 
-        for (int i = 0; i < COUNT;) {
-            Queue<Object> buf = ch.pipeline().outboundMessageBuffer();
-            for (int j = 0; i < COUNT && j < COUNT / 8; j ++) {
-                buf.add(Integer.valueOf(i ++));
+                ch.pipeline().context(h6).executor().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        Queue<Object> buf = ch.pipeline().outboundMessageBuffer();
+                        for (int j = start; j < end; j ++) {
+                            buf.add(Integer.valueOf(j));
+                        }
+                        ch.pipeline().flush();
+                    }
+                });
+            }
+
+            while (h1.outCnt < TOTAL_CNT || h2.outCnt < TOTAL_CNT || h3.outCnt < TOTAL_CNT ||
+                    h4.outCnt < TOTAL_CNT || h5.outCnt < TOTAL_CNT || h6.outCnt < TOTAL_CNT) {
                 if (h1.exception.get() != null) {
                     throw h1.exception.get();
                 }
@@ -246,24 +287,29 @@ public class LocalTransportThreadModelTest {
                 if (h3.exception.get() != null) {
                     throw h3.exception.get();
                 }
+                if (h4.exception.get() != null) {
+                    throw h4.exception.get();
+                }
+                if (h5.exception.get() != null) {
+                    throw h5.exception.get();
+                }
+                if (h6.exception.get() != null) {
+                    throw h6.exception.get();
+                }
+                Thread.sleep(10);
             }
-            ch.pipeline().flush();
+
+            ch.close().sync();
+            h6.latch.await(); // Wait until channelInactive() is triggered.
+
+        } finally {
+            l.shutdown();
+            e1.shutdown();
+            e2.shutdown();
+            e3.shutdown();
+            e4.shutdown();
+            e5.shutdown();
         }
-
-        while (h1.outCnt < COUNT || h2.outCnt < COUNT || h3.outCnt < COUNT) {
-            if (h1.exception.get() != null) {
-                throw h1.exception.get();
-            }
-            if (h2.exception.get() != null) {
-                throw h2.exception.get();
-            }
-            if (h3.exception.get() != null) {
-                throw h3.exception.get();
-            }
-
-            Thread.sleep(10);
-        }
-
     }
 
     private static class ThreadNameAuditor extends ChannelHandlerAdapter<Object, Object> {
@@ -311,7 +357,170 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    private static class MessageForwarder extends ChannelHandlerAdapter<Object, Object> {
+    /**
+     * Converts integers into a binary stream.
+     */
+    private static class MessageForwarder1 extends ChannelHandlerAdapter<Integer, Byte> {
+
+        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private volatile int inCnt;
+        private volatile int outCnt;
+        private volatile Thread t;
+
+        @Override
+        public ChannelBufferHolder<Integer> newInboundBuffer(
+                ChannelInboundHandlerContext<Integer> ctx) throws Exception {
+            return ChannelBufferHolders.messageBuffer();
+        }
+
+        @Override
+        public ChannelBufferHolder<Byte> newOutboundBuffer(
+                ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+            return ChannelBufferHolders.byteBuffer();
+        }
+
+        @Override
+        public void inboundBufferUpdated(
+                ChannelInboundHandlerContext<Integer> ctx) throws Exception {
+            Thread t = this.t;
+            if (t == null) {
+                this.t = Thread.currentThread();
+            } else {
+                Assert.assertSame(t, Thread.currentThread());
+            }
+
+            Queue<Integer> in = ctx.inbound().messageBuffer();
+            ChannelBuffer out = ctx.nextInboundByteBuffer();
+
+            for (;;) {
+                Integer msg = in.poll();
+                if (msg == null) {
+                    break;
+                }
+
+                int expected = inCnt ++;
+                Assert.assertEquals(expected, msg.intValue());
+                out.writeInt(msg);
+            }
+            ctx.fireInboundBufferUpdated();
+        }
+
+        @Override
+        public void flush(ChannelOutboundHandlerContext<Byte> ctx,
+                ChannelFuture future) throws Exception {
+            Assert.assertSame(t, Thread.currentThread());
+
+            // Don't let the write request go to the server-side channel - just swallow.
+            boolean swallow = this == ctx.pipeline().first();
+
+            ChannelBuffer in = ctx.outbound().byteBuffer();
+            Queue<Object> out = ctx.nextOutboundMessageBuffer();
+            while (in.readableBytes() >= 4) {
+                int msg = in.readInt();
+                int expected = outCnt ++;
+                Assert.assertEquals(expected, msg);
+                if (!swallow) {
+                    out.add(msg);
+                }
+            }
+            in.discardReadBytes();
+            if (swallow) {
+                future.setSuccess();
+            } else {
+                ctx.flush(future);
+            }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelInboundHandlerContext<Integer> ctx,
+                Throwable cause) throws Exception {
+            exception.compareAndSet(null, cause);
+            //System.err.print("[" + Thread.currentThread().getName() + "] ");
+            //cause.printStackTrace();
+            super.exceptionCaught(ctx, cause);
+        }
+    }
+
+    /**
+     * Converts a binary stream into integers.
+     */
+    private static class MessageForwarder2 extends ChannelHandlerAdapter<Byte, Integer> {
+
+        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private volatile int inCnt;
+        private volatile int outCnt;
+        private volatile Thread t;
+
+        @Override
+        public ChannelBufferHolder<Byte> newInboundBuffer(
+                ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            return ChannelBufferHolders.byteBuffer();
+        }
+
+        @Override
+        public ChannelBufferHolder<Integer> newOutboundBuffer(
+                ChannelOutboundHandlerContext<Integer> ctx) throws Exception {
+            return ChannelBufferHolders.messageBuffer();
+        }
+
+        @Override
+        public void inboundBufferUpdated(
+                ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            Thread t = this.t;
+            if (t == null) {
+                this.t = Thread.currentThread();
+            } else {
+                Assert.assertSame(t, Thread.currentThread());
+            }
+
+            ChannelBuffer in = ctx.inbound().byteBuffer();
+            Queue<Object> out = ctx.nextInboundMessageBuffer();
+
+            while (in.readableBytes() >= 4) {
+                int msg = in.readInt();
+                int expected = inCnt ++;
+                Assert.assertEquals(expected, msg);
+                out.add(msg);
+            }
+            in.discardReadBytes();
+            ctx.fireInboundBufferUpdated();
+        }
+
+        @Override
+        public void flush(ChannelOutboundHandlerContext<Integer> ctx,
+                ChannelFuture future) throws Exception {
+            Assert.assertSame(t, Thread.currentThread());
+
+            Queue<Integer> in = ctx.outbound().messageBuffer();
+            ChannelBuffer out = ctx.nextOutboundByteBuffer();
+
+            for (;;) {
+                Integer msg = in.poll();
+                if (msg == null) {
+                    break;
+                }
+
+                int expected = outCnt ++;
+                Assert.assertEquals(expected, msg.intValue());
+                out.writeInt(msg);
+            }
+            ctx.flush(future);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+                Throwable cause) throws Exception {
+            exception.compareAndSet(null, cause);
+            //System.err.print("[" + Thread.currentThread().getName() + "] ");
+            //cause.printStackTrace();
+            super.exceptionCaught(ctx, cause);
+        }
+    }
+
+    /**
+     * Simply forwards the received object to the next handler.
+     */
+    private static class MessageForwarder3 extends ChannelHandlerAdapter<Object, Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -342,10 +551,6 @@ public class LocalTransportThreadModelTest {
 
             Queue<Object> in = ctx.inbound().messageBuffer();
             Queue<Object> out = ctx.nextInboundMessageBuffer();
-
-            // Ensure the bridge buffer is returned.
-            Assert.assertTrue(out instanceof BlockingQueue);
-
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -366,12 +571,6 @@ public class LocalTransportThreadModelTest {
 
             Queue<Object> in = ctx.outbound().messageBuffer();
             Queue<Object> out = ctx.nextOutboundMessageBuffer();
-
-            // Ensure the bridge buffer is returned.
-            if (ctx.pipeline().first() != this) {
-                Assert.assertTrue(out instanceof BlockingQueue);
-            }
-
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -395,12 +594,16 @@ public class LocalTransportThreadModelTest {
         }
     }
 
+    /**
+     * Discards all received messages.
+     */
     private static class MessageDiscarder extends ChannelHandlerAdapter<Object, Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
+        final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
@@ -442,10 +645,6 @@ public class LocalTransportThreadModelTest {
 
             Queue<Object> in = ctx.outbound().messageBuffer();
             Queue<Object> out = ctx.nextOutboundMessageBuffer();
-
-            // Ensure the bridge buffer is returned.
-            Assert.assertTrue(out instanceof BlockingQueue);
-
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -460,11 +659,17 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void channelInactive(ChannelInboundHandlerContext<Object> ctx)
+                throws Exception {
+            latch.countDown();
+        }
+
+        @Override
         public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
                 Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
-            System.err.print("[" + Thread.currentThread().getName() + "] ");
-            cause.printStackTrace();
+            //System.err.print("[" + Thread.currentThread().getName() + "] ");
+            //cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
         }
     }
