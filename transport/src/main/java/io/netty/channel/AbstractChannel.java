@@ -72,7 +72,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Channel parent;
     private final Integer id;
     private final Unsafe unsafe;
-    private final ChannelPipeline pipeline;
+    private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
     private final ChannelFuture voidFuture = new VoidChannelFuture(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
@@ -82,7 +82,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
-    private final ChannelBufferHolder<Object> directOutbound;
     private ClosedChannelException closedChannelException;
     private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
     private long writeCounter;
@@ -123,7 +122,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.id = id;
         unsafe = newUnsafe();
-        directOutbound = (ChannelBufferHolder<Object>) outboundBuffer;
+        pipeline = new DefaultChannelPipeline(this);
 
         closeFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -132,7 +131,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         });
 
-        pipeline = new DefaultChannelPipeline(this);
     }
 
     @Override
@@ -385,7 +383,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final ChannelBufferHolder<Object> directOutbound() {
-            return directOutbound;
+            return pipeline.directOutbound;
         }
 
         @Override
@@ -628,7 +626,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             inFlushNow = true;
-            final ChannelBufferHolder<Object> out = directOutbound;
+            final ChannelBufferHolder<Object> out = directOutbound();
             try {
                 Throwable cause = null;
                 int oldSize = out.size();

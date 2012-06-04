@@ -5,6 +5,8 @@ import io.netty.util.DefaultAttributeMap;
 
 import java.net.SocketAddress;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelInboundHandlerContext<Object>, ChannelOutboundHandlerContext<Object> {
     volatile DefaultChannelHandlerContext next;
@@ -17,7 +19,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final boolean canHandleInbound;
     private final boolean canHandleOutbound;
     final ChannelBufferHolder<Object> in;
-    private final ChannelBufferHolder<Object> out;
+    final ChannelBufferHolder<Object> out;
+
+    // When the two handlers run in a different thread and they are next to each other,
+    // each other's buffers can be accessed at the same time resuslting in a race condition.
+    // To avoid such situation, we lazily creates an additional thread-safe buffer called
+    // 'bridge' so that the two handlers access each other's buffer only via the bridges.
+    // The content written into a bridge is flushed into the actual buffer by flushBridge().
+    final AtomicReference<BlockingQueue<Object>> inMsgBridge;
+    final AtomicReference<BlockingQueue<Object>> outMsgBridge;
+    final AtomicReference<ChannelBuffer> inByteBridge;
+    final AtomicReference<ChannelBuffer> outByteBridge;
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {
@@ -73,6 +85,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         @SuppressWarnings("unchecked")
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            flushBridge();
             try {
                 ((ChannelInboundHandler<Object>) ctx.handler()).inboundBufferUpdated(ctx);
             } catch (Throwable t) {
@@ -135,8 +148,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } catch (Exception e) {
                 throw new ChannelPipelineException("A user handler failed to create a new inbound buffer.", e);
             }
+
+            if (!in.isBypass()) {
+                if (in.hasByteBuffer()) {
+                    inByteBridge = new AtomicReference<ChannelBuffer>();
+                    inMsgBridge = null;
+                } else {
+                    inByteBridge = null;
+                    inMsgBridge = new AtomicReference<BlockingQueue<Object>>();
+                }
+            } else {
+                inByteBridge = null;
+                inMsgBridge = null;
+            }
         } else {
             in = null;
+            inByteBridge = null;
+            inMsgBridge = null;
         }
         if (canHandleOutbound) {
             try {
@@ -148,8 +176,38 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     // TODO Release the inbound buffer once pooling is implemented.
                 }
             }
+
+            if (!out.isBypass()) {
+                if (out.hasByteBuffer()) {
+                    outByteBridge = new AtomicReference<ChannelBuffer>();
+                    outMsgBridge = null;
+                } else {
+                    outByteBridge = null;
+                    outMsgBridge = new AtomicReference<BlockingQueue<Object>>();
+                }
+            } else {
+                outByteBridge = null;
+                outMsgBridge = null;
+            }
         } else {
             out = null;
+            outByteBridge = null;
+            outMsgBridge = null;
+        }
+    }
+
+    void flushBridge() {
+        if (inMsgBridge != null) {
+            BlockingQueue<Object> bridge = inMsgBridge.get();
+            if (bridge != null) {
+                bridge.drainTo(in.messageBuffer());
+            }
+        }
+        if (outMsgBridge != null) {
+            BlockingQueue<Object> bridge = outMsgBridge.get();
+            if (bridge != null) {
+                bridge.drainTo(out.messageBuffer());
+            }
         }
     }
 
@@ -229,7 +287,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public Queue<Object> nextInboundMessageBuffer() {
-        return DefaultChannelPipeline.nextInboundMessageBuffer(next);
+        return DefaultChannelPipeline.nextInboundMessageBuffer(executor(), next);
     }
 
     @Override
@@ -239,7 +297,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public Queue<Object> nextOutboundMessageBuffer() {
-        return pipeline.nextOutboundMessageBuffer(prev);
+        return pipeline.nextOutboundMessageBuffer(executor(), prev);
     }
 
     @Override
