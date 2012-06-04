@@ -69,7 +69,7 @@ final class SocketSendBufferPool {
         }
 
 
-        if (src instanceof CompositeChannelBuffer && DetectionUtil.javaVersion() >= 7) {
+        if (src instanceof CompositeChannelBuffer && ((CompositeChannelBuffer) src).useGathering()) {
             return new GatheringSendBuffer(src.toByteBuffers());
         }
 

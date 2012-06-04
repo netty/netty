@@ -39,12 +39,22 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     private ChannelBuffer[] components;
     private int[] indices;
     private int lastAccessedComponentId;
+    private final boolean gathering;
 
-    public CompositeChannelBuffer(ByteOrder endianness, List<ChannelBuffer> buffers) {
+    public CompositeChannelBuffer(ByteOrder endianness, List<ChannelBuffer> buffers, boolean gathering) {
         order = endianness;
+        this.gathering = gathering;
         setComponents(buffers);
     }
 
+    /**
+     * Return <code>true</code> if gathering writes / reads should be used 
+     * for this {@link CompositeChannelBuffer}
+     */
+    public boolean useGathering() {
+        return gathering && DetectionUtil.javaVersion() >= 7;
+    }
+    
     /**
      * Same with {@link #slice(int, int)} except that this method returns a list.
      */
@@ -130,6 +140,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     private CompositeChannelBuffer(CompositeChannelBuffer buffer) {
         order = buffer.order;
+        this.gathering = buffer.gathering;
         components = buffer.components.clone();
         indices = buffer.indices.clone();
         setIndex(buffer.readerIndex(), buffer.writerIndex());
@@ -283,7 +294,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
 
-        if (DetectionUtil.javaVersion() >= 7) {
+        if (useGathering()) {
             return (int) out.write(toByteBuffers(index, length));
         }
 
@@ -564,7 +575,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         case 1:
             return components.get(0);
         default:
-            return new CompositeChannelBuffer(order(), components);
+            return new CompositeChannelBuffer(order(), components, gathering);
         }
     }
 

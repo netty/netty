@@ -247,22 +247,24 @@ public class DefaultCookie implements Cookie {
             return false;
         }
 
-        if (getPath() == null && that.getPath() != null) {
-            return false;
+        if (getPath() == null) {
+            if (that.getPath() != null) {
+                return false;
+            }
         } else if (that.getPath() == null) {
             return false;
-        }
-        if (!getPath().equals(that.getPath())) {
+        } else if (!getPath().equals(that.getPath())) {
             return false;
         }
 
-        if (getDomain() == null && that.getDomain() != null) {
-            return false;
+        if (getDomain() == null) {
+            if (that.getDomain() != null) {
+                return false;
+            }
         } else if (that.getDomain() == null) {
             return false;
-        }
-        if (!getDomain().equalsIgnoreCase(that.getDomain())) {
-            return false;
+        } else {
+            return getDomain().equalsIgnoreCase(that.getDomain());
         }
 
         return true;
@@ -275,23 +277,31 @@ public class DefaultCookie implements Cookie {
             return v;
         }
 
-        if (getPath() == null && c.getPath() != null) {
-            return -1;
+        if (getPath() == null) {
+            if (c.getPath() != null) {
+                return -1;
+            }
         } else if (c.getPath() == null) {
             return 1;
+        } else {
+            v = getPath().compareTo(c.getPath());
+            if (v != 0) {
+                return v;
+            }
         }
-        v = getPath().compareTo(c.getPath());
-        if (v != 0) {
+
+        if (getDomain() == null) {
+            if (c.getDomain() != null) {
+                return -1;
+            }
+        } else if (c.getDomain() == null) {
+            return 1;
+        } else {
+            v = getDomain().compareToIgnoreCase(c.getDomain());
             return v;
         }
 
-        if (getDomain() == null && c.getDomain() != null) {
-            return -1;
-        } else if (c.getDomain() == null) {
-            return 1;
-        }
-        v = getDomain().compareToIgnoreCase(c.getDomain());
-        return v;
+        return 0;
     }
 
     @Override
@@ -346,3 +356,4 @@ public class DefaultCookie implements Cookie {
         return value;
     }
 }
+
