@@ -106,6 +106,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     private ChannelBuffer content;
     private long chunkSize;
     private int headerSize;
+    private int contentRead;
 
     /**
      * The internal state of {@link HttpMessageDecoder}.
@@ -235,17 +236,24 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return null;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
-            if (content == null) {
-                content = ChannelBuffers.dynamicBuffer();
+            int toRead = actualReadableBytes();
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
             }
-            //this will cause a replay error until the channel is closed where this will read what's left in the buffer
-            content.writeBytes(buffer.readBytes(buffer.readableBytes()));
-            return reset();
+            if (!message.isChunked()) {
+                message.setChunked(true);
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
+            } else {
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
+            }
         }
         case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
             // Keep reading data as a chunk until the end of connection is reached.
-            int chunkSize = Math.min(maxChunkSize, buffer.readableBytes());
-            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(chunkSize));
+            int toRead = actualReadableBytes();
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
+            }
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
 
             if (!buffer.readable()) {
                 // Reached to the end of the connection.
@@ -258,19 +266,23 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return chunk;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            //we have a content-length so we just read the correct number of bytes
-            readFixedLengthContent(buffer);
-            return reset();
+            return readFixedLengthContent(buffer);
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            long chunkSize = this.chunkSize;
-            HttpChunk chunk;
-            if (chunkSize > maxChunkSize) {
-                chunk = new DefaultHttpChunk(buffer.readBytes(maxChunkSize));
-                chunkSize -= maxChunkSize;
+            assert this.chunkSize <= Integer.MAX_VALUE;
+            int chunkSize = (int) this.chunkSize;
+            int readLimit = actualReadableBytes();
+            int toRead = chunkSize;
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
+            }
+            if (toRead > readLimit) {
+                toRead = readLimit;
+            }
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
+            if (chunkSize > toRead) {
+                chunkSize -= toRead;
             } else {
-                assert chunkSize <= Integer.MAX_VALUE;
-                chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
                 chunkSize = 0;
             }
             this.chunkSize = chunkSize;
@@ -310,14 +322,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return chunk;
         }
         case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            long chunkSize = this.chunkSize;
-            HttpChunk chunk;
-            if (chunkSize > maxChunkSize) {
-                chunk = new DefaultHttpChunk(buffer.readBytes(maxChunkSize));
-                chunkSize -= maxChunkSize;
+            assert this.chunkSize <= Integer.MAX_VALUE;
+            int chunkSize = (int) this.chunkSize;
+            int readLimit = actualReadableBytes();
+            int toRead = chunkSize;
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
+            }
+            if (toRead > readLimit) {
+                toRead = readLimit;
+            }
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
+            if (chunkSize > toRead) {
+                chunkSize -= toRead;
             } else {
-                assert chunkSize <= Integer.MAX_VALUE;
-                chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
                 chunkSize = 0;
             }
             this.chunkSize = chunkSize;
@@ -414,15 +432,29 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         }
     }
 
-    private void readFixedLengthContent(ChannelBuffer buffer) {
+    private Object readFixedLengthContent(ChannelBuffer buffer) {
+        //we have a content-length so we just read the correct number of bytes
         long length = HttpHeaders.getContentLength(message, -1);
         assert length <= Integer.MAX_VALUE;
-
+        int toRead = (int) length - contentRead;
+        if (toRead > actualReadableBytes()) {
+            toRead = actualReadableBytes();
+        }
+        contentRead = contentRead + toRead;
+        if (length < contentRead) {
+            if (!message.isChunked()) {
+                message.setChunked(true);
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
+            } else {
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
+            }
+        }
         if (content == null) {
             content = buffer.readBytes((int) length);
         } else {
             content.writeBytes(buffer.readBytes((int) length));
         }
+        return reset();
     }
 
     private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
