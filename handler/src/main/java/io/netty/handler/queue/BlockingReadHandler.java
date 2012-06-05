@@ -100,7 +100,7 @@ public class BlockingReadHandler<E> extends ChannelInboundHandlerAdapter<Object>
     public ChannelBufferHolder<Object> newInboundBuffer(
             ChannelInboundHandlerContext<Object> ctx) throws Exception {
         this.ctx = ctx;
-        return ChannelBufferHolders.catchAllBuffer();
+        return ChannelBufferHolders.messageBuffer(queue);
     }
 
     /**
