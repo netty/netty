@@ -1227,17 +1227,8 @@ public class SslHandler extends FrameDecoder
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        super.beforeAdd(ctx);
         this.ctx = ctx;
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // Unused
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
     }
 
     /**
