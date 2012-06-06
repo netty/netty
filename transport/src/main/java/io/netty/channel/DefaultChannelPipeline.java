@@ -56,7 +56,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     final Map<EventExecutor, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutor, EventExecutor>();
 
-    
+
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -91,7 +91,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext nextCtx = head.next;
                 final DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, executor, head, nextCtx, name, handler);
-                
+
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addFirst0(name, nextCtx, newCtx);
                     return this;
@@ -101,7 +101,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     @Override
                     void doCall() {
                         checkDuplicateName(name);
-                        addFirst0(name, nextCtx, newCtx);                        
+                        addFirst0(name, nextCtx, newCtx);
                     }
 
                 });
@@ -109,7 +109,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // Call Future.get() outside of the synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
             return this;
@@ -123,7 +123,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
     }
-    
+
     private void addFirst0(final String name, DefaultChannelHandlerContext nextCtx, DefaultChannelHandlerContext newCtx) {
         callBeforeAdd(newCtx);
 
@@ -151,17 +151,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
                 final DefaultChannelHandlerContext oldTail = tail;
                 final DefaultChannelHandlerContext newTail = new DefaultChannelHandlerContext(this, executor, oldTail, null, name, handler);
-                
+
                 if (!newTail.channel().isRegistered() || newTail.executor().inEventLoop()) {
                     addLast0(name, oldTail, newTail);
                     return this;
                 } else {
                     future = newTail.executor().submit(new AsyncPipelineModification() {
-                        
+
                         @Override
                         void doCall() {
                             checkDuplicateName(name);
-                            addLast0(name, oldTail, newTail);                            
+                            addLast0(name, oldTail, newTail);
                         }
                     });
                 }
@@ -169,7 +169,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // Call Future.get() outside of synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
             return this;
@@ -181,7 +181,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             throw new ChannelPipelineException(t);
         }
-        
+
     }
 
     private void addLast0(final String name, DefaultChannelHandlerContext oldTail, DefaultChannelHandlerContext newTail) {
@@ -203,7 +203,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline addBefore(EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
-            
+
             synchronized (this) {
                 final DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
                 checkDuplicateName(name);
@@ -214,21 +214,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     return this;
                 } else {
                     future = newCtx.executor().submit(new AsyncPipelineModification() {
-                        
+
                         @Override
                         void doCall() {
                             checkDuplicateName(name);
-                            addBefore0(name, ctx, newCtx);                            
+                            addBefore0(name, ctx, newCtx);
                         }
                     });
-                    
+
                 }
             }
-            
+
             // Call Future.get() outside of synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
             return this;
@@ -240,7 +240,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             throw new ChannelPipelineException(t);
         }
-        
+
     }
 
     private void addBefore0(final String name, DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
@@ -260,10 +260,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addAfter(EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
-        
+
         try {
             Future<Throwable> future;
-            
+
             synchronized (this) {
                 final DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
                 if (ctx == tail) {
@@ -277,7 +277,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     return this;
                 } else {
                     future = newCtx.executor().submit(new AsyncPipelineModification() {
-                        
+
                         @Override
                         void doCall() {
                             checkDuplicateName(name);
@@ -289,7 +289,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // Call Future.get() outside of synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
             return this;
@@ -301,7 +301,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             throw new ChannelPipelineException(t);
         }
-        
+
     }
 
     private void addAfter0(final String name, DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
@@ -411,7 +411,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         return oldTail;
                     } else {
                         future = oldTail.executor().submit(new AsyncPipelineModification() {
-                            
+
                             @Override
                             void doCall() {
                                 removeLast0(oldTail);
@@ -419,7 +419,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         });
                         context = oldTail;
                     }
-                    
+
                 } else {
                     if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
                         remove0(ctx);
@@ -431,20 +431,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         void doCall() {
                             remove0(ctx);
                         }
-   
+
                         });
                        context = ctx;
                     }
                 }
             }
-            
+
             // Call Future.get() outside of synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
-            
+
             return context;
         } catch (RuntimeException e) {
             throw e;
@@ -453,7 +453,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             throw new ChannelPipelineException(t);
         }
-        
+
     }
 
     private void remove0(DefaultChannelHandlerContext ctx) {
@@ -502,10 +502,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // Call Future.get() outside of synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
-            
+
             return oldTail.handler();
         } catch (RuntimeException e) {
             throw e;
@@ -515,7 +515,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new ChannelPipelineException(t);
         }
 
-        
+
     }
 
     private void removeLast0(DefaultChannelHandlerContext oldTail) {
@@ -557,7 +557,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     }
                     final DefaultChannelHandlerContext oldTail = tail;
                     final DefaultChannelHandlerContext newTail = new DefaultChannelHandlerContext(this, null, oldTail, null, newName, newHandler);
-                    
+
                     if (!oldTail.channel().isRegistered() || oldTail.executor().inEventLoop()) {
                         removeLast0(oldTail);
                         checkDuplicateName(newName);
@@ -566,7 +566,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
                     } else {
                             future = oldTail.executor().submit(new AsyncPipelineModification() {
-                                
+
                                 @Override
                                 void doCall() {
                                     removeLast0(oldTail);
@@ -575,7 +575,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 }
                             });
                     }
-                    
+
                 } else {
                     boolean sameName = ctx.name().equals(newName);
                     if (!sameName) {
@@ -605,10 +605,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // Call Future.get() outside of synchronized block to prevent dead-lock
             Throwable result = future.get();
             if (result != null) {
-                // re-throw exception that was caught 
+                // re-throw exception that was caught
                 throw result;
             }
-            
+
             return ctx.handler();
 
         } catch (RuntimeException e) {
@@ -1707,11 +1707,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             unsafe.flush(future);
         }
     }
-    
+
     /**
      * Custom {@link Callable} implementation which will catch all {@link Throwable} which happens during execution of {@link AsyncPipelineModification#doCall()}
      * and return them in the {@link Future}. This allows to re-throw them later.
-     * 
+     *
      * It also handles the right synchronization of the {@link AsyncPipelineModification#doCall()} method.
      *
      */
@@ -1728,11 +1728,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             return null;
         }
-        
+
         /**
          * Execute the modification
          */
         abstract void doCall();
-        
+
     }
 }

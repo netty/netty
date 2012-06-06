@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadFactory;
 public class DefaultEventExecutor extends MultithreadEventExecutor {
 
     public DefaultEventExecutor(int nThreads) {
-        super(nThreads);
+        this(nThreads, null);
     }
 
     public DefaultEventExecutor(int nThreads, ThreadFactory threadFactory) {

@@ -22,10 +22,12 @@ import java.util.concurrent.ThreadFactory;
 
 public class LocalEventLoop extends MultithreadEventLoop {
 
-    public LocalEventLoop() { }
+    public LocalEventLoop() {
+        this(0);
+    }
 
     public LocalEventLoop(int nThreads) {
-        super(nThreads);
+        this(nThreads, null);
     }
 
     public LocalEventLoop(int nThreads, ThreadFactory threadFactory) {

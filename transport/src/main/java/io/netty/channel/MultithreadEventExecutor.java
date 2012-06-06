@@ -41,20 +41,15 @@ public abstract class MultithreadEventExecutor implements EventExecutor {
         }
     };
 
-    protected MultithreadEventExecutor(Object... args) {
-        this(DEFAULT_POOL_SIZE, args);
-    }
-
-    protected MultithreadEventExecutor(int nThreads, Object... args) {
-        this(nThreads, null, args);
-    }
-
     protected MultithreadEventExecutor(int nThreads, ThreadFactory threadFactory, Object... args) {
-        if (nThreads <= 0) {
+        if (nThreads < 0) {
             throw new IllegalArgumentException(String.format(
-                    "nThreads: %d (expected: > 0)", nThreads));
+                    "nThreads: %d (expected: >= 0)", nThreads));
         }
 
+        if (nThreads == 0) {
+            nThreads = DEFAULT_POOL_SIZE;
+        }
         if (threadFactory == null) {
             threadFactory = new DefaultThreadFactory();
         }
