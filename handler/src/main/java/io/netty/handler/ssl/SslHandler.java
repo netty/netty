@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLEngine;
@@ -161,7 +160,7 @@ public class SslHandler extends StreamToStreamCodec {
         return defaultBufferPool;
     }
 
-    private volatile ChannelHandlerContext ctx;
+    private ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final SslBufferPool bufferPool;
     private final Executor delegatedTaskExecutor;
@@ -172,11 +171,13 @@ public class SslHandler extends StreamToStreamCodec {
     private volatile boolean enableRenegotiation = true;
 
     final Object handshakeLock = new Object();
+    
     private boolean handshaking;
     private volatile boolean handshaken;
-    private volatile ChannelFuture handshakeFuture;
+    private ChannelFuture handshakeFuture;
 
-    private final AtomicBoolean sentCloseNotify = new AtomicBoolean();
+    private boolean sentCloseNotify;
+    
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private volatile boolean issueHandshake;
@@ -557,7 +558,7 @@ public class SslHandler extends StreamToStreamCodec {
         } finally {
             unwrap(ctx, ctx.channel(), ChannelBuffers.EMPTY_BUFFER, 0, 0, ChannelBuffers.EMPTY_BUFFER);
             engine.closeOutbound();
-            if (!sentCloseNotify.get() && handshaken) {
+            if (!sentCloseNotify && handshaken) {
                 try {
                     engine.closeInbound();
                 } catch (SSLException ex) {
@@ -1021,7 +1022,8 @@ public class SslHandler extends StreamToStreamCodec {
             }
 
             if (!engine.isInboundDone()) {
-                if (sentCloseNotify.compareAndSet(false, true)) {
+                if (!sentCloseNotify) {
+                    sentCloseNotify = true;
                     engine.closeOutbound();
                     try {
                         ChannelFuture closeNotifyFuture = wrapNonAppData(context, context.channel());
