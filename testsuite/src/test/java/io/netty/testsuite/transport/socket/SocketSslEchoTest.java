@@ -16,22 +16,21 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -39,9 +38,6 @@ import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -52,83 +48,49 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509TrustManager;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-public abstract class AbstractSocketSslEchoTest {
-    static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(AbstractSocketSslEchoTest.class);
+public class SocketSslEchoTest extends AbstractSocketTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
-
-    private static ExecutorService executor;
-    private static ExecutorService eventExecutor;
 
     static {
         random.nextBytes(data);
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-        eventExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor, eventExecutor);
-    }
-
-    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
-    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
-
-    protected boolean isExecutorRequired() {
-        return false;
-    }
-
     @Test
     public void testSslEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        run();
+    }
 
-        EchoHandler sh = new EchoHandler(true);
-        EchoHandler ch = new EchoHandler(false);
+    public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final EchoHandler sh = new EchoHandler(true);
+        final EchoHandler ch = new EchoHandler(false);
 
-        SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
-        SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
+        final SSLEngine sse = BogusSslContextFactory.getServerContext().createSSLEngine();
+        final SSLEngine cse = BogusSslContextFactory.getClientContext().createSSLEngine();
         sse.setUseClientMode(false);
         cse.setUseClientMode(true);
 
-        // Workaround for blocking I/O transport write-write dead lock.
-        sb.setOption("receiveBufferSize", 1048576);
-        sb.setOption("receiveBufferSize", 1048576);
-
-        sb.pipeline().addFirst("ssl", new SslHandler(sse));
-        sb.pipeline().addLast("handler", sh);
-        cb.pipeline().addFirst("ssl", new SslHandler(cse));
-        cb.pipeline().addLast("handler", ch);
-
-        if (isExecutorRequired()) {
-            sb.pipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
-            cb.pipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
-        }
-
-        Channel sc = sb.bind(new InetSocketAddress(0));
-        int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
-
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
-        ccf.awaitUninterruptibly();
-        if (!ccf.isSuccess()) {
-            if(logger.isErrorEnabled()) {
-                logger.error("Connection attempt failed", ccf.cause());
+        sb.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel sch) throws Exception {
+                sch.pipeline().addFirst("ssl", new SslHandler(sse));
+                sch.pipeline().addLast("handler", sh);
             }
-            sc.close().awaitUninterruptibly();
-        }
-        assertTrue(ccf.isSuccess());
+        });
 
-        Channel cc = ccf.channel();
+        cb.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel sch) throws Exception {
+                sch.pipeline().addFirst("ssl", new SslHandler(cse));
+                sch.pipeline().addLast("handler", ch);
+            }
+        });
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect().sync().channel();
         ChannelFuture hf = cc.pipeline().get(SslHandler.class).handshake();
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
@@ -194,7 +156,7 @@ public abstract class AbstractSocketSslEchoTest {
         }
     }
 
-    private static class EchoHandler extends SimpleChannelUpstreamHandler {
+    private class EchoHandler extends ChannelInboundStreamHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -205,41 +167,41 @@ public abstract class AbstractSocketSslEchoTest {
         }
 
         @Override
-        public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+        public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
                 throws Exception {
-            channel = e.channel();
+            channel = ctx.channel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+        public void inboundBufferUpdated(
+                ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
                 throws Exception {
-            ChannelBuffer m = (ChannelBuffer) e.getMessage();
-            byte[] actual = new byte[m.readableBytes()];
-            m.getBytes(0, actual);
+            byte[] actual = new byte[in.readableBytes()];
+            in.readBytes(actual);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            if (channel.getParent() != null) {
-                channel.write(m);
+            if (channel.parent() != null) {
+                channel.write(ChannelBuffers.wrappedBuffer(actual));
             }
 
             counter += actual.length;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
+        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+                Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "Unexpected exception from the " +
-                        (server? "server" : "client") + " side", e.cause());
+                        (server? "server" : "client") + " side", cause);
             }
 
-            exception.compareAndSet(null, e.cause());
-            e.channel().close();
+            exception.compareAndSet(null, cause);
+            ctx.close();
         }
     }
 

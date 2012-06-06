@@ -164,26 +164,26 @@ public class SslHandler extends StreamToStreamCodec {
     private final SSLEngine engine;
     private final SslBufferPool bufferPool;
     private final Executor delegatedTaskExecutor;
-    
+
     private final boolean startTls;
     private boolean sentFirstMessage;
-    
+
     private volatile boolean enableRenegotiation = true;
 
     final Object handshakeLock = new Object();
-    
+
     private boolean handshaking;
     private volatile boolean handshaken;
     private ChannelFuture handshakeFuture;
 
     private boolean sentCloseNotify;
-    
+
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private volatile boolean issueHandshake;
 
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
-    
+
     private int packetLength = -1;
 
     /**
@@ -337,36 +337,36 @@ public class SslHandler extends StreamToStreamCodec {
                         engine.beginHandshake();
                         runDelegatedTasks();
                         wrapNonAppData(ctx, channel);
-                        
+
                     } catch (Exception e) {
                         exception = e;
                     }
-                    
+
                 } else {
                     ctx.executor().execute(new Runnable() {
-                        
+
                         @Override
                         public void run() {
                             Throwable exception = null;
                             synchronized (handshakeLock) {
                                 try {
-                                    
+
                                     engine.beginHandshake();
                                     runDelegatedTasks();
                                     wrapNonAppData(ctx, ctx.channel());
-                                    
+
                                 } catch (Exception e) {
                                     exception = e;
-                                }   
+                                }
                             }
                             if (exception != null) { // Failed to initiate handshake.
                                 handshakeFuture.setFailure(exception);
                                 ctx.fireExceptionCaught(exception);
-                            }                 
+                            }
                         }
                     });
                 }
-                
+
             }
         }
 
@@ -459,7 +459,7 @@ public class SslHandler extends StreamToStreamCodec {
             out.writeBytes(in);
             return;
         }
-        
+
         ByteBuffer outNetBuf = bufferPool.acquireBuffer();
         boolean success = true;
         boolean needsUnwrap = false;
@@ -467,7 +467,7 @@ public class SslHandler extends StreamToStreamCodec {
             ByteBuffer outAppBuf = in.nioBuffer();
 
             while(in.readable()) {
-                
+
                 int read;
                 int remaining = outAppBuf.remaining();
                 SSLEngineResult result = null;
@@ -477,14 +477,14 @@ public class SslHandler extends StreamToStreamCodec {
                 }
                 read = remaining - outAppBuf.remaining();
                 in.readerIndex(in.readerIndex() + read);
-                    
-                
+
+
 
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
                     out.writeBytes(outNetBuf);
                     outNetBuf.clear();
-                    
+
 
                 } else if (result.getStatus() == Status.CLOSED) {
                     // SSLEngine has been closed already.
@@ -519,7 +519,7 @@ public class SslHandler extends StreamToStreamCodec {
                         throw new IllegalStateException("Unknown handshake status: " + handshakeStatus);
                     }
                 }
-                
+
             }
         } catch (SSLException e) {
             success = false;
@@ -527,14 +527,14 @@ public class SslHandler extends StreamToStreamCodec {
             throw e;
         } finally {
             bufferPool.releaseBuffer(outNetBuf);
-            
+
             if (!success) {
-                // mark all bytes as read 
+                // mark all bytes as read
                 in.readerIndex(in.readerIndex() + in.readableBytes());
 
                 throw new IllegalStateException("SSLEngine already closed");
-                
-                
+
+
             }
         }
 
@@ -608,7 +608,7 @@ public class SslHandler extends StreamToStreamCodec {
         super.exceptionCaught(ctx, cause);
     }
 
-   
+
 
     @Override
     public void decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
@@ -647,7 +647,7 @@ public class SslHandler extends StreamToStreamCodec {
                     tls = false;
                 }
             }
-        
+
             if (!tls) {
                 // SSLv2 or bad data - Check the version
                 boolean sslv2 = true;
@@ -677,11 +677,11 @@ public class SslHandler extends StreamToStreamCodec {
                     throw e;
                 }
             }
-        
+
             assert packetLength > 0;
         }
-        
-        
+
+
         if (in.readableBytes() < packetLength) {
             // not enough bytes left to read the packet
             // so return here for now
@@ -1073,7 +1073,7 @@ public class SslHandler extends StreamToStreamCodec {
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-        this.handshakeFuture = ctx.newFuture();
+        handshakeFuture = ctx.newFuture();
     }
 
 
@@ -1102,7 +1102,7 @@ public class SslHandler extends StreamToStreamCodec {
             });
         } else {
             super.channelActive(ctx);
-        }        
+        }
     }
 
     private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
@@ -1134,6 +1134,6 @@ public class SslHandler extends StreamToStreamCodec {
             return false;
         }
     }
-    
-   
+
+
 }
