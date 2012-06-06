@@ -168,7 +168,7 @@ public class SslHandler extends StreamToStreamCodec {
     
     // TODO: Fix STARTTLS
     private final boolean startTls;
-    private boolean firstMessageSend;
+    private boolean sentFirstMessage;
     
     private volatile boolean enableRenegotiation = true;
 
@@ -449,6 +449,15 @@ public class SslHandler extends StreamToStreamCodec {
     @Override
     public void encode(ChannelOutboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
 
+
+        // Do not encrypt the first write request if this handler is
+        // created with startTLS flag turned on.
+        if (startTls && !sentFirstMessage) {
+            sentFirstMessage = true;
+            out.writeBytes(in);
+            return;
+        }
+        
         ByteBuffer outNetBuf = bufferPool.acquireBuffer();
         boolean success = true;
         boolean needsUnwrap = false;
