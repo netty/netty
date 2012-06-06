@@ -31,7 +31,7 @@ public class SecureChatServer {
         this.port = port;
     }
 
-    public void run() {
+    public void run() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.eventLoop(new NioEventLoop(), new NioEventLoop())
