@@ -364,8 +364,9 @@ public class SslHandler extends FrameDecoder
             try {
                 wrapNonAppData(ctx, channel);
             } catch (SSLException e) {
-                fireExceptionCaught(ctx, e);
                 handshakeFuture.setFailure(e);
+
+                fireExceptionCaught(ctx, e);
             }
         } else { // Failed to initiate handshake.
             fireExceptionCaught(ctx, exception);
