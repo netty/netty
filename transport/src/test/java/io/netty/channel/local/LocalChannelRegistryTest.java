@@ -59,7 +59,7 @@ public class LocalChannelRegistryTest {
 
 
             // Start server
-            sb.bind().sync();
+            Channel sc = sb.bind().sync().channel();
 
             // Connect to the server
             Channel cc = cb.connect().sync().channel();
@@ -73,6 +73,8 @@ public class LocalChannelRegistryTest {
 
             sb.shutdown();
             cb.shutdown();
+
+            sc.closeFuture().sync();
 
             Assert.assertTrue(String.format(
                     "Expected null, got channel '%s' for local address '%s'",
