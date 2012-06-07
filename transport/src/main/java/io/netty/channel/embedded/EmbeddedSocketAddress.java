@@ -13,12 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.embedded;
 
-/**
- * A helper that wraps an encoder or a decoder so that they can be used without
- * doing actual I/O in unit tests or higher level codecs.
- *
- * @apiviz.exclude CodecEmbedder$
- */
-package io.netty.handler.codec.embedder;
+import java.net.SocketAddress;
 
+class EmbeddedSocketAddress extends SocketAddress {
+    private static final long serialVersionUID = 1400788804624980619L;
+}

@@ -52,17 +52,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelHandlerAdapter<Byte, Byte> {
-        @Override
-        public ChannelBufferHolder<Byte> newInboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.byteBuffer();
-        }
-
-        @Override
-        public ChannelBufferHolder<Byte> newOutboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.byteBuffer();
-        }
-    };
+    private static class TestHandler extends ChannelHandlerAdapter {
+        // Dummy
+    }
 }

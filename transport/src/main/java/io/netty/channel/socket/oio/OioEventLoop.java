@@ -259,6 +259,11 @@ public class OioEventLoop implements EventLoop {
         return SingleThreadEventExecutor.currentEventLoop() != null;
     }
 
+    @Override
+    public boolean inEventLoop(Thread thread) {
+        throw new UnsupportedOperationException();
+    }
+
     private EventLoop nextChild() {
         OioChildEventLoop loop = idleChildren.poll();
         if (loop == null) {

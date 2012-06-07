@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
 /**
@@ -891,7 +890,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
-        return nextInboundMessageBuffer(SingleThreadEventExecutor.currentEventLoop(), head.next);
+        return nextInboundMessageBuffer(head.next);
     }
 
     @Override
@@ -900,17 +899,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
-        return nextInboundByteBuffer(SingleThreadEventExecutor.currentEventLoop(), head.next);
+        return nextInboundByteBuffer(head.next);
     }
 
     @Override
     public Queue<Object> outboundMessageBuffer() {
-        return nextOutboundMessageBuffer(SingleThreadEventExecutor.currentEventLoop(), tail);
+        return nextOutboundMessageBuffer(tail);
     }
 
     @Override
     public ChannelBuffer outboundByteBuffer() {
-        return nextOutboundByteBuffer(SingleThreadEventExecutor.currentEventLoop(), tail);
+        return nextOutboundByteBuffer(tail);
     }
 
     static boolean hasNextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
@@ -937,13 +936,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    static ChannelBuffer nextInboundByteBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
+    static ChannelBuffer nextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
             }
             if (ctx.inByteBuf != null) {
-                if (currentExecutor == ctx.executor()) {
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.inByteBuf;
                 } else {
                     StreamBridge bridge = ctx.inByteBridge.get();
@@ -960,14 +960,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    static Queue<Object> nextInboundMessageBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
+    static Queue<Object> nextInboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
             }
 
             if (ctx.inMsgBuf != null) {
-                if (currentExecutor == ctx.executor()) {
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.inMsgBuf;
                 } else {
                     MessageBridge bridge = ctx.inMsgBridge.get();
@@ -1010,14 +1011,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    ChannelBuffer nextOutboundByteBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
+    ChannelBuffer nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
             }
 
             if (ctx.outByteBuf != null) {
-                if (currentExecutor == ctx.executor()) {
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.outByteBuf;
                 } else {
                     StreamBridge bridge = ctx.outByteBridge.get();
@@ -1034,14 +1036,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    Queue<Object> nextOutboundMessageBuffer(Executor currentExecutor, DefaultChannelHandlerContext ctx) {
+    Queue<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
                 throw new NoSuchBufferException();
             }
 
             if (ctx.outMsgBuf != null) {
-                if (currentExecutor == ctx.executor()) {
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.outMsgBuf;
                 } else {
                     MessageBridge bridge = ctx.outMsgBridge.get();
@@ -1618,7 +1621,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @SuppressWarnings("rawtypes")
-    private final class HeadHandler implements ChannelOutboundHandler, ChannelOperationHandler {
+    private final class HeadHandler implements ChannelOutboundHandler {
         @Override
         public ChannelBufferHolder newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.type()) {

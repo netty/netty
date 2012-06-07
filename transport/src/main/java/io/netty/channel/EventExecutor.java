@@ -19,6 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public interface EventExecutor extends ScheduledExecutorService {
     boolean inEventLoop();
+    boolean inEventLoop(Thread thread);
     Unsafe unsafe();
 
     public interface Unsafe {

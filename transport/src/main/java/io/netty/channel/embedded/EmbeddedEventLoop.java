@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.embedder;
+package io.netty.channel.embedded;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -99,6 +99,11 @@ class EmbeddedEventLoop extends AbstractExecutorService implements
 
     @Override
     public boolean inEventLoop() {
+        return true;
+    }
+
+    @Override
+    public boolean inEventLoop(Thread thread) {
         return true;
     }
 

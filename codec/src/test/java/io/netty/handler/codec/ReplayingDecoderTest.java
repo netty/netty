@@ -20,7 +20,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.util.VoidEnum;
 
 import org.junit.Test;
@@ -29,23 +29,23 @@ public class ReplayingDecoderTest {
 
     @Test
     public void testLineProtocol() {
-        DecoderEmbedder<ChannelBuffer> e = new DecoderEmbedder<ChannelBuffer>(new LineDecoder());
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(new LineDecoder());
 
         // Ordinary input
-        e.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
-        assertNull(e.poll());
-        e.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'B' }));
-        assertNull(e.poll());
-        e.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'C' }));
-        assertNull(e.poll());
-        e.offer(ChannelBuffers.wrappedBuffer(new byte[] { '\n' }));
-        assertEquals(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), e.poll());
+        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
+        assertNull(ch.readInbound());
+        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'B' }));
+        assertNull(ch.readInbound());
+        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'C' }));
+        assertNull(ch.readInbound());
+        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { '\n' }));
+        assertEquals(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
 
         // Truncated input
-        e.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
-        assertNull(e.poll());
-        e.finish();
-        assertNull(e.poll());
+        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
+        assertNull(ch.readInbound());
+        ch.close();
+        assertNull(ch.readInbound());
     }
 
     private static final class LineDecoder extends ReplayingDecoder<ChannelBuffer, VoidEnum> {

@@ -23,8 +23,10 @@ import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.DefaultEventExecutor;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
@@ -326,7 +328,9 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    private static class ThreadNameAuditor extends ChannelHandlerAdapter<Object, Object> {
+    private static class ThreadNameAuditor
+            extends ChannelHandlerAdapter
+            implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
@@ -373,7 +377,9 @@ public class LocalTransportThreadModelTest {
     /**
      * Converts integers into a binary stream.
      */
-    private static class MessageForwarder1 extends ChannelHandlerAdapter<Integer, Byte> {
+    private static class MessageForwarder1
+            extends ChannelHandlerAdapter
+            implements ChannelInboundHandler<Integer>, ChannelOutboundHandler<Byte> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -456,7 +462,9 @@ public class LocalTransportThreadModelTest {
     /**
      * Converts a binary stream into integers.
      */
-    private static class MessageForwarder2 extends ChannelHandlerAdapter<Byte, Integer> {
+    private static class MessageForwarder2
+            extends ChannelHandlerAdapter
+            implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<Integer> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -531,7 +539,9 @@ public class LocalTransportThreadModelTest {
     /**
      * Simply forwards the received object to the next handler.
      */
-    private static class MessageForwarder3 extends ChannelHandlerAdapter<Object, Object> {
+    private static class MessageForwarder3
+            extends ChannelHandlerAdapter
+            implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -607,7 +617,9 @@ public class LocalTransportThreadModelTest {
     /**
      * Discards all received messages.
      */
-    private static class MessageDiscarder extends ChannelHandlerAdapter<Object, Object> {
+    private static class MessageDiscarder
+            extends ChannelHandlerAdapter
+            implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;

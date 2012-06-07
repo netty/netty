@@ -401,22 +401,22 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelBuffer nextInboundByteBuffer() {
-        return DefaultChannelPipeline.nextInboundByteBuffer(executor(), next);
+        return DefaultChannelPipeline.nextInboundByteBuffer(next);
     }
 
     @Override
     public Queue<Object> nextInboundMessageBuffer() {
-        return DefaultChannelPipeline.nextInboundMessageBuffer(executor(), next);
+        return DefaultChannelPipeline.nextInboundMessageBuffer(next);
     }
 
     @Override
     public ChannelBuffer nextOutboundByteBuffer() {
-        return pipeline.nextOutboundByteBuffer(executor(), prev);
+        return pipeline.nextOutboundByteBuffer(prev);
     }
 
     @Override
     public Queue<Object> nextOutboundMessageBuffer() {
-        return pipeline.nextOutboundMessageBuffer(executor(), prev);
+        return pipeline.nextOutboundMessageBuffer(prev);
     }
 
     @Override

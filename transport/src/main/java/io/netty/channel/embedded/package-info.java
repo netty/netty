@@ -13,19 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.util;
 
-import io.netty.channel.ChannelHandlerContext;
+/**
+ * A virtual {@link io.netty.channel.Channel} that helps wrapping a series of handlers to
+ * unit test the handlers or use them in non-I/O context.
+ */
+package io.netty.channel.embedded;
 
-public class DummyHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        ctx.sendUpstream(e);
-    }
-
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        ctx.sendDownstream(e);
-    }
-}

@@ -216,7 +216,12 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
     @Override
     public boolean inEventLoop() {
-        return Thread.currentThread() == thread;
+        return inEventLoop(Thread.currentThread());
+    }
+
+    @Override
+    public boolean inEventLoop(Thread thread) {
+        return thread == this.thread;
     }
 
     public void addShutdownHook(final Runnable task) {

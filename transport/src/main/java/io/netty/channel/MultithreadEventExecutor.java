@@ -204,6 +204,11 @@ public abstract class MultithreadEventExecutor implements EventExecutor {
         return SingleThreadEventExecutor.currentEventLoop() != null;
     }
 
+    @Override
+    public boolean inEventLoop(Thread thread) {
+        throw new UnsupportedOperationException();
+    }
+
     private static EventExecutor currentEventLoop() {
         EventExecutor loop = SingleThreadEventExecutor.currentEventLoop();
         if (loop == null) {
