@@ -19,11 +19,11 @@ package io.netty.handler.timeout;
  * A {@link TimeoutException} raised by {@link WriteTimeoutHandler} when no data
  * was written within a certain period of time.
  */
-public class WriteTimeoutException extends TimeoutException {
+public final class WriteTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = -144786655770296065L;
 
     public static final WriteTimeoutException INSTANCE = new WriteTimeoutException();
 
-    private WriteTimeoutException() {}
+    private WriteTimeoutException() { }
 }

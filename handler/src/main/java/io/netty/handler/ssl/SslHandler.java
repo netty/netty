@@ -466,7 +466,7 @@ public class SslHandler extends StreamToStreamCodec {
         try {
             ByteBuffer outAppBuf = in.nioBuffer();
 
-            while(in.readable()) {
+            while (in.readable()) {
 
                 int read;
                 int remaining = outAppBuf.remaining();

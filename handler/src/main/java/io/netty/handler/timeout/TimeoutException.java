@@ -25,7 +25,7 @@ public class TimeoutException extends ChannelException {
 
     private static final long serialVersionUID = 4673641882869672533L;
 
-    TimeoutException() {}
+    TimeoutException() { }
 
     @Override
     public Throwable fillInStackTrace() {
