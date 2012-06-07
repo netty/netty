@@ -7,10 +7,8 @@ import io.netty.channel.ChannelType;
 
 public class EmbeddedStreamChannel extends AbstractEmbeddedChannel {
 
-    private final ChannelBuffer lastOutboundBuffer = ChannelBuffers.dynamicBuffer();
-
     public EmbeddedStreamChannel(ChannelHandler... handlers) {
-        super(handlers);
+        super(ChannelBuffers.dynamicBuffer(), handlers);
     }
 
     @Override
@@ -23,17 +21,17 @@ public class EmbeddedStreamChannel extends AbstractEmbeddedChannel {
     }
 
     public ChannelBuffer lastOutboundBuffer() {
-        return lastOutboundBuffer;
+        return (ChannelBuffer) lastOutboundBuffer;
     }
 
     public ChannelBuffer readOutbound() {
-        if (!lastOutboundBuffer.readable()) {
+        if (!lastOutboundBuffer().readable()) {
             return null;
         }
         try {
-            return lastOutboundBuffer.readBytes(lastOutboundBuffer.readableBytes());
+            return lastOutboundBuffer().readBytes(lastOutboundBuffer().readableBytes());
         } finally {
-            lastOutboundBuffer.clear();
+            lastOutboundBuffer().clear();
         }
     }
 
@@ -59,9 +57,9 @@ public class EmbeddedStreamChannel extends AbstractEmbeddedChannel {
 
     @Override
     protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
-        if (!lastOutboundBuffer.readable()) {
-            lastOutboundBuffer.discardReadBytes();
+        if (!lastOutboundBuffer().readable()) {
+            lastOutboundBuffer().discardReadBytes();
         }
-        lastOutboundBuffer.writeBytes(buf);
+        lastOutboundBuffer().writeBytes(buf);
     }
 }

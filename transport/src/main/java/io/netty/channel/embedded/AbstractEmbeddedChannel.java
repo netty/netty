@@ -48,15 +48,18 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> lastInboundMessageBuffer = new ArrayDeque<Object>();
     private final ChannelBuffer lastInboundByteBuffer = ChannelBuffers.dynamicBuffer();
+    protected final Object lastOutboundBuffer;
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
 
-    AbstractEmbeddedChannel(ChannelHandler... handlers) {
+    AbstractEmbeddedChannel(Object lastOutboundBuffer, ChannelHandler... handlers) {
         super(null, null);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
+
+        this.lastOutboundBuffer = lastOutboundBuffer;
 
         int nHandlers = 0;
         boolean hasBuffer = false;

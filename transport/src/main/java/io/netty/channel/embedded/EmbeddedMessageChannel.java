@@ -8,10 +8,8 @@ import java.util.Queue;
 
 public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
 
-    private final Queue<Object> lastOutboundBuffer = new ArrayDeque<Object>();
-
     public EmbeddedMessageChannel(ChannelHandler... handlers) {
-        super(handlers);
+        super(new ArrayDeque<Object>(), handlers);
     }
 
     @Override
@@ -23,12 +21,13 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
         return pipeline().inboundMessageBuffer();
     }
 
+    @SuppressWarnings("unchecked")
     public Queue<Object> lastOutboundBuffer() {
-        return lastOutboundBuffer;
+        return (Queue<Object>) lastOutboundBuffer;
     }
 
     public Object readOutbound() {
-        return lastOutboundBuffer.poll();
+        return lastOutboundBuffer().poll();
     }
 
     public boolean writeInbound(Object msg) {
@@ -58,7 +57,7 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
             if (o == null) {
                 break;
             }
-            lastOutboundBuffer.add(o);
+            lastOutboundBuffer().add(o);
         }
     }
 }
