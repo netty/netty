@@ -17,9 +17,11 @@ package org.jboss.netty.channel.socket;
 
 import static org.junit.Assert.*;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -70,14 +72,25 @@ public abstract class AbstractDatagramMulticastTest {
 
         int port = TestUtil.getFreePort();
 
-        NetworkInterface iface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+        NetworkInterface iface = null;
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface inf = interfaces.nextElement();
+            
+            // Only try to use interface if its not a loopback interface
+            if (!inf.isLoopback()) {
 
-        // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
-        // if so fail back the the first interface
-        if (iface == null) {
-            // use nextElement() as NetWorkInterface.getByIndex(0) returns null
-            iface = NetworkInterface.getNetworkInterfaces().nextElement();
+                Enumeration<InetAddress> addresses = inf.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if (addr instanceof Inet4Address) {
+                        iface = inf;
+                        break;
+                    }
+                }
+            }
         }
+        
         sb.setOption("networkInterface", iface);
         sb.setOption("reuseAddress", true);
 
