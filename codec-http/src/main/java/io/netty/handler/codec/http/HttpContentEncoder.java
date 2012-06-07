@@ -18,8 +18,8 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
 import io.netty.util.internal.QueueFactory;
 
 import java.util.Queue;
@@ -49,7 +49,7 @@ import java.util.Queue;
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
     private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue();
-    private volatile EncoderEmbedder<ChannelBuffer> encoder;
+    private EmbeddedStreamChannel encoder;
 
     /**
      * Creates a new instance.
@@ -117,15 +117,16 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             if (!m.isChunked()) {
                 ChannelBuffer content = m.getContent();
                 // Encode the content.
-                content = ChannelBuffers.wrappedBuffer(
-                        encode(content), finishEncode());
+                ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                encode(content, newContent);
+                finishEncode(newContent);
 
                 // Replace the content.
-                m.setContent(content);
+                m.setContent(newContent);
                 if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
                     m.setHeader(
                             HttpHeaders.Names.CONTENT_LENGTH,
-                            Integer.toString(content.readableBytes()));
+                            Integer.toString(newContent.readableBytes()));
                 }
             }
         } else if (msg instanceof HttpChunk) {
@@ -135,12 +136,16 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // Encode the chunk if necessary.
             if (encoder != null) {
                 if (!c.isLast()) {
-                    content = encode(content);
+                    ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                    encode(content, newContent);
                     if (content.readable()) {
-                        c.setContent(content);
+                        c.setContent(newContent);
+                    } else {
+                        return null;
                     }
                 } else {
-                    ChannelBuffer lastProduct = finishEncode();
+                    ChannelBuffer lastProduct = ChannelBuffers.dynamicBuffer();
+                    finishEncode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
@@ -171,27 +176,33 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      */
     protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
 
-    private ChannelBuffer encode(ChannelBuffer buf) {
-        encoder.offer(buf);
-        return ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));
+    private void encode(ChannelBuffer in, ChannelBuffer out) {
+        encoder.writeOutbound(in);
+        fetchEncoderOutput(out);
     }
 
-    private ChannelBuffer finishEncode() {
-        ChannelBuffer result;
+    private void finishEncode(ChannelBuffer out) {
         if (encoder.finish()) {
-            result = ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));
-        } else {
-            result = ChannelBuffers.EMPTY_BUFFER;
+            fetchEncoderOutput(out);
         }
         encoder = null;
-        return result;
+    }
+
+    private void fetchEncoderOutput(ChannelBuffer out) {
+        for (;;) {
+            ChannelBuffer buf = encoder.readOutbound();
+            if (buf == null) {
+                break;
+            }
+            out.writeBytes(buf);
+        }
     }
 
     public static final class Result {
         private final String targetContentEncoding;
-        private final EncoderEmbedder<ChannelBuffer> contentEncoder;
+        private final EmbeddedStreamChannel contentEncoder;
 
-        public Result(String targetContentEncoding, EncoderEmbedder<ChannelBuffer> contentEncoder) {
+        public Result(String targetContentEncoding, EmbeddedStreamChannel contentEncoder) {
             if (targetContentEncoding == null) {
                 throw new NullPointerException("targetContentEncoding");
             }
@@ -207,7 +218,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             return targetContentEncoding;
         }
 
-        public EncoderEmbedder<ChannelBuffer> getContentEncoder() {
+        public EmbeddedStreamChannel getContentEncoder() {
             return contentEncoder;
         }
     }

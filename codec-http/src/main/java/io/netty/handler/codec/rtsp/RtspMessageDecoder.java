@@ -17,8 +17,8 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMessageDecoder;
@@ -54,7 +54,7 @@ import io.netty.handler.codec.http.HttpMessageDecoder;
  */
 public abstract class RtspMessageDecoder extends HttpMessageDecoder {
 
-    private final DecoderEmbedder<HttpMessage> aggregator;
+    private final EmbeddedMessageChannel aggregator;
 
     /**
      * Creates a new instance with the default
@@ -70,15 +70,15 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
      */
     protected RtspMessageDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
         super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2);
-        aggregator = new DecoderEmbedder<HttpMessage>(new HttpChunkAggregator(maxContentLength));
+        aggregator = new EmbeddedMessageChannel(new HttpChunkAggregator(maxContentLength));
     }
 
 
     @Override
     public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
         Object o = super.decode(ctx, buffer);
-        if (o != null && aggregator.offer(o)) {
-            return aggregator.poll();
+        if (o != null && aggregator.writeInbound(o)) {
+            return aggregator.readInbound();
         } else {
             return null;
         }

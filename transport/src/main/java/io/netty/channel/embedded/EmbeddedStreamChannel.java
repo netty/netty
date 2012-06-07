@@ -2,7 +2,6 @@ package io.netty.channel.embedded;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelType;
 
@@ -11,7 +10,7 @@ public class EmbeddedStreamChannel extends AbstractEmbeddedChannel {
     private final ChannelBuffer lastOutboundBuffer = ChannelBuffers.dynamicBuffer();
 
     public EmbeddedStreamChannel(ChannelHandler... handlers) {
-        super(ChannelBufferHolders.messageBuffer(), handlers);
+        super(handlers);
     }
 
     @Override

@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelType;
 
@@ -27,9 +26,8 @@ import java.util.Queue;
 abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     protected AbstractNioMessageChannel(
-            Channel parent, Integer id, ChannelBufferHolder<?> outboundBuffer,
-            SelectableChannel ch, int defaultInterestOps) {
-        super(parent, id, outboundBuffer, ch, defaultInterestOps);
+            Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
+        super(parent, id, ch, defaultInterestOps);
     }
 
     @Override

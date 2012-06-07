@@ -36,7 +36,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
      * Creates a new instance.
      */
     protected AbstractServerChannel(Integer id) {
-        super(null, id, ChannelBufferHolders.discardMessageBuffer());
+        super(null, id);
     }
 
     @Override

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
@@ -52,8 +53,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
         p.addLast("codec", new HttpClientCodec());
 
         // Remove the following line if you don't want automatic content decompression.
-        // FIXME: Port HttpContentDecompressor to the new API
-        //p.addLast("inflater", new HttpContentDecompressor());
+        p.addLast("inflater", new HttpContentDecompressor());
 
         // Uncomment the following line if you don't want to handle HttpChunks.
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));

@@ -16,12 +16,10 @@
 package io.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
 import io.netty.util.CharsetUtil;
 
 import org.junit.Test;
@@ -38,42 +36,33 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsNotOnRequestResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
 
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        decoder.offer(ChannelBuffers.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
-
-        encoder.finish();
-        decoder.finish();
-
+        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeInbound(ChannelBuffers.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.finish();
     }
 
     @Test
     public void testFailsNotOnRequestResponseChunked() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
 
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        decoder.offer(ChannelBuffers.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
-
-        encoder.finish();
-        decoder.finish();
-
+        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeInbound(ChannelBuffers.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.finish();
     }
 
     @Test
     public void testFailsOnMissingResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
 
-        assertTrue(encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
-        assertNotNull(encoder.poll());
-        assertTrue(encoder.finish());
+        assertTrue(ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
+        assertNotNull(ch.readOutbound());
 
         try {
-            encoder.poll();
+            ch.finish();
             fail();
         } catch (CodecException e) {
             assertTrue(e instanceof PrematureChannelClosureException);
@@ -84,19 +73,16 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
 
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        decoder.offer(ChannelBuffers.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeInbound(ChannelBuffers.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
 
         try {
-            encoder.finish();
-            decoder.finish();
+            ch.finish();
             fail();
         } catch (CodecException e) {
-            assertTrue(e.getCause() instanceof PrematureChannelClosureException);
+            assertTrue(e instanceof PrematureChannelClosureException);
         }
 
     }

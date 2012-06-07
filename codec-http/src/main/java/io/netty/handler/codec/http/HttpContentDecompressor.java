@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpChunk} compressed in
@@ -27,12 +26,12 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  */
 public class HttpContentDecompressor extends HttpContentDecoder {
     @Override
-    protected DecoderEmbedder<ChannelBuffer> newContentDecoder(String contentEncoding) throws Exception {
+    protected EmbeddedStreamChannel newContentDecoder(String contentEncoding) throws Exception {
         if ("gzip".equalsIgnoreCase(contentEncoding) || "x-gzip".equalsIgnoreCase(contentEncoding)) {
-            return new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(ZlibWrapper.GZIP));
+            return new EmbeddedStreamChannel(new ZlibDecoder(ZlibWrapper.GZIP));
         } else if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
+            return new EmbeddedStreamChannel(new ZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
         }
 
         // 'identity' or unsupported

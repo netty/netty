@@ -24,7 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.util.CharsetUtil;
 
 import java.io.ByteArrayInputStream;
@@ -98,39 +98,43 @@ public class ChunkedWriteHandlerTest {
 
         check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
     }
-    
+
     // Test case which shows that there is not a bug like stated here:
     // http://stackoverflow.com/questions/10409241/why-is-close-channelfuturelistener-not-notified/10426305#comment14126161_10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() {
         ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
-                
+
         ChunkedInput input = new ChunkedInput() {
             private boolean done;
-            private ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
-            
+            private final ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+
+            @Override
             public Object nextChunk() throws Exception {
                 done = true;
                 return buffer.duplicate();
             }
-            
+
+            @Override
             public boolean isEndOfInput() throws Exception {
                 return done;
             }
-            
+
+            @Override
             public void close() throws Exception {
-                
+                // NOOP
             }
         };
-        
+
         final AtomicBoolean listenerNotified = new AtomicBoolean(false);
         final ChannelFutureListener listener = new ChannelFutureListener() {
-            
+
+            @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 listenerNotified.set(true);
             }
         };
-        
+
         ChannelOutboundHandlerAdapter<ChannelBuffer> testHandler = new ChannelOutboundHandlerAdapter<ChannelBuffer>() {
 
             @Override
@@ -141,48 +145,39 @@ public class ChunkedWriteHandlerTest {
             @Override
             public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
                 super.flush(ctx, future);
-                
+
                 future.setSuccess();
             }
 
         };
-        
-        EncoderEmbedder<ChannelBuffer> handler = new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler(), testHandler) {
-            @Override
-            public boolean offer(Object input) {
-                ChannelFuture future = channel().write(input);
-                future.addListener(listener);
-                future.awaitUninterruptibly();
-                return !isEmpty();
-            }
-            
-        };
-        
-        assertTrue(handler.offer(input));
-        assertTrue(handler.finish());
-        
+
+        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new ChunkedWriteHandler(), testHandler);
+        ch.outboundMessageBuffer().add(input);
+        ch.flush().addListener(listener).syncUninterruptibly();
+        ch.checkException();
+        ch.finish();
+
         // the listener should have been notified
         assertTrue(listenerNotified.get());
-        
-        assertEquals(buffer, handler.poll());
-        assertNull(handler.poll());
-        
+
+        assertEquals(buffer, ch.readOutbound());
+        assertNull(ch.readOutbound());
+
     }
 
     private static void check(ChunkedInput... inputs) {
-        EncoderEmbedder<ChannelBuffer> embedder =
-                new EncoderEmbedder<ChannelBuffer>(new ChunkedWriteHandler());
+        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new ChunkedWriteHandler());
 
         for (ChunkedInput input: inputs) {
-            embedder.offer(input);
+            ch.writeOutbound(input);
         }
 
-        Assert.assertTrue(embedder.finish());
+        Assert.assertTrue(ch.finish());
 
         int i = 0;
         int read = 0;
         for (;;) {
-            ChannelBuffer buffer = embedder.poll();
+            ChannelBuffer buffer = (ChannelBuffer) ch.readOutbound();
             if (buffer == null) {
                 break;
             }

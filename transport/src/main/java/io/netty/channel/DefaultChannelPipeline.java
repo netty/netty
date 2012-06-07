@@ -1628,7 +1628,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             case STREAM:
                 return ChannelBufferHolders.byteBuffer();
             case MESSAGE:
-                return ChannelBufferHolders.messageBuffer();
+                if (channel instanceof ServerChannel) {
+                    return ChannelBufferHolders.discardMessageBuffer();
+                } else {
+                    return ChannelBufferHolders.messageBuffer();
+                }
             default:
                 throw new Error();
             }

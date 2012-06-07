@@ -51,8 +51,8 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
 
-    AbstractEmbeddedChannel(ChannelBufferHolder<?> outboundBuffer, ChannelHandler... handlers) {
-        super(null, null, outboundBuffer);
+    AbstractEmbeddedChannel(ChannelHandler... handlers) {
+        super(null, null);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");

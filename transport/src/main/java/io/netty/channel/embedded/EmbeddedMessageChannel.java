@@ -1,6 +1,5 @@
 package io.netty.channel.embedded;
 
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelType;
 
@@ -12,7 +11,7 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
     private final Queue<Object> lastOutboundBuffer = new ArrayDeque<Object>();
 
     public EmbeddedMessageChannel(ChannelHandler... handlers) {
-        super(ChannelBufferHolders.messageBuffer(), handlers);
+        super(handlers);
     }
 
     @Override

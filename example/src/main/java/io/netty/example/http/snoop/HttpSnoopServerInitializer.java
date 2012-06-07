@@ -18,6 +18,7 @@ package io.netty.example.http.snoop;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 
@@ -37,8 +38,7 @@ public class HttpSnoopServerInitializer extends ChannelInitializer<SocketChannel
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
         p.addLast("encoder", new HttpResponseEncoder());
         // Remove the following line if you don't want automatic content compression.
-        // FIXME: Port HttpContentCompressor to the new API
-        //p.addLast("deflater", new HttpContentCompressor());
+        p.addLast("deflater", new HttpContentCompressor());
         p.addLast("handler", new HttpSnoopServerHandler());
     }
 }

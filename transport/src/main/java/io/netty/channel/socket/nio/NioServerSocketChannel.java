@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -42,8 +41,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     public NioServerSocketChannel() {
-        super(null, null, ChannelBufferHolders.discardMessageBuffer(),
-                newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 

@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -60,7 +59,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     public OioServerSocketChannel(Integer id, ServerSocket socket) {
-        super(null, id, ChannelBufferHolders.discardMessageBuffer());
+        super(null, id);
         if (socket == null) {
             throw new NullPointerException("socket");
         }

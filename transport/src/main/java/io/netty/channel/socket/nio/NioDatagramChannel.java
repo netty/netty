@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -88,7 +87,7 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
     }
 
     public NioDatagramChannel(Integer id, DatagramChannel socket) {
-        super(null, id, ChannelBufferHolders.messageBuffer(), socket, SelectionKey.OP_READ);
+        super(null, id, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(socket);
     }
 

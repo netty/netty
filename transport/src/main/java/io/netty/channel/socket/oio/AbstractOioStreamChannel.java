@@ -17,7 +17,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelType;
 
@@ -26,7 +25,7 @@ import java.io.IOException;
 abstract class AbstractOioStreamChannel extends AbstractOioChannel {
 
     protected AbstractOioStreamChannel(Channel parent, Integer id) {
-        super(parent, id, ChannelBufferHolders.byteBuffer());
+        super(parent, id);
     }
 
     @Override

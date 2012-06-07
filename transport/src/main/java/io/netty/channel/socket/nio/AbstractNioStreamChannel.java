@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelType;
 
@@ -29,7 +28,7 @@ abstract class AbstractNioStreamChannel extends AbstractNioChannel {
 
     protected AbstractNioStreamChannel(
             Channel parent, Integer id, SelectableChannel ch) {
-        super(parent, id, ChannelBufferHolders.byteBuffer(), ch, SelectionKey.OP_READ);
+        super(parent, id, ch, SelectionKey.OP_READ);
     }
 
     @Override

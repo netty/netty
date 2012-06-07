@@ -17,7 +17,6 @@ package io.netty.channel.local;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -57,11 +56,11 @@ public class LocalChannel extends AbstractChannel {
     }
 
     public LocalChannel(Integer id) {
-        super(null, id, ChannelBufferHolders.messageBuffer());
+        super(null, id);
     }
 
     LocalChannel(LocalServerChannel parent, LocalChannel peer) {
-        super(parent, null, ChannelBufferHolders.messageBuffer());
+        super(parent, null);
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();

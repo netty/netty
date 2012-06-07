@@ -18,8 +18,8 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpChunk}.
@@ -42,7 +42,7 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  */
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
 
-    private DecoderEmbedder<ChannelBuffer> decoder;
+    private EmbeddedStreamChannel decoder;
 
     /**
      * Creates a new instance.
@@ -84,15 +84,16 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                 if (!m.isChunked()) {
                     ChannelBuffer content = m.getContent();
                     // Decode the content
-                    content = ChannelBuffers.wrappedBuffer(
-                            decode(content), finishDecode());
+                    ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                    decode(content, newContent);
+                    finishDecode(newContent);
 
                     // Replace the content.
-                    m.setContent(content);
+                    m.setContent(newContent);
                     if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
                         m.setHeader(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(content.readableBytes()));
+                                Integer.toString(newContent.readableBytes()));
                     }
                 }
             }
@@ -103,12 +104,16 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
             // Decode the chunk if necessary.
             if (decoder != null) {
                 if (!c.isLast()) {
-                    content = decode(content);
-                    if (content.readable()) {
-                        c.setContent(content);
+                    ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                    decode(content, newContent);
+                    if (newContent.readable()) {
+                        c.setContent(newContent);
+                    } else {
+                        return null;
                     }
                 } else {
-                    ChannelBuffer lastProduct = finishDecode();
+                    ChannelBuffer lastProduct = ChannelBuffers.dynamicBuffer();
+                    finishDecode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
@@ -132,7 +137,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract DecoderEmbedder<ChannelBuffer> newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract EmbeddedStreamChannel newContentDecoder(String contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.
@@ -146,19 +151,25 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
         return HttpHeaders.Values.IDENTITY;
     }
 
-    private ChannelBuffer decode(ChannelBuffer buf) {
-        decoder.offer(buf);
-        return ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
+    private void decode(ChannelBuffer in, ChannelBuffer out) {
+        decoder.writeInbound(in);
+        fetchDecoderOutput(out);
     }
 
-    private ChannelBuffer finishDecode() {
-        ChannelBuffer result;
+    private void finishDecode(ChannelBuffer out) {
         if (decoder.finish()) {
-            result = ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
-        } else {
-            result = ChannelBuffers.EMPTY_BUFFER;
+            fetchDecoderOutput(out);
         }
         decoder = null;
-        return result;
+    }
+
+    private void fetchDecoderOutput(ChannelBuffer out) {
+        for (;;) {
+            ChannelBuffer buf = (ChannelBuffer) decoder.readInbound();
+            if (buf == null) {
+                break;
+            }
+            out.writeBytes(buf);
+        }
     }
 }

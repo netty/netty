@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
@@ -119,7 +118,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         return new Result(
                 targetContentEncoding,
-                new EncoderEmbedder<ChannelBuffer>(
+                new EmbeddedStreamChannel(
                         new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel)));
     }
 

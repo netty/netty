@@ -17,7 +17,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannel;
@@ -66,7 +65,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     public OioDatagramChannel(Integer id, MulticastSocket socket) {
-        super(null, id, ChannelBufferHolders.messageBuffer());
+        super(null, id);
 
         boolean success = false;
         try {
