@@ -35,9 +35,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
             initChannel((C) ctx.channel());
             ctx.pipeline().remove(this);
             removed = true;
-            // Note that we do not call ctx.fireChannelRegistered() because a user might have
-            // inserted a handler before the initializer using pipeline.addFirst().
-            ctx.pipeline().fireChannelRegistered();
+            ctx.fireChannelRegistered();
             success = true;
         } catch (Throwable t) {
             logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), t);
