@@ -96,7 +96,7 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
                 }
                 nextIn.add(msg);
             }
-        } else if (ctx.hasInboundByteBuffer()){
+        } else if (ctx.hasInboundByteBuffer()) {
             ChannelBuffer in = ctx.inboundByteBuffer();
             ChannelBuffer nextIn = ctx.nextInboundByteBuffer();
             nextIn.writeBytes(in);

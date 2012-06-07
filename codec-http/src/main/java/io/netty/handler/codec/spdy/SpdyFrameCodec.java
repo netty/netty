@@ -17,8 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.channel.CombinedChannelHandler;
 
-import io.netty.channel.CombinedChannelHandler;
-
 
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
