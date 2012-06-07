@@ -19,9 +19,12 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 
 public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
-        extends ChannelHandlerAdapter<INBOUND_IN, OUTBOUND_IN> {
+        extends ChannelHandlerAdapter
+        implements ChannelInboundHandler<INBOUND_IN>, ChannelOutboundHandler<OUTBOUND_IN> {
 
     private final MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT> encoder =
             new MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT>() {

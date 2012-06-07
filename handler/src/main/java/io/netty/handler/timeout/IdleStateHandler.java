@@ -17,8 +17,6 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -114,7 +112,7 @@ import java.util.concurrent.TimeUnit;
  * @apiviz.uses io.netty.util.HashedWheelTimer
  * @apiviz.has io.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
-public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
+public class IdleStateHandler extends ChannelHandlerAdapter {
 
     private final long readerIdleTimeMillis;
     private final long writerIdleTimeMillis;
@@ -200,16 +198,6 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
         } else {
             allIdleTimeMillis = Math.max(unit.toMillis(allIdleTime), 1);
         }
-    }
-
-    @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.inboundBypassBuffer(ctx);
-    }
-
-    @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.outboundBypassBuffer(ctx);
     }
 
     @Override

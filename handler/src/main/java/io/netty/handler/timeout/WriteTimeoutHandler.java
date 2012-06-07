@@ -16,12 +16,10 @@
 package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOperationHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
@@ -67,7 +65,7 @@ import java.util.concurrent.TimeUnit;
  * @apiviz.uses io.netty.util.HashedWheelTimer
  * @apiviz.has io.netty.handler.timeout.TimeoutException oneway - - raises
  */
-public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter<Object> {
+public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
 
     private final long timeoutMillis;
 
@@ -101,11 +99,6 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter<Object> {
         } else {
             timeoutMillis = Math.max(unit.toMillis(timeout), 1);
         }
-    }
-
-    @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.outboundBypassBuffer(ctx);
     }
 
     @Override

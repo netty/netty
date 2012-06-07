@@ -75,4 +75,13 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.type().contains(ChannelHandlerType.INBOUND)) {
+            ChannelInboundHandlerAdapter.inboundBufferUpdated0(ctx);
+        } else {
+            ctx.fireInboundBufferUpdated();
+        }
+    }
 }

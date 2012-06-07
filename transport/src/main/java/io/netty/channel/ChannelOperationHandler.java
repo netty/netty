@@ -8,4 +8,5 @@ public interface ChannelOperationHandler extends ChannelHandler {
     void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
     void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
     void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
 }

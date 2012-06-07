@@ -1214,7 +1214,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             fireInboundBufferUpdatedOnActivation = true;
             return;
         }
-        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.INBOUND);
+        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.STATE);
         if (ctx != null) {
             fireInboundBufferUpdated(ctx);
         }
@@ -1413,7 +1413,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture flush(ChannelFuture future) {
-        return flush(firstContext(ChannelHandlerType.OUTBOUND), future);
+        return flush(firstContext(ChannelHandlerType.OPERATION), future);
     }
 
     ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1436,7 +1436,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void flush0(final DefaultChannelHandlerContext ctx, ChannelFuture future) {
         try {
             ctx.flushBridge();
-            ((ChannelOutboundHandler<Object>) ctx.handler()).flush(ctx, future);
+            ((ChannelOperationHandler) ctx.handler()).flush(ctx, future);
         } catch (Throwable t) {
             notifyHandlerException(t);
         } finally {

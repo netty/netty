@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 
-public interface ChannelInboundHandler<T> extends ChannelHandler {
+public interface ChannelInboundHandler<T> extends ChannelStateHandler {
     ChannelBufferHolder<T> newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
-    void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
 }

@@ -6,4 +6,6 @@ public interface ChannelStateHandler extends ChannelHandler {
 
     void channelActive(ChannelHandlerContext ctx) throws Exception;
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
+
+    void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
 }

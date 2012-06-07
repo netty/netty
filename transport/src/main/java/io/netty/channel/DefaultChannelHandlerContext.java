@@ -105,12 +105,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     };
     final Runnable curCtxFireInboundBufferUpdatedTask = new Runnable() {
         @Override
-        @SuppressWarnings("unchecked")
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             flushBridge();
             try {
-                ((ChannelInboundHandler<Object>) ctx.handler).inboundBufferUpdated(ctx);
+                ((ChannelStateHandler) ctx.handler).inboundBufferUpdated(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             } finally {
@@ -127,7 +126,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         @Override
         public void run() {
             DefaultChannelHandlerContext next = nextContext(
-                    DefaultChannelHandlerContext.this.next, ChannelHandlerType.INBOUND);
+                    DefaultChannelHandlerContext.this.next, ChannelHandlerType.STATE);
             if (next != null) {
                 next.fillBridge();
                 DefaultChannelPipeline.fireInboundBufferUpdated(next);
@@ -554,7 +553,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelFuture flush(final ChannelFuture future) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            DefaultChannelHandlerContext prev = nextContext(this.prev, ChannelHandlerType.OUTBOUND);
+            DefaultChannelHandlerContext prev = nextContext(this.prev, ChannelHandlerType.OPERATION);
             prev.fillBridge();
             pipeline.flush(prev, future);
         } else {

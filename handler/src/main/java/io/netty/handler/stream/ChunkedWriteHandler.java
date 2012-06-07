@@ -23,8 +23,8 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.stream.ChunkedInput oneway - - reads from
  */
-public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
+public class ChunkedWriteHandler extends ChannelOutboundHandlerAdapter<Object> {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
@@ -79,13 +79,6 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
     private Object currentEvent;
-
-    @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        return ChannelBufferHolders.inboundBypassBuffer(ctx);
-    }
 
     @Override
     public ChannelBufferHolder<Object> newOutboundBuffer(
@@ -116,7 +109,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
         } else {
             // let the transfer resume on the next event loop round
             ctx.executor().execute(new Runnable() {
-                
+
                 @Override
                 public void run() {
                     try {
@@ -125,7 +118,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
                         if (logger.isWarnEnabled()) {
                             logger.warn("Unexpected exception while sending chunks.", e);
                         }
-                    }                    
+                    }
                 }
             });
         }
@@ -283,8 +276,8 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
                 return;
             }
         }
-        
-   
+
+
     }
 
     static void closeInput(ChunkedInput chunks) {

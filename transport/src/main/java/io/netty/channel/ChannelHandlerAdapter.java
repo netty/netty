@@ -17,13 +17,7 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public abstract class ChannelHandlerAdapter<I, O> extends ChannelStateHandlerAdapter
-        implements ChannelOperationHandler, ChannelInboundHandler<I>, ChannelOutboundHandler<O> {
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ChannelInboundHandlerAdapter.inboundBufferUpdated0(ctx);
-    }
+public class ChannelHandlerAdapter extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
@@ -52,6 +46,10 @@ public abstract class ChannelHandlerAdapter<I, O> extends ChannelStateHandlerAda
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        ChannelOutboundHandlerAdapter.flush0(ctx, future);
+        if (ctx.type().contains(ChannelHandlerType.OUTBOUND)) {
+            ChannelOutboundHandlerAdapter.flush0(ctx, future);
+        } else {
+            ctx.flush(future);
+        }
     }
 }

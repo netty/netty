@@ -17,36 +17,10 @@ package io.netty.channel;
 
 import io.netty.buffer.ChannelBuffer;
 
-import java.net.SocketAddress;
 import java.util.Queue;
 
-public abstract class ChannelOutboundHandlerAdapter<O> extends ChannelStateHandlerAdapter
-        implements ChannelOperationHandler, ChannelOutboundHandler<O> {
-
-    @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.bind(localAddress, future);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.connect(remoteAddress, localAddress, future);
-    }
-
-    @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        ctx.disconnect(future);
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        ctx.close(future);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        ctx.deregister(future);
-    }
+public abstract class ChannelOutboundHandlerAdapter<O> extends ChannelHandlerAdapter
+        implements ChannelOutboundHandler<O> {
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
