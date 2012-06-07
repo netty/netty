@@ -20,11 +20,13 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOperationHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 
 import java.util.Queue;
 
-public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAdapter<I> {
+public abstract class MessageToStreamEncoder<I>
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler<I> {
 
     @Override
     public ChannelBufferHolder<I> newOutboundBuffer(

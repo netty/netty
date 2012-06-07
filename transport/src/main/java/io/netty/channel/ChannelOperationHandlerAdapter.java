@@ -69,6 +69,6 @@ public class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future)
             throws Exception {
-        ctx.flush(future);
+        ChannelHandlerAdapter.flush0(ctx, future);
     }
 }

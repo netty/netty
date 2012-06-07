@@ -20,10 +20,11 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateHandlerAdapter;
 
-public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAdapter<Byte> {
+public abstract class StreamToMessageDecoder<O>
+        extends ChannelStateHandlerAdapter implements ChannelInboundHandler<Byte> {
 
     private ChannelHandlerContext ctx;
 

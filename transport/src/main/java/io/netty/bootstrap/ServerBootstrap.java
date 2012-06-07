@@ -23,10 +23,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.logging.InternalLogger;
@@ -230,9 +231,11 @@ public class ServerBootstrap {
         validate();
     }
 
-    private class Acceptor extends ChannelInboundHandlerAdapter<Channel> {
+    private class Acceptor extends ChannelStateHandlerAdapter implements ChannelInboundHandler<Channel> {
+
         @Override
-        public ChannelBufferHolder<Channel> newInboundBuffer(ChannelHandlerContext ctx) {
+        public ChannelBufferHolder<Channel> newInboundBuffer(
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 

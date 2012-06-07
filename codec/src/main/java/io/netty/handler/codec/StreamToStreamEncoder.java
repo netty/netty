@@ -20,9 +20,11 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOperationHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 
-public abstract class StreamToStreamEncoder extends ChannelOutboundHandlerAdapter<Byte> {
+public abstract class StreamToStreamEncoder
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler<Byte> {
 
     @Override
     public ChannelBufferHolder<Byte> newOutboundBuffer(

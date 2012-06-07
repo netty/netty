@@ -23,8 +23,9 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -67,7 +68,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.stream.ChunkedInput oneway - - reads from
  */
-public class ChunkedWriteHandler extends ChannelOutboundHandlerAdapter<Object> {
+public class ChunkedWriteHandler
+        extends ChannelHandlerAdapter implements ChannelOutboundHandler<Object> {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);

@@ -232,4 +232,16 @@ public class LoggingHandler extends ChannelHandlerAdapter {
         }
         super.deregister(ctx, future);
     }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+            throws Exception {
+        ctx.flush(future);
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx)
+            throws Exception {
+        ctx.fireInboundBufferUpdated();
+    }
 }
