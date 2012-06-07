@@ -17,7 +17,7 @@ package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 
 import java.io.IOException;
 
@@ -38,12 +38,12 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         final MarshallerFactory marshallerFactory = createMarshallerFactory();
         final MarshallingConfiguration configuration = createMarshallingConfig();
 
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(createEncoder());
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(createEncoder());
 
-        encoder.offer(testObject);
-        Assert.assertTrue(encoder.finish());
+        ch.writeOutbound(testObject);
+        Assert.assertTrue(ch.finish());
 
-        ChannelBuffer buffer = encoder.poll();
+        ChannelBuffer buffer = ch.readOutbound();
 
         Unmarshaller unmarshaller = marshallerFactory.createUnmarshaller(configuration);
         unmarshaller.start(Marshalling.createByteInput(truncate(buffer).nioBuffer()));
@@ -52,7 +52,7 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
 
         Assert.assertEquals(-1, unmarshaller.read());
 
-        Assert.assertNull(encoder.poll());
+        Assert.assertNull(ch.readOutbound());
 
         unmarshaller.finish();
         unmarshaller.close();

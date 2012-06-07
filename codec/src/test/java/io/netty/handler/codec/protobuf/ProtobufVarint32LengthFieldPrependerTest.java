@@ -18,27 +18,25 @@ package io.netty.handler.codec.protobuf;
 import static io.netty.buffer.ChannelBuffers.*;
 import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 
 import org.junit.Before;
 import org.junit.Test;
 
 public class ProtobufVarint32LengthFieldPrependerTest {
 
-    private EncoderEmbedder<ChannelBuffer> embedder;
+    private EmbeddedStreamChannel ch;
 
     @Before
     public void setUp() {
-        embedder = new EncoderEmbedder<ChannelBuffer>(
-                new ProtobufVarint32LengthFieldPrepender());
+        ch = new EmbeddedStreamChannel(new ProtobufVarint32LengthFieldPrepender());
     }
 
     @Test
     public void testTinyEncode() {
         byte[] b = { 4, 1, 1, 1, 1 };
-        embedder.offer(wrappedBuffer(b, 1, b.length - 1));
-        assertThat(embedder.poll(), is(wrappedBuffer(b)));
+        ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1));
+        assertThat(ch.readOutbound(), is(wrappedBuffer(b)));
     }
 
     @Test
@@ -49,7 +47,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         }
         b[0] = -2;
         b[1] = 15;
-        embedder.offer(wrappedBuffer(b, 2, b.length - 2));
-        assertThat(embedder.poll(), is(wrappedBuffer(b)));
+        ch.writeOutbound(wrappedBuffer(b, 2, b.length - 2));
+        assertThat(ch.readOutbound(), is(wrappedBuffer(b)));
     }
 }

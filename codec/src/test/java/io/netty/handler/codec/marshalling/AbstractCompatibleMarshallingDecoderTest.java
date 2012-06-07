@@ -19,9 +19,9 @@ import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,7 +42,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
 
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(Integer.MAX_VALUE));
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(createDecoder(Integer.MAX_VALUE));
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -53,14 +53,14 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
 
         byte[] testBytes = bout.toByteArray();
 
-        decoder.offer(input(testBytes));
-        assertTrue(decoder.finish());
+        ch.writeInbound(input(testBytes));
+        assertTrue(ch.finish());
 
-        String unmarshalled = (String) decoder.poll();
+        String unmarshalled = (String) ch.readInbound();
 
         Assert.assertEquals(testObject, unmarshalled);
 
-        Assert.assertNull(decoder.poll());
+        Assert.assertNull(ch.readInbound());
     }
 
     protected ChannelBuffer input(byte[] input) {
@@ -72,7 +72,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
 
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(createDecoder(Integer.MAX_VALUE));
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(createDecoder(Integer.MAX_VALUE));
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -86,16 +86,15 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         ChannelBuffer buffer = input(testBytes);
         ChannelBuffer slice = buffer.readSlice(2);
 
-        decoder.offer(slice);
-        decoder.offer(buffer);
-        assertTrue(decoder.finish());
+        ch.writeInbound(slice);
+        ch.writeInbound(buffer);
+        assertTrue(ch.finish());
 
-
-        String unmarshalled = (String) decoder.poll();
+        String unmarshalled = (String) ch.readInbound();
 
         Assert.assertEquals(testObject, unmarshalled);
 
-        Assert.assertNull(decoder.poll());
+        Assert.assertNull(ch.readInbound());
     }
 
     @Test
@@ -104,7 +103,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallingConfiguration configuration = createMarshallingConfig();
 
         ChannelHandler mDecoder = createDecoder(4);
-        DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(mDecoder);
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(mDecoder);
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -114,10 +113,8 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         marshaller.close();
 
         byte[] testBytes = bout.toByteArray();
-
-        decoder.offer(input(testBytes));
         try {
-            decoder.poll();
+            ch.writeInbound(input(testBytes));
             fail();
         } catch (CodecException e) {
             assertEquals(TooLongFrameException.class, e.getClass());

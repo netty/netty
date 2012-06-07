@@ -20,7 +20,7 @@ import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
 
 import java.util.Random;
 
@@ -31,32 +31,32 @@ import org.junit.Test;
  */
 public class ByteArrayEncoderTest {
 
-    private EncoderEmbedder<ChannelBuffer> embedder;
+    private EmbeddedMessageChannel ch;
 
     @Before
     public void setUp() {
-        embedder = new EncoderEmbedder<ChannelBuffer>(new ByteArrayEncoder());
+        ch = new EmbeddedMessageChannel(new ByteArrayEncoder());
     }
 
     @Test
     public void testEncode() {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
-        embedder.offer(b);
-        assertThat(embedder.poll(), is(wrappedBuffer(b)));
+        ch.writeOutbound(b);
+        assertThat((ChannelBuffer) ch.readOutbound(), is(wrappedBuffer(b)));
     }
 
     @Test
     public void testEncodeEmpty() {
         byte[] b = new byte[0];
-        embedder.offer(b);
-        assertThat(embedder.poll(), nullValue());
+        ch.writeOutbound(b);
+        assertThat(ch.readOutbound(), nullValue());
     }
 
     @Test
     public void testEncodeOtherType() {
         String str = "Meep!";
-        embedder.offer(str);
-        assertThat(embedder.poll(), is((Object) str));
+        ch.writeOutbound(str);
+        assertThat(ch.readOutbound(), is((Object) str));
     }
 }

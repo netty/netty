@@ -51,6 +51,13 @@ public class EmbeddedStreamChannel extends AbstractEmbeddedChannel {
         return lastOutboundBuffer().readable();
     }
 
+    public boolean finish() {
+        close();
+        checkException();
+        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
+               lastOutboundBuffer().readable();
+    }
+
     @Override
     protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
         if (!lastOutboundBuffer.readable()) {

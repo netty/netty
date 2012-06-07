@@ -20,30 +20,30 @@ import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 
 import org.junit.Before;
 import org.junit.Test;
 
 public class ProtobufVarint32FrameDecoderTest {
 
-    private DecoderEmbedder<ChannelBuffer> embedder;
+    private EmbeddedStreamChannel ch;
 
     @Before
     public void setUp() {
-        embedder = new DecoderEmbedder<ChannelBuffer>(
-                new ProtobufVarint32FrameDecoder());
+        ch = new EmbeddedStreamChannel(new ProtobufVarint32FrameDecoder());
     }
 
     @Test
     public void testTinyDecode() {
         byte[] b = { 4, 1, 1, 1, 1 };
-        embedder.offer(wrappedBuffer(b, 0, 1));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 1, 2));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 3, b.length - 3));
-        assertThat(embedder.poll(),
+        ch.writeInbound(wrappedBuffer(b, 0, 1));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 1, 2));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 3, b.length - 3));
+        assertThat(
+                (ChannelBuffer) ch.readInbound(),
                 is(wrappedBuffer(new byte[] { 1, 1, 1, 1 })));
     }
 
@@ -55,12 +55,11 @@ public class ProtobufVarint32FrameDecoderTest {
         }
         b[0] = -2;
         b[1] = 15;
-        embedder.offer(wrappedBuffer(b, 0, 127));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 127, 600));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 727, b.length - 727));
-        assertThat(embedder.poll(), is(wrappedBuffer(b, 2, b.length - 2)));
+        ch.writeInbound(wrappedBuffer(b, 0, 127));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 127, 600));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 727, b.length - 727));
+        assertThat((ChannelBuffer) ch.readInbound(), is(wrappedBuffer(b, 2, b.length - 2)));
     }
-
 }

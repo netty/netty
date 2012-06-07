@@ -45,6 +45,13 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
         return !lastOutboundBuffer().isEmpty();
     }
 
+    public boolean finish() {
+        close();
+        checkException();
+        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
+               !lastOutboundBuffer().isEmpty();
+    }
+
     @Override
     protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
         for (;;) {

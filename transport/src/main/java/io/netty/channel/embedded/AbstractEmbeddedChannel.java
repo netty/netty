@@ -31,12 +31,16 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
 public abstract class AbstractEmbeddedChannel extends AbstractChannel {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEmbeddedChannel.class);
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig();
@@ -205,7 +209,13 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
                 throws Exception {
-            lastException = cause;
+            if (lastException == null) {
+                lastException = cause;
+            } else {
+                logger.warn(
+                        "More than one exception was raised. " +
+                        "Will report only the first one and log others.", cause);
+            }
         }
     }
 

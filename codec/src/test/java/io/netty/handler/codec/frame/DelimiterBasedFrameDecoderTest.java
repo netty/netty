@@ -18,54 +18,53 @@ package io.netty.handler.codec.frame;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.embedded.EmbeddedStreamChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.util.CharsetUtil;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 public class DelimiterBasedFrameDecoderTest {
+
     @Test
     public void testFailSlowTooLongFrameRecovery() throws Exception {
-        DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(
                 new DelimiterBasedFrameDecoder(1, true, false, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
-            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 }));
+            ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 }));
             try {
-                assertTrue(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0 })));
-                embedder.poll();
+                assertTrue(ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0 })));
                 Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 0 }));
-            ChannelBuffer buf = embedder.poll();
+            ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 0 }));
+            ChannelBuffer buf = (ChannelBuffer) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
 
     @Test
     public void testFailFastTooLongFrameRecovery() throws Exception {
-        DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
+        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(
                 new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
             try {
-                assertTrue(embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 })));
-                embedder.poll();
+                assertTrue(ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 })));
                 Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 'A', 0 }));
-            ChannelBuffer buf = embedder.poll();
+            ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 'A', 0 }));
+            ChannelBuffer buf = (ChannelBuffer) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
