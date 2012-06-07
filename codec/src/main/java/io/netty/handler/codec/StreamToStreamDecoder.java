@@ -16,20 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
-public abstract class StreamToStreamDecoder
-        extends ChannelStateHandlerAdapter implements ChannelInboundHandler<Byte> {
-
-    @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.byteBuffer();
-    }
+public abstract class StreamToStreamDecoder extends ChannelInboundStreamHandlerAdapter {
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {

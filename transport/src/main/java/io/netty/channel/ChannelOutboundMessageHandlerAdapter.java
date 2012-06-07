@@ -13,24 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.spdy;
-
-import io.netty.channel.CombinedChannelHandler;
+package io.netty.channel;
 
 
-/**
- * A combination of {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}
- * @apiviz.has io.netty.handler.codec.sdpy.SpdyHttpDecoder
- * @apiviz.has io.netty.handler.codec.spdy.SpdyHttpEncoder
- */
-public class SpdyHttpCodec extends CombinedChannelHandler {
-
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
-    public SpdyHttpCodec(int version, int maxContentLength) {
-        super(
-                new SpdyHttpDecoder(version, maxContentLength),
-                new SpdyHttpEncoder(version));
+public class ChannelOutboundMessageHandlerAdapter<I> extends ChannelOutboundHandlerAdapter<I> {
+    @Override
+    public ChannelBufferHolder<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ChannelBufferHolders.messageBuffer();
     }
 }

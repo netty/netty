@@ -21,9 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
@@ -70,8 +69,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @param <E> the type of the received messages
  */
-public class BlockingReadHandler<E>
-        extends ChannelStateHandlerAdapter implements ChannelInboundHandler<Object> {
+public class BlockingReadHandler<E> extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private static final Object INACTIVE = new Object();
 

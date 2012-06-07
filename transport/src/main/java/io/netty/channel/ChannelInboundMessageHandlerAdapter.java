@@ -17,8 +17,7 @@ package io.netty.channel;
 
 import java.util.Queue;
 
-public class ChannelInboundMessageHandlerAdapter<I>
-        extends ChannelStateHandlerAdapter implements ChannelInboundHandler<I> {
+public class ChannelInboundMessageHandlerAdapter<I> extends ChannelInboundHandlerAdapter<I> {
 
     @Override
     public ChannelBufferHolder<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {

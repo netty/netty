@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.channel.CombinedChannelHandler;
+
+import io.netty.channel.CombinedChannelHandler;
+
 
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}

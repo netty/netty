@@ -15,21 +15,12 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.util.Queue;
 
-public abstract class MessageToMessageDecoder<I, O> extends ChannelStateHandlerAdapter implements ChannelInboundHandler<I> {
-
-    @Override
-    public ChannelBufferHolder<I> newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
-    }
+public abstract class MessageToMessageDecoder<I, O> extends ChannelInboundMessageHandlerAdapter<I> {
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx)

@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.CombinedChannelHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.internal.QueueFactory;
 
