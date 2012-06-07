@@ -17,10 +17,10 @@ package org.jboss.netty.channel.socket;
 
 import static org.junit.Assert.*;
 
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -31,8 +31,8 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.util.TestUtil;
@@ -65,68 +65,76 @@ public abstract class AbstractDatagramMulticastTest {
     public void testMulticast() throws Throwable {
         ConnectionlessBootstrap sb = new ConnectionlessBootstrap(newServerSocketChannelFactory(executor));
         ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
-        MulticastTestHandler mhandler = new MulticastTestHandler();
+        DatagramChannel sc = null;
+        DatagramChannel cc = null;
+        try {
+            MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        cb.getPipeline().addFirst("handler", mhandler);
-        sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
+            cb.getPipeline().addFirst("handler", mhandler);
+            sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
-        int port = TestUtil.getFreePort();
+            int port = TestUtil.getFreePort();
 
-        NetworkInterface iface = null;
-        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-        while (interfaces.hasMoreElements()) {
-            NetworkInterface inf = interfaces.nextElement();
-            
-            // Only try to use interface if its not a loopback interface
-            if (!inf.isLoopback()) {
+            NetworkInterface loopbackIf;
+            try {
+                loopbackIf = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+            } catch (SocketException e) {
+                loopbackIf = null;
+            }
 
-                Enumeration<InetAddress> addresses = inf.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress addr = addresses.nextElement();
-                    if (addr instanceof Inet4Address) {
-                        iface = inf;
+            // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
+            // if so fail back the the first interface
+            if (loopbackIf == null) {
+                for (Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces();
+                     e.hasMoreElements();) {
+                    NetworkInterface nif = e.nextElement();
+                    if (nif.isLoopback()) {
+                        loopbackIf = nif;
                         break;
                     }
                 }
             }
+
+            sb.setOption("networkInterface", loopbackIf);
+            sb.setOption("reuseAddress", true);
+
+            sc = (DatagramChannel) sb.bind(new InetSocketAddress(port));
+
+
+            String group = "230.0.0.1";
+            InetSocketAddress groupAddress = new InetSocketAddress(group, port);
+
+            cb.setOption("networkInterface", loopbackIf);
+            cb.setOption("reuseAddress", true);
+
+            cc = (DatagramChannel) cb.bind(new InetSocketAddress(port));
+
+            assertTrue(cc.joinGroup(groupAddress, loopbackIf).awaitUninterruptibly().isSuccess());
+
+            assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
+
+            assertTrue(mhandler.await());
+
+            assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
+
+            // leave the group
+            assertTrue(cc.leaveGroup(groupAddress, loopbackIf).awaitUninterruptibly().isSuccess());
+
+            // sleep a second to make sure we left the group
+            Thread.sleep(1000);
+
+            // we should not receive a message anymore as we left the group before
+            assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
+        } finally {
+            if (sc != null) {
+                sc.close().awaitUninterruptibly();
+            }
+            if (cc != null) {
+                cc.close().awaitUninterruptibly();
+            }
+            sb.releaseExternalResources();
+            cb.releaseExternalResources();
         }
-        
-        sb.setOption("networkInterface", iface);
-        sb.setOption("reuseAddress", true);
-
-        Channel sc = sb.bind(new InetSocketAddress(port));
-
-
-        String group = "230.0.0.1";
-        InetSocketAddress groupAddress = new InetSocketAddress(group, port);
-
-        cb.setOption("networkInterface", iface);
-        cb.setOption("reuseAddress", true);
-
-        DatagramChannel cc = (DatagramChannel) cb.bind(new InetSocketAddress(port));
-
-        assertTrue(cc.joinGroup(groupAddress, iface).awaitUninterruptibly().isSuccess());
-
-        assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
-
-
-        assertTrue(mhandler.await());
-
-        assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
-
-
-        // leave the group
-        assertTrue(cc.leaveGroup(groupAddress, iface).awaitUninterruptibly().isSuccess());
-
-        // sleep a second to make sure we left the group
-        Thread.sleep(1000);
-
-        // we should not receive a message anymore as we left the group before
-        assertTrue(sc.write(wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
-
-        sc.close().awaitUninterruptibly();
-        cc.close().awaitUninterruptibly();
-
     }
 
     private static ChannelBuffer wrapInt(int value) {
@@ -148,12 +156,18 @@ public abstract class AbstractDatagramMulticastTest {
                 fail = true;
             }
 
-            Assert.assertEquals(1,((ChannelBuffer)e.getMessage()).readInt());
+            Assert.assertEquals(1, ((ChannelBuffer)e.getMessage()).readInt());
 
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message
             done = true;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+                throws Exception {
+            e.getCause().printStackTrace();
         }
 
         public boolean await() throws Exception {

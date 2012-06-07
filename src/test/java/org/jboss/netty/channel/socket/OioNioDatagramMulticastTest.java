@@ -18,6 +18,7 @@ package org.jboss.netty.channel.socket;
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 
 public class OioNioDatagramMulticastTest extends AbstractDatagramMulticastTest {
 
@@ -28,7 +29,7 @@ public class OioNioDatagramMulticastTest extends AbstractDatagramMulticastTest {
 
     @Override
     protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor, InternetProtocolFamily.IPv4);
+        return new OioDatagramChannelFactory(executor);
     }
 
 }
