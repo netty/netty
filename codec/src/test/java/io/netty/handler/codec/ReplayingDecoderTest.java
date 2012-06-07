@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.util.VoidEnum;
 
@@ -54,7 +54,7 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        public ChannelBuffer decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
+        public ChannelBuffer decode(ChannelHandlerContext ctx, ChannelBuffer in) {
             ChannelBuffer msg = in.readBytes(in.bytesBefore(ChannelBufferIndexFinder.LF));
             in.skipBytes(1);
             return msg;

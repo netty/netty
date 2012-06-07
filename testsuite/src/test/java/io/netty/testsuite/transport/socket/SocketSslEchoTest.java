@@ -22,7 +22,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -167,14 +167,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
+        public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
         }
 
         @Override
         public void inboundBufferUpdated(
-                ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
+                ChannelHandlerContext ctx, ChannelBuffer in)
                 throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
@@ -192,7 +192,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+        public void exceptionCaught(ChannelHandlerContext ctx,
                 Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn(

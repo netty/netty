@@ -18,30 +18,30 @@ package io.netty.handler.codec;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 
 public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAdapter<Byte> {
 
-    private ChannelInboundHandlerContext<Byte> ctx;
+    private ChannelHandlerContext ctx;
 
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         return ChannelBufferHolders.byteBuffer();
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         callDecode(ctx);
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ChannelBuffer in = ctx.inboundByteBuffer();
         if (in.readable()) {
             callDecode(ctx);
         }
@@ -62,8 +62,8 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         ctx.fireChannelInactive();
     }
 
-    protected void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+    protected void callDecode(ChannelHandlerContext ctx) {
+        ChannelBuffer in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
         for (;;) {
@@ -123,10 +123,10 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         // the new handler.
         ctx.pipeline().addAfter(ctx.name(), newHandlerName, newHandler);
 
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+        ChannelBuffer in = ctx.inboundByteBuffer();
         try {
             if (in.readable()) {
-                ctx.nextInboundByteBuffer().writeBytes(ctx.inbound().byteBuffer());
+                ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());
                 ctx.fireInboundBufferUpdated();
             }
         } finally {
@@ -134,9 +134,9 @@ public abstract class StreamToMessageDecoder<O> extends ChannelInboundHandlerAda
         }
     }
 
-    public abstract O decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception;
+    public abstract O decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception;
 
-    public O decodeLast(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public O decodeLast(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         return decode(ctx, in);
     }
 }

@@ -18,7 +18,6 @@ package io.netty.handler.codec.string;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -81,7 +80,7 @@ public class StringDecoder extends MessageToMessageDecoder<ChannelBuffer, String
     }
 
     @Override
-    public String decode(ChannelInboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg) throws Exception {
+    public String decode(ChannelHandlerContext ctx, ChannelBuffer msg) throws Exception {
         return msg.toString(charset);
     }
 }

@@ -24,8 +24,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventExecutor;
 import io.netty.util.HashedWheelTimer;
@@ -205,12 +203,12 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public ChannelBufferHolder<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.inboundBypassBuffer(ctx);
     }
 
     @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.outboundBypassBuffer(ctx);
     }
 
@@ -232,7 +230,7 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // This method will be invoked only if this handler was added
         // before channelActive() event is fired.  If a user adds this handler
         // after the channelActive() event, initialize() will be called by beforeAdd().
@@ -241,21 +239,21 @@ public class IdleStateHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
         super.channelInactive(ctx);
     }
 
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         lastReadTime = System.currentTimeMillis();
         readerIdleCount = allIdleCount = 0;
         ctx.fireInboundBufferUpdated();
     }
 
     @Override
-    public void flush(final ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {

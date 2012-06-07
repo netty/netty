@@ -141,7 +141,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     boolean isActive();
 
     ChannelBuffer outboundByteBuffer();
-    Queue<Object> outboundMessageBuffer();
+    <T> Queue<T> outboundMessageBuffer();
 
     /**
      * Returns the local address where this channel is bound to.  The returned
@@ -179,7 +179,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     Unsafe unsafe();
 
     public interface Unsafe {
-        ChannelBufferHolder<Object> directOutbound();
+        ChannelHandlerContext directOutboundContext();
         ChannelFuture voidFuture();
 
         SocketAddress localAddress();

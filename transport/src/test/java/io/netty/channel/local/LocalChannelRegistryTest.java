@@ -18,7 +18,7 @@ package io.netty.channel.local;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.logging.InternalLogger;
@@ -85,7 +85,7 @@ public class LocalChannelRegistryTest {
 
     static class TestHandler extends ChannelInboundMessageHandlerAdapter<String> {
         @Override
-        public void messageReceived(ChannelInboundHandlerContext<String> ctx, String msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             logger.info(String.format("Received mesage: %s", msg));
         }
     }

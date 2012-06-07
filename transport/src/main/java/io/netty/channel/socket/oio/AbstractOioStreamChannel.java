@@ -17,7 +17,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelType;
@@ -78,11 +77,7 @@ abstract class AbstractOioStreamChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
-        flushByteBuf(buf.byteBuffer());
-    }
-
-    private void flushByteBuf(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
         while (buf.readable()) {
             doWriteBytes(buf);
         }

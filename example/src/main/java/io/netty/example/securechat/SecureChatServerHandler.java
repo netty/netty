@@ -18,7 +18,7 @@ package io.netty.example.securechat;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -39,7 +39,7 @@ public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter
     static final ChannelGroup channels = new DefaultChannelGroup();
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<String> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // Get the SslHandler in the current pipeline.
         // We added it in SecureChatPipelineFactory.
         final SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
@@ -50,7 +50,7 @@ public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String request) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String request) throws Exception {
         // Send the received message to all channels but the current one.
         for (Channel c: channels) {
             if (c != ctx.channel()) {
@@ -68,7 +68,7 @@ public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

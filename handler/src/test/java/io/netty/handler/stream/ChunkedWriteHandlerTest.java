@@ -15,17 +15,15 @@
  */
 package io.netty.handler.stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
 import io.netty.util.CharsetUtil;
 
@@ -136,12 +134,12 @@ public class ChunkedWriteHandlerTest {
         ChannelOutboundHandlerAdapter<ChannelBuffer> testHandler = new ChannelOutboundHandlerAdapter<ChannelBuffer>() {
 
             @Override
-            public ChannelBufferHolder<ChannelBuffer> newOutboundBuffer(ChannelOutboundHandlerContext<ChannelBuffer> ctx) throws Exception {
+            public ChannelBufferHolder<ChannelBuffer> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
                 return ChannelBufferHolders.messageBuffer();
             }
 
             @Override
-            public void flush(ChannelOutboundHandlerContext<ChannelBuffer> ctx, ChannelFuture future) throws Exception {
+            public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
                 super.flush(ctx, future);
                 
                 future.setSuccess();

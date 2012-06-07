@@ -19,7 +19,6 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -79,7 +78,7 @@ public class StringEncoder extends MessageToMessageEncoder<String, ChannelBuffer
     }
 
     @Override
-    public ChannelBuffer encode(ChannelOutboundHandlerContext<String> ctx, String msg) throws Exception {
+    public ChannelBuffer encode(ChannelHandlerContext ctx, String msg) throws Exception {
         return ChannelBuffers.copiedBuffer(msg, charset);
     }
 }

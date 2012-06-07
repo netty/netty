@@ -16,7 +16,7 @@
 package io.netty.example.factorial;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 
 import java.math.BigInteger;
@@ -30,7 +30,7 @@ public class NumberEncoder extends MessageToStreamEncoder<Number> {
 
     @Override
     public void encode(
-            ChannelOutboundHandlerContext<Number> ctx, Number msg, ChannelBuffer out) throws Exception {
+            ChannelHandlerContext ctx, Number msg, ChannelBuffer out) throws Exception {
         // Convert to a BigInteger first for easier implementation.
         BigInteger v;
         if (msg instanceof BigInteger) {

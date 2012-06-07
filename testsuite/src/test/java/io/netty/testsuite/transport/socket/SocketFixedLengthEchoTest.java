@@ -21,7 +21,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -129,14 +129,14 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelInboundHandlerContext<ChannelBuffer> ctx)
+        public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
         }
 
         @Override
         public void messageReceived(
-                ChannelInboundHandlerContext<ChannelBuffer> ctx,
+                ChannelHandlerContext ctx,
                 ChannelBuffer msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
@@ -157,7 +157,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(
-                ChannelInboundHandlerContext<ChannelBuffer> ctx, Throwable cause)
+                ChannelHandlerContext ctx, Throwable cause)
                 throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();

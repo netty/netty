@@ -21,8 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.handler.codec.StreamToStreamCodec;
@@ -437,19 +435,19 @@ public class SslHandler extends StreamToStreamCodec {
     }
 
     @Override
-    public void disconnect(final ChannelOutboundHandlerContext<Byte> ctx,
+    public void disconnect(final ChannelHandlerContext ctx,
             final ChannelFuture future) throws Exception {
         closeOutboundAndChannel(ctx, future, true);
     }
 
     @Override
-    public void close(final ChannelOutboundHandlerContext<Byte> ctx,
+    public void close(final ChannelHandlerContext ctx,
             final ChannelFuture future) throws Exception {
         closeOutboundAndChannel(ctx, future, false);
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
 
 
         // Do not encrypt the first write request if this handler is
@@ -544,7 +542,7 @@ public class SslHandler extends StreamToStreamCodec {
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure the handshake future is notified when a connection has
         // been closed during handshake.
         synchronized (handshakeLock) {
@@ -571,7 +569,7 @@ public class SslHandler extends StreamToStreamCodec {
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof IOException) {
             if (cause instanceof ClosedChannelException) {
                 synchronized (ignoreClosedChannelExceptionLock) {
@@ -611,7 +609,7 @@ public class SslHandler extends StreamToStreamCodec {
 
 
     @Override
-    public void decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
+    public void decode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
 
         // check if the packet lenght was read before
         if (packetLength == -1) {
@@ -1001,7 +999,7 @@ public class SslHandler extends StreamToStreamCodec {
     }
 
     private void closeOutboundAndChannel(
-            final ChannelOutboundHandlerContext<Byte> context, final ChannelFuture future, boolean disconnect) throws Exception {
+            final ChannelHandlerContext context, final ChannelFuture future, boolean disconnect) throws Exception {
         if (!context.channel().isActive()) {
             if (disconnect) {
                 ctx.disconnect(future);
@@ -1082,7 +1080,7 @@ public class SslHandler extends StreamToStreamCodec {
      * Calls {@link #handshake()} once the {@link Channel} is connected
      */
     @Override
-    public void channelActive(final ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         if (issueHandshake) {
             // issue and handshake and add a listener to it which will fire an exception event if an exception was thrown while doing the handshake
             handshake().addListener(new ChannelFutureListener() {

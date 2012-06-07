@@ -19,20 +19,20 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerContext;
 
 public abstract class StreamToStreamEncoder extends ChannelOutboundHandlerAdapter<Byte> {
 
     @Override
     public ChannelBufferHolder<Byte> newOutboundBuffer(
-            ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.byteBuffer();
     }
 
     @Override
-    public void flush(ChannelOutboundHandlerContext<Byte> ctx, ChannelFuture future) throws Exception {
-        ChannelBuffer in = ctx.outbound().byteBuffer();
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        ChannelBuffer in = ctx.outboundByteBuffer();
         ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
         int oldOutSize = out.readableBytes();
@@ -58,5 +58,5 @@ public abstract class StreamToStreamEncoder extends ChannelOutboundHandlerAdapte
         }
     }
 
-    public abstract void encode(ChannelOutboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
+    public abstract void encode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
 }

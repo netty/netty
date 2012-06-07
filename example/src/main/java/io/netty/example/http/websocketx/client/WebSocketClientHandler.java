@@ -38,7 +38,7 @@
 package io.netty.example.http.websocketx.client;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -57,12 +57,12 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         System.out.println("WebSocket Client disconnected!");
     }
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         Channel ch = ctx.channel();
         if (!handshaker.isHandshakeComplete()) {
             handshaker.finishHandshake(ch, (HttpResponse) msg);
@@ -89,7 +89,7 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
     }

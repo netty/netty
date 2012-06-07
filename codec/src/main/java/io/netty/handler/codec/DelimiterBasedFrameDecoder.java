@@ -17,7 +17,6 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s by one or more
@@ -187,7 +186,7 @@ public class DelimiterBasedFrameDecoder extends StreamToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
         // Try all delimiters and choose the delimiter which yields the shortest frame.
         int minFrameLength = Integer.MAX_VALUE;
         ChannelBuffer minDelim = null;

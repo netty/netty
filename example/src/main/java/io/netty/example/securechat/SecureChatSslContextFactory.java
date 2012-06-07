@@ -15,6 +15,8 @@
  */
 package io.netty.example.securechat;
 
+import io.netty.handler.ssl.SslHandler;
+
 import java.security.KeyStore;
 import java.security.Security;
 
@@ -23,8 +25,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
-
-import io.netty.handler.ssl.SslHandler;
 
 /**
  * Creates a bogus {@link SSLContext}.  A client-side context created by this

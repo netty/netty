@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpChunk;
@@ -145,7 +144,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
     }
 
     @Override
-    public Object encode(ChannelOutboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         List<Object> out = new ArrayList<Object>();
         if (msg instanceof HttpRequest) {

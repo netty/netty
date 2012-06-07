@@ -84,11 +84,7 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
-        flushMessageBuf(buf.messageBuffer());
-    }
-
-    private void flushMessageBuf(Queue<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
         final int writeSpinCount = config().getWriteSpinCount() - 1;
         while (!buf.isEmpty()) {
             boolean wrote = false;

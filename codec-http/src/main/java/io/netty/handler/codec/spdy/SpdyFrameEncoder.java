@@ -21,7 +21,6 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 
@@ -92,7 +91,7 @@ public class SpdyFrameEncoder extends MessageToStreamEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;

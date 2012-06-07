@@ -19,7 +19,6 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.StreamToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -102,7 +101,7 @@ public class SpdyFrameDecoder extends StreamToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decodeLast(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public Object decodeLast(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         try {
             return decode(ctx, in);
         } finally {
@@ -111,7 +110,7 @@ public class SpdyFrameDecoder extends StreamToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
         switch(state) {
         case READ_COMMON_HEADER:
             state = readCommonHeader(buffer);

@@ -18,25 +18,25 @@ package io.netty.handler.codec;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
 
 public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter<Byte> {
 
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.byteBuffer();
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         callDecode(ctx);
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ChannelBuffer in = ctx.inboundByteBuffer();
         if (!in.readable()) {
             callDecode(ctx);
         }
@@ -61,8 +61,8 @@ public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter
         ctx.fireChannelInactive();
     }
 
-    private void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+    private void callDecode(ChannelHandlerContext ctx) {
+        ChannelBuffer in = ctx.inboundByteBuffer();
         ChannelBuffer out = ctx.nextInboundByteBuffer();
 
         int oldOutSize = out.readableBytes();
@@ -88,9 +88,9 @@ public abstract class StreamToStreamDecoder extends ChannelInboundHandlerAdapter
         }
     }
 
-    public abstract void decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
+    public abstract void decode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
 
-    public void decodeLast(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
+    public void decodeLast(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
         decode(ctx, in, out);
     }
 }

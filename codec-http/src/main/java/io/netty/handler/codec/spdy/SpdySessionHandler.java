@@ -15,15 +15,12 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
@@ -87,19 +84,19 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer();
     }
 
     @Override
     public ChannelBufferHolder<Object> newOutboundBuffer(
-            ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer();
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
-        Queue<Object> in = ctx.inbound().messageBuffer();
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        Queue<Object> in = ctx.inboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {
@@ -422,7 +419,7 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof SpdyProtocolException) {
             issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
         }
@@ -432,20 +429,20 @@ public class SpdySessionHandler extends ChannelHandlerAdapter<Object, Object> {
 
 
     @Override
-    public void close(ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         sendGoAwayFrame(ctx);
         super.close(ctx, future);
     }
 
     @Override
-    public void disconnect(ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         sendGoAwayFrame(ctx);
         super.close(ctx, future);
     }
 
     @Override
-    public void flush(ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
-        Queue<Object> in = ctx.outbound().messageBuffer();
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        Queue<Object> in = ctx.outboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {

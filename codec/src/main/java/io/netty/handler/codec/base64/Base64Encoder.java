@@ -17,7 +17,7 @@ package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -68,7 +68,7 @@ public class Base64Encoder extends MessageToMessageEncoder<ChannelBuffer, Channe
     }
 
     @Override
-    public ChannelBuffer encode(ChannelOutboundHandlerContext<ChannelBuffer> ctx,
+    public ChannelBuffer encode(ChannelHandlerContext ctx,
             ChannelBuffer msg) throws Exception {
         return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
     }

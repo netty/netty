@@ -15,9 +15,9 @@
  */
 package io.netty.example.telnet;
 
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,13 +32,13 @@ public class TelnetClientHandler extends ChannelInboundMessageHandlerAdapter<Str
             TelnetClientHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         // Print out the line received from the server.
         System.err.println(msg);
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

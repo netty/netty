@@ -17,7 +17,7 @@ package io.netty.example.factorial;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.math.BigInteger;
@@ -39,7 +39,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     private static final Logger logger = Logger.getLogger(
             FactorialClientHandler.class.getName());
 
-    private ChannelInboundHandlerContext<BigInteger> ctx;
+    private ChannelHandlerContext ctx;
     private int i = 1;
     private int receivedMessages;
     private final int count;
@@ -65,7 +65,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<BigInteger> ctx) {
+    public void channelActive(ChannelHandlerContext ctx) {
         this.ctx = ctx;
         sendNumbers();
     }
@@ -73,7 +73,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void messageReceived(
-            ChannelInboundHandlerContext<BigInteger> ctx, final BigInteger msg) {
+            ChannelHandlerContext ctx, final BigInteger msg) {
         receivedMessages ++;
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.
@@ -89,7 +89,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void exceptionCaught(
-            ChannelInboundHandlerContext<BigInteger> ctx, Throwable cause) throws Exception {
+            ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

@@ -55,7 +55,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.logging.InternalLogger;
@@ -99,7 +99,7 @@ public class WebSocket08FrameEncoder extends MessageToStreamEncoder<WebSocketFra
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<WebSocketFrame> ctx,
+    public void encode(ChannelHandlerContext ctx,
             WebSocketFrame msg, ChannelBuffer out) throws Exception {
         byte[] mask;
 

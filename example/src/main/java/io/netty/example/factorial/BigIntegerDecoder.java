@@ -16,7 +16,7 @@
 package io.netty.example.factorial;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.StreamToMessageDecoder;
 
@@ -31,7 +31,7 @@ import java.math.BigInteger;
 public class BigIntegerDecoder extends StreamToMessageDecoder<BigInteger> {
 
     @Override
-    public BigInteger decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
+    public BigInteger decode(ChannelHandlerContext ctx, ChannelBuffer in) {
         // Wait until the length prefix is available.
         if (in.readableBytes() < 5) {
             return null;

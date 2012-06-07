@@ -18,7 +18,7 @@ package io.netty.example.uptime;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.handler.timeout.IdleState;
@@ -42,7 +42,7 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         if (startTime < 0) {
             startTime = System.currentTimeMillis();
         }
@@ -50,13 +50,13 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         // Discard received data
         in.clear();
     }
 
     @Override
-    public void userEventTriggered(ChannelInboundHandlerContext<Byte> ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (!(evt instanceof IdleStateEvent)) {
             return;
         }
@@ -70,12 +70,12 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         println("Disconnected from: " + ctx.channel().remoteAddress());
     }
 
     @Override
-    public void channelUnregistered(final ChannelInboundHandlerContext<Byte> ctx)
+    public void channelUnregistered(final ChannelHandlerContext ctx)
             throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
 
@@ -90,7 +90,7 @@ public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ConnectException) {
             startTime = -1;
             println("Failed to connect: " + cause.getMessage());

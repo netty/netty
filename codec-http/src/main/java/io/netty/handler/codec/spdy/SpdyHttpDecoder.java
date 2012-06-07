@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -67,7 +66,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
     }
 
     @Override
-    public HttpMessage decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public HttpMessage decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.

@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 
@@ -56,7 +56,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;

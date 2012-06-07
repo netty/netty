@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import static io.netty.buffer.ChannelBuffers.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -61,7 +61,7 @@ public abstract class HttpMessageEncoder extends MessageToStreamEncoder<Object> 
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
             boolean chunked;

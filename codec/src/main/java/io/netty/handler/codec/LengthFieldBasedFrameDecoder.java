@@ -18,7 +18,6 @@ package io.netty.handler.codec;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
 /**
@@ -308,7 +307,7 @@ public class LengthFieldBasedFrameDecoder extends StreamToMessageDecoder<Object>
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         if (discardingTooLongFrame) {
             long bytesToDiscard = this.bytesToDiscard;
             int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());

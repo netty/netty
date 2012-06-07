@@ -21,7 +21,6 @@ import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
@@ -113,7 +112,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.inboundBypassBuffer(ctx);
     }
 
@@ -135,7 +134,7 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Object> ctx)
+    public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
         // This method will be invoked only if this handler was added
         // before channelActive() event is fired.  If a user adds this handler
@@ -145,13 +144,13 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter<Object> {
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
         super.channelInactive(ctx);
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         lastReadTime = System.currentTimeMillis();
         ctx.fireInboundBufferUpdated();
     }

@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import io.netty.logging.InternalLogger;
@@ -283,7 +282,7 @@ public class SpdySessionHandlerTest {
         }
 
         @Override
-        public void channelActive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // Initiate 4 new streams
             int streamID = server ? 2 : 1;
             SpdySynStreamFrame spdySynStreamFrame =
@@ -304,7 +303,7 @@ public class SpdySessionHandlerTest {
         }
 
         @Override
-        public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof SpdyDataFrame ||
                 msg instanceof SpdyPingFrame ||
                 msg instanceof SpdyHeadersFrame) {

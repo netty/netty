@@ -17,7 +17,6 @@ package io.netty.channel.local;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -199,7 +198,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -210,10 +209,9 @@ public class LocalChannel extends AbstractChannel {
         final LocalChannel peer = this.peer;
         assert peer != null;
 
-        Queue<Object> in = buf.messageBuffer();
         Queue<Object> out = peer.pipeline().inboundMessageBuffer();
         for (;;) {
-            Object msg = in.poll();
+            Object msg = buf.poll();
             if (msg == null) {
                 break;
             }

@@ -102,7 +102,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    @SuppressWarnings("unchecked")
     protected AbstractChannel(Channel parent, Integer id, ChannelBufferHolder<?> outboundBuffer) {
         if (outboundBuffer == null) {
             throw new NullPointerException("outboundBuffer");
@@ -382,8 +381,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private final Runnable flushLaterTask = new FlushLater();
 
         @Override
-        public final ChannelBufferHolder<Object> directOutbound() {
-            return pipeline.directOutbound;
+        public final ChannelHandlerContext directOutboundContext() {
+            return pipeline.head;
         }
 
         @Override
@@ -575,7 +574,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop().inEventLoop()) {
                 // Append flush future to the notification list.
                 if (future != voidFuture) {
-                    long checkpoint = writeCounter + directOutbound().size();
+                    final int bufSize;
+                    final ChannelHandlerContext ctx = directOutboundContext();
+                    if (ctx.hasOutboundByteBuffer()) {
+                        bufSize = ctx.outboundByteBuffer().readableBytes();
+                    } else {
+                        bufSize = ctx.outboundMessageBuffer().size();
+                    }
+
+                    long checkpoint = writeCounter + bufSize;
                     if (future instanceof FlushCheckpoint) {
                         FlushCheckpoint cp = (FlushCheckpoint) future;
                         cp.flushCheckpoint(checkpoint);
@@ -626,19 +633,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             inFlushNow = true;
-            final ChannelBufferHolder<Object> out = directOutbound();
+            ChannelHandlerContext ctx = directOutboundContext();
+            Throwable cause = null;
             try {
-                Throwable cause = null;
-                int oldSize = out.size();
-                try {
-                    doFlush(out);
-                } catch (Throwable t) {
-                    cause = t;
-                } finally {
-                    final int newSize = out.size();
-                    writeCounter += oldSize - newSize;
-                    if (newSize == 0 && out.hasByteBuffer()) {
-                        out.byteBuffer().discardReadBytes();
+                if (ctx.hasOutboundByteBuffer()) {
+                    ChannelBuffer out = ctx.outboundByteBuffer();
+                    int oldSize = out.readableBytes();
+                    try {
+                        doFlushByteBuffer(out);
+                    } catch (Throwable t) {
+                        cause = t;
+                    } finally {
+                        final int newSize = out.readableBytes();
+                        writeCounter += oldSize - newSize;
+                        if (newSize == 0) {
+                            out.discardReadBytes();
+                        }
+                    }
+                } else {
+                    Queue<Object> out = ctx.outboundMessageBuffer();
+                    int oldSize = out.size();
+                    try {
+                        doFlushMessageBuffer(out);
+                    } catch (Throwable t) {
+                        cause = t;
+                    } finally {
+                        writeCounter += oldSize - out.size();
                     }
                 }
 
@@ -693,7 +713,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doDisconnect() throws Exception;
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
-    protected abstract void doFlush(ChannelBufferHolder<Object> buf) throws Exception;
+    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
+        throw new UnsupportedOperationException();
+    }
 
     protected abstract boolean isFlushPending();
 

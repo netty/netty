@@ -15,7 +15,7 @@
  */
 package io.netty.example.securechat;
 
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.ssl.SslHandler;
 
@@ -31,7 +31,7 @@ public class SecureChatClientHandler extends ChannelInboundMessageHandlerAdapter
             SecureChatClientHandler.class.getName());
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<String> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // Get the SslHandler from the pipeline
         // which were added in SecureChatPipelineFactory.
         SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
@@ -41,12 +41,12 @@ public class SecureChatClientHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         System.err.println(msg);
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

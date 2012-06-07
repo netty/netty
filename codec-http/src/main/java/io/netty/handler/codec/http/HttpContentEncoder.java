@@ -17,8 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.embedder.EncoderEmbedder;
 import io.netty.util.internal.QueueFactory;
@@ -64,7 +63,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    public HttpMessage decode(ChannelInboundHandlerContext<HttpMessage> ctx, HttpMessage msg)
+    public HttpMessage decode(ChannelHandlerContext ctx, HttpMessage msg)
             throws Exception {
         String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
@@ -81,7 +80,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    public Object encode(ChannelOutboundHandlerContext<Object> ctx, Object msg)
+    public Object encode(ChannelHandlerContext ctx, Object msg)
             throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.

@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramChannel;
@@ -46,7 +46,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
             @Override
             public void messageReceived(
-                    ChannelInboundHandlerContext<DatagramPacket> ctx,
+                    ChannelHandlerContext ctx,
                     DatagramPacket msg) throws Exception {
                 // Nothing will be sent.
             }
@@ -94,7 +94,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         @Override
         public void messageReceived(
-                ChannelInboundHandlerContext<DatagramPacket> ctx,
+                ChannelHandlerContext ctx,
                 DatagramPacket msg) throws Exception {
             if (done) {
                 fail = true;

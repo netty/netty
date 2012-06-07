@@ -18,7 +18,7 @@ package io.netty.handler.codec.marshalling;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 
 import org.jboss.marshalling.Marshaller;
@@ -50,7 +50,7 @@ public class CompatibleMarshallingEncoder extends MessageToStreamEncoder<Object>
 
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
         Marshaller marshaller = provider.getMarshaller(ctx);
         marshaller.start(new ChannelBufferByteOutput(out));
         marshaller.writeObject(msg);

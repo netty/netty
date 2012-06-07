@@ -22,8 +22,8 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -232,13 +232,13 @@ public class ServerBootstrap {
 
     private class Acceptor extends ChannelInboundHandlerAdapter<Channel> {
         @Override
-        public ChannelBufferHolder<Channel> newInboundBuffer(ChannelInboundHandlerContext<Channel> ctx) {
+        public ChannelBufferHolder<Channel> newInboundBuffer(ChannelHandlerContext ctx) {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelInboundHandlerContext<Channel> ctx) {
-            Queue<Channel> in = ctx.inbound().messageBuffer();
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) {
+            Queue<Channel> in = ctx.inboundMessageBuffer();
             for (;;) {
                 Channel child = in.poll();
                 if (child == null) {

@@ -25,7 +25,7 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
@@ -53,12 +53,12 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer();
     }
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) msg;
 
@@ -125,7 +125,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
     }
 
-    private void writeResponse(ChannelInboundHandlerContext<Object> ctx) {
+    private void writeResponse(ChannelHandlerContext ctx) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
 
@@ -165,14 +165,14 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
     }
 
-    private static void send100Continue(ChannelInboundHandlerContext<Object> ctx) {
+    private static void send100Continue(ChannelHandlerContext ctx) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
         ctx.write(response);
     }
 
     @Override
     public void exceptionCaught(
-            ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+            ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
     }

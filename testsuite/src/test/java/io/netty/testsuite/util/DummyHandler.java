@@ -15,10 +15,7 @@
  */
 package io.netty.testsuite.util;
 
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
 
 public class DummyHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 

@@ -58,14 +58,6 @@ public final class ChannelBufferHolders {
         return new ChannelBufferHolder<Byte>(buffer);
     }
 
-    public static <E> ChannelBufferHolder<E> inboundBypassBuffer(ChannelHandlerContext ctx) {
-        return new ChannelBufferHolder<E>(ctx, true);
-    }
-
-    public static <E> ChannelBufferHolder<E> outboundBypassBuffer(ChannelHandlerContext ctx) {
-        return new ChannelBufferHolder<E>(ctx, false);
-    }
-
     @SuppressWarnings("unchecked")
     public static <E> ChannelBufferHolder<E> discardMessageBuffer() {
         return (ChannelBufferHolder<E>) DISCARD_MESSAGE_BUFFER;

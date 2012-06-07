@@ -16,7 +16,7 @@
 package io.netty.example.discard;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
 import java.util.logging.Level;
@@ -32,7 +32,7 @@ public class DiscardServerHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in)
             throws Exception {
         // Discard the received data silently.
         in.clear();
@@ -40,7 +40,7 @@ public class DiscardServerHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+    public void exceptionCaught(ChannelHandlerContext ctx,
             Throwable cause) throws Exception {
         // Close the connection when an exception is raised.
         logger.log(

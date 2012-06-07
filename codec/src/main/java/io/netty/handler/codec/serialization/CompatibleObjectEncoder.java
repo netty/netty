@@ -17,7 +17,7 @@ package io.netty.handler.codec.serialization;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -81,7 +81,7 @@ public class CompatibleObjectEncoder extends MessageToStreamEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
         Attribute<ObjectOutputStream> oosAttr = ctx.attr(OOS);
         ObjectOutputStream oos = oosAttr.get();
         if (oos == null) {

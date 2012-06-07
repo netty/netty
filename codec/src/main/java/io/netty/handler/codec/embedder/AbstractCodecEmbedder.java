@@ -23,9 +23,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CodecException;
@@ -68,7 +66,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
             ChannelHandlerContext ctx = p.context(h);
             if (inboundType == 0) {
                 if (ctx.canHandleInbound()) {
-                    ChannelInboundHandlerContext<?> inCtx = (ChannelInboundHandlerContext<?>) ctx;
+                    ChannelHandlerContext inCtx = (ChannelHandlerContext) ctx;
                     if (inCtx.inbound().hasByteBuffer()) {
                         inboundType = 1;
                     } else {
@@ -77,7 +75,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
                 }
             }
             if (ctx.canHandleOutbound()) {
-                ChannelOutboundHandlerContext<?> outCtx = (ChannelOutboundHandlerContext<?>) ctx;
+                ChannelHandlerContext outCtx = (ChannelHandlerContext) ctx;
                 if (outCtx.outbound().hasByteBuffer()) {
                     outboundType = 1;
                 } else {
@@ -211,17 +209,17 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     private final class LastHandler extends ChannelInboundHandlerAdapter<Object> {
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer(productQueue);
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             productQueue.add(cause);
         }
     }
@@ -233,13 +231,13 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
         @Override
         public ChannelBufferHolder<Byte> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.byteBuffer();
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Byte> ctx, ChannelFuture future) throws Exception {
-            ChannelBuffer in = ctx.outbound().byteBuffer();
+        public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+            ChannelBuffer in = ctx.outboundByteBuffer();
             if (in.readable()) {
                 ctx.nextOutboundMessageBuffer().add(in.readBytes(in.readableBytes()));
             }
@@ -254,13 +252,13 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx) throws Exception {
-            Queue<Object> in = ctx.inbound().messageBuffer();
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            Queue<Object> in = ctx.inboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -284,13 +282,13 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
         @Override
         public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
-            Queue<Object> in = ctx.outbound().messageBuffer();
+        public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+            Queue<Object> in = ctx.outboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {

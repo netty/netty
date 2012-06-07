@@ -56,7 +56,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -119,7 +119,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
 
     @Override
     public WebSocketFrame decode(
-            ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+            ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
 
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
@@ -366,7 +366,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void protocolViolation(ChannelInboundHandlerContext<Byte> ctx, String reason) throws CorruptedFrameException {
+    private void protocolViolation(ChannelHandlerContext ctx, String reason) throws CorruptedFrameException {
         checkpoint(State.CORRUPT);
         if (ctx.channel().isActive()) {
             ctx.flush().addListener(ChannelFutureListener.CLOSE);
@@ -382,7 +382,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void checkUTF8String(ChannelInboundHandlerContext<Byte> ctx, byte[] bytes) throws CorruptedFrameException {
+    private void checkUTF8String(ChannelHandlerContext ctx, byte[] bytes) throws CorruptedFrameException {
         try {
             // StringBuilder sb = new StringBuilder("UTF8 " + bytes.length +
             // " bytes: ");
@@ -401,7 +401,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    protected void checkCloseFrameBody(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws CorruptedFrameException {
+    protected void checkCloseFrameBody(ChannelHandlerContext ctx, ChannelBuffer buffer) throws CorruptedFrameException {
         if (buffer == null || buffer.capacity() == 0) {
             return;
         }

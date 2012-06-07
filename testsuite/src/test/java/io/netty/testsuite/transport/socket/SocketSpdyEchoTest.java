@@ -21,7 +21,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -233,12 +233,12 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.write(msg);
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }
@@ -255,8 +255,8 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-            ChannelBuffer m = ctx.inbound().byteBuffer();
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            ChannelBuffer m = ctx.inboundByteBuffer();
             byte[] actual = new byte[m.readableBytes()];
             m.readBytes(actual);
 
@@ -269,7 +269,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

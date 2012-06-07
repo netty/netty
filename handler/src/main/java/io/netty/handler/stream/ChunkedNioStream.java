@@ -16,11 +16,10 @@
 package io.netty.handler.stream;
 
 import static io.netty.buffer.ChannelBuffers.*;
+import io.netty.buffer.ChannelBuffer;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-
-import io.netty.buffer.ChannelBuffer;
 
 /**
  * A {@link ChunkedInput} that fetches data from a {@link ReadableByteChannel}

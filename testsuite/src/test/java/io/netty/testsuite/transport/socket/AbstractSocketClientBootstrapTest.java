@@ -16,6 +16,11 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipelineException;
+import io.netty.testsuite.util.DummyHandler;
+import io.netty.util.SocketAddresses;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -28,15 +33,6 @@ import org.easymock.EasyMock;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipelineException;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.testsuite.util.DummyHandler;
-import io.netty.util.SocketAddresses;
-import io.netty.util.internal.ExecutorUtil;
 
 
 /**

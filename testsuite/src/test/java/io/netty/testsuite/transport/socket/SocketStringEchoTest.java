@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -141,13 +141,13 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelInboundHandlerContext<String> ctx)
+        public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
         }
 
         @Override
-        public void messageReceived(ChannelInboundHandlerContext<String> ctx,
+        public void messageReceived(ChannelHandlerContext ctx,
                 String msg) throws Exception {
             assertEquals(data[counter], msg);
 
@@ -160,7 +160,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<String> ctx,
+        public void exceptionCaught(ChannelHandlerContext ctx,
                 Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();

@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-public class AbstractChannelHandler implements ChannelHandler {
+public class ChannelStateHandlerAdapter implements ChannelStateHandler {
 
     // Not using volatile because it's used only for a sanity check.
     boolean added;
@@ -42,5 +42,37 @@ public class AbstractChannelHandler implements ChannelHandler {
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+            throws Exception {
+        ctx.fireExceptionCaught(cause);
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
+            throws Exception {
+        ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelRegistered();
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelUnregistered();
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelActive();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelInactive();
     }
 }

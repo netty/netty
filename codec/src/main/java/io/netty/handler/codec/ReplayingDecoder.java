@@ -21,7 +21,6 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
 import io.netty.util.VoidEnum;
@@ -359,7 +358,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
 
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         if (inUse) {
             throw new IllegalStateException(
                     ReplayingDecoder.class.getSimpleName() + " cannot be shared.");
@@ -369,7 +368,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         replayable.terminate();
         ChannelBuffer in = cumulation;
         if (in.readable()) {
@@ -395,7 +394,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
     }
 
     @Override
-    protected void callDecode(ChannelInboundHandlerContext<Byte> ctx) {
+    protected void callDecode(ChannelHandlerContext ctx) {
         ChannelBuffer in = cumulation;
         boolean decoded = false;
         while (in.readable()) {
@@ -463,7 +462,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMes
         }
     }
 
-    private void fireInboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
+    private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) {
         checkpoint -= in.readerIndex();
         in.discardReadBytes();
         ctx.fireInboundBufferUpdated();

@@ -16,7 +16,7 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -60,7 +60,7 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
 
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         ChannelBuffer frame = (ChannelBuffer) super.decode(ctx, in);
         if (frame == null) {
             return null;

@@ -17,9 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
-import io.netty.channel.CombinedChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.internal.QueueFactory;
 
@@ -84,7 +82,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
     private final class Encoder extends HttpRequestEncoder {
         @Override
         public void encode(
-                ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+                ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
@@ -111,7 +109,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
 
         @Override
         public Object decode(
-                ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+                ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
             if (done) {
                 return buffer.readBytes(actualReadableBytes());
             } else {
@@ -193,7 +191,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
         }
 
         @Override
-        public void channelInactive(ChannelInboundHandlerContext<Byte> ctx)
+        public void channelInactive(ChannelHandlerContext ctx)
                 throws Exception {
             super.channelInactive(ctx);
 

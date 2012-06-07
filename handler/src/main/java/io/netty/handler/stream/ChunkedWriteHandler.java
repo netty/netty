@@ -25,8 +25,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -84,14 +82,14 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         return ChannelBufferHolders.inboundBypassBuffer(ctx);
     }
 
     @Override
     public ChannelBufferHolder<Object> newOutboundBuffer(
-            ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer(queue);
     }
 
@@ -134,7 +132,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void flush(ChannelOutboundHandlerContext<Object> ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         queue.add(future);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
@@ -142,7 +140,7 @@ public class ChunkedWriteHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         doFlush(ctx);
         super.channelInactive(ctx);
     }

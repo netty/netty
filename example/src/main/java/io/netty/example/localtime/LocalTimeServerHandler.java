@@ -16,7 +16,7 @@
 package io.netty.example.localtime;
 
 import static java.util.Calendar.*;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.example.localtime.LocalTimeProtocol.Continent;
 import io.netty.example.localtime.LocalTimeProtocol.DayOfWeek;
@@ -36,7 +36,7 @@ public class LocalTimeServerHandler extends ChannelInboundMessageHandlerAdapter<
             LocalTimeServerHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<Locations> ctx, Locations locations) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Locations locations) throws Exception {
         long currentTime = System.currentTimeMillis();
 
         LocalTimes.Builder builder = LocalTimes.newBuilder();
@@ -60,7 +60,7 @@ public class LocalTimeServerHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Locations> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

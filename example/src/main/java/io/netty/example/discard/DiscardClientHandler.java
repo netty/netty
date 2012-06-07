@@ -18,7 +18,7 @@ package io.netty.example.discard;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
 import java.util.logging.Level;
@@ -33,7 +33,7 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
             DiscardClientHandler.class.getName());
 
     private final byte[] content;
-    private ChannelInboundHandlerContext<Byte> ctx;
+    private ChannelHandlerContext ctx;
 
     public DiscardClientHandler(int messageSize) {
         if (messageSize <= 0) {
@@ -45,7 +45,7 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Byte> ctx)
+    public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
         this.ctx = ctx;
         // Send the initial messages.
@@ -54,7 +54,7 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in)
             throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
         in.clear();
@@ -62,7 +62,7 @@ public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
 
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
+    public void exceptionCaught(ChannelHandlerContext ctx,
             Throwable cause) throws Exception {
         // Close the connection when an exception is raised.
         logger.log(

@@ -17,7 +17,7 @@ package io.netty.example.proxy;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
 public class HexDumpProxyBackendHandler extends ChannelInboundStreamHandlerAdapter {
@@ -29,13 +29,13 @@ public class HexDumpProxyBackendHandler extends ChannelInboundStreamHandlerAdapt
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ChannelBuffer in = ctx.inboundByteBuffer();
         ChannelBuffer out = inboundChannel.outboundByteBuffer();
         out.discardReadBytes();
         out.writeBytes(in);
@@ -44,12 +44,12 @@ public class HexDumpProxyBackendHandler extends ChannelInboundStreamHandlerAdapt
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         HexDumpProxyFrontendHandler.closeOnFlush(inboundChannel);
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         HexDumpProxyFrontendHandler.closeOnFlush(ctx.channel());
     }

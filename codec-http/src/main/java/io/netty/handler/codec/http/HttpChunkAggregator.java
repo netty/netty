@@ -19,7 +19,7 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -77,7 +77,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
     }
 
     @Override
-    public HttpMessage decode(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public HttpMessage decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {

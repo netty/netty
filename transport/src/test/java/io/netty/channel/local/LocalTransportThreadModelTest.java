@@ -22,10 +22,9 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.DefaultEventExecutor;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
@@ -62,7 +61,7 @@ public class LocalTransportThreadModelTest {
               public void initChannel(LocalChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundMessageHandlerAdapter<Object>() {
                     @Override
-                    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) {
+                    public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                         // Discard
                     }
                   });
@@ -336,35 +335,34 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public void inboundBufferUpdated(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
-            ctx.inbound().messageBuffer().clear();
+                ChannelHandlerContext ctx) throws Exception {
+            ctx.inboundMessageBuffer().clear();
             inboundThreadNames.add(Thread.currentThread().getName());
             ctx.fireInboundBufferUpdated();
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Object> ctx,
+        public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
-            ctx.outbound().messageBuffer().clear();
+            ctx.outboundMessageBuffer().clear();
             outboundThreadNames.add(Thread.currentThread().getName());
             ctx.flush(future);
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
             System.err.print("[" + Thread.currentThread().getName() + "] ");
             cause.printStackTrace();
@@ -384,19 +382,19 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ChannelBufferHolder<Integer> newInboundBuffer(
-                ChannelInboundHandlerContext<Integer> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public ChannelBufferHolder<Byte> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.byteBuffer();
         }
 
         @Override
         public void inboundBufferUpdated(
-                ChannelInboundHandlerContext<Integer> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -404,7 +402,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            Queue<Integer> in = ctx.inbound().messageBuffer();
+            Queue<Integer> in = ctx.inboundMessageBuffer();
             ChannelBuffer out = ctx.nextInboundByteBuffer();
 
             for (;;) {
@@ -421,14 +419,14 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Byte> ctx,
+        public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             // Don't let the write request go to the server-side channel - just swallow.
             boolean swallow = this == ctx.pipeline().first();
 
-            ChannelBuffer in = ctx.outbound().byteBuffer();
+            ChannelBuffer in = ctx.outboundByteBuffer();
             Queue<Object> out = ctx.nextOutboundMessageBuffer();
             while (in.readableBytes() >= 4) {
                 int msg = in.readInt();
@@ -447,8 +445,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Integer> ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
             //System.err.print("[" + Thread.currentThread().getName() + "] ");
             //cause.printStackTrace();
@@ -468,19 +465,19 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ChannelBufferHolder<Byte> newInboundBuffer(
-                ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.byteBuffer();
         }
 
         @Override
         public ChannelBufferHolder<Integer> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Integer> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public void inboundBufferUpdated(
-                ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -488,7 +485,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            ChannelBuffer in = ctx.inbound().byteBuffer();
+            ChannelBuffer in = ctx.inboundByteBuffer();
             Queue<Object> out = ctx.nextInboundMessageBuffer();
 
             while (in.readableBytes() >= 4) {
@@ -502,11 +499,11 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Integer> ctx,
+        public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            Queue<Integer> in = ctx.outbound().messageBuffer();
+            Queue<Integer> in = ctx.outboundMessageBuffer();
             ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
             for (;;) {
@@ -523,8 +520,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
             //System.err.print("[" + Thread.currentThread().getName() + "] ");
             //cause.printStackTrace();
@@ -544,19 +540,19 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public void inboundBufferUpdated(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -564,7 +560,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            Queue<Object> in = ctx.inbound().messageBuffer();
+            Queue<Object> in = ctx.inboundMessageBuffer();
             Queue<Object> out = ctx.nextInboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
@@ -580,11 +576,11 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Object> ctx,
+        public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            Queue<Object> in = ctx.outbound().messageBuffer();
+            Queue<Object> in = ctx.outboundMessageBuffer();
             Queue<Object> out = ctx.nextOutboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
@@ -600,8 +596,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
             System.err.print("[" + Thread.currentThread().getName() + "] ");
             cause.printStackTrace();
@@ -622,19 +617,19 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.messageBuffer();
         }
 
         @Override
         public void inboundBufferUpdated(
-                ChannelInboundHandlerContext<Object> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -642,7 +637,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            Queue<Object> in = ctx.inbound().messageBuffer();
+            Queue<Object> in = ctx.inboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -654,11 +649,11 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void flush(ChannelOutboundHandlerContext<Object> ctx,
+        public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            Queue<Object> in = ctx.outbound().messageBuffer();
+            Queue<Object> in = ctx.outboundMessageBuffer();
             Queue<Object> out = ctx.nextOutboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
@@ -674,14 +669,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void channelInactive(ChannelInboundHandlerContext<Object> ctx)
-                throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
             latch.countDown();
         }
 
         @Override
-        public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
             //System.err.print("[" + Thread.currentThread().getName() + "] ");
             //cause.printStackTrace();

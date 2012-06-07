@@ -23,8 +23,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.logging.InternalLogLevel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -284,18 +282,18 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
 
     @Override
     public ChannelBufferHolder<Object> newOutboundBuffer(
-            ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.outboundBypassBuffer(ctx);
     }
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.inboundBypassBuffer(ctx);
     }
 
     @Override
-    public void channelRegistered(ChannelInboundHandlerContext<Object> ctx)
+    public void channelRegistered(ChannelHandlerContext ctx)
             throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "REGISTERED"));
@@ -304,7 +302,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void channelUnregistered(ChannelInboundHandlerContext<Object> ctx)
+    public void channelUnregistered(ChannelHandlerContext ctx)
             throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "UNREGISTERED"));
@@ -313,7 +311,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Object> ctx)
+    public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "ACTIVE"));
@@ -322,7 +320,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Object> ctx)
+    public void channelInactive(ChannelHandlerContext ctx)
             throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "INACTIVE"));
@@ -331,7 +329,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
+    public void exceptionCaught(ChannelHandlerContext ctx,
             Throwable cause) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "EXCEPTION: " + cause), cause);
@@ -340,7 +338,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void userEventTriggered(ChannelInboundHandlerContext<Object> ctx,
+    public void userEventTriggered(ChannelHandlerContext ctx,
             Object evt) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "USER_EVENT: " + evt));
@@ -349,7 +347,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Object> ctx)
+    public void inboundBufferUpdated(ChannelHandlerContext ctx)
             throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("INBUF", ctx.inbound())));
@@ -358,7 +356,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void bind(ChannelOutboundHandlerContext<Object> ctx,
+    public void bind(ChannelHandlerContext ctx,
             SocketAddress localAddress, ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND(" + localAddress + ')'));
@@ -367,7 +365,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void connect(ChannelOutboundHandlerContext<Object> ctx,
+    public void connect(ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
@@ -377,7 +375,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void disconnect(ChannelOutboundHandlerContext<Object> ctx,
+    public void disconnect(ChannelHandlerContext ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT()"));
@@ -386,7 +384,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void close(ChannelOutboundHandlerContext<Object> ctx,
+    public void close(ChannelHandlerContext ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE()"));
@@ -395,7 +393,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void deregister(ChannelOutboundHandlerContext<Object> ctx,
+    public void deregister(ChannelHandlerContext ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER()"));
@@ -404,7 +402,7 @@ public class LoggingHandler extends ChannelHandlerAdapter<Object, Object> {
     }
 
     @Override
-    public void flush(ChannelOutboundHandlerContext<Object> ctx,
+    public void flush(ChannelHandlerContext ctx,
             ChannelFuture future) throws Exception {
         if (getLogger().isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("OUTBUF", ctx.outbound())));

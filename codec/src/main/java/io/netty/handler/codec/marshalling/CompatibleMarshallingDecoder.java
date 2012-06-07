@@ -17,7 +17,7 @@ package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.VoidEnum;
@@ -52,7 +52,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
         Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize != Integer.MAX_VALUE) {
@@ -73,7 +73,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
     }
 
     @Override
-    public Object decodeLast(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+    public Object decodeLast(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return null;
@@ -90,7 +90,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof TooLongFrameException) {
             ctx.close();
         } else {

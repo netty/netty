@@ -55,13 +55,13 @@ public class DefaultChannelPipelineTest {
     private static class TestHandler extends ChannelHandlerAdapter<Byte, Byte> {
         @Override
         public ChannelBufferHolder<Byte> newInboundBuffer(
-                ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.byteBuffer();
         }
 
         @Override
         public ChannelBufferHolder<Byte> newOutboundBuffer(
-                ChannelOutboundHandlerContext<Byte> ctx) throws Exception {
+                ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.byteBuffer();
         }
     };

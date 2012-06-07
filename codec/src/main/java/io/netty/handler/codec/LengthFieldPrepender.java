@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 
 import java.nio.ByteOrder;
 
@@ -103,7 +103,7 @@ public class LengthFieldPrepender extends MessageToStreamEncoder<ChannelBuffer> 
 
     @Override
     public void encode(
-            ChannelOutboundHandlerContext<ChannelBuffer> ctx,
+            ChannelHandlerContext ctx,
             ChannelBuffer msg, ChannelBuffer out) throws Exception {
 
         int length = lengthIncludesLengthFieldLength?

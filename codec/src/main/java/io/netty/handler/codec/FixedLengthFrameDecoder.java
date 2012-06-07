@@ -19,7 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s by the fixed number
@@ -66,7 +66,7 @@ public class FixedLengthFrameDecoder extends StreamToMessageDecoder<Object> {
 
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         if (allocateFullBuffer) {
             return ChannelBufferHolders.byteBuffer(ChannelBuffers.dynamicBuffer(frameLength));
         } else {
@@ -75,7 +75,7 @@ public class FixedLengthFrameDecoder extends StreamToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {

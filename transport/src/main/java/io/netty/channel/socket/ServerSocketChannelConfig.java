@@ -15,9 +15,9 @@
  */
 package io.netty.channel.socket;
 
-import java.net.ServerSocket;
-
 import io.netty.channel.ChannelConfig;
+
+import java.net.ServerSocket;
 
 /**
  * A {@link ChannelConfig} for a {@link ServerSocketChannel}.

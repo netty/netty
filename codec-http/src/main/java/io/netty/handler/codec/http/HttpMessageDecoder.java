@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -166,7 +166,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
         switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {

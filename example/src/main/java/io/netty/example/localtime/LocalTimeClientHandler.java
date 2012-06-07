@@ -16,7 +16,7 @@
 package io.netty.example.localtime;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.example.localtime.LocalTimeProtocol.Continent;
 import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
@@ -87,17 +87,17 @@ public class LocalTimeClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void channelRegistered(ChannelInboundHandlerContext<LocalTimes> ctx) throws Exception {
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         channel = ctx.channel();
     }
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<LocalTimes> ctx, LocalTimes msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, LocalTimes msg) throws Exception {
         answer.add(msg);
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<LocalTimes> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

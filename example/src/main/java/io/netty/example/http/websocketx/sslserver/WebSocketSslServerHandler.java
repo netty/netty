@@ -25,7 +25,6 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -53,7 +52,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             handleHttpRequest(ctx, (HttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -134,7 +133,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
     }

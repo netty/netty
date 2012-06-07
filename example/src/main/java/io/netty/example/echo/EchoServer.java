@@ -23,8 +23,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
 import java.net.InetSocketAddress;
 
@@ -51,7 +49,7 @@ public class EchoServer {
              .handler(new ChannelInitializer<ServerSocketChannel>() {
                 @Override
                 public void initChannel(ServerSocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
+                    //ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                 }
              })
              .childHandler(new ChannelInitializer<SocketChannel>() {

@@ -77,11 +77,7 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
-        flushMessageBuf(buf.messageBuffer());
-    }
-
-    private void flushMessageBuf(Queue<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
         while (!buf.isEmpty()) {
             doWriteMessages(buf);
         }

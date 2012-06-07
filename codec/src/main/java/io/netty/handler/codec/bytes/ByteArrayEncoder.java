@@ -20,7 +20,6 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
@@ -54,7 +53,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ChannelBuffer> {
 
     @Override
-    public ChannelBufferHolder<byte[]> newOutboundBuffer(ChannelOutboundHandlerContext<byte[]> ctx) throws Exception {
+    public ChannelBufferHolder<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer();
     }
 
@@ -64,7 +63,7 @@ public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ChannelBuf
     }
 
     @Override
-    public ChannelBuffer encode(ChannelOutboundHandlerContext<byte[]> ctx, byte[] msg) throws Exception {
+    public ChannelBuffer encode(ChannelHandlerContext ctx, byte[] msg) throws Exception {
         if (msg.length == 0) {
             return null;
         }

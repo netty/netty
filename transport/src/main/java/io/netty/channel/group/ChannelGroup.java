@@ -15,6 +15,7 @@
  */
 package io.netty.channel.group;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;

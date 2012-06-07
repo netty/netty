@@ -22,7 +22,6 @@ import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.QueueFactory;
 
@@ -98,7 +97,7 @@ public class BlockingReadHandler<E> extends ChannelInboundHandlerAdapter<Object>
 
     @Override
     public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelInboundHandlerContext<Object> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         return ChannelBufferHolders.messageBuffer(queue);
     }
@@ -193,12 +192,12 @@ public class BlockingReadHandler<E> extends ChannelInboundHandlerAdapter<Object>
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Object> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         addEvent(INACTIVE);
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Object> ctx,
+    public void exceptionCaught(ChannelHandlerContext ctx,
             Throwable cause) throws Exception {
         addEvent(cause);
     }

@@ -19,8 +19,8 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerContext;
 
 import java.util.Queue;
 
@@ -28,13 +28,13 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAd
 
     @Override
     public ChannelBufferHolder<I> newOutboundBuffer(
-            ChannelOutboundHandlerContext<I> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer();
     }
 
     @Override
-    public void flush(ChannelOutboundHandlerContext<I> ctx, ChannelFuture future) throws Exception {
-        Queue<I> in = ctx.outbound().messageBuffer();
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        Queue<I> in = ctx.outboundMessageBuffer();
         ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
         boolean notify = false;
@@ -78,5 +78,5 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundHandlerAd
         return true;
     }
 
-    public abstract void encode(ChannelOutboundHandlerContext<I> ctx, I msg, ChannelBuffer out) throws Exception;
+    public abstract void encode(ChannelHandlerContext ctx, I msg, ChannelBuffer out) throws Exception;
 }

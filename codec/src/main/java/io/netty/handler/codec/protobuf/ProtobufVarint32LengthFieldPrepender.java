@@ -18,7 +18,7 @@ package io.netty.handler.codec.protobuf;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 
 import com.google.protobuf.CodedOutputStream;
@@ -53,7 +53,7 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToStreamEncoder
 
     @Override
     public void encode(
-            ChannelOutboundHandlerContext<ChannelBuffer> ctx, ChannelBuffer msg, ChannelBuffer out) throws Exception {
+            ChannelHandlerContext ctx, ChannelBuffer msg, ChannelBuffer out) throws Exception {
         ChannelBuffer body = msg;
         int bodyLen = body.readableBytes();
         int headerLen = CodedOutputStream.computeRawVarint32Size(bodyLen);

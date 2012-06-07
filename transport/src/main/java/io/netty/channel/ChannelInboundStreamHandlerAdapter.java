@@ -20,19 +20,16 @@ import io.netty.buffer.ChannelBuffer;
 
 public class ChannelInboundStreamHandlerAdapter extends ChannelInboundHandlerAdapter<Byte> {
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(
-            ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.byteBuffer();
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx)
-            throws Exception {
-        inboundBufferUpdated(ctx, ctx.inbound().byteBuffer());
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        inboundBufferUpdated(ctx, ctx.inboundByteBuffer());
     }
 
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in)
-            throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         ctx.nextInboundByteBuffer().writeBytes(in);
         in.discardReadBytes();
     }

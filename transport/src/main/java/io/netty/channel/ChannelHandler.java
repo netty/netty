@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.group.ChannelGroup;
 
 import java.lang.annotation.Documented;
@@ -211,6 +212,9 @@ public interface ChannelHandler {
     void afterAdd(ChannelHandlerContext ctx) throws Exception;
     void beforeRemove(ChannelHandlerContext ctx) throws Exception;
     void afterRemove(ChannelHandlerContext ctx) throws Exception;
+
+    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
+    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 
     /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}

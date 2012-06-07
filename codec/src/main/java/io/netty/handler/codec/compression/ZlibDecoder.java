@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.StreamToStreamDecoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
@@ -88,7 +88,7 @@ public class ZlibDecoder extends StreamToStreamDecoder {
 
     @Override
     public void decode(
-            ChannelInboundHandlerContext<Byte> ctx,
+            ChannelHandlerContext ctx,
             ChannelBuffer in, ChannelBuffer out) throws Exception {
 
         if (!in.readable()) {

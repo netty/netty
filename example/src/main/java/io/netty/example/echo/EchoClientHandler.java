@@ -17,7 +17,7 @@ package io.netty.example.echo;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
 import java.util.logging.Level;
@@ -49,12 +49,12 @@ public class EchoClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Byte> ctx) {
+    public void channelActive(ChannelHandlerContext ctx) {
         ctx.write(firstMessage);
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) {
         ChannelBuffer out = ctx.nextOutboundByteBuffer();
         out.discardReadBytes();
         out.writeBytes(in);
@@ -62,8 +62,7 @@ public class EchoClientHandler extends ChannelInboundStreamHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelInboundHandlerContext<Byte> ctx, Throwable cause) {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // Close the connection when an exception is raised.
         logger.log(Level.WARNING, "Unexpected exception from downstream.", cause);
         ctx.close();

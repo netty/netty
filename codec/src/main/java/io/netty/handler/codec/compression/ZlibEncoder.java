@@ -20,7 +20,6 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.handler.codec.StreamToStreamEncoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
@@ -263,7 +262,7 @@ public class ZlibEncoder extends StreamToStreamEncoder {
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Byte> ctx,
+    public void encode(ChannelHandlerContext ctx,
             ChannelBuffer in, ChannelBuffer out) throws Exception {
         if (finished.get()) {
             return;
@@ -336,7 +335,7 @@ public class ZlibEncoder extends StreamToStreamEncoder {
 
     @Override
     public void disconnect(
-            final ChannelOutboundHandlerContext<Byte> ctx,
+            final ChannelHandlerContext ctx,
             final ChannelFuture future) throws Exception {
         finishEncode(ctx, ctx.newFuture()).addListener(new ChannelFutureListener() {
             @Override
@@ -348,7 +347,7 @@ public class ZlibEncoder extends StreamToStreamEncoder {
 
     @Override
     public void close(
-            final ChannelOutboundHandlerContext<Byte> ctx,
+            final ChannelHandlerContext ctx,
             final ChannelFuture future) throws Exception {
         finishEncode(ctx, ctx.newFuture()).addListener(new ChannelFutureListener() {
             @Override

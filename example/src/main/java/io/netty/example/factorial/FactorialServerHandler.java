@@ -15,7 +15,7 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.math.BigInteger;
@@ -40,7 +40,7 @@ public class FactorialServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void messageReceived(
-            ChannelInboundHandlerContext<BigInteger> ctx, BigInteger msg) throws Exception {
+            ChannelHandlerContext ctx, BigInteger msg) throws Exception {
         // Calculate the cumulative factorial and send it to the client.
         lastMultiplier = msg;
         factorial = factorial.multiply(msg);
@@ -49,14 +49,14 @@ public class FactorialServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void channelInactive(
-            ChannelInboundHandlerContext<BigInteger> ctx) throws Exception {
+            ChannelHandlerContext ctx) throws Exception {
         logger.info(new Formatter().format(
                 "Factorial of %,d is: %,d", lastMultiplier, factorial).toString());
     }
 
     @Override
     public void exceptionCaught(
-            ChannelInboundHandlerContext<BigInteger> ctx, Throwable cause) throws Exception {
+            ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

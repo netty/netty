@@ -19,7 +19,6 @@ import static io.netty.buffer.ChannelBuffers.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
@@ -66,7 +65,7 @@ public class ProtobufEncoder extends MessageToMessageEncoder<Object, ChannelBuff
     }
 
     @Override
-    public ChannelBuffer encode(ChannelOutboundHandlerContext<Object> ctx, Object msg) throws Exception {
+    public ChannelBuffer encode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());
         }

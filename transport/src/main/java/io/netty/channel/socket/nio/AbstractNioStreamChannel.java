@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelType;
@@ -87,11 +86,7 @@ abstract class AbstractNioStreamChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlush(ChannelBufferHolder<Object> buf) throws Exception {
-        flushByteBuf(buf.byteBuffer());
-    }
-
-    private void flushByteBuf(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
         if (!buf.readable()) {
             // Reset reader/writerIndex to 0 if the buffer is empty.
             buf.clear();

@@ -24,7 +24,6 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -103,7 +102,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
     @Override
     public void messageReceived(
-            ChannelInboundHandlerContext<HttpRequest> ctx, HttpRequest request) throws Exception {
+            ChannelHandlerContext ctx, HttpRequest request) throws Exception {
 
         if (request.getMethod() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
@@ -173,7 +172,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
     @Override
     public void exceptionCaught(
-            ChannelInboundHandlerContext<HttpRequest> ctx, Throwable cause) throws Exception {
+            ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof TooLongFrameException) {
             sendError(ctx, BAD_REQUEST);
             return;

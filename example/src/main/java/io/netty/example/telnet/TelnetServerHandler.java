@@ -18,7 +18,7 @@ package io.netty.example.telnet;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.net.InetAddress;
@@ -36,7 +36,7 @@ public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<Str
             TelnetServerHandler.class.getName());
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<String> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // Send greeting for a new connection.
         ctx.write(
                 "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
@@ -44,7 +44,7 @@ public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<Str
     }
 
     @Override
-    public void messageReceived(ChannelInboundHandlerContext<String> ctx, String request) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String request) throws Exception {
         // Generate and write a response.
         String response;
         boolean close = false;
@@ -69,7 +69,7 @@ public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<Str
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<String> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

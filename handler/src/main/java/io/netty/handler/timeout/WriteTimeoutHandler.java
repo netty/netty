@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
@@ -105,12 +104,12 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter<Object> {
     }
 
     @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelOutboundHandlerContext<Object> ctx) throws Exception {
+    public ChannelBufferHolder<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.outboundBypassBuffer(ctx);
     }
 
     @Override
-    public void flush(final ChannelOutboundHandlerContext<Object> ctx, final ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
         if (timeoutMillis > 0) {
             // Schedule a timeout.
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {

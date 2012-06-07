@@ -20,47 +20,42 @@ import io.netty.buffer.ChannelBuffer;
 import java.net.SocketAddress;
 import java.util.Queue;
 
-public abstract class ChannelOutboundHandlerAdapter<O> extends AbstractChannelHandler
-        implements ChannelOutboundHandler<O> {
+public abstract class ChannelOutboundHandlerAdapter<O> extends ChannelStateHandlerAdapter
+        implements ChannelOperationHandler, ChannelOutboundHandler<O> {
 
     @Override
-    public void bind(ChannelOutboundHandlerContext<O> ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
         ctx.bind(localAddress, future);
     }
 
     @Override
-    public void connect(ChannelOutboundHandlerContext<O> ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) throws Exception {
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) throws Exception {
         ctx.connect(remoteAddress, localAddress, future);
     }
 
     @Override
-    public void disconnect(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         ctx.disconnect(future);
     }
 
     @Override
-    public void close(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         ctx.close(future);
     }
 
     @Override
-    public void deregister(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         ctx.deregister(future);
     }
 
     @Override
-    public void flush(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         flush0(ctx, future);
     }
 
-    static <O> void flush0(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) {
-        if (ctx.outbound().isBypass()) {
-            ctx.flush(future);
-            return;
-        }
-
-        if (ctx.outbound().hasMessageBuffer()) {
-            Queue<O> out = ctx.outbound().messageBuffer();
+    static <O> void flush0(ChannelHandlerContext ctx, ChannelFuture future) {
+        if (ctx.hasOutboundMessageBuffer()) {
+            Queue<O> out = ctx.outboundMessageBuffer();
             Queue<Object> nextOut = ctx.nextOutboundMessageBuffer();
             for (;;) {
                 O msg = out.poll();
@@ -70,7 +65,7 @@ public abstract class ChannelOutboundHandlerAdapter<O> extends AbstractChannelHa
                 nextOut.add(msg);
             }
         } else {
-            ChannelBuffer out = ctx.outbound().byteBuffer();
+            ChannelBuffer out = ctx.outboundByteBuffer();
             ChannelBuffer nextOut = ctx.nextOutboundByteBuffer();
             nextOut.writeBytes(out);
             out.discardReadBytes();

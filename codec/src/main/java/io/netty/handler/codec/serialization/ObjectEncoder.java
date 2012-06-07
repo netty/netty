@@ -18,7 +18,7 @@ package io.netty.handler.codec.serialization;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelOutboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToStreamEncoder;
 
 import java.io.ObjectInputStream;
@@ -45,7 +45,7 @@ public class ObjectEncoder extends MessageToStreamEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelOutboundHandlerContext<Object> ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
         int startIdx = out.writerIndex();
 
         ChannelBufferOutputStream bout = new ChannelBufferOutputStream(out);

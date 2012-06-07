@@ -19,52 +19,17 @@ import io.netty.buffer.ChannelBuffer;
 
 import java.util.Queue;
 
-public abstract class ChannelInboundHandlerAdapter<I> extends AbstractChannelHandler
+public abstract class ChannelInboundHandlerAdapter<I> extends ChannelStateHandlerAdapter
         implements ChannelInboundHandler<I> {
 
     @Override
-    public void channelRegistered(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.fireChannelRegistered();
-    }
-
-    @Override
-    public void channelUnregistered(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.fireChannelUnregistered();
-    }
-
-    @Override
-    public void channelActive(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.fireChannelActive();
-    }
-
-    @Override
-    public void channelInactive(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.fireChannelInactive();
-    }
-
-    @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<I> ctx, Throwable cause) throws Exception {
-        ctx.fireExceptionCaught(cause);
-    }
-
-    @Override
-    public void userEventTriggered(ChannelInboundHandlerContext<I> ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         inboundBufferUpdated0(ctx);
     }
 
-    static <I> void inboundBufferUpdated0(ChannelInboundHandlerContext<I> ctx) {
-        if (ctx.inbound().isBypass()) {
-            ctx.fireInboundBufferUpdated();
-            return;
-        }
-
-        if (ctx.inbound().hasMessageBuffer()) {
-            Queue<I> in = ctx.inbound().messageBuffer();
+    static <I> void inboundBufferUpdated0(ChannelHandlerContext ctx) {
+        if (ctx.hasInboundMessageBuffer()) {
+            Queue<I> in = ctx.inboundMessageBuffer();
             Queue<Object> nextIn = ctx.nextInboundMessageBuffer();
             for (;;) {
                 I msg = in.poll();
@@ -74,7 +39,7 @@ public abstract class ChannelInboundHandlerAdapter<I> extends AbstractChannelHan
                 nextIn.add(msg);
             }
         } else {
-            ChannelBuffer in = ctx.inbound().byteBuffer();
+            ChannelBuffer in = ctx.inboundByteBuffer();
             ChannelBuffer nextIn = ctx.nextInboundByteBuffer();
             nextIn.writeBytes(in);
             in.discardReadBytes();

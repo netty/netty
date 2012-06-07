@@ -20,7 +20,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -37,7 +37,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
     }
 
     @Override
-    public void channelActive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // TODO: Suspend incoming traffic until connected to the remote host.
         //       Currently, we just keep the inbound traffic in the client channel's outbound buffer.
         final Channel inboundChannel = ctx.channel();
@@ -66,8 +66,8 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
-        ChannelBuffer in = ctx.inbound().byteBuffer();
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ChannelBuffer in = ctx.inboundByteBuffer();
         ChannelBuffer out = outboundChannel.outboundByteBuffer();
         out.discardReadBytes();
         out.writeBytes(in);
@@ -78,14 +78,14 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdap
     }
 
     @Override
-    public void channelInactive(ChannelInboundHandlerContext<Byte> ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (outboundChannel != null) {
             closeOnFlush(outboundChannel);
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelInboundHandlerContext<Byte> ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         closeOnFlush(ctx.channel());
     }

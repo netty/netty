@@ -16,7 +16,7 @@
 package io.netty.handler.codec.protobuf;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.StreamToMessageDecoder;
 
@@ -49,7 +49,7 @@ public class ProtobufVarint32FrameDecoder extends StreamToMessageDecoder<Object>
     }
 
     @Override
-    public Object decode(ChannelInboundHandlerContext<Byte> ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         in.markReaderIndex();
         final byte[] buf = new byte[5];
         for (int i = 0; i < buf.length; i ++) {

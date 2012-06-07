@@ -15,7 +15,7 @@
  */
 package io.netty.example.objectecho;
 
-import io.netty.channel.ChannelInboundHandlerContext;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.util.List;
@@ -33,14 +33,14 @@ public class ObjectEchoServerHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void messageReceived(
-            ChannelInboundHandlerContext<List<Integer>> ctx, List<Integer> msg) throws Exception {
+            ChannelHandlerContext ctx, List<Integer> msg) throws Exception {
         // Echo back the received object to the client.
         ctx.write(msg);
     }
 
     @Override
     public void exceptionCaught(
-            ChannelInboundHandlerContext<List<Integer>> ctx, Throwable cause) throws Exception {
+            ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

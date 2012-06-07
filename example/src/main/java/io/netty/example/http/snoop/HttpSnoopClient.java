@@ -17,8 +17,8 @@ package io.netty.example.http.snoop;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.CookieEncoder;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
