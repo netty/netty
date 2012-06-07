@@ -1471,7 +1471,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 msgBuf = true;
                 executor = ctx.executor();
                 break;
-            } else if (message instanceof ChannelBuffer) {
+            } if (message instanceof ChannelBuffer && ctx.hasOutboundByteBuffer()) {
                 executor = ctx.executor();
                 break;
             }
