@@ -92,15 +92,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
         ChannelFuture hf = cc.pipeline().get(SslHandler.class).handshake();
-        hf.awaitUninterruptibly();
-        if (!hf.isSuccess()) {
-            logger.error("Handshake failed", hf.cause());
-            sh.channel.close().awaitUninterruptibly();
-            ch.channel.close().awaitUninterruptibly();
-            sc.close().awaitUninterruptibly();
-        }
-
-        assertTrue(hf.isSuccess());
+        hf.sync();
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);

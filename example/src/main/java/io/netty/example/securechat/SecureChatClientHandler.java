@@ -17,7 +17,6 @@ package io.netty.example.securechat;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.ssl.SslHandler;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,16 +28,6 @@ public class SecureChatClientHandler extends ChannelInboundMessageHandlerAdapter
 
     private static final Logger logger = Logger.getLogger(
             SecureChatClientHandler.class.getName());
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // Get the SslHandler from the pipeline
-        // which were added in SecureChatPipelineFactory.
-        SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-
-        // Begin handshake.
-        sslHandler.handshake();
-    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {

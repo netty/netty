@@ -66,7 +66,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
         boolean success = false;
         try {
-            socket.setSoTimeout(1000);
+            socket.setSoTimeout(SO_TIMEOUT);
             success = true;
         } catch (IOException e) {
             throw new ChannelException(

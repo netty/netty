@@ -58,7 +58,21 @@ class OioChildEventLoop extends SingleThreadEventLoop {
                     // Waken up by interruptThread()
                 }
             } else {
-                runAllTasks();
+                long startTime = System.nanoTime();
+                for (;;) {
+                    final Runnable task = pollTask();
+                    if (task == null) {
+                        break;
+                    }
+
+                    task.run();
+
+                    // Ensure running tasks doesn't take too much time.
+                    if (System.nanoTime() - startTime > AbstractOioChannel.SO_TIMEOUT * 1000000L) {
+                        break;
+                    }
+                }
+
                 ch.unsafe().read();
 
                 // Handle deregistration

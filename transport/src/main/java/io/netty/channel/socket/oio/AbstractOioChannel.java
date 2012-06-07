@@ -25,6 +25,8 @@ import java.net.SocketAddress;
 
 abstract class AbstractOioChannel extends AbstractChannel {
 
+    static final int SO_TIMEOUT = 1000;
+
     protected AbstractOioChannel(Channel parent, Integer id) {
         super(parent, id);
     }

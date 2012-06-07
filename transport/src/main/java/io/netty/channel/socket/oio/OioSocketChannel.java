@@ -62,7 +62,7 @@ public class OioSocketChannel extends AbstractOioStreamChannel
                 is = socket.getInputStream();
                 os = socket.getOutputStream();
             }
-            socket.setSoTimeout(1000);
+            socket.setSoTimeout(SO_TIMEOUT);
             success = true;
         } catch (Exception e) {
             throw new ChannelException("failed to initialize a socket", e);

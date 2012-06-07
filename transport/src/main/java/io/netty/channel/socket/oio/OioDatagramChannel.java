@@ -69,7 +69,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
         boolean success = false;
         try {
-            socket.setSoTimeout(1000);
+            socket.setSoTimeout(SO_TIMEOUT);
             socket.setBroadcast(false);
             success = true;
         } catch (SocketException e) {
