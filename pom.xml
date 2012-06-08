@@ -577,10 +577,10 @@
           <doctitle>${project.name} API Reference (${project.version})</doctitle>
           <windowtitle>${project.name} API Reference (${project.version})</windowtitle>
           <additionalparam>
-            -link http://java.sun.com/javase/6/docs/api/
+            -link http://docs.oracle.com/javase/7/docs/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
-            -link http://java.sun.com/products/servlet/2.5/docs/servlet-2_5-mr2/
-            -link http://www.osgi.org/javadoc/r4v41/
+            -link http://docs.oracle.com/javaee/6/api/
+            -link http://www.osgi.org/javadoc/r4v43/core/
             -link http://www.slf4j.org/apidocs/
             -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
             -link http://logging.apache.org/log4j/1.2/apidocs/
