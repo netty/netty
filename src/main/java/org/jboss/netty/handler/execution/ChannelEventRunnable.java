@@ -27,7 +27,7 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;
     int estimatedSize;
-    private Executor executor;
+    private final Executor executor;
 
     /**
      * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
@@ -57,7 +57,7 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     public Object unwrap() {
         return e;
     }
-    
+
     public final void run() {
         try {
             DeadLockProofWorker.PARENT.set(executor);
@@ -65,8 +65,8 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
         } finally {
             DeadLockProofWorker.PARENT.remove();
         }
-        
+
     }
-    
+
     protected abstract void doRun();
 }

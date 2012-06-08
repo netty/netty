@@ -35,6 +35,6 @@ public class ChannelDownstreamEventRunnable extends ChannelEventRunnable {
      */
     @Override
     protected void doRun() {
-        ctx.sendDownstream(e);        
+        ctx.sendDownstream(e);
     }
 }
