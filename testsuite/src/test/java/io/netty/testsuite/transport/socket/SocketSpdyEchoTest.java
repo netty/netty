@@ -29,7 +29,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
 import io.netty.handler.codec.spdy.SpdyFrameEncoder;
-import io.netty.util.SocketAddresses;
+import io.netty.util.NetworkConstants;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -197,7 +197,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         Channel sc = sb.localAddress(0).bind().sync().channel();
         int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
-        Channel cc = cb.remoteAddress(SocketAddresses.LOCALHOST, port).connect().sync().channel();
+        Channel cc = cb.remoteAddress(NetworkConstants.LOCALHOST, port).connect().sync().channel();
         cc.write(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {

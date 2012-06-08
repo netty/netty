@@ -29,7 +29,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.SocketAddresses;
+import io.netty.util.NetworkConstants;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -43,7 +43,7 @@ import java.util.Queue;
 public class ServerBootstrap {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
-    private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(SocketAddresses.LOCALHOST, 0);
+    private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(NetworkConstants.LOCALHOST, 0);
 
     private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
         @Override

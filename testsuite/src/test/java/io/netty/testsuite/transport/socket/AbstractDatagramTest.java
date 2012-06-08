@@ -20,7 +20,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
-import io.netty.util.SocketAddresses;
+import io.netty.util.NetworkConstants;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -51,7 +51,7 @@ public abstract class AbstractDatagramTest {
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
             addr = new InetSocketAddress(
-                    SocketAddresses.LOCALHOST, TestUtils.getFreePort());
+                    NetworkConstants.LOCALHOST, TestUtils.getFreePort());
             sb.localAddress(addr);
             cb.localAddress(0).remoteAddress(addr);
 

@@ -24,13 +24,13 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
-public final class SocketAddresses {
+public final class NetworkConstants {
 
     public static final InetAddress LOCALHOST;
     public static final NetworkInterface LOOPBACK_IF;
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SocketAddresses.class);
+            InternalLoggerFactory.getInstance(NetworkConstants.class);
 
     static {
         // We cache this because some machine takes almost forever to return
@@ -80,7 +80,7 @@ public final class SocketAddresses {
         LOOPBACK_IF = loopbackIf;
     }
 
-    private SocketAddresses() {
+    private NetworkConstants() {
         // Unused
     }
 }
