@@ -34,7 +34,7 @@ import org.jboss.netty.util.CharsetUtil;
  * <pre>
  * String data = "foobar";
  *
- * {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt; embedder = new {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt;(
+ * {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt; embedder = new {@link EncoderEmbedder}&lt;&gt;(
  *         new {@link Base64Encoder}(), new {@link StringEncoder}());
  *
  * embedder.offer(data);

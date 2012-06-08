@@ -20,8 +20,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
- * Web Socket continuation frame containing continuation text or binary data. This is used for fragmented messages where
- * the contents of a messages is contained more than 1 frame.
+ * Web Socket continuation frame containing continuation text or binary data. This is used for
+ * fragmented messages where the contents of a messages is contained more than 1 frame.
  */
 public class ContinuationWebSocketFrame extends WebSocketFrame {
 
@@ -35,7 +35,8 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new continuation frame with the specified binary data. The final fragment flag is set to true.
+     * Creates a new continuation frame with the specified binary data. The final fragment flag is
+     * set to true.
      *
      * @param binaryData
      *            the content of the frame.
@@ -72,7 +73,8 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * @param aggregatedText
      *            Aggregated text set by decoder on the final continuation frame of a fragmented text message
      */
-    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData, String aggregatedText) {
+    public ContinuationWebSocketFrame(
+            boolean finalFragment, int rsv, ChannelBuffer binaryData, String aggregatedText) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);

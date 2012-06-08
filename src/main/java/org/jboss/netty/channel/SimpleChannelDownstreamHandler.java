@@ -52,7 +52,8 @@ import java.net.SocketAddress;
  * <p>
  * <strong>Caution:</strong>
  * <p>
- * Use the *Later(..) methods of the {@link Channels} class if you want to send an upstream event from a {@link ChannelDownstreamHandler} otherwise you may run into threading issues.
+ * Use the *Later(..) methods of the {@link Channels} class if you want to send an upstream event
+ * from a {@link ChannelDownstreamHandler} otherwise you may run into threading issues.
  *
  */
 public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler {

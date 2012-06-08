@@ -182,7 +182,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize,
             long keepAliveTime, TimeUnit unit) {
 
-        this(corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit, Executors.defaultThreadFactory());
+        this(
+                corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit,
+                Executors.defaultThreadFactory());
     }
 
     /**
@@ -201,7 +203,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize,
             long keepAliveTime, TimeUnit unit, ThreadFactory threadFactory) {
 
-        this(corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit, new DefaultObjectSizeEstimator(), threadFactory);
+        this(
+                corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit,
+                new DefaultObjectSizeEstimator(), threadFactory);
     }
 
     /**
@@ -277,11 +281,13 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     /**
-     * See {@link ThreadPoolExecutor#shutdownNow()} for how it handles the shutdown. If <code>true</code> is given to this method it also notifies all {@link ChannelFuture}'s
+     * See {@link ThreadPoolExecutor#shutdownNow()} for how it handles the shutdown.
+     * If <code>true</code> is given to this method it also notifies all {@link ChannelFuture}'s
      * of the not executed {@link ChannelEventRunnable}'s.
      *
      * <p>
-     * Be aware that if you call this with <code>false</code> you will need to handle the notification of the {@link ChannelFuture}'s by your self. So only use this if you
+     * Be aware that if you call this with <code>false</code> you will need to handle the
+     * notification of the {@link ChannelFuture}'s by your self. So only use this if you
      * really have a use-case for it.
      * </p>
      *
@@ -395,11 +401,13 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     /**
-     * If set to <code>false</code> no queued {@link ChannelEventRunnable}'s {@link ChannelFuture} will get notified once {@link #shutdownNow()} is called.
-     * If set to <code>true</code> every queued {@link ChannelEventRunnable} will get marked as failed via {@link ChannelFuture#setFailure(Throwable)}.
+     * If set to <code>false</code> no queued {@link ChannelEventRunnable}'s {@link ChannelFuture}
+     * will get notified once {@link #shutdownNow()} is called.  If set to <code>true</code> every
+     * queued {@link ChannelEventRunnable} will get marked as failed via {@link ChannelFuture#setFailure(Throwable)}.
      *
      * <p>
-     * Please only set this to <code>false</code> if you want to handle the notification by yourself and know what you are doing. Default is <code>true</code>.
+     * Please only set this to <code>false</code> if you want to handle the notification by yourself
+     * and know what you are doing. Default is <code>true</code>.
      * </p>
      */
     public void setNotifyChannelFuturesOnShutdown(boolean notifyOnShutdown) {
@@ -524,8 +532,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                     //System.out.println("READABLE");
                     ChannelHandlerContext ctx = eventTask.getContext();
                     if (ctx.getHandler() instanceof ExecutionHandler) {
-                        // check if the attachment was set as this means that we suspend the channel from reads. This only works when
-                        // this pool is used with ExecutionHandler but I guess thats good enough for us.
+                        // check if the attachment was set as this means that we suspend the channel
+                        // from reads. This only works when this pool is used with ExecutionHandler
+                        // but I guess thats good enough for us.
                         //
                         // See #215
                         if (ctx.getAttachment() != null) {
