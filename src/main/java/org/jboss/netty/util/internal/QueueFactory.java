@@ -55,8 +55,9 @@ public final class QueueFactory {
         } catch (Throwable t) {
             // For whatever reason an exception was thrown while loading the LinkedTransferQueue
             //
-            // This mostly happens because of a custom classloader or security policy that did not allow us to access the
-            // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
+            // This mostly happens because of a custom classloader or security policy that did not
+            // allow us to access the com.sun.Unmisc class. So just log it and fallback to the old
+            // LegacyLinkedTransferQueue that works in all cases
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
             }
@@ -87,8 +88,9 @@ public final class QueueFactory {
         } catch (Throwable t) {
             // For whatever reason an exception was thrown while loading the LinkedTransferQueue
             //
-            // This mostly happens because of a custom classloader or security policy that did not allow us to access the
-            // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
+            // This mostly happens because of a custom classloader or security policy that did not
+            // allow us to access the com.sun.Unmisc class. So just log it and fallback to the old
+            // LegacyLinkedTransferQueue that works in all cases
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
             }

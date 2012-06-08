@@ -1723,13 +1723,15 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
             String charsetName, ChannelBufferIndexFinder terminatorFinder);
 
     /**
-     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and
+     * {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(int index, int length, String charsetName);
 
     /**
-     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and
+     * {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(

@@ -130,7 +130,8 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
 
     public ChannelFuture joinGroup(InetAddress multicastAddress) {
        try {
-            return joinGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
+            return joinGroup(
+                    multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
             return Channels.failedFuture(this, e);
         }
@@ -144,7 +145,8 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     /**
      * Joins the specified multicast group at the specified interface using the specified source.
      */
-    public ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+    public ChannelFuture joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
@@ -185,7 +187,8 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
 
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
         try {
-            return leaveGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
+            return leaveGroup(
+                    multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
             return Channels.failedFuture(this, e);
         }
@@ -222,7 +225,8 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                         while (keyIt.hasNext()) {
                             MembershipKey key = keyIt.next();
                             if (networkInterface.equals(key.networkInterface())) {
-                               if (source == null && key.sourceAddress() == null || source != null && source.equals(key.sourceAddress())) {
+                               if (source == null && key.sourceAddress() == null ||
+                                   source != null && source.equals(key.sourceAddress())) {
                                    key.drop();
                                    keyIt.remove();
                                }

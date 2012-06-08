@@ -415,8 +415,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     /**
-     * Returns if the {@link ChannelFuture}'s of the {@link ChannelEventRunnable}'s should be notified about the shutdown of this {@link MemoryAwareThreadPoolExecutor}.
-     *
+     * Returns if the {@link ChannelFuture}'s of the {@link ChannelEventRunnable}'s should be
+     * notified about the shutdown of this {@link MemoryAwareThreadPoolExecutor}.
      */
     public boolean getNotifyChannelFuturesOnShutdown() {
         return notifyOnShutdown;
