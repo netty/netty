@@ -21,4 +21,3 @@
  * then {@link io.netty.example.http.websocketx.client.WebSocketClient}.
  */
 package io.netty.example.http.websocketx.client;
-

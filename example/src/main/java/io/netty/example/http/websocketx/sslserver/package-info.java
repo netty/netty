@@ -33,4 +33,3 @@
  * <a href="http://download.oracle.com/javase/6/docs/technotes/guides/security/jsse/JSSERefGuide.html">giude</a>.
  */
 package io.netty.example.http.websocketx.sslserver;
-

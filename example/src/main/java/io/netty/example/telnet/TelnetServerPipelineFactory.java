@@ -30,7 +30,7 @@ public class TelnetServerPipelineFactory extends ChannelInitializer<SocketChanne
     private static final StringDecoder DECODER = new StringDecoder();
     private static final StringEncoder ENCODER = new StringEncoder();
     private static final TelnetServerHandler SERVERHANDLER = new TelnetServerHandler();
-    
+
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();

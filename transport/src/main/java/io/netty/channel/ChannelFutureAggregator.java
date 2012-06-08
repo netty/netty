@@ -72,6 +72,5 @@ public class ChannelFutureAggregator implements ChannelFutureListener {
             }
 
         }
-        
     }
 }
