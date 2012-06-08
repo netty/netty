@@ -53,7 +53,7 @@ public class DefaultCookie implements Cookie {
     private boolean discard;
     private Set<Integer> ports = Collections.emptySet();
     private Set<Integer> unmodifiablePorts = ports;
-    private int maxAge = -1;
+    private long maxAge = -1;
     private int version;
     private boolean secure;
     private boolean httpOnly;
@@ -211,12 +211,12 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public int getMaxAge() {
+    public long getMaxAge() {
         return maxAge;
     }
 
     @Override
-    public void setMaxAge(int maxAge) {
+    public void setMaxAge(long maxAge) {
         if (maxAge < -1) {
             throw new IllegalArgumentException(
                     "maxAge must be either -1, 0, or a positive integer: " +

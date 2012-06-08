@@ -70,7 +70,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Returns the max age of this cookie in seconds.
      */
-    int getMaxAge();
+    long getMaxAge();
 
     /**
      * Sets the max age of this cookie in seconds.  If {@code 0} is specified,
@@ -78,7 +78,7 @@ public interface Cookie extends Comparable<Cookie> {
      * immediately.  If {@code -1} is specified, this cookie will be removed
      * when a user terminates browser.
      */
-    void setMaxAge(int maxAge);
+    void setMaxAge(long maxAge);
 
     /**
      * Returns the version of this cookie.

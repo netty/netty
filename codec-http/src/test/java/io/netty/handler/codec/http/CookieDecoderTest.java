@@ -17,9 +17,11 @@ package io.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.TimeZone;
 
 import org.junit.Test;
 
@@ -343,5 +345,30 @@ public class CookieDecoderTest {
         assertEquals("unfinished furniture", c.getValue());
 
         assertFalse(it.hasNext());
+    }
+
+    @Test
+    public void testDecodingLongDates() {
+        Calendar cookieDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        cookieDate.set(9999, 11, 31, 23, 59, 59);
+        long expectedMaxAge = (cookieDate.getTimeInMillis() - System.currentTimeMillis()) / 1000;
+
+        String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+
+        Cookie c = cookies.iterator().next();
+        assertTrue(Math.abs(expectedMaxAge - c.getMaxAge()) < 2);
+    }
+
+    @Test
+    public void testDecodingValueWithComma() {
+        String source = "UserCookie=timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE;" +
+                " expires=Sat, 01-Dec-2012 10:53:31 GMT; path=/";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+
+        Cookie c = cookies.iterator().next();
+        assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.getValue());
     }
 }
