@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 /**
@@ -93,7 +92,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     addFirst0(name, nextCtx, newCtx);
                     return this;
                 }
-                future = newCtx.executor().submit(new AsyncPipelineModification(this) {
+                future = newCtx.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                     @Override
                     void doCall() {
                         checkDuplicateName(name);
@@ -151,7 +150,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     addLast0(name, oldTail, newTail);
                     return this;
                 } else {
-                    future = newTail.executor().submit(new AsyncPipelineModification(this) {
+                    future = newTail.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                         @Override
                         void doCall() {
                             checkDuplicateName(name);
@@ -207,7 +206,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     addBefore0(name, ctx, newCtx);
                     return this;
                 } else {
-                    future = newCtx.executor().submit(new AsyncPipelineModification(this) {
+                    future = newCtx.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                         @Override
                         void doCall() {
                             checkDuplicateName(name);
@@ -268,7 +267,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     addAfter0(name, ctx, newCtx);
                     return this;
                 } else {
-                    future = newCtx.executor().submit(new AsyncPipelineModification(this) {
+                    future = newCtx.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                         @Override
                         void doCall() {
                             checkDuplicateName(name);
@@ -401,7 +400,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         removeLast0(oldTail);
                         return oldTail;
                     } else {
-                        future = oldTail.executor().submit(new AsyncPipelineModification(this) {
+                        future = oldTail.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                             @Override
                             void doCall() {
                                 removeLast0(oldTail);
@@ -415,7 +414,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         remove0(ctx);
                         return ctx;
                     } else {
-                       future = ctx.executor().submit(new AsyncPipelineModification(this) {
+                       future = ctx.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                            @Override
                            void doCall() {
                                remove0(ctx);
@@ -478,7 +477,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     removeLast0(oldTail);
                     return oldTail.handler();
                 } else {
-                    future = oldTail.executor().submit(new AsyncPipelineModification(this) {
+                    future = oldTail.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                         @Override
                         void doCall() {
                             removeLast0(oldTail);
@@ -552,7 +551,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         return ctx.handler();
 
                     } else {
-                        future = oldTail.executor().submit(new AsyncPipelineModification(this) {
+                        future = oldTail.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                             @Override
                             void doCall() {
                                 removeLast0(oldTail);
@@ -577,7 +576,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         replace0(ctx, newName, newCtx);
                         return ctx.handler();
                     } else {
-                        future = newCtx.executor().submit(new AsyncPipelineModification(this) {
+                        future = newCtx.executor().submit(new DefaultChannelPipelineModificationTask(this) {
                             @Override
                             void doCall() {
                                 replace0(ctx, newName, newCtx);
@@ -1692,42 +1691,4 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ctx.fireUserEventTriggered(evt);
         }
     }
-}
-
-/**
- * Custom {@link Callable} implementation which will catch all {@link Throwable} which happens
- * during execution of {@link AsyncPipelineModification#doCall()} and return them in the
- * {@link Future}. This allows to re-throw them later.
- *
- * It also handles the right synchronization of the {@link AsyncPipelineModification#doCall()}
- * method.
- *
- * It was originally an inner class of {@link DefaultChannelPipeline}, but moved to a top level
- * type to work around a compiler bug.
- */
-abstract class AsyncPipelineModification implements Callable<Throwable> {
-
-    private final ChannelPipeline lock;
-
-    AsyncPipelineModification(ChannelPipeline lock) {
-        this.lock = lock;
-    }
-
-    @Override
-    public Throwable call() {
-        try {
-            synchronized (lock) {
-                doCall();
-            }
-        } catch (Throwable t) {
-            return t;
-        }
-        return null;
-    }
-
-    /**
-     * Execute the modification
-     */
-    abstract void doCall();
-
 }
