@@ -129,7 +129,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     DefaultChannelHandlerContext.this.next, ChannelHandlerType.STATE);
             if (next != null) {
                 next.fillBridge();
-                DefaultChannelPipeline.fireInboundBufferUpdated(next);
+                EventExecutor executor = next.executor();
+                if (executor.inEventLoop()) {
+                    next.curCtxFireInboundBufferUpdatedTask.run();
+                } else {
+                    executor.execute(next.curCtxFireInboundBufferUpdatedTask);
+                }
             }
         }
     };
@@ -381,12 +386,30 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public boolean hasNextInboundByteBuffer() {
-        return DefaultChannelPipeline.hasNextInboundByteBuffer(next);
+        DefaultChannelHandlerContext ctx = next;
+        for (;;) {
+            if (ctx == null) {
+                return false;
+            }
+            if (ctx.inByteBridge != null) {
+                return true;
+            }
+            ctx = ctx.next;
+        }
     }
 
     @Override
     public boolean hasNextInboundMessageBuffer() {
-        return DefaultChannelPipeline.hasNextInboundMessageBuffer(next);
+        DefaultChannelHandlerContext ctx = next;
+        for (;;) {
+            if (ctx == null) {
+                return false;
+            }
+            if (ctx.inMsgBridge != null) {
+                return true;
+            }
+            ctx = ctx.next;
+        }
     }
 
     @Override
@@ -401,12 +424,55 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelBuffer nextInboundByteBuffer() {
-        return DefaultChannelPipeline.nextInboundByteBuffer(next);
+        DefaultChannelHandlerContext ctx = next;
+        final Thread currentThread = Thread.currentThread();
+        for (;;) {
+            if (ctx == null) {
+                throw new NoSuchBufferException();
+            }
+            if (ctx.inByteBuf != null) {
+                if (ctx.executor().inEventLoop(currentThread)) {
+                    return ctx.inByteBuf;
+                } else {
+                    StreamBridge bridge = ctx.inByteBridge.get();
+                    if (bridge == null) {
+                        bridge = new StreamBridge();
+                        if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.inByteBridge.get();
+                        }
+                    }
+                    return bridge.byteBuf;
+                }
+            }
+            ctx = ctx.next;
+        }
     }
 
     @Override
     public Queue<Object> nextInboundMessageBuffer() {
-        return DefaultChannelPipeline.nextInboundMessageBuffer(next);
+        DefaultChannelHandlerContext ctx = next;
+        final Thread currentThread = Thread.currentThread();
+        for (;;) {
+            if (ctx == null) {
+                throw new NoSuchBufferException();
+            }
+
+            if (ctx.inMsgBuf != null) {
+                if (ctx.executor().inEventLoop(currentThread)) {
+                    return ctx.inMsgBuf;
+                } else {
+                    MessageBridge bridge = ctx.inMsgBridge.get();
+                    if (bridge == null) {
+                        bridge = new MessageBridge();
+                        if (!ctx.inMsgBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.inMsgBridge.get();
+                        }
+                    }
+                    return bridge.msgBuf;
+                }
+            }
+            ctx = ctx.next;
+        }
     }
 
     @Override
@@ -423,7 +489,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelRegistered() {
         DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
         if (next != null) {
-            DefaultChannelPipeline.fireChannelRegistered(next);
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                next.fireChannelRegisteredTask.run();
+            } else {
+                executor.execute(next.fireChannelRegisteredTask);
+            }
         }
     }
 
@@ -431,7 +502,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelUnregistered() {
         DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
         if (next != null) {
-            DefaultChannelPipeline.fireChannelUnregistered(next);
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                next.fireChannelUnregisteredTask.run();
+            } else {
+                executor.execute(next.fireChannelUnregisteredTask);
+            }
         }
     }
 
@@ -439,7 +515,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelActive() {
         DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
         if (next != null) {
-            DefaultChannelPipeline.fireChannelActive(next);
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                next.fireChannelActiveTask.run();
+            } else {
+                executor.execute(next.fireChannelActiveTask);
+            }
         }
     }
 
@@ -447,25 +528,73 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelInactive() {
         DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
         if (next != null) {
-            DefaultChannelPipeline.fireChannelInactive(next);
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                next.fireChannelInactiveTask.run();
+            } else {
+                executor.execute(next.fireChannelInactiveTask);
+            }
         }
     }
 
     @Override
-    public void fireExceptionCaught(Throwable cause) {
+    public void fireExceptionCaught(final Throwable cause) {
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
+
         DefaultChannelHandlerContext next = this.next;
         if (next != null) {
-            pipeline.fireExceptionCaught(next, cause);
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    next.handler().exceptionCaught(next, cause);
+                } catch (Throwable t) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "An exception was thrown by a user handler's " +
+                                "exceptionCaught() method while handling the following exception:", cause);
+                    }
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        fireExceptionCaught(cause);
+                    }
+                });
+            }
         } else {
-            DefaultChannelPipeline.logTerminalException(cause);
+            logger.warn(
+                    "An exceptionCaught() event was fired, and it reached at the end of the " +
+                    "pipeline.  It usually means the last inbound handler in the pipeline did not " +
+                    "handle the exception.", cause);
         }
     }
 
     @Override
-    public void fireUserEventTriggered(Object event) {
+    public void fireUserEventTriggered(final Object event) {
+        if (event == null) {
+            throw new NullPointerException("event");
+        }
+
         DefaultChannelHandlerContext next = this.next;
         if (next != null) {
-            pipeline.fireUserEventTriggered(next, event);
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                try {
+                    next.handler().userEventTriggered(next, event);
+                } catch (Throwable t) {
+                    pipeline.notifyHandlerException(t);
+                }
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        fireUserEventTriggered(event);
+                    }
+                });
+            }
         }
     }
 

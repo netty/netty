@@ -887,7 +887,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
-        return nextInboundMessageBuffer(head.next);
+        return head.nextInboundMessageBuffer();
     }
 
     @Override
@@ -896,7 +896,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
-        return nextInboundByteBuffer(head.next);
+        return head.nextInboundByteBuffer();
     }
 
     @Override
@@ -907,79 +907,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelBuffer outboundByteBuffer() {
         return nextOutboundByteBuffer(tail);
-    }
-
-    static boolean hasNextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
-        for (;;) {
-            if (ctx == null) {
-                return false;
-            }
-            if (ctx.inByteBridge != null) {
-                return true;
-            }
-            ctx = ctx.next;
-        }
-    }
-
-    static boolean hasNextInboundMessageBuffer(DefaultChannelHandlerContext ctx) {
-        for (;;) {
-            if (ctx == null) {
-                return false;
-            }
-            if (ctx.inMsgBridge != null) {
-                return true;
-            }
-            ctx = ctx.next;
-        }
-    }
-
-    static ChannelBuffer nextInboundByteBuffer(DefaultChannelHandlerContext ctx) {
-        final Thread currentThread = Thread.currentThread();
-        for (;;) {
-            if (ctx == null) {
-                throw new NoSuchBufferException();
-            }
-            if (ctx.inByteBuf != null) {
-                if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.inByteBuf;
-                } else {
-                    StreamBridge bridge = ctx.inByteBridge.get();
-                    if (bridge == null) {
-                        bridge = new StreamBridge();
-                        if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.inByteBridge.get();
-                        }
-                    }
-                    return bridge.byteBuf;
-                }
-            }
-            ctx = ctx.next;
-        }
-    }
-
-    static Queue<Object> nextInboundMessageBuffer(DefaultChannelHandlerContext ctx) {
-        final Thread currentThread = Thread.currentThread();
-        for (;;) {
-            if (ctx == null) {
-                throw new NoSuchBufferException();
-            }
-
-            if (ctx.inMsgBuf != null) {
-                if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.inMsgBuf;
-                } else {
-                    MessageBridge bridge = ctx.inMsgBridge.get();
-                    if (bridge == null) {
-                        bridge = new MessageBridge();
-                        if (!ctx.inMsgBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.inMsgBridge.get();
-                        }
-                    }
-                    return bridge.msgBuf;
-                }
-            }
-            ctx = ctx.next;
-        }
     }
 
     boolean hasNextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
@@ -1060,152 +987,41 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public void fireChannelRegistered() {
-        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.STATE);
-        if (ctx != null) {
-            fireChannelRegistered(ctx);
-        }
-    }
-
-    static void fireChannelRegistered(DefaultChannelHandlerContext ctx) {
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            ctx.fireChannelRegisteredTask.run();
-        } else {
-            executor.execute(ctx.fireChannelRegisteredTask);
-        }
+        head.fireChannelRegistered();
     }
 
     @Override
     public void fireChannelUnregistered() {
-        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.STATE);
-        if (ctx != null) {
-            fireChannelUnregistered(ctx);
-        }
-    }
-
-    static void fireChannelUnregistered(DefaultChannelHandlerContext ctx) {
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            ctx.fireChannelUnregisteredTask.run();
-        } else {
-            executor.execute(ctx.fireChannelUnregisteredTask);
-        }
+        head.fireChannelUnregistered();
     }
 
     @Override
     public void fireChannelActive() {
-        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.STATE);
-        if (ctx != null) {
-            firedChannelActive = true;
-            fireChannelActive(ctx);
-            if (fireInboundBufferUpdatedOnActivation) {
-                fireInboundBufferUpdatedOnActivation = false;
-                fireInboundBufferUpdated(ctx);
-            }
-        }
-    }
-
-    static void fireChannelActive(DefaultChannelHandlerContext ctx) {
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            ctx.fireChannelActiveTask.run();
-        } else {
-            executor.execute(ctx.fireChannelActiveTask);
+        firedChannelActive = true;
+        head.fireChannelActive();
+        if (fireInboundBufferUpdatedOnActivation) {
+            fireInboundBufferUpdatedOnActivation = false;
+            head.fireInboundBufferUpdated();
         }
     }
 
     @Override
     public void fireChannelInactive() {
-        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.STATE);
-        if (ctx != null) {
-            // Some implementations such as EmbeddedChannel can trigger inboundBufferUpdated()
-            // after deactivation, so it's safe not to revert the firedChannelActive flag here.
-            // Also, all known transports never get re-activated.
-            //firedChannelActive = false;
-            fireChannelInactive(ctx);
-        }
-    }
-
-    static void fireChannelInactive(DefaultChannelHandlerContext ctx) {
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            ctx.fireChannelInactiveTask.run();
-        } else {
-            executor.execute(ctx.fireChannelInactiveTask);
-        }
+        // Some implementations such as EmbeddedChannel can trigger inboundBufferUpdated()
+        // after deactivation, so it's safe not to revert the firedChannelActive flag here.
+        // Also, all known transports never get re-activated.
+        //firedChannelActive = false;
+        head.fireChannelInactive();
     }
 
     @Override
     public void fireExceptionCaught(Throwable cause) {
-        DefaultChannelHandlerContext ctx = head.next;
-        if (ctx != null) {
-            fireExceptionCaught(ctx, cause);
-        } else {
-            logTerminalException(cause);
-        }
-    }
-
-    static void logTerminalException(Throwable cause) {
-        logger.warn(
-                "An exceptionCaught() event was fired, and it reached at the end of the " +
-                "pipeline.  It usually means the last inbound handler in the pipeline did not " +
-                "handle the exception.", cause);
-    }
-
-    void fireExceptionCaught(final DefaultChannelHandlerContext ctx, final Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).exceptionCaught(ctx, cause);
-            } catch (Throwable t) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(
-                            "An exception was thrown by a user handler's " +
-                            "exceptionCaught() method while handling the following exception:", cause);
-                }
-            }
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    fireExceptionCaught(ctx, cause);
-                }
-            });
-        }
+        head.fireExceptionCaught(cause);
     }
 
     @Override
     public void fireUserEventTriggered(Object event) {
-        DefaultChannelHandlerContext ctx = head.next;
-        if (ctx != null) {
-            fireUserEventTriggered(ctx, event);
-        }
-    }
-
-    void fireUserEventTriggered(final DefaultChannelHandlerContext ctx, final Object event) {
-        if (event == null) {
-            throw new NullPointerException("event");
-        }
-
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            try {
-                ((ChannelInboundHandler<Object>) ctx.handler()).userEventTriggered(ctx, event);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
-            }
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    fireUserEventTriggered(ctx, event);
-                }
-            });
-        }
+        head.fireUserEventTriggered(event);
     }
 
     @Override
@@ -1214,19 +1030,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             fireInboundBufferUpdatedOnActivation = true;
             return;
         }
-        DefaultChannelHandlerContext ctx = firstContext(ChannelHandlerType.STATE);
-        if (ctx != null) {
-            fireInboundBufferUpdated(ctx);
-        }
-    }
-
-    static void fireInboundBufferUpdated(DefaultChannelHandlerContext ctx) {
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            ctx.curCtxFireInboundBufferUpdatedTask.run();
-        } else {
-            executor.execute(ctx.curCtxFireInboundBufferUpdatedTask);
-        }
+        head.fireInboundBufferUpdated();
     }
 
     @Override
