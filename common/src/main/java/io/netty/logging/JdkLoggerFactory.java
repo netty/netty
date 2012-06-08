@@ -18,7 +18,7 @@ package io.netty.logging;
 
 /**
  * Logger factory which creates a
- * <a href="http://java.sun.com/javase/6/docs/technotes/guides/logging/index.html">java.util.logging</a>
+ * <a href="http://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
  * logger.
  */
 public class JdkLoggerFactory extends InternalLoggerFactory {

@@ -44,7 +44,8 @@ import java.util.Queue;
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-public final class NioDatagramChannel extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
+public final class NioDatagramChannel
+        extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
@@ -299,7 +300,8 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
     @Override
     public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelFuture future) {
         try {
-            return leaveGroup(multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, future);
+            return leaveGroup(
+                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, future);
         } catch (SocketException e) {
             future.setFailure(e);
         }
@@ -348,7 +350,8 @@ public final class NioDatagramChannel extends AbstractNioMessageChannel implemen
                     while (keyIt.hasNext()) {
                         MembershipKey key = keyIt.next();
                         if (networkInterface.equals(key.networkInterface())) {
-                           if (source == null && key.sourceAddress() == null || source != null && source.equals(key.sourceAddress())) {
+                           if (source == null && key.sourceAddress() == null ||
+                               source != null && source.equals(key.sourceAddress())) {
                                key.drop();
                                keyIt.remove();
                            }

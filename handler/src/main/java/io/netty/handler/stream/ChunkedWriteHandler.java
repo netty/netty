@@ -234,8 +234,9 @@ public class ChunkedWriteHandler
                 if (endOfInput) {
                     this.currentEvent = null;
 
-                    // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have
-                    // some resource bound that can not be closed before its not written
+                    // Register a listener which will close the input once the write is complete.
+                    // This is needed because the Chunk may have some resource bound that can not
+                    // be closed before its not written.
                     //
                     // See https://github.com/netty/netty/issues/303
                     f.addListener(new ChannelFutureListener() {

@@ -101,7 +101,9 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
 
     @Override
     protected HttpMessage createMessage(String[] initialLine) {
-        return new DefaultHttpResponse(HttpVersion.valueOf(initialLine[0]), new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
+        return new DefaultHttpResponse(
+                HttpVersion.valueOf(initialLine[0]),
+                new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
     }
 
     @Override

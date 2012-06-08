@@ -113,7 +113,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         @Override
-        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+        public void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 if (!ensureOpen(future)) {
                     return;

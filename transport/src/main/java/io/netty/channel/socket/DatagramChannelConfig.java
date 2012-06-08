@@ -17,9 +17,9 @@ package io.netty.channel.socket;
 
 import io.netty.channel.ChannelConfig;
 
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.StandardSocketOptions;
 
 /**
  * A {@link ChannelConfig} for a {@link DatagramChannel}.
@@ -56,22 +56,22 @@ import java.net.NetworkInterface;
 public interface DatagramChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
     int getSendBufferSize();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
     void setSendBufferSize(int sendBufferSize);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
@@ -80,44 +80,44 @@ public interface DatagramChannelConfig extends ChannelConfig {
     void setReceivePacketSize(int receivePacketSize);
 
     /**
-     * Gets the traffic class.
+     * Gets the {@link StandardSocketOptions#IP_TOS} option.
      */
     int getTrafficClass();
 
     /**
-     * Sets the traffic class as specified in {@link DatagramSocket#setTrafficClass(int)}.
+     * Sets the {@link StandardSocketOptions#IP_TOS} option.
      */
     void setTrafficClass(int trafficClass);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     boolean isReuseAddress();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     void setReuseAddress(boolean reuseAddress);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_BROADCAST}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_BROADCAST} option.
      */
     boolean isBroadcast();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_BROADCAST}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_BROADCAST} option.
      */
     void setBroadcast(boolean broadcast);
 
     /**
-     * Gets the setting for local loopback of multicast datagrams.
+     * Gets the {@link StandardSocketOptions#IP_MULTICAST_LOOP} option.
      *
      * @return {@code true} if and only if the loopback mode has been disabled
      */
     boolean isLoopbackModeDisabled();
 
     /**
-     * Sets the setting for local loopback of multicast datagrams.
+     * Sets the {@link StandardSocketOptions#IP_MULTICAST_LOOP} option.
      *
      * @param loopbackModeDisabled
      *        {@code true} if and only if the loopback mode has been disabled
@@ -125,14 +125,12 @@ public interface DatagramChannelConfig extends ChannelConfig {
     void setLoopbackModeDisabled(boolean loopbackModeDisabled);
 
     /**
-     * Gets the default time-to-live for multicast packets sent out on the
-     * socket.
+     * Gets the {@link StandardSocketOptions#IP_MULTICAST_TTL} option.
      */
     int getTimeToLive();
 
     /**
-     * Sets the default time-to-live for multicast packets sent out on the
-     * {@link DatagramChannel} in order to control the scope of the multicasts.
+     * Sets the {@link StandardSocketOptions#IP_MULTICAST_TTL} option.
      */
     void setTimeToLive(int ttl);
 
@@ -147,14 +145,12 @@ public interface DatagramChannelConfig extends ChannelConfig {
     void setInterface(InetAddress interfaceAddress);
 
     /**
-     * Gets the network interface for outgoing multicast datagrams sent on
-     * the {@link DatagramChannel}.
+     * Gets the {@link StandardSocketOptions#IP_MULTICAST_IF} option.
      */
     NetworkInterface getNetworkInterface();
 
     /**
-     * Sets the network interface for outgoing multicast datagrams sent on
-     * the {@link DatagramChannel}.
+     * Sets the {@link StandardSocketOptions#IP_MULTICAST_IF} option.
      */
     void setNetworkInterface(NetworkInterface networkInterface);
 }

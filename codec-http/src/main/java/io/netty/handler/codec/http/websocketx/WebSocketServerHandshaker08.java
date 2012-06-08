@@ -52,17 +52,18 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * Constructor specifying the destination web socket location
      *
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath".
+     *            Subsequent web socket frames will be sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web socket frame
      * @param maxFramePayloadLength
-     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
-     *            reduce denial of service attacks using long data frames.
+     *            Maximum allowable frame payload length. Setting this value to your application's
+     *            requirement may reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
+    public WebSocketServerHandshaker08(
+            String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
         super(WebSocketVersion.V08, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }

@@ -23,7 +23,8 @@ package io.netty.handler.codec.base64;
  * Enumeration of supported Base64 dialects.
  * <p>
  * The internal lookup tables in this class has been derived from
- * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain Base64 Encoder/Decoder</a>.
+ * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain
+ * Base64 Encoder/Decoder</a>.
  */
 public enum Base64Dialect {
     /**

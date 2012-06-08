@@ -46,6 +46,12 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         } catch (Exception e) {
             // Not Java 7+
         }
+        Class<?> stdSocketOptionType = null;
+        try {
+            stdSocketOptionType = Class.forName("java.net.StandardSocketOptions", true, classLoader);
+        } catch (Exception e) {
+            // Not Java 7+
+        }
 
         Object ipMulticastTtl = null;
         Object ipMulticastIf = null;
@@ -54,19 +60,19 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         Method setOption = null;
         if (socketOptionType != null) {
             try {
-                ipMulticastTtl = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_TTL").get(null);
+                ipMulticastTtl = stdSocketOptionType.getDeclaredField("IP_MULTICAST_TTL").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_TTL field", e);
             }
 
             try {
-                ipMulticastIf = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_IF").get(null);
+                ipMulticastIf = stdSocketOptionType.getDeclaredField("IP_MULTICAST_IF").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_IF field", e);
             }
 
             try {
-                ipMulticastLoop = Class.forName("java.net.StandardSocketOptions", true, classLoader).getDeclaredField("IP_MULTICAST_LOOP").get(null);
+                ipMulticastLoop = stdSocketOptionType.getDeclaredField("IP_MULTICAST_LOOP").get(null);
             } catch (Exception e) {
                 throw new Error("cannot locate the IP_MULTICAST_LOOP field", e);
             }

@@ -27,7 +27,8 @@ import org.jboss.marshalling.Unmarshaller;
 /**
  * Decoder which MUST be used with {@link MarshallingEncoder}.
  *
- * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
+ * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out
+ * of the {@link ChannelBuffer}.
  *
  */
 public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {

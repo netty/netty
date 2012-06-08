@@ -239,7 +239,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
         httpMessage.removeHeader("Proxy-Connection");
         httpMessage.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
 
-        SpdySynStreamFrame spdySynStreamFrame = new DefaultSpdySynStreamFrame(streamID, associatedToStreamID, priority);
+        SpdySynStreamFrame spdySynStreamFrame =
+                new DefaultSpdySynStreamFrame(streamID, associatedToStreamID, priority);
 
         // Unfold the first line of the message into name/value pairs
         if (httpMessage instanceof HttpRequest) {

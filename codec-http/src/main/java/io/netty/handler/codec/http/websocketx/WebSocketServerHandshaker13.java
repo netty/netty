@@ -35,10 +35,8 @@ import io.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>
- * (originally web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
- * 17</a>).
+ * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>
+ * (originally web socket specification <a href="http://goo.gl/zVBkL">draft-ietf-hybi-thewebsocketprotocol-17</a>).
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
@@ -53,17 +51,18 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Constructor specifying the destination web socket location
      *
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
+     *        URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web
+     *        socket frames will be sent to this URL.
      * @param subprotocols
-     *            CSV of supported protocols
+     *        CSV of supported protocols
      * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
+     *        Allow extensions to be used in the reserved bits of the web socket frame
      * @param maxFramePayloadLength
-     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
-     *            reduce denial of service attacks using long data frames.
+     *        Maximum allowable frame payload length. Setting this value to your application's
+     *        requirement may reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
+    public WebSocketServerHandshaker13(
+            String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
         super(WebSocketVersion.V13, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
@@ -136,7 +135,8 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
-                throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+                throw new WebSocketHandshakeException(
+                        "Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 setSelectedSubprotocol(selectedSubprotocol);

@@ -44,7 +44,8 @@ public final class SocketAddresses {
                 localhost = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
             } catch (UnknownHostException e1) {
                 try {
-                    localhost = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+                    localhost = InetAddress.getByAddress(
+                            new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
                 } catch (UnknownHostException e2) {
                     logger.error("Failed to resolve localhost", e2);
                 }
@@ -60,8 +61,7 @@ public final class SocketAddresses {
             loopbackIf = null;
         }
 
-        // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
-        // if so fail back the the first interface
+        // If null is returned, iterate over all the available network interfaces.
         if (loopbackIf == null) {
             try {
                 for (Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces();

@@ -28,7 +28,9 @@ import io.netty.buffer.HeapChannelBufferFactory;
  * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a> notation.
  * <p>
  * The encoding and decoding algorithm in this class has been derived from
- * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain Base64 Encoder/Decoder</a>.
+ * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain
+ * Base64 Encoder/Decoder</a>.
+ *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.base64.Base64Dialect
  */
@@ -125,7 +127,8 @@ public final class Base64 {
         return encode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+    public static ChannelBuffer encode(
+            ChannelBuffer src, int off, int len, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
         return encode(src, off, len, breakLines(dialect), dialect, bufferFactory);
     }
 

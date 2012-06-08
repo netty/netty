@@ -37,7 +37,8 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT);
     }
 
-    protected Map<ChannelOption<?>, Object> getOptions(Map<ChannelOption<?>, Object> result, ChannelOption<?>... options) {
+    protected Map<ChannelOption<?>, Object> getOptions(
+            Map<ChannelOption<?>, Object> result, ChannelOption<?>... options) {
         if (result == null) {
             result = new IdentityHashMap<ChannelOption<?>, Object>();
         }

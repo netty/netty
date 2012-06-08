@@ -28,7 +28,9 @@ public class ChannelHandlerAdapter extends ChannelStateHandlerAdapter implements
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) throws Exception {
+    public void connect(
+            ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+            ChannelFuture future) throws Exception {
         ctx.connect(remoteAddress, localAddress, future);
     }
 

@@ -777,7 +777,8 @@ public class SpdySessionHandler
             return false;
         }
         spdySession.acceptStream(
-                streamID, priority, remoteSideClosed, localSideClosed, initialSendWindowSize, initialReceiveWindowSize);
+                streamID, priority, remoteSideClosed, localSideClosed,
+                initialSendWindowSize, initialReceiveWindowSize);
         if (isRemoteInitiatedID(streamID)) {
             lastGoodStreamID = streamID;
         }

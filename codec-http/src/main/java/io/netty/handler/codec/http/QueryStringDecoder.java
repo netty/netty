@@ -46,10 +46,10 @@ import java.util.Map;
  *
  * <h3>HashDOS vulnerability fix</h3>
  *
- * As a workaround to the <a href="http://events.ccc.de/congress/2011/Fahrplan/attachments/2007_28C3_Effective_DoS_on_web_application_platforms.pdf">HashDOS</a>
- * vulnerability, the decoder limits the maximum number of decoded key-value
- * parameter pairs, up to {@literal 1024} by default, and you can configure it
- * when you construct the decoder by passing an additional integer parameter.
+ * As a workaround to the <a href="http://goo.gl/I4Nky">HashDOS</a> vulnerability, the decoder
+ * limits the maximum number of decoded key-value parameter pairs, up to {@literal 1024} by
+ * default, and you can configure it when you construct the decoder by passing an additional
+ * integer parameter.
  *
  * @see QueryStringEncoder
  *

@@ -30,7 +30,7 @@ import java.net.InetSocketAddress;
  * A UDP broadcast client that asks for a quote of the moment (QOTM) to
  * {@link QuoteOfTheMomentServer}.
  *
- * Inspired by <a href="http://java.sun.com/docs/books/tutorial/networking/datagrams/clientServer.html">the official Java tutorial</a>.
+ * Inspired by <a href="http://goo.gl/BsXVR">the official Java tutorial</a>.
  */
 public class QuoteOfTheMomentClient {
 

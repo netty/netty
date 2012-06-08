@@ -21,9 +21,10 @@
  * This package supports different web socket specification versions (hence the X suffix).
  * The specification current supported are:
  * <ul>
- * <li><a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00">draft-ietf-hybi-thewebsocketprotocol-00</a></li>
- * <li><a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10">draft-ietf-hybi-thewebsocketprotocol-10</a></li>
- * <li><a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a> (originally <a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">draft-ietf-hybi-thewebsocketprotocol-17</a>)</li>
+ * <li><a href="http://goo.gl/wFiu3">draft-ietf-hybi-thewebsocketprotocol-00</a></li>
+ * <li><a href="http://goo.gl/h27VE">draft-ietf-hybi-thewebsocketprotocol-10</a></li>
+ * <li><a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a> (originally
+ *     <a href="http://goo.gl/zVBkL">draft-ietf-hybi-thewebsocketprotocol-17</a>)</li>
  * </ul>
  * </p>
  * <p>

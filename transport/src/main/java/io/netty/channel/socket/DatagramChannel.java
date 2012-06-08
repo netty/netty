@@ -45,10 +45,12 @@ public interface DatagramChannel extends Channel {
      * Joins the specified multicast group at the specified interface.
      */
     ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
-    ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+    ChannelFuture joinGroup(
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
 
     ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
-    ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelFuture future);
+    ChannelFuture joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelFuture future);
 
     /**
      * Leaves a multicast group.
@@ -60,7 +62,8 @@ public interface DatagramChannel extends Channel {
      * Leaves a multicast group on a specified local interface.
      */
     ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
-    ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+    ChannelFuture leaveGroup(
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
 
     /**
      * Leave the specified multicast group at the specified interface using the specified source.

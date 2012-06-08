@@ -401,7 +401,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    protected void checkCloseFrameBody(ChannelHandlerContext ctx, ChannelBuffer buffer) throws CorruptedFrameException {
+    protected void checkCloseFrameBody(
+            ChannelHandlerContext ctx, ChannelBuffer buffer) throws CorruptedFrameException {
         if (buffer == null || buffer.capacity() == 0) {
             return;
         }

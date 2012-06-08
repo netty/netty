@@ -59,7 +59,8 @@ public class ByteArrayDecoder extends MessageToMessageDecoder<ChannelBuffer, byt
         byte[] array;
         if (msg.hasArray()) {
             if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {
-                // we have no offset and the length is the same as the capacity. Its safe to reuse the array without copy it first
+                // we have no offset and the length is the same as the capacity. Its safe to reuse
+                // the array without copy it first
                 array = msg.array();
             } else {
                 // copy the ChannelBuffer to a byte array

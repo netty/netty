@@ -707,7 +707,8 @@ public class HttpHeaders {
 
     /**
      * Adds a new date header with the specified name and value.  The specified
-     * value is formatted as defined in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
+     * value is formatted as defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
     public static void addDateHeader(HttpMessage message, String name, Date value) {
         message.addHeader(name, value);

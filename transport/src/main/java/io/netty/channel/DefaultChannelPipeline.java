@@ -86,7 +86,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             synchronized (this) {
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext nextCtx = head.next;
-                final DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, executor, head, nextCtx, name, handler);
+                final DefaultChannelHandlerContext newCtx =
+                        new DefaultChannelHandlerContext(this, executor, head, nextCtx, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addFirst0(name, nextCtx, newCtx);
@@ -118,7 +119,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     }
 
-    private void addFirst0(final String name, DefaultChannelHandlerContext nextCtx, DefaultChannelHandlerContext newCtx) {
+    private void addFirst0(
+            final String name, DefaultChannelHandlerContext nextCtx, DefaultChannelHandlerContext newCtx) {
         callBeforeAdd(newCtx);
 
         if (nextCtx != null) {
@@ -144,7 +146,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 checkDuplicateName(name);
 
                 final DefaultChannelHandlerContext oldTail = tail;
-                final DefaultChannelHandlerContext newTail = new DefaultChannelHandlerContext(this, executor, oldTail, null, name, handler);
+                final DefaultChannelHandlerContext newTail =
+                        new DefaultChannelHandlerContext(this, executor, oldTail, null, name, handler);
 
                 if (!newTail.channel().isRegistered() || newTail.executor().inEventLoop()) {
                     addLast0(name, oldTail, newTail);
@@ -177,7 +180,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     }
 
-    private void addLast0(final String name, DefaultChannelHandlerContext oldTail, DefaultChannelHandlerContext newTail) {
+    private void addLast0(
+            final String name, DefaultChannelHandlerContext oldTail, DefaultChannelHandlerContext newTail) {
         callBeforeAdd(newTail);
 
         oldTail.next = newTail;
@@ -193,14 +197,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addBefore(EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
+    public ChannelPipeline addBefore(
+            EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
             synchronized (this) {
                 final DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
                 checkDuplicateName(name);
-                final DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, executor, ctx.prev, ctx, name, handler);
+                final DefaultChannelHandlerContext newCtx =
+                        new DefaultChannelHandlerContext(this, executor, ctx.prev, ctx, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addBefore0(name, ctx, newCtx);
@@ -250,7 +256,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addAfter(EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
+    public ChannelPipeline addAfter(
+            EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
 
         try {
             Future<Throwable> future;
@@ -261,7 +268,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     return addLast(name, handler);
                 }
                 checkDuplicateName(name);
-                final DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, executor, ctx, ctx.next, name, handler);
+                final DefaultChannelHandlerContext newCtx =
+                        new DefaultChannelHandlerContext(this, executor, ctx, ctx.next, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addAfter0(name, ctx, newCtx);
@@ -531,7 +539,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler);
     }
 
-    private ChannelHandler replace(final DefaultChannelHandlerContext ctx, final String newName, final ChannelHandler newHandler) {
+    private ChannelHandler replace(
+            final DefaultChannelHandlerContext ctx, final String newName, final ChannelHandler newHandler) {
         try {
             Future<Throwable> future;
             synchronized (this) {
@@ -542,7 +551,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         throw new NoSuchElementException();
                     }
                     final DefaultChannelHandlerContext oldTail = tail;
-                    final DefaultChannelHandlerContext newTail = new DefaultChannelHandlerContext(this, null, oldTail, null, newName, newHandler);
+                    final DefaultChannelHandlerContext newTail =
+                            new DefaultChannelHandlerContext(this, null, oldTail, null, newName, newHandler);
 
                     if (!oldTail.channel().isRegistered() || oldTail.executor().inEventLoop()) {
                         removeLast0(oldTail);
@@ -570,7 +580,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     DefaultChannelHandlerContext prev = ctx.prev;
                     DefaultChannelHandlerContext next = ctx.next;
 
-                    final DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, ctx.executor, prev, next, newName, newHandler);
+                    final DefaultChannelHandlerContext newCtx =
+                            new DefaultChannelHandlerContext(this, ctx.executor, prev, next, newName, newHandler);
 
                     if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                         replace0(ctx, newName, newCtx);
@@ -1263,7 +1274,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return bind(firstContext(ChannelHandlerType.OPERATION), localAddress, future);
     }
 
-    ChannelFuture bind(final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelFuture future) {
+    ChannelFuture bind(
+            final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelFuture future) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
@@ -1297,7 +1309,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return connect(firstContext(ChannelHandlerType.OPERATION), remoteAddress, localAddress, future);
     }
 
-    ChannelFuture connect(final DefaultChannelHandlerContext ctx, final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+    ChannelFuture connect(
+            final DefaultChannelHandlerContext ctx, final SocketAddress remoteAddress,
+            final SocketAddress localAddress, final ChannelFuture future) {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }

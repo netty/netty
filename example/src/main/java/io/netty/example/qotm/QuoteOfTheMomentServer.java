@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
  * A UDP server that responds to the QOTM (quote of the moment) request to a
  * {@link QuoteOfTheMomentClient}.
  *
- * Inspired by <a href="http://java.sun.com/docs/books/tutorial/networking/datagrams/clientServer.html">the official Java tutorial</a>.
+ * Inspired by <a href="http://goo.gl/BsXVR">the official Java tutorial</a>.
  */
 public class QuoteOfTheMomentServer {
 

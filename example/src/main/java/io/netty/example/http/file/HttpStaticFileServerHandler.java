@@ -131,7 +131,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
 
-            // Only compare up to the second because the datetime format we send to the client does not have milliseconds
+            // Only compare up to the second because the datetime format we send to the client
+            // does not have milliseconds
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
             long fileLastModifiedSeconds = file.lastModified() / 1000;
             if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
@@ -270,7 +271,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
         response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
         response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
-        response.setHeader(HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
+        response.setHeader(
+                HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
     }
 
     /**

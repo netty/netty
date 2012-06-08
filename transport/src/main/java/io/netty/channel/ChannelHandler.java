@@ -143,7 +143,7 @@ import java.nio.channels.Channels;
  * <pre>
  * public final class DataServerState {
  *
- *     <b>public static final {@link ChannelLocal}&lt;Boolean&gt; loggedIn = new {@link ChannelLocal}&lt;Boolean&gt;() {
+ *     <b>public static final {@link ChannelLocal}&lt;Boolean&gt; loggedIn = new {@link ChannelLocal}&lt;&gt;() {
  *         protected Boolean initialValue(Channel channel) {
  *             return false;
  *         }

@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.example.http.websocketx.server.WebSocketServerIndexPage;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -71,7 +72,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         if (req.getUri().equals("/")) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
 
-            ChannelBuffer content = WebSocketSslServerIndexPage.getContent(getWebSocketLocation(req));
+            ChannelBuffer content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
 
             res.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
             setContentLength(res, content.readableBytes());

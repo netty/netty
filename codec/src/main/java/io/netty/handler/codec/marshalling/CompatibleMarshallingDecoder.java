@@ -39,12 +39,15 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
     /**
      * Create a new instance of {@link CompatibleMarshallingDecoder}.
      *
-     * @param provider      the {@link UnmarshallerProvider} which is used to obtain the {@link Unmarshaller} for the {@link Channel}
-     * @param maxObjectSize the maximal size (in bytes) of the {@link Object} to unmarshal. Once the size is exceeded
-     *                      the {@link Channel} will get closed. Use a a maxObjectSize of {@link Integer#MAX_VALUE} to disable this.
-     *                      You should only do this if you are sure that the received Objects will never be big and the
-     *                      sending side are trusted, as this opens the possibility for a DOS-Attack due an {@link OutOfMemoryError}.
-     *
+     * @param provider
+     *        the {@link UnmarshallerProvider} which is used to obtain the {@link Unmarshaller}
+     *        for the {@link Channel}
+     * @param maxObjectSize
+     *        the maximal size (in bytes) of the {@link Object} to unmarshal. Once the size is
+     *        exceeded the {@link Channel} will get closed. Use a a maxObjectSize of
+     *        {@link Integer#MAX_VALUE} to disable this.  You should only do this if you are sure
+     *        that the received Objects will never be big and the sending side are trusted, as this
+     *        opens the possibility for a DOS-Attack due an {@link OutOfMemoryError}.
      */
     public CompatibleMarshallingDecoder(UnmarshallerProvider provider, int maxObjectSize) {
         this.provider = provider;

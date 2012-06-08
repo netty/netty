@@ -62,9 +62,10 @@ import javax.net.ssl.SSLException;
  * <h3>Handshake</h3>
  * <p>
  * If {@link #isIssueHandshake()} is {@code false}
- * (default) you will need to take care of calling {@link #handshake()} by your own. In most situations were {@link SslHandler} is used in 'client mode'
- * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to
- * worry about this as the {@link SslHandler} will take care of it.
+ * (default) you will need to take care of calling {@link #handshake()} by your own. In most
+ * situations were {@link SslHandler} is used in 'client mode' you want to issue a handshake once
+ * the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code>
+ * you don't need to worry about this as the {@link SslHandler} will take care of it.
  * <p>
  *
  * <h3>Renegotiation</h3>
@@ -83,7 +84,8 @@ import javax.net.ssl.SSLException;
  * <ul>
  *   <li><a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a></li>
  *   <li><a href="http://www.ietf.org/rfc/rfc5746.txt">RFC5746</a></li>
- *   <li><a href="http://www.oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html">Phased Approach to Fixing the TLS Renegotiation Issue</a></li>
+ *   <li><a href="http://www.oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html">Phased
+ *       Approach to Fixing the TLS Renegotiation Issue</a></li>
  * </ul>
  *
  * <h3>Closing the session</h3>
@@ -646,7 +648,8 @@ public class SslHandler
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         if (!startTls && engine.getUseClientMode()) {
-            // issue and handshake and add a listener to it which will fire an exception event if an exception was thrown while doing the handshake
+            // issue and handshake and add a listener to it which will fire an exception event if
+            // an exception was thrown while doing the handshake
             handshake().addListener(new ChannelFutureListener() {
 
                 @Override

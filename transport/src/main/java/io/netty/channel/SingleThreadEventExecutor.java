@@ -49,7 +49,8 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private static final long START_TIME = System.nanoTime();
     private static final AtomicLong nextTaskId = new AtomicLong();
 
-    static final ThreadLocal<SingleThreadEventExecutor> CURRENT_EVENT_LOOP = new ThreadLocal<SingleThreadEventExecutor>();
+    static final ThreadLocal<SingleThreadEventExecutor> CURRENT_EVENT_LOOP =
+            new ThreadLocal<SingleThreadEventExecutor>();
 
     public static SingleThreadEventExecutor currentEventLoop() {
         return CURRENT_EVENT_LOOP.get();
