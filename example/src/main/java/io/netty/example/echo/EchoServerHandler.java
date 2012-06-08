@@ -16,6 +16,7 @@
 package io.netty.example.echo;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundStreamHandlerAdapter;
 
@@ -25,6 +26,7 @@ import java.util.logging.Logger;
 /**
  * Handler implementation for the echo server.
  */
+@Sharable
 public class EchoServerHandler extends ChannelInboundStreamHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
