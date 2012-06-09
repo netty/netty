@@ -113,8 +113,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      */
     Integer id();
 
-    ChannelType type();
-
     EventLoop eventLoop();
 
     /**
@@ -139,6 +137,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     boolean isOpen();
     boolean isRegistered();
     boolean isActive();
+
+    ChannelBufferType bufferType();
 
     ChannelBuffer outboundByteBuffer();
     <T> Queue<T> outboundMessageBuffer();

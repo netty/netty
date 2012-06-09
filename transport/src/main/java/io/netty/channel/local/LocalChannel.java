@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelType;
+import io.netty.channel.ChannelBufferType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
@@ -67,8 +67,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelType type() {
-        return ChannelType.MESSAGE;
+    public ChannelBufferType bufferType() {
+        return ChannelBufferType.MESSAGE;
     }
 
     @Override

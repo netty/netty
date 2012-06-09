@@ -50,8 +50,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelType type() {
-        return ChannelType.MESSAGE;
+    public ChannelBufferType bufferType() {
+        return ChannelBufferType.MESSAGE;
     }
 
     @Override

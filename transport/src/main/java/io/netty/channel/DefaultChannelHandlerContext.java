@@ -34,13 +34,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private static final EnumSet<ChannelHandlerType> EMPTY_TYPE = EnumSet.noneOf(ChannelHandlerType.class);
 
+    static final int DIR_INBOUND  = 0x00000001;
+    static final int DIR_OUTBOUND = 0x80000000;
+
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
     private final Channel channel;
     private final DefaultChannelPipeline pipeline;
     EventExecutor executor; // not thread-safe but OK because it never changes once set.
     private final String name;
-    final Set<ChannelHandlerType> type;
+    private final Set<ChannelHandlerType> type;
+    final int directions;
     private final ChannelHandler handler;
 
     final Queue<Object> inMsgBuf;
@@ -126,7 +130,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         @Override
         public void run() {
             DefaultChannelHandlerContext next = nextContext(
-                    DefaultChannelHandlerContext.this.next, ChannelHandlerType.STATE);
+                    DefaultChannelHandlerContext.this.next, DIR_INBOUND);
             if (next != null) {
                 next.fillBridge();
                 EventExecutor executor = next.executor();
@@ -153,20 +157,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         // Determine the type of the specified handler.
+        int typeValue = 0;
         EnumSet<ChannelHandlerType> type = EMPTY_TYPE.clone();
         if (handler instanceof ChannelStateHandler) {
             type.add(ChannelHandlerType.STATE);
-        }
-        if (handler instanceof ChannelInboundHandler) {
-            type.add(ChannelHandlerType.INBOUND);
-        }
-        if (handler instanceof ChannelOutboundHandler) {
-            type.add(ChannelHandlerType.OUTBOUND);
+            typeValue |= DIR_INBOUND;
+            if (handler instanceof ChannelInboundHandler) {
+                type.add(ChannelHandlerType.INBOUND);
+            }
         }
         if (handler instanceof ChannelOperationHandler) {
             type.add(ChannelHandlerType.OPERATION);
+            typeValue |= DIR_OUTBOUND;
+            if (handler instanceof ChannelOutboundHandler) {
+                type.add(ChannelHandlerType.OUTBOUND);
+            }
         }
         this.type = Collections.unmodifiableSet(type);
+        this.directions = typeValue;
 
         this.prev = prev;
         this.next = next;
@@ -199,16 +207,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new ChannelPipelineException("A user handler failed to create a new inbound buffer.", e);
             }
 
-            if (holder.hasByteBuffer()) {
+            switch (holder.type()) {
+            case STREAM:
                 inByteBuf = holder.byteBuffer();
                 inByteBridge = new AtomicReference<StreamBridge>();
                 inMsgBuf = null;
                 inMsgBridge = null;
-            } else {
+                break;
+            case MESSAGE:
                 inByteBuf = null;
                 inByteBridge = null;
                 inMsgBuf = holder.messageBuffer();
                 inMsgBridge = new AtomicReference<MessageBridge>();
+                break;
+            default:
+                throw new Error();
             }
         } else {
             inByteBuf = null;
@@ -225,16 +238,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
             }
 
-            if (holder.hasByteBuffer()) {
+            switch (holder.type()) {
+            case STREAM:
                 outByteBuf = holder.byteBuffer();
                 outByteBridge = new AtomicReference<StreamBridge>();
                 outMsgBuf = null;
                 outMsgBridge = null;
-            } else {
+                break;
+            case MESSAGE:
                 outByteBuf = null;
                 outByteBridge = null;
                 outMsgBuf = holder.messageBuffer();
                 outMsgBridge = new AtomicReference<MessageBridge>();
+                break;
+            default:
+                throw new Error();
             }
         } else {
             outByteBuf = null;
@@ -487,7 +505,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelRegistered() {
-        DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
+        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -500,7 +518,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelUnregistered() {
-        DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
+        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -513,7 +531,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelActive() {
-        DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
+        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -526,7 +544,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelInactive() {
-        DefaultChannelHandlerContext next = nextContext(this.next, ChannelHandlerType.STATE);
+        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -650,7 +668,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-        return pipeline.bind(nextContext(prev, ChannelHandlerType.OPERATION), localAddress, future);
+        return pipeline.bind(nextContext(prev, DIR_OUTBOUND), localAddress, future);
     }
 
     @Override
@@ -660,29 +678,29 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        return pipeline.connect(nextContext(prev, ChannelHandlerType.OPERATION), remoteAddress, localAddress, future);
+        return pipeline.connect(nextContext(prev, DIR_OUTBOUND), remoteAddress, localAddress, future);
     }
 
     @Override
     public ChannelFuture disconnect(ChannelFuture future) {
-        return pipeline.disconnect(nextContext(prev, ChannelHandlerType.OPERATION), future);
+        return pipeline.disconnect(nextContext(prev, DIR_OUTBOUND), future);
     }
 
     @Override
     public ChannelFuture close(ChannelFuture future) {
-        return pipeline.close(nextContext(prev, ChannelHandlerType.OPERATION), future);
+        return pipeline.close(nextContext(prev, DIR_OUTBOUND), future);
     }
 
     @Override
     public ChannelFuture deregister(ChannelFuture future) {
-        return pipeline.deregister(nextContext(prev, ChannelHandlerType.OPERATION), future);
+        return pipeline.deregister(nextContext(prev, DIR_OUTBOUND), future);
     }
 
     @Override
     public ChannelFuture flush(final ChannelFuture future) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            DefaultChannelHandlerContext prev = nextContext(this.prev, ChannelHandlerType.OPERATION);
+            DefaultChannelHandlerContext prev = nextContext(this.prev, DIR_OUTBOUND);
             prev.fillBridge();
             pipeline.flush(prev, future);
         } else {

@@ -21,6 +21,7 @@ import java.util.Queue;
 
 public final class ChannelBufferHolder<E> {
 
+    private final ChannelBufferType type;
     private final Queue<E> msgBuf;
     private final ChannelBuffer byteBuf;
 
@@ -30,6 +31,7 @@ public final class ChannelBufferHolder<E> {
         }
         this.msgBuf = msgBuf;
         byteBuf = null;
+        type = ChannelBufferType.MESSAGE;
 
     }
 
@@ -39,14 +41,11 @@ public final class ChannelBufferHolder<E> {
         }
         msgBuf = null;
         this.byteBuf = byteBuf;
+        type = ChannelBufferType.STREAM;
     }
 
-    public boolean hasMessageBuffer() {
-        return msgBuf != null;
-    }
-
-    public boolean hasByteBuffer() {
-        return byteBuf != null;
+    public ChannelBufferType type() {
+        return type;
     }
 
     public Queue<E> messageBuffer() {
@@ -65,26 +64,35 @@ public final class ChannelBufferHolder<E> {
 
     @Override
     public String toString() {
-        if (msgBuf != null) {
+        switch (type) {
+        case MESSAGE:
             return "MessageBuffer(" + msgBuf.size() + ')';
-        } else {
+        case STREAM:
             return byteBuf.toString();
+        default:
+            throw new Error();
         }
     }
 
     public int size() {
-        if (msgBuf != null) {
+        switch (type) {
+        case MESSAGE:
             return msgBuf.size();
-        } else {
+        case STREAM:
             return byteBuf.readableBytes();
+        default:
+            throw new Error();
         }
     }
 
     public boolean isEmpty() {
-        if (msgBuf != null) {
+        switch (type) {
+        case MESSAGE:
             return msgBuf.isEmpty();
-        } else {
+        case STREAM:
             return !byteBuf.readable();
+        default:
+            throw new Error();
         }
     }
 }

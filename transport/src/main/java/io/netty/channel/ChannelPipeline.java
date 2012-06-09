@@ -79,7 +79,7 @@ import java.util.Queue;
  *  |            /|\                         .               |
  *  |             .                          .               |
  *  |     [ sendUpstream() ]        [ sendDownstream() ]     |
- *  |     [ + INBOUND data ]        [ + OUTBOUND data  ]     |
+ *  |     [ + VAL_INBOUND data ]        [ + VAL_OUTBOUND data  ]     |
  *  |             .                          .               |
  *  |             .                         \|/              |
  *  |  +----------+-----------+  +-----------+------------+  |

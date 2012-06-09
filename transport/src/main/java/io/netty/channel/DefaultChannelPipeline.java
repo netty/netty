@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
 import io.netty.channel.DefaultChannelHandlerContext.StreamBridge;
@@ -883,7 +884,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public Queue<Object> inboundMessageBuffer() {
-        if (channel.type() != ChannelType.MESSAGE) {
+        if (channel.bufferType() != ChannelBufferType.MESSAGE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
@@ -892,7 +893,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelBuffer inboundByteBuffer() {
-        if (channel.type() != ChannelType.STREAM) {
+        if (channel.bufferType() != ChannelBufferType.STREAM) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
@@ -1075,7 +1076,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-        return bind(firstContext(ChannelHandlerType.OPERATION), localAddress, future);
+        return bind(firstContext(DIR_OUTBOUND), localAddress, future);
     }
 
     ChannelFuture bind(
@@ -1110,7 +1111,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        return connect(firstContext(ChannelHandlerType.OPERATION), remoteAddress, localAddress, future);
+        return connect(firstContext(DIR_OUTBOUND), remoteAddress, localAddress, future);
     }
 
     ChannelFuture connect(
@@ -1142,7 +1143,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture disconnect(ChannelFuture future) {
-        return disconnect(firstContext(ChannelHandlerType.OPERATION), future);
+        return disconnect(firstContext(DIR_OUTBOUND), future);
     }
 
     ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1168,7 +1169,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture close(ChannelFuture future) {
-        return close(firstContext(ChannelHandlerType.OPERATION), future);
+        return close(firstContext(DIR_OUTBOUND), future);
     }
 
     ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1194,7 +1195,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture deregister(final ChannelFuture future) {
-        return deregister(firstContext(ChannelHandlerType.OPERATION), future);
+        return deregister(firstContext(DIR_OUTBOUND), future);
     }
 
     ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1220,7 +1221,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture flush(ChannelFuture future) {
-        return flush(firstContext(ChannelHandlerType.OPERATION), future);
+        return flush(firstContext(DIR_OUTBOUND), future);
     }
 
     ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1326,30 +1327,32 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private DefaultChannelHandlerContext firstContext(ChannelHandlerType type) {
-        if (type.direction == 0) {
-            return nextContext(head.next, type);
+    private DefaultChannelHandlerContext firstContext(int direction) {
+        assert direction == DIR_INBOUND || direction == DIR_OUTBOUND;
+        if (direction > 0) {
+            return nextContext(head.next, direction);
         } else {
-            return nextContext(tail, type);
+            return nextContext(tail, direction);
         }
     }
 
     static DefaultChannelHandlerContext nextContext(
-            DefaultChannelHandlerContext ctx, ChannelHandlerType type) {
+            DefaultChannelHandlerContext ctx, int direction) {
+        assert direction == DIR_INBOUND || direction == DIR_OUTBOUND;
         if (ctx == null) {
             return null;
         }
 
         DefaultChannelHandlerContext realCtx = ctx;
-        if (type.direction == 0) {
-            while (!realCtx.type.contains(type)) {
+        if (direction > 0) {
+            while ((realCtx.directions & direction) == 0) {
                 realCtx = realCtx.next;
                 if (realCtx == null) {
                     return null;
                 }
             }
         } else {
-            while (!realCtx.type.contains(type)) {
+            while ((realCtx.directions & direction) == 0) {
                 realCtx = realCtx.prev;
                 if (realCtx == null) {
                     return null;
@@ -1430,7 +1433,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final class HeadHandler implements ChannelOutboundHandler {
         @Override
         public ChannelBufferHolder newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            switch (channel.type()) {
+            switch (channel.bufferType()) {
             case STREAM:
                 return ChannelBufferHolders.byteBuffer();
             case MESSAGE:
