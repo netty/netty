@@ -23,7 +23,7 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
@@ -245,7 +245,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class SpdyEchoTestClientHandler extends ChannelInboundStreamHandlerAdapter {
+    private class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         final ChannelBuffer frames;
         volatile int counter;

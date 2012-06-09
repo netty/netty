@@ -18,35 +18,20 @@ package io.netty.handler.codec;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 
-import java.util.Queue;
-
-public abstract class MessageToStreamEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
+public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapter {
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        Queue<I> in = ctx.outboundMessageBuffer();
+        ChannelBuffer in = ctx.outboundByteBuffer();
         ChannelBuffer out = ctx.nextOutboundByteBuffer();
 
-        boolean notify = false;
         int oldOutSize = out.readableBytes();
-        for (;;) {
-            Object msg = in.poll();
-            if (msg == null) {
-                break;
-            }
-
-            if (!isEncodable(msg)) {
-                ctx.nextOutboundMessageBuffer().add(msg);
-                notify = true;
-                continue;
-            }
-
-            @SuppressWarnings("unchecked")
-            I imsg = (I) msg;
+        while (in.readable()) {
+            int oldInSize = in.readableBytes();
             try {
-                encode(ctx, imsg, out);
+                encode(ctx, in, out);
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
@@ -54,21 +39,16 @@ public abstract class MessageToStreamEncoder<I> extends ChannelOutboundMessageHa
                     ctx.fireExceptionCaught(new EncoderException(t));
                 }
             }
+            if (oldInSize == in.readableBytes()) {
+                break;
+            }
         }
 
-        if (out.readableBytes() > oldOutSize || notify) {
+        if (out.readableBytes() > oldOutSize) {
+            in.discardReadBytes();
             ctx.flush(future);
         }
     }
 
-    /**
-     * Returns {@code true} if and only if the specified message can be encoded by this encoder.
-     *
-     * @param msg the message
-     */
-    public boolean isEncodable(Object msg) throws Exception {
-        return true;
-    }
-
-    public abstract void encode(ChannelHandlerContext ctx, I msg, ChannelBuffer out) throws Exception;
+    public abstract void encode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
 }

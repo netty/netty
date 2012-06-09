@@ -17,7 +17,7 @@ package io.netty.example.factorial;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.math.BigInteger;
 
@@ -26,7 +26,7 @@ import java.math.BigInteger;
  * a magic number ('F' or 0x46) and a 32-bit length prefix.  For example, 42
  * will be encoded to { 'F', 0, 0, 0, 1, 42 }.
  */
-public class NumberEncoder extends MessageToStreamEncoder<Number> {
+public class NumberEncoder extends MessageToByteEncoder<Number> {
 
     @Override
     public void encode(

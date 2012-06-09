@@ -23,7 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 
-public class StreamLoggingHandler
+public class ByteLoggingHandler
         extends LoggingHandler
         implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<Byte> {
 
@@ -87,27 +87,27 @@ public class StreamLoggingHandler
         }
     }
 
-    public StreamLoggingHandler() {
+    public ByteLoggingHandler() {
         super();
     }
 
-    public StreamLoggingHandler(Class<?> clazz, LogLevel level) {
+    public ByteLoggingHandler(Class<?> clazz, LogLevel level) {
         super(clazz, level);
     }
 
-    public StreamLoggingHandler(Class<?> clazz) {
+    public ByteLoggingHandler(Class<?> clazz) {
         super(clazz);
     }
 
-    public StreamLoggingHandler(LogLevel level) {
+    public ByteLoggingHandler(LogLevel level) {
         super(level);
     }
 
-    public StreamLoggingHandler(String name, LogLevel level) {
+    public ByteLoggingHandler(String name, LogLevel level) {
         super(name, level);
     }
 
-    public StreamLoggingHandler(String name) {
+    public ByteLoggingHandler(String name) {
         super(name);
     }
     @Override

@@ -22,7 +22,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
 import java.io.IOException;
 import java.util.Random;
@@ -108,7 +108,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundStreamHandlerAdapter {
+    private static class EchoHandler extends ChannelInboundByteHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;

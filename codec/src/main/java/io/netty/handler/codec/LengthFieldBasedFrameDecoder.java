@@ -179,7 +179,7 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
  * </pre>
  * @see LengthFieldPrepender
  */
-public class LengthFieldBasedFrameDecoder extends StreamToMessageDecoder<Object> {
+public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
 
     private final int maxFrameLength;
     private final int lengthFieldOffset;

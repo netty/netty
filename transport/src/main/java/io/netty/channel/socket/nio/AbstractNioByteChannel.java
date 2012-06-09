@@ -24,24 +24,24 @@ import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
-abstract class AbstractNioStreamChannel extends AbstractNioChannel {
+abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
-    protected AbstractNioStreamChannel(
+    protected AbstractNioByteChannel(
             Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id, ch, SelectionKey.OP_READ);
     }
 
     @Override
     public ChannelBufferType bufferType() {
-        return ChannelBufferType.STREAM;
+        return ChannelBufferType.BYTE;
     }
 
     @Override
     protected Unsafe newUnsafe() {
-        return new NioStreamUnsafe();
+        return new NioByteUnsafe();
     }
 
-    private class NioStreamUnsafe extends AbstractNioUnsafe {
+    private class NioByteUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

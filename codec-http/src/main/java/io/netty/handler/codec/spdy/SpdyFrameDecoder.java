@@ -19,13 +19,13 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.StreamToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
 /**
  * Decodes {@link ChannelBuffer}s into SPDY Data and Control Frames.
  */
-public class SpdyFrameDecoder extends StreamToMessageDecoder<Object> {
+public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
 
     private final int spdyVersion;
     private final int maxChunkSize;

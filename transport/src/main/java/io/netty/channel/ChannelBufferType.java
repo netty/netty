@@ -16,6 +16,6 @@
 package io.netty.channel;
 
 public enum ChannelBufferType {
-    STREAM,
+    BYTE,
     MESSAGE;
 }

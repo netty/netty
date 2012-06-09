@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
  * Encodes a {@link WebSocketFrame} into a {@link ChannelBuffer}.
@@ -30,7 +30,7 @@ import io.netty.handler.codec.MessageToStreamEncoder;
  * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
 @Sharable
-public class WebSocket00FrameEncoder extends MessageToStreamEncoder<WebSocketFrame> {
+public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {

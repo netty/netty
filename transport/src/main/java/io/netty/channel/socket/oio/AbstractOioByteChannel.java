@@ -22,23 +22,23 @@ import io.netty.channel.ChannelBufferType;
 
 import java.io.IOException;
 
-abstract class AbstractOioStreamChannel extends AbstractOioChannel {
+abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
-    protected AbstractOioStreamChannel(Channel parent, Integer id) {
+    protected AbstractOioByteChannel(Channel parent, Integer id) {
         super(parent, id);
     }
 
     @Override
     public ChannelBufferType bufferType() {
-        return ChannelBufferType.STREAM;
+        return ChannelBufferType.BYTE;
     }
 
     @Override
     protected Unsafe newUnsafe() {
-        return new OioStreamUnsafe();
+        return new OioByteUnsafe();
     }
 
-    private class OioStreamUnsafe extends AbstractOioUnsafe {
+    private class OioByteUnsafe extends AbstractOioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

@@ -19,7 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 /**
  * Handles a client-side channel.
  */
-public class DiscardClientHandler extends ChannelInboundStreamHandlerAdapter {
+public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());

@@ -17,9 +17,9 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
-public abstract class StreamToStreamDecoder extends ChannelInboundStreamHandlerAdapter {
+public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {

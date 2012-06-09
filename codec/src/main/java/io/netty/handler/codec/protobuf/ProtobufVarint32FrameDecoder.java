@@ -18,7 +18,7 @@ package io.netty.handler.codec.protobuf;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
-import io.netty.handler.codec.StreamToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 import com.google.protobuf.CodedInputStream;
 
@@ -37,7 +37,7 @@ import com.google.protobuf.CodedInputStream;
  *
  * @see com.google.protobuf.CodedInputStream
  */
-public class ProtobufVarint32FrameDecoder extends StreamToMessageDecoder<Object> {
+public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder<Object> {
 
     // TODO maxFrameLength + safe skip + fail-fast option
     //      (just like LengthFieldBasedFrameDecoder)

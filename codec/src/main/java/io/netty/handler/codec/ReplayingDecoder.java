@@ -26,7 +26,7 @@ import io.netty.util.Signal;
 import io.netty.util.VoidEnum;
 
 /**
- * A specialized variation of {@link StreamToMessageDecoder} which enables implementation
+ * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
  * of a non-blocking decoder in the blocking I/O paradigm.
  * <p>
  * The biggest difference between {@link ReplayingDecoder} and
@@ -278,7 +278,7 @@ import io.netty.util.VoidEnum;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.UnreplayableOperationException oneway - - throws
  */
-public abstract class ReplayingDecoder<O, S extends Enum<S>> extends StreamToMessageDecoder<O> {
+public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessageDecoder<O> {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 

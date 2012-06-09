@@ -20,7 +20,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.VoidEnum;
 
 import org.junit.Test;
@@ -29,7 +29,7 @@ public class ReplayingDecoderTest {
 
     @Test
     public void testLineProtocol() {
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(new LineDecoder());
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineDecoder());
 
         // Ordinary input
         ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));

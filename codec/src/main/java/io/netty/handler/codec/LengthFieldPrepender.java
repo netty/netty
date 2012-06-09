@@ -51,7 +51,7 @@ import java.nio.ByteOrder;
  * </pre>
  */
 @Sharable
-public class LengthFieldPrepender extends MessageToStreamEncoder<ChannelBuffer> {
+public class LengthFieldPrepender extends MessageToByteEncoder<ChannelBuffer> {
 
     private final int lengthFieldLength;
     private final boolean lengthIncludesLengthFieldLength;

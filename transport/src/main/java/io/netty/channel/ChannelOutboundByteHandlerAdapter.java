@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-public class ChannelOutboundStreamHandlerAdapter extends ChannelOutboundHandlerAdapter<Byte> {
+public class ChannelOutboundByteHandlerAdapter extends ChannelOutboundHandlerAdapter<Byte> {
     @Override
     public ChannelBufferHolder<Byte> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.byteBuffer();

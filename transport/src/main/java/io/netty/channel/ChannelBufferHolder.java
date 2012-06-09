@@ -41,7 +41,7 @@ public final class ChannelBufferHolder<E> {
         }
         msgBuf = null;
         this.byteBuf = byteBuf;
-        type = ChannelBufferType.STREAM;
+        type = ChannelBufferType.BYTE;
     }
 
     public ChannelBufferType type() {
@@ -67,7 +67,7 @@ public final class ChannelBufferHolder<E> {
         switch (type) {
         case MESSAGE:
             return "MessageBuffer(" + msgBuf.size() + ')';
-        case STREAM:
+        case BYTE:
             return byteBuf.toString();
         default:
             throw new Error();
@@ -78,7 +78,7 @@ public final class ChannelBufferHolder<E> {
         switch (type) {
         case MESSAGE:
             return msgBuf.size();
-        case STREAM:
+        case BYTE:
             return byteBuf.readableBytes();
         default:
             throw new Error();
@@ -89,7 +89,7 @@ public final class ChannelBufferHolder<E> {
         switch (type) {
         case MESSAGE:
             return msgBuf.isEmpty();
-        case STREAM:
+        case BYTE:
             return !byteBuf.readable();
         default:
             throw new Error();

@@ -37,7 +37,7 @@ import io.netty.channel.ChannelHandlerContext;
  * +-----+-----+-----+
  * </pre>
  */
-public class FixedLengthFrameDecoder extends StreamToMessageDecoder<Object> {
+public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
 
     private final int frameLength;
     private final boolean allocateFullBuffer;

@@ -18,10 +18,10 @@ package io.netty.handler.codec;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 
-public abstract class StreamToMessageDecoder<O> extends ChannelInboundStreamHandlerAdapter {
+public abstract class ByteToMessageDecoder<O> extends ChannelInboundByteHandlerAdapter {
 
     private ChannelHandlerContext ctx;
 

@@ -23,7 +23,7 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
@@ -148,7 +148,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class EchoHandler extends ChannelInboundStreamHandlerAdapter {
+    private class EchoHandler extends ChannelInboundByteHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;

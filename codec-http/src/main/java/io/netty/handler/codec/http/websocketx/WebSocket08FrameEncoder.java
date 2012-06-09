@@ -56,7 +56,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -69,7 +69,7 @@ import java.nio.ByteBuffer;
  * href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  * </p>
  */
-public class WebSocket08FrameEncoder extends MessageToStreamEncoder<WebSocketFrame> {
+public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameEncoder.class);
 

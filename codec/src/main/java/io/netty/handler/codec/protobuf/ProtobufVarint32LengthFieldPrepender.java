@@ -19,7 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import com.google.protobuf.CodedOutputStream;
 
@@ -38,7 +38,7 @@ import com.google.protobuf.CodedOutputStream;
  * @see com.google.protobuf.CodedOutputStream
  */
 @Sharable
-public class ProtobufVarint32LengthFieldPrepender extends MessageToStreamEncoder<ChannelBuffer> {
+public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ChannelBuffer> {
 
     /**
      * Creates a new instance.

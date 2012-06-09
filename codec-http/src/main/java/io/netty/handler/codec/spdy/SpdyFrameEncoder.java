@@ -21,7 +21,7 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 
 import java.nio.ByteOrder;
@@ -30,7 +30,7 @@ import java.util.Set;
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ChannelBuffer}.
  */
-public class SpdyFrameEncoder extends MessageToStreamEncoder<Object> {
+public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
     private final int version;
     private volatile boolean finished;

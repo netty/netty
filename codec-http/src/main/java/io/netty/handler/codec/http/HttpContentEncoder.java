@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.internal.QueueFactory;
 
@@ -49,7 +49,7 @@ import java.util.Queue;
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
     private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue();
-    private EmbeddedStreamChannel encoder;
+    private EmbeddedByteChannel encoder;
 
     /**
      * Creates a new instance.
@@ -200,9 +200,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
     public static final class Result {
         private final String targetContentEncoding;
-        private final EmbeddedStreamChannel contentEncoder;
+        private final EmbeddedByteChannel contentEncoder;
 
-        public Result(String targetContentEncoding, EmbeddedStreamChannel contentEncoder) {
+        public Result(String targetContentEncoding, EmbeddedByteChannel contentEncoder) {
             if (targetContentEncoding == null) {
                 throw new NullPointerException("targetContentEncoding");
             }
@@ -218,7 +218,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             return targetContentEncoding;
         }
 
-        public EmbeddedStreamChannel getContentEncoder() {
+        public EmbeddedByteChannel getContentEncoder() {
             return contentEncoder;
         }
     }

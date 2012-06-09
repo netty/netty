@@ -59,8 +59,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // The content written into a bridge is flushed into the actual buffer by flushBridge().
     final AtomicReference<MessageBridge> inMsgBridge;
     final AtomicReference<MessageBridge> outMsgBridge;
-    final AtomicReference<StreamBridge> inByteBridge;
-    final AtomicReference<StreamBridge> outByteBridge;
+    final AtomicReference<ByteBridge> inByteBridge;
+    final AtomicReference<ByteBridge> outByteBridge;
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {
@@ -208,9 +208,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
 
             switch (holder.type()) {
-            case STREAM:
+            case BYTE:
                 inByteBuf = holder.byteBuffer();
-                inByteBridge = new AtomicReference<StreamBridge>();
+                inByteBridge = new AtomicReference<ByteBridge>();
                 inMsgBuf = null;
                 inMsgBridge = null;
                 break;
@@ -239,9 +239,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
 
             switch (holder.type()) {
-            case STREAM:
+            case BYTE:
                 outByteBuf = holder.byteBuffer();
-                outByteBridge = new AtomicReference<StreamBridge>();
+                outByteBridge = new AtomicReference<ByteBridge>();
                 outMsgBuf = null;
                 outMsgBridge = null;
                 break;
@@ -269,7 +269,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 bridge.fill();
             }
         } else if (inByteBridge != null) {
-            StreamBridge bridge = inByteBridge.get();
+            ByteBridge bridge = inByteBridge.get();
             if (bridge != null) {
                 bridge.fill();
             }
@@ -281,7 +281,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 bridge.fill();
             }
         } else if (outByteBridge != null) {
-            StreamBridge bridge = outByteBridge.get();
+            ByteBridge bridge = outByteBridge.get();
             if (bridge != null) {
                 bridge.fill();
             }
@@ -295,7 +295,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 bridge.flush(inMsgBuf);
             }
         } else if (inByteBridge != null) {
-            StreamBridge bridge = inByteBridge.get();
+            ByteBridge bridge = inByteBridge.get();
             if (bridge != null) {
                 bridge.flush(inByteBuf);
             }
@@ -307,7 +307,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 bridge.flush(outMsgBuf);
             }
         } else if (outByteBridge != null) {
-            StreamBridge bridge = outByteBridge.get();
+            ByteBridge bridge = outByteBridge.get();
             if (bridge != null) {
                 bridge.flush(outByteBuf);
             }
@@ -452,9 +452,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.inByteBuf;
                 } else {
-                    StreamBridge bridge = ctx.inByteBridge.get();
+                    ByteBridge bridge = ctx.inByteBridge.get();
                     if (bridge == null) {
-                        bridge = new StreamBridge();
+                        bridge = new ByteBridge();
                         if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.inByteBridge.get();
                         }
@@ -762,7 +762,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    static final class StreamBridge {
+    static final class ByteBridge {
         final ChannelBuffer byteBuf = ChannelBuffers.dynamicBuffer();
         final BlockingQueue<ChannelBuffer> exchangeBuf = QueueFactory.createQueue();
 

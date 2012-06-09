@@ -17,7 +17,7 @@ package io.netty.example.discard;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 /**
  * Handles a server-side channel.
  */
-public class DiscardServerHandler extends ChannelInboundStreamHandlerAdapter {
+public class DiscardServerHandler extends ChannelInboundByteHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             DiscardServerHandler.class.getName());

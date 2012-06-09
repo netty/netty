@@ -19,7 +19,7 @@ import static io.netty.buffer.ChannelBuffers.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
@@ -42,7 +42,7 @@ import java.util.Map;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageEncoder extends MessageToStreamEncoder<Object> {
+public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
 
     private static final ChannelBuffer LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);

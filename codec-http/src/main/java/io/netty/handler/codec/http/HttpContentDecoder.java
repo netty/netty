@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
@@ -42,7 +42,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  */
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
 
-    private EmbeddedStreamChannel decoder;
+    private EmbeddedByteChannel decoder;
 
     /**
      * Creates a new instance.
@@ -137,7 +137,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract EmbeddedStreamChannel newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract EmbeddedByteChannel newContentDecoder(String contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.

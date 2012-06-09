@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
@@ -36,7 +36,7 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsNotOnRequestResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(ChannelBuffers.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
@@ -46,7 +46,7 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsNotOnRequestResponseChunked() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(ChannelBuffers.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
@@ -56,7 +56,7 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsOnMissingResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         assertTrue(ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
         assertNotNull(ch.readOutbound());
@@ -73,7 +73,7 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(codec);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(ChannelBuffers.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));

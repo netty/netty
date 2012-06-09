@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -42,7 +42,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
 
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(createDecoder(Integer.MAX_VALUE));
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(createDecoder(Integer.MAX_VALUE));
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -72,7 +72,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallerFactory marshallerFactory = createMarshallerFactory();
         MarshallingConfiguration configuration = createMarshallingConfig();
 
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(createDecoder(Integer.MAX_VALUE));
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(createDecoder(Integer.MAX_VALUE));
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
@@ -103,7 +103,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         MarshallingConfiguration configuration = createMarshallingConfig();
 
         ChannelHandler mDecoder = createDecoder(4);
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(mDecoder);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(mDecoder);
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Marshaller marshaller = marshallerFactory.createMarshaller(configuration);

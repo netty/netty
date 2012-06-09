@@ -18,9 +18,9 @@ package io.netty.example.proxy;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
-public class HexDumpProxyBackendHandler extends ChannelInboundStreamHandlerAdapter {
+public class HexDumpProxyBackendHandler extends ChannelInboundByteHandlerAdapter {
 
     private final Channel inboundChannel;
 

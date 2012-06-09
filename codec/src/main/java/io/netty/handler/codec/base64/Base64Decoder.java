@@ -19,15 +19,15 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.handler.codec.StreamToMessageDecoder;
 
 /**
  * Decodes a Base64-encoded {@link ChannelBuffer} or US-ASCII {@link String}
  * into a {@link ChannelBuffer}.  Please note that this decoder must be used
- * with a proper {@link StreamToMessageDecoder} such as {@link DelimiterBasedFrameDecoder}
+ * with a proper {@link ByteToMessageDecoder} such as {@link DelimiterBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP.  A typical decoder
  * setup for TCP/IP would be:
  * <pre>

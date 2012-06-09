@@ -18,7 +18,7 @@ package io.netty.handler.codec.serialization;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -34,7 +34,7 @@ import java.io.Serializable;
  * This encoder is interoperable with the standard Java object streams such as
  * {@link ObjectInputStream} and {@link ObjectOutputStream}.
  */
-public class CompatibleObjectEncoder extends MessageToStreamEncoder<Object> {
+public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
 
     private static final AttributeKey<ObjectOutputStream> OOS =
             new AttributeKey<ObjectOutputStream>(CompatibleObjectEncoder.class.getName() + ".oos");

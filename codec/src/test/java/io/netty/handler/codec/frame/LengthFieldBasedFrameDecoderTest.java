@@ -18,7 +18,7 @@ package io.netty.handler.codec.frame;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -30,7 +30,7 @@ import org.junit.Test;
 public class LengthFieldBasedFrameDecoderTest {
     @Test
     public void testFailSlowTooLongFrameRecovery() throws Exception {
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4, false));
 
         for (int i = 0; i < 2; i ++) {
@@ -50,7 +50,7 @@ public class LengthFieldBasedFrameDecoderTest {
 
     @Test
     public void testFailFastTooLongFrameRecovery() throws Exception {
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4));
 
         for (int i = 0; i < 2; i ++) {

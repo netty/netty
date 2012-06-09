@@ -20,7 +20,7 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.StreamToStreamEncoder;
+import io.netty.handler.codec.ByteToByteEncoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
-public class ZlibEncoder extends StreamToStreamEncoder {
+public class ZlibEncoder extends ByteToByteEncoder {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
 

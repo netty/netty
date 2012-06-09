@@ -20,15 +20,15 @@ import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelBufferType;
 
-public class EmbeddedStreamChannel extends AbstractEmbeddedChannel {
+public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
 
-    public EmbeddedStreamChannel(ChannelHandler... handlers) {
+    public EmbeddedByteChannel(ChannelHandler... handlers) {
         super(ChannelBuffers.dynamicBuffer(), handlers);
     }
 
     @Override
     public ChannelBufferType bufferType() {
-        return ChannelBufferType.STREAM;
+        return ChannelBufferType.BYTE;
     }
 
     public ChannelBuffer inboundBuffer() {

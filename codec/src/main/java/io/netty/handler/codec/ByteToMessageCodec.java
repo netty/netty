@@ -23,26 +23,26 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 
-public abstract class StreamToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
+public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         extends ChannelHandlerAdapter
         implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<OUTBOUND_IN> {
 
-    private final MessageToStreamEncoder<OUTBOUND_IN> encoder =
-            new MessageToStreamEncoder<OUTBOUND_IN>() {
+    private final MessageToByteEncoder<OUTBOUND_IN> encoder =
+            new MessageToByteEncoder<OUTBOUND_IN>() {
         @Override
         public void encode(
                 ChannelHandlerContext ctx,
                 OUTBOUND_IN msg, ChannelBuffer out) throws Exception {
-            StreamToMessageCodec.this.encode(ctx, msg, out);
+            ByteToMessageCodec.this.encode(ctx, msg, out);
         }
     };
 
-    private final StreamToMessageDecoder<INBOUND_OUT> decoder =
-            new StreamToMessageDecoder<INBOUND_OUT>() {
+    private final ByteToMessageDecoder<INBOUND_OUT> decoder =
+            new ByteToMessageDecoder<INBOUND_OUT>() {
         @Override
         public INBOUND_OUT decode(
                 ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
-            return StreamToMessageCodec.this.decode(ctx, in);
+            return ByteToMessageCodec.this.decode(ctx, in);
         }
     };
 

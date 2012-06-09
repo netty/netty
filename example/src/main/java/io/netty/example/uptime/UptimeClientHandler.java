@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  * connection attempt status.
  */
 @Sharable
-public class UptimeClientHandler extends ChannelInboundStreamHandlerAdapter {
+public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
 
     private final UptimeClient client;
     private long startTime = -1;

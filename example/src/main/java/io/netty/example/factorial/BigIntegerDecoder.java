@@ -18,7 +18,7 @@ package io.netty.example.factorial;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
-import io.netty.handler.codec.StreamToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.math.BigInteger;
 
@@ -28,7 +28,7 @@ import java.math.BigInteger;
  * {@link BigInteger} instance.  For example, { 'F', 0, 0, 0, 1, 42 } will be
  * decoded into new BigInteger("42").
  */
-public class BigIntegerDecoder extends StreamToMessageDecoder<BigInteger> {
+public class BigIntegerDecoder extends ByteToMessageDecoder<BigInteger> {
 
     @Override
     public BigInteger decode(ChannelHandlerContext ctx, ChannelBuffer in) {

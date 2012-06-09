@@ -19,12 +19,12 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import org.jboss.marshalling.Marshaller;
 
 /**
- * {@link MessageToStreamEncoder} implementation which uses JBoss Marshalling to marshal
+ * {@link MessageToByteEncoder} implementation which uses JBoss Marshalling to marshal
  * an Object.
  *
  * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a>
@@ -34,7 +34,7 @@ import org.jboss.marshalling.Marshaller;
  *
  */
 @Sharable
-public class CompatibleMarshallingEncoder extends MessageToStreamEncoder<Object> {
+public class CompatibleMarshallingEncoder extends MessageToByteEncoder<Object> {
 
     private final MarshallerProvider provider;
 

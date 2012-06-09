@@ -18,7 +18,7 @@ package io.netty.channel;
 import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
-import io.netty.channel.DefaultChannelHandlerContext.StreamBridge;
+import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -893,7 +893,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelBuffer inboundByteBuffer() {
-        if (channel.bufferType() != ChannelBufferType.STREAM) {
+        if (channel.bufferType() != ChannelBufferType.BYTE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
@@ -947,9 +947,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.outByteBuf;
                 } else {
-                    StreamBridge bridge = ctx.outByteBridge.get();
+                    ByteBridge bridge = ctx.outByteBridge.get();
                     if (bridge == null) {
-                        bridge = new StreamBridge();
+                        bridge = new ByteBridge();
                         if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.outByteBridge.get();
                         }
@@ -1434,7 +1434,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public ChannelBufferHolder newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.bufferType()) {
-            case STREAM:
+            case BYTE:
                 return ChannelBufferHolders.byteBuffer();
             case MESSAGE:
                 if (channel instanceof ServerChannel) {

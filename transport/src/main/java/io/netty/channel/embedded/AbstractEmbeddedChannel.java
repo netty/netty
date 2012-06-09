@@ -83,7 +83,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
             throw new IllegalArgumentException("handlers does not provide any buffers.");
         }
 
-        p.addLast(new LastInboundMessageHandler(), new LastInboundStreamHandler());
+        p.addLast(new LastInboundMessageHandler(), new LastInboundByteHandler());
         loop.register(this);
     }
 
@@ -222,7 +222,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class LastInboundStreamHandler extends ChannelInboundHandlerAdapter<Byte> {
+    private final class LastInboundByteHandler extends ChannelInboundHandlerAdapter<Byte> {
         @Override
         public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return ChannelBufferHolders.byteBuffer(lastInboundByteBuffer);

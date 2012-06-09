@@ -21,10 +21,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
-public class HexDumpProxyFrontendHandler extends ChannelInboundStreamHandlerAdapter {
+public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapter {
 
     private final String remoteHost;
     private final int remotePort;

@@ -19,7 +19,7 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -36,7 +36,7 @@ import java.io.Serializable;
  * @apiviz.has io.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */
 @Sharable
-public class ObjectEncoder extends MessageToStreamEncoder<Object> {
+public class ObjectEncoder extends MessageToByteEncoder<Object> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
     @Override

@@ -17,7 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.StreamToStreamDecoder;
+import io.netty.handler.codec.ByteToByteDecoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
@@ -27,7 +27,7 @@ import io.netty.util.internal.jzlib.ZStream;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
-public class ZlibDecoder extends StreamToStreamDecoder {
+public class ZlibDecoder extends ByteToByteDecoder {
 
     private final ZStream z = new ZStream();
     private byte[] dictionary;

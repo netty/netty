@@ -18,7 +18,7 @@ package io.netty.handler.codec.frame;
 import static org.junit.Assert.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.embedded.EmbeddedStreamChannel;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -32,7 +32,7 @@ public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testFailSlowTooLongFrameRecovery() throws Exception {
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new DelimiterBasedFrameDecoder(1, true, false, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
@@ -52,7 +52,7 @@ public class DelimiterBasedFrameDecoderTest {
 
     @Test
     public void testFailFastTooLongFrameRecovery() throws Exception {
-        EmbeddedStreamChannel ch = new EmbeddedStreamChannel(
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {

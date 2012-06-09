@@ -17,7 +17,7 @@ package io.netty.example.portunification;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundStreamHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.example.factorial.BigIntegerDecoder;
 import io.netty.example.factorial.FactorialServerHandler;
@@ -38,7 +38,7 @@ import javax.net.ssl.SSLEngine;
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
  */
-public class PortUnificationServerHandler extends ChannelInboundStreamHandlerAdapter {
+public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapter {
 
     private final boolean detectSsl;
     private final boolean detectGzip;

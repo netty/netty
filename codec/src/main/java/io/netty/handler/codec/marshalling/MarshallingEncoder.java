@@ -18,12 +18,12 @@ package io.netty.handler.codec.marshalling;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToStreamEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import org.jboss.marshalling.Marshaller;
 
 /**
- * {@link MessageToStreamEncoder} implementation which uses JBoss Marshalling to marshal
+ * {@link MessageToByteEncoder} implementation which uses JBoss Marshalling to marshal
  * an Object. Be aware that this encoder is not compatible with an other client that just use
  * JBoss Marshalling as it includes the size of every {@link Object} that gets serialized in
  * front of the {@link Object} itself.
@@ -35,7 +35,7 @@ import org.jboss.marshalling.Marshaller;
  *
  */
 @Sharable
-public class MarshallingEncoder extends MessageToStreamEncoder<Object> {
+public class MarshallingEncoder extends MessageToByteEncoder<Object> {
 
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
     private final MarshallerProvider provider;
