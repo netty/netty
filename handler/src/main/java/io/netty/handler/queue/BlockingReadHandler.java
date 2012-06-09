@@ -155,6 +155,9 @@ public class BlockingReadHandler<E> extends ChannelInboundMessageHandlerAdapter<
             return null;
         }
 
+        if (e instanceof IOException) {
+            throw (IOException) e;
+        }
         if (e instanceof Throwable) {
             throw (IOException) new IOException().initCause((Throwable) e);
         }
