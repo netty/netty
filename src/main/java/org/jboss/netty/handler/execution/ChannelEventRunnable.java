@@ -59,7 +59,8 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     }
 
     public final void run() {
-        if (e instanceof UpstreamMessageEvent && executor instanceof MemoryAwareThreadPoolExecutor) {
+        if (e instanceof UpstreamMessageEvent && executor instanceof MemoryAwareThreadPoolExecutor
+            && ctx.getChannel() instanceof LocalChannel) {
             doRun();
         } else {
             try {
