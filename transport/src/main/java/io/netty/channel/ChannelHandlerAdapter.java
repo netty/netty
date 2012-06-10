@@ -15,10 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
-
 import java.net.SocketAddress;
-import java.util.Queue;
 
 public class ChannelHandlerAdapter extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
@@ -51,27 +48,11 @@ public class ChannelHandlerAdapter extends ChannelStateHandlerAdapter implements
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        flush0(ctx, future);
-    }
-
-    static <O> void flush0(ChannelHandlerContext ctx, ChannelFuture future) {
-        if (ctx.hasOutboundMessageBuffer()) {
-            Queue<O> out = ctx.outboundMessageBuffer();
-            Queue<Object> nextOut = ctx.nextOutboundMessageBuffer();
-            for (;;) {
-                O msg = out.poll();
-                if (msg == null) {
-                    break;
-                }
-                nextOut.add(msg);
-            }
-        } else if (ctx.hasOutboundByteBuffer()) {
-            ChannelBuffer out = ctx.outboundByteBuffer();
-            ChannelBuffer nextOut = ctx.nextOutboundByteBuffer();
-            nextOut.writeBytes(out);
-            out.discardReadBytes();
+        if (this instanceof ChannelOutboundHandler) {
+            throw new IllegalStateException(
+                    "flush(...) must be overridden by " + getClass().getName() +
+                    ", which implements " + ChannelOutboundHandler.class.getSimpleName());
         }
-
         ctx.flush(future);
     }
 }

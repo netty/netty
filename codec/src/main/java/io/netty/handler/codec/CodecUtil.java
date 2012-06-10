@@ -47,28 +47,28 @@ final class CodecUtil {
         }
 
         if (inbound) {
-            try {
+            if (ctx.hasNextInboundMessageBuffer()) {
                 ctx.nextInboundMessageBuffer().add(msg);
                 return true;
-            } catch (NoSuchBufferException e) {
-                if (msg instanceof ChannelBuffer) {
-                    ChannelBuffer altDst = ctx.nextInboundByteBuffer();
-                    ChannelBuffer src = (ChannelBuffer) msg;
-                    altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
-                    return true;
-                }
+            }
+
+            if (msg instanceof ChannelBuffer && ctx.hasNextInboundByteBuffer()) {
+                ChannelBuffer altDst = ctx.nextInboundByteBuffer();
+                ChannelBuffer src = (ChannelBuffer) msg;
+                altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
+                return true;
             }
         } else {
-            try {
+            if (ctx.hasNextOutboundMessageBuffer()) {
                 ctx.nextOutboundMessageBuffer().add(msg);
                 return true;
-            } catch (NoSuchBufferException e) {
-                if (msg instanceof ChannelBuffer) {
-                    ChannelBuffer altDst = ctx.nextOutboundByteBuffer();
-                    ChannelBuffer src = (ChannelBuffer) msg;
-                    altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
-                    return true;
-                }
+            }
+
+            if (msg instanceof ChannelBuffer && ctx.hasNextOutboundByteBuffer()) {
+                ChannelBuffer altDst = ctx.nextOutboundByteBuffer();
+                ChannelBuffer src = (ChannelBuffer) msg;
+                altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
+                return true;
             }
         }
 

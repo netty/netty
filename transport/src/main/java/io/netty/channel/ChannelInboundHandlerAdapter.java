@@ -18,5 +18,6 @@ package io.netty.channel;
 
 public abstract class ChannelInboundHandlerAdapter<I> extends ChannelStateHandlerAdapter
         implements ChannelInboundHandler<I> {
-    // Useful when you have to create an anonymous class
+    @Override
+    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
 }

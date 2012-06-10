@@ -18,7 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ChannelBuffer;
 
 
-public class ChannelInboundByteHandlerAdapter extends ChannelInboundHandlerAdapter<Byte> {
+public abstract class ChannelInboundByteHandlerAdapter extends ChannelInboundHandlerAdapter<Byte> {
 
     @Override
     public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -26,12 +26,16 @@ public class ChannelInboundByteHandlerAdapter extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        inboundBufferUpdated(ctx, ctx.inboundByteBuffer());
+    public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ChannelBuffer in = ctx.inboundByteBuffer();
+        try {
+            inboundBufferUpdated(ctx, in);
+        } finally {
+            if (!in.readable()) {
+                in.discardReadBytes();
+            }
+        }
     }
 
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
-        ctx.nextInboundByteBuffer().writeBytes(in);
-        in.discardReadBytes();
-    }
+    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception;
 }

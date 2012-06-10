@@ -84,6 +84,11 @@ public class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future)
             throws Exception {
-        ChannelHandlerAdapter.flush0(ctx, future);
+        if (this instanceof ChannelOutboundHandler) {
+            throw new IllegalStateException(
+                    "flush(...) must be overridden by " + getClass().getName() +
+                    ", which implements " + ChannelOutboundHandler.class.getSimpleName());
+        }
+        ctx.flush(future);
     }
 }

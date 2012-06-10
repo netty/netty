@@ -144,11 +144,8 @@ public class ChunkedWriteHandlerTest {
 
             @Override
             public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-                super.flush(ctx, future);
-
                 future.setSuccess();
             }
-
         };
 
         EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new ChunkedWriteHandler(), testHandler);

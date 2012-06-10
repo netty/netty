@@ -15,9 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
-
-import java.util.Queue;
 
 public class ChannelStateHandlerAdapter implements ChannelStateHandler {
 
@@ -82,28 +79,11 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        inboundBufferUpdated0(ctx);
-    }
-
-    static <I> void inboundBufferUpdated0(ChannelHandlerContext ctx) {
-        if (ctx.hasInboundMessageBuffer()) {
-            Queue<I> in = ctx.inboundMessageBuffer();
-            Queue<Object> nextIn = ctx.nextInboundMessageBuffer();
-            for (;;) {
-                I msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-                nextIn.add(msg);
-            }
-        } else if (ctx.hasInboundByteBuffer()) {
-            ChannelBuffer in = ctx.inboundByteBuffer();
-            ChannelBuffer nextIn = ctx.nextInboundByteBuffer();
-            nextIn.writeBytes(in);
-            in.discardReadBytes();
+        if (this instanceof ChannelInboundHandler) {
+            throw new IllegalStateException(
+                    "inboundBufferUpdated(...) must be overridden by " + getClass().getName() +
+                    ", which implements " + ChannelInboundHandler.class.getSimpleName());
         }
-
         ctx.fireInboundBufferUpdated();
     }
-
 }

@@ -218,4 +218,10 @@ public class BlockingReadHandler<E> extends ChannelInboundMessageHandlerAdapter<
             queue.add(e);
         }
     }
+
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // TODO Auto-generated method stub
+
+    }
 }

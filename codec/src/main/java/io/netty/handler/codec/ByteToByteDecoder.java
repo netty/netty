@@ -22,18 +22,18 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
 public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        callDecode(ctx);
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+        callDecode(ctx, in, ctx.nextOutboundByteBuffer());
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ChannelBuffer in = ctx.inboundByteBuffer();
+        ChannelBuffer out = ctx.nextInboundByteBuffer();
         if (!in.readable()) {
-            callDecode(ctx);
+            callDecode(ctx, in, out);
         }
 
-        ChannelBuffer out = ctx.nextInboundByteBuffer();
         int oldOutSize = out.readableBytes();
         try {
             decodeLast(ctx, in, out);
@@ -53,10 +53,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         ctx.fireChannelInactive();
     }
 
-    private void callDecode(ChannelHandlerContext ctx) {
-        ChannelBuffer in = ctx.inboundByteBuffer();
-        ChannelBuffer out = ctx.nextInboundByteBuffer();
-
+    private void callDecode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) {
         int oldOutSize = out.readableBytes();
         while (in.readable()) {
             int oldInSize = in.readableBytes();

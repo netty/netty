@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 
-public class ChannelOutboundMessageHandlerAdapter<I> extends ChannelOutboundHandlerAdapter<I> {
+public abstract class ChannelOutboundMessageHandlerAdapter<I> extends ChannelOutboundHandlerAdapter<I> {
     @Override
     public ChannelBufferHolder<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ChannelBufferHolders.messageBuffer();

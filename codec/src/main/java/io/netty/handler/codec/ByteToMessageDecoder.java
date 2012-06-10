@@ -16,12 +16,14 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 
-public abstract class ByteToMessageDecoder<O> extends ChannelInboundByteHandlerAdapter {
+public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapter<Byte> {
 
     private ChannelHandlerContext ctx;
 
@@ -29,6 +31,11 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundByteHandlerA
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         super.beforeAdd(ctx);
+    }
+
+    @Override
+    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ChannelBufferHolders.byteBuffer();
     }
 
     @Override

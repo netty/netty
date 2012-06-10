@@ -16,12 +16,14 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferHolder;
+import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -228,7 +230,11 @@ public class ServerBootstrap {
         validate();
     }
 
-    private class Acceptor extends ChannelInboundMessageHandlerAdapter<Channel> {
+    private class Acceptor extends ChannelInboundHandlerAdapter<Channel> {
+        @Override
+        public ChannelBufferHolder<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return ChannelBufferHolders.messageBuffer();
+        }
 
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) {

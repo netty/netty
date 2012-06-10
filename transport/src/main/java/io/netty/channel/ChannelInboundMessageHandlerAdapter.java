@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import java.util.Queue;
 
-public class ChannelInboundMessageHandlerAdapter<I> extends ChannelInboundHandlerAdapter<I> {
+public abstract class ChannelInboundMessageHandlerAdapter<I> extends ChannelInboundHandlerAdapter<I> {
 
     @Override
     public ChannelBufferHolder<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -25,7 +25,7 @@ public class ChannelInboundMessageHandlerAdapter<I> extends ChannelInboundHandle
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         Queue<I> in = ctx.inboundMessageBuffer();
         for (;;) {
             I msg = in.poll();
@@ -34,14 +34,11 @@ public class ChannelInboundMessageHandlerAdapter<I> extends ChannelInboundHandle
             }
             try {
                 messageReceived(ctx, msg);
-                ctx.fireInboundBufferUpdated();
             } catch (Throwable t) {
                 ctx.fireExceptionCaught(t);
             }
         }
     }
 
-    public void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
-        ctx.nextInboundMessageBuffer().add(msg);
-    }
+    public abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
 }

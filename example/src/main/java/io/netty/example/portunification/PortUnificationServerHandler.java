@@ -53,16 +53,14 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ChannelBuffer buffer = ctx.inboundByteBuffer();
-
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
         // Will use the first two bytes to detect a protocol.
-        if (buffer.readableBytes() < 2) {
+        if (in.readableBytes() < 2) {
             return;
         }
 
-        final int magic1 = buffer.getUnsignedByte(buffer.readerIndex());
-        final int magic2 = buffer.getUnsignedByte(buffer.readerIndex() + 1);
+        final int magic1 = in.getUnsignedByte(in.readerIndex());
+        final int magic2 = in.getUnsignedByte(in.readerIndex() + 1);
 
         if (isSsl(magic1)) {
             enableSsl(ctx);
@@ -74,13 +72,13 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
             switchToFactorial(ctx);
         } else {
             // Unknown protocol; discard everything and close the connection.
-            buffer.clear();
+            in.clear();
             ctx.close();
             return;
         }
 
         // Forward the current read buffer as is to the new handlers.
-        ctx.nextInboundByteBuffer().writeBytes(buffer);
+        ctx.nextInboundByteBuffer().writeBytes(in);
         ctx.fireInboundBufferUpdated();
     }
 

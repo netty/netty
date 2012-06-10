@@ -22,8 +22,8 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
@@ -255,10 +255,9 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            ChannelBuffer m = ctx.inboundByteBuffer();
-            byte[] actual = new byte[m.readableBytes()];
-            m.readBytes(actual);
+        public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+            byte[] actual = new byte[in.readableBytes()];
+            in.readBytes(actual);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
