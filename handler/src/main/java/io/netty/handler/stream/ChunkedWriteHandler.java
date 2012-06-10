@@ -274,13 +274,10 @@ public class ChunkedWriteHandler
                 return;
             }
         }
-
-
     }
 
     /**
-     * Read the next {@link ChunkedInput} and transfer it the the outbound buffer. 
-     * 
+     * Read the next {@link ChunkedInput} and transfer it the the outbound buffer.
      * @param ctx           the {@link ChannelHandlerContext} this handler is bound to
      * @param chunks        the {@link ChunkedInput} to read from
      * @return read         <code>true</code> if something could be transfered to the outbound buffer
@@ -295,7 +292,7 @@ public class ChunkedWriteHandler
             throw new IllegalArgumentException("ChunkedInput instance " + chunks + " not supported");
         }
     }
-    
+
     static void closeInput(ChunkedInput<?> chunks) {
         try {
             chunks.close();

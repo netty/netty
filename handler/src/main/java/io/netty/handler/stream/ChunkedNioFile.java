@@ -164,7 +164,7 @@ public class ChunkedNioFile implements ChunkedByteInput {
         chunk.flip();
         buffer.writeBytes(chunk);
         this.offset += readBytes;
-        
+
         return true;
     }
 }

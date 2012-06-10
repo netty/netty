@@ -32,8 +32,7 @@ public interface ChunkedInput<B> {
      * Releases the resources associated with the stream.
      */
     void close() throws Exception;
-    
-    
+
     /**
      * Fetches a chunked data from the stream.  The chunk is then
      * transfered to the given buffer.  Once this method returns the last chunk

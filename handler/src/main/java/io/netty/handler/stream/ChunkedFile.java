@@ -143,14 +143,13 @@ public class ChunkedFile implements ChunkedByteInput {
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        
         // Check if the buffer is backed by an byte array. If so we can optimize it a bit an safe a copy
-        
+
         byte[] chunk = new byte[chunkSize];
         file.readFully(chunk);
         buffer.writeBytes(chunk);
         this.offset = offset + chunkSize;
-        
+
         return true;
     }
 }

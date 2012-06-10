@@ -105,9 +105,9 @@ public class ChunkedStream implements ChunkedByteInput {
         } else {
             chunkSize = Math.min(this.chunkSize, in.available());
         }
-        
+
         // transfer to buffer
-        offset =+ buffer.writeBytes(in, chunkSize);
+        offset += buffer.writeBytes(in, chunkSize);
         return true;
     }
 }

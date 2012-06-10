@@ -100,7 +100,6 @@ public class ChunkedNioStream implements ChunkedByteInput {
         if (isEndOfInput()) {
             return false;
         }
-        
         // buffer cannot be not be empty from there
         int readBytes = byteBuffer.position();
         for (;;) {
@@ -110,7 +109,6 @@ public class ChunkedNioStream implements ChunkedByteInput {
             }
             readBytes += localReadBytes;
             offset += localReadBytes;
-
             if (readBytes == chunkSize) {
                 break;
             }
@@ -118,7 +116,7 @@ public class ChunkedNioStream implements ChunkedByteInput {
         byteBuffer.flip();
         buffer.writeBytes(byteBuffer);
         byteBuffer.clear();
-        
+
         return true;
     }
 }
