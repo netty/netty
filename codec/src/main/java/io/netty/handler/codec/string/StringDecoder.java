@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.string;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -26,7 +26,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import java.nio.charset.Charset;
 
 /**
- * Decodes a received {@link ChannelBuffer} into a {@link String}.  Please
+ * Decodes a received {@link ByteBuf} into a {@link String}.  Please
  * note that this decoder must be used with a proper {@link FrameDecoder}
  * such as {@link DelimiterBasedFrameDecoder} if you are using a stream-based
  * transport such as TCP/IP.  A typical setup for a text-based line protocol
@@ -41,7 +41,7 @@ import java.nio.charset.Charset;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
- * and then you can use a {@link String} instead of a {@link ChannelBuffer}
+ * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -52,7 +52,7 @@ import java.nio.charset.Charset;
  * @apiviz.landmark
  */
 @Sharable
-public class StringDecoder extends MessageToMessageDecoder<ChannelBuffer, String> {
+public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
 
     // TODO Use CharsetDecoder instead.
     private final Charset charset;
@@ -76,11 +76,11 @@ public class StringDecoder extends MessageToMessageDecoder<ChannelBuffer, String
 
     @Override
     public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ChannelBuffer;
+        return msg instanceof ByteBuf;
     }
 
     @Override
-    public String decode(ChannelHandlerContext ctx, ChannelBuffer msg) throws Exception {
+    public String decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         return msg.toString(charset);
     }
 }

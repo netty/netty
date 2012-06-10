@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.TooLongFrameException;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMessageDecoder;
 
 /**
- * Decodes {@link ChannelBuffer}s into RTSP messages represented in
+ * Decodes {@link ByteBuf}s into RTSP messages represented in
  * {@link HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
@@ -75,7 +75,7 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
 
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         Object o = super.decode(ctx, buffer);
         if (o != null && aggregator.writeInbound(o)) {
             return aggregator.readInbound();

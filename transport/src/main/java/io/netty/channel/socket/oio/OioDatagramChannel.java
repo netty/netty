@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -175,7 +175,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected int doWriteMessages(Queue<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
-        ChannelBuffer data = p.data();
+        ByteBuf data = p.data();
         int length = data.readableBytes();
         tmpPacket.setSocketAddress(p.remoteAddress());
         if (data.hasArray()) {

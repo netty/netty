@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.CharsetUtil;
 
@@ -40,7 +40,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *
      * @param binaryData the content of the frame.
      */
-    public ContinuationWebSocketFrame(ChannelBuffer binaryData) {
+    public ContinuationWebSocketFrame(ByteBuf binaryData) {
         setBinaryData(binaryData);
     }
 
@@ -54,7 +54,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);
@@ -74,7 +74,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            text message
      */
     public ContinuationWebSocketFrame(
-            boolean finalFragment, int rsv, ChannelBuffer binaryData, String aggregatedText) {
+            boolean finalFragment, int rsv, ByteBuf binaryData, String aggregatedText) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);

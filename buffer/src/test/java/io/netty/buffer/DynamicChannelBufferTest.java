@@ -26,10 +26,10 @@ import org.junit.Test;
  */
 public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
 
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
+    protected ByteBuf newBuffer(int length) {
         buffer = ChannelBuffers.dynamicBuffer(length);
 
         assertEquals(0, buffer.readerIndex());
@@ -40,28 +40,28 @@ public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new DynamicChannelBuffer(null, 0);
+        new DynamicByteBuf(null, 0);
     }
 
     @Test
     public void shouldNotFailOnInitialIndexUpdate() {
-        new DynamicChannelBuffer(ByteOrder.BIG_ENDIAN, 10).setIndex(0, 10);
+        new DynamicByteBuf(ByteOrder.BIG_ENDIAN, 10).setIndex(0, 10);
     }
 
     @Test
     public void shouldNotFailOnInitialIndexUpdate2() {
-        new DynamicChannelBuffer(ByteOrder.BIG_ENDIAN, 10).writerIndex(10);
+        new DynamicByteBuf(ByteOrder.BIG_ENDIAN, 10).writerIndex(10);
     }
 
     @Test
     public void shouldNotFailOnInitialIndexUpdate3() {
-        ChannelBuffer buf = new DynamicChannelBuffer(ByteOrder.BIG_ENDIAN, 10);
+        ByteBuf buf = new DynamicByteBuf(ByteOrder.BIG_ENDIAN, 10);
         buf.writerIndex(10);
         buf.readerIndex(10);
     }

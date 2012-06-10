@@ -16,7 +16,7 @@
 package io.netty.handler.stream;
 
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -103,11 +103,11 @@ public class ChunkedWriteHandlerTest {
     // http://stackoverflow.com/questions/10409241/why-is-close-channelfuturelistener-not-notified/10426305#comment14126161_10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() {
-        ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+        ByteBuf buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
 
         ChunkedInput input = new ChunkedInput() {
             private boolean done;
-            private final ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final ByteBuf buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
 
             @Override
             public Object nextChunk() throws Exception {
@@ -135,10 +135,10 @@ public class ChunkedWriteHandlerTest {
             }
         };
 
-        ChannelOutboundHandlerAdapter<ChannelBuffer> testHandler = new ChannelOutboundHandlerAdapter<ChannelBuffer>() {
+        ChannelOutboundHandlerAdapter<ByteBuf> testHandler = new ChannelOutboundHandlerAdapter<ByteBuf>() {
 
             @Override
-            public ChannelBufferHolder<ChannelBuffer> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            public ChannelBufferHolder<ByteBuf> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
                 return ChannelBufferHolders.messageBuffer();
             }
 
@@ -174,7 +174,7 @@ public class ChunkedWriteHandlerTest {
         int i = 0;
         int read = 0;
         for (;;) {
-            ChannelBuffer buffer = (ChannelBuffer) ch.readOutbound();
+            ByteBuf buffer = (ByteBuf) ch.readOutbound();
             if (buffer == null) {
                 break;
             }

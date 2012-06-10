@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -23,7 +23,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import com.google.protobuf.CodedInputStream;
 
 /**
- * A decoder that splits the received {@link ChannelBuffer}s dynamically by the
+ * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the Google Protocol Buffers
  * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
  * 128 Varints</a> integer length field in the message.  For example:
@@ -49,7 +49,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         in.markReaderIndex();
         final byte[] buf = new byte[5];
         for (int i = 0; i < buf.length; i ++) {

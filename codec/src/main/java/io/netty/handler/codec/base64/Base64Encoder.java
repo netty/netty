@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.base64;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
- * Encodes a {@link ChannelBuffer} into a Base64-encoded {@link ChannelBuffer}.
+ * Encodes a {@link ByteBuf} into a Base64-encoded {@link ByteBuf}.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -40,7 +40,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Encoder extends MessageToMessageEncoder<ChannelBuffer, ChannelBuffer> {
+public class Base64Encoder extends MessageToMessageEncoder<ByteBuf, ByteBuf> {
 
     private final boolean breakLines;
     private final Base64Dialect dialect;
@@ -64,12 +64,12 @@ public class Base64Encoder extends MessageToMessageEncoder<ChannelBuffer, Channe
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof ChannelBuffer;
+        return msg instanceof ByteBuf;
     }
 
     @Override
-    public ChannelBuffer encode(ChannelHandlerContext ctx,
-            ChannelBuffer msg) throws Exception {
+    public ByteBuf encode(ChannelHandlerContext ctx,
+            ByteBuf msg) throws Exception {
         return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
     }
 }

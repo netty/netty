@@ -16,7 +16,7 @@
 package io.netty.handler.codec.protobuf;
 
 import static io.netty.buffer.ChannelBuffers.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -30,7 +30,7 @@ import com.google.protobuf.MessageLite;
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
  * Protocol Buffers</a> {@link Message} and {@link MessageLite} into a
- * {@link ChannelBuffer}. A typical setup for TCP/IP would be:
+ * {@link ByteBuf}. A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
@@ -44,7 +44,7 @@ import com.google.protobuf.MessageLite;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
  * </pre>
- * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
+ * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -57,7 +57,7 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufEncoder extends MessageToMessageEncoder<Object, ChannelBuffer> {
+public class ProtobufEncoder extends MessageToMessageEncoder<Object, ByteBuf> {
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {
@@ -65,7 +65,7 @@ public class ProtobufEncoder extends MessageToMessageEncoder<Object, ChannelBuff
     }
 
     @Override
-    public ChannelBuffer encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public ByteBuf encode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());
         }

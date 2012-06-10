@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -32,7 +32,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         @Override
         public void encode(
                 ChannelHandlerContext ctx,
-                OUTBOUND_IN msg, ChannelBuffer out) throws Exception {
+                OUTBOUND_IN msg, ByteBuf out) throws Exception {
             ByteToMessageCodec.this.encode(ctx, msg, out);
         }
     };
@@ -41,7 +41,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
             new ByteToMessageDecoder<INBOUND_OUT>() {
         @Override
         public INBOUND_OUT decode(
-                ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+                ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             return ByteToMessageCodec.this.decode(ctx, in);
         }
     };
@@ -71,8 +71,8 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
 
     public abstract void encode(
             ChannelHandlerContext ctx,
-            OUTBOUND_IN msg, ChannelBuffer out) throws Exception;
+            OUTBOUND_IN msg, ByteBuf out) throws Exception;
 
     public abstract INBOUND_OUT decode(
-            ChannelHandlerContext ctx, ChannelBuffer in) throws Exception;
+            ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

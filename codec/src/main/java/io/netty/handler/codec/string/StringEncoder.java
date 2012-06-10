@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.string;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,7 +27,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import java.nio.charset.Charset;
 
 /**
- * Encodes the requested {@link String} into a {@link ChannelBuffer}.
+ * Encodes the requested {@link String} into a {@link ByteBuf}.
  * A typical setup for a text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -39,7 +39,7 @@ import java.nio.charset.Charset;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
- * and then you can use a {@link String} instead of a {@link ChannelBuffer}
+ * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -50,7 +50,7 @@ import java.nio.charset.Charset;
  * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends MessageToMessageEncoder<String, ChannelBuffer> {
+public class StringEncoder extends MessageToMessageEncoder<String, ByteBuf> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -78,7 +78,7 @@ public class StringEncoder extends MessageToMessageEncoder<String, ChannelBuffer
     }
 
     @Override
-    public ChannelBuffer encode(ChannelHandlerContext ctx, String msg) throws Exception {
+    public ByteBuf encode(ChannelHandlerContext ctx, String msg) throws Exception {
         return ChannelBuffers.copiedBuffer(msg, charset);
     }
 }

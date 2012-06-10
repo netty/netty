@@ -15,7 +15,7 @@
  */
 package io.netty.example.portunification;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -53,7 +53,7 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Will use the first two bytes to detect a protocol.
         if (in.readableBytes() < 2) {
             return;

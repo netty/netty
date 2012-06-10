@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * An {@link OutputStream} which writes data to a {@link ChannelBuffer}.
+ * An {@link OutputStream} which writes data to a {@link ByteBuf}.
  * <p>
  * A write operation against this stream will occur at the {@code writerIndex}
  * of its underlying buffer and the {@code writerIndex} will increase during
@@ -30,19 +30,19 @@ import java.io.OutputStream;
  * This stream implements {@link DataOutput} for your convenience.
  * The endianness of the stream is not always big endian but depends on
  * the endianness of the underlying buffer.
- * @see ChannelBufferInputStream
+ * @see ByteBufInputStream
  * @apiviz.uses io.netty.buffer.ChannelBuffer
  */
-public class ChannelBufferOutputStream extends OutputStream implements DataOutput {
+public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
     private final int startIndex;
     private final DataOutputStream utf8out = new DataOutputStream(this);
 
     /**
      * Creates a new stream which writes data to the specified {@code buffer}.
      */
-    public ChannelBufferOutputStream(ChannelBuffer buffer) {
+    public ByteBufOutputStream(ByteBuf buffer) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }
@@ -140,7 +140,7 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
     /**
      * Returns the buffer where this stream is writing data.
      */
-    public ChannelBuffer buffer() {
+    public ByteBuf buffer() {
         return buffer;
     }
 }

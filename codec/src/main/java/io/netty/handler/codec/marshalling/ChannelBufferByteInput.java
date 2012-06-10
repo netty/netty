@@ -15,20 +15,20 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 
 import org.jboss.marshalling.ByteInput;
 
 /**
- * {@link ByteInput} implementation which reads its data from a {@link ChannelBuffer}
+ * {@link ByteInput} implementation which reads its data from a {@link ByteBuf}
  */
 class ChannelBufferByteInput implements ByteInput {
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
 
-    public ChannelBufferByteInput(ChannelBuffer buffer) {
+    public ChannelBufferByteInput(ByteBuf buffer) {
         this.buffer = buffer;
     }
 

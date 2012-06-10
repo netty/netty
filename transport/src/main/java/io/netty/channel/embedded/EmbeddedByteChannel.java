@@ -15,7 +15,7 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelBufferType;
@@ -31,15 +31,15 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
         return ChannelBufferType.BYTE;
     }
 
-    public ChannelBuffer inboundBuffer() {
+    public ByteBuf inboundBuffer() {
         return pipeline().inboundByteBuffer();
     }
 
-    public ChannelBuffer lastOutboundBuffer() {
-        return (ChannelBuffer) lastOutboundBuffer;
+    public ByteBuf lastOutboundBuffer() {
+        return (ByteBuf) lastOutboundBuffer;
     }
 
-    public ChannelBuffer readOutbound() {
+    public ByteBuf readOutbound() {
         if (!lastOutboundBuffer().readable()) {
             return null;
         }
@@ -50,7 +50,7 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
         }
     }
 
-    public boolean writeInbound(ChannelBuffer data) {
+    public boolean writeInbound(ByteBuf data) {
         inboundBuffer().writeBytes(data);
         pipeline().fireInboundBufferUpdated();
         checkException();
@@ -71,7 +71,7 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!lastOutboundBuffer().readable()) {
             lastOutboundBuffer().discardReadBytes();
         }

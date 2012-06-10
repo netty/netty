@@ -19,7 +19,7 @@ import static io.netty.buffer.ChannelBuffers.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 
 import java.util.Random;
@@ -43,7 +43,7 @@ public class ByteArrayEncoderTest {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeOutbound(b);
-        assertThat((ChannelBuffer) ch.readOutbound(), is(wrappedBuffer(b)));
+        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(b)));
     }
 
     @Test

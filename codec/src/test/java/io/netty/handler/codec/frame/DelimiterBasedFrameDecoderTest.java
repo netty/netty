@@ -16,7 +16,7 @@
 package io.netty.handler.codec.frame;
 
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.DecoderException;
@@ -45,7 +45,7 @@ public class DelimiterBasedFrameDecoderTest {
             }
 
             ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 0 }));
-            ChannelBuffer buf = (ChannelBuffer) ch.readInbound();
+            ByteBuf buf = (ByteBuf) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
@@ -64,7 +64,7 @@ public class DelimiterBasedFrameDecoderTest {
             }
 
             ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 'A', 0 }));
-            ChannelBuffer buf = (ChannelBuffer) ch.readInbound();
+            ByteBuf buf = (ByteBuf) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }

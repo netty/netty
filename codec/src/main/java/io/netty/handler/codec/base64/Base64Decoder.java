@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.base64;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -25,8 +25,8 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes a Base64-encoded {@link ChannelBuffer} or US-ASCII {@link String}
- * into a {@link ChannelBuffer}.  Please note that this decoder must be used
+ * Decodes a Base64-encoded {@link ByteBuf} or US-ASCII {@link String}
+ * into a {@link ByteBuf}.  Please note that this decoder must be used
  * with a proper {@link ByteToMessageDecoder} such as {@link DelimiterBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP.  A typical decoder
  * setup for TCP/IP would be:
@@ -44,7 +44,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Decoder extends MessageToMessageDecoder<ChannelBuffer, ChannelBuffer> {
+public class Base64Decoder extends MessageToMessageDecoder<ByteBuf, ByteBuf> {
 
     private final Base64Dialect dialect;
 
@@ -61,11 +61,11 @@ public class Base64Decoder extends MessageToMessageDecoder<ChannelBuffer, Channe
 
     @Override
     public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ChannelBuffer;
+        return msg instanceof ByteBuf;
     }
 
     @Override
-    public ChannelBuffer decode(ChannelHandlerContext ctx, ChannelBuffer msg) throws Exception {
+    public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         return Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect);
     }
 }

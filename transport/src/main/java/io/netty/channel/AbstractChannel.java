@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
@@ -264,7 +264,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelBuffer outboundByteBuffer() {
+    public ByteBuf outboundByteBuffer() {
         return pipeline.outboundByteBuffer();
     }
 
@@ -633,7 +633,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             Throwable cause = null;
             try {
                 if (ctx.hasOutboundByteBuffer()) {
-                    ChannelBuffer out = ctx.outboundByteBuffer();
+                    ByteBuf out = ctx.outboundByteBuffer();
                     int oldSize = out.readableBytes();
                     try {
                         doFlushByteBuffer(out);
@@ -709,7 +709,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doDisconnect() throws Exception;
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
-    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         throw new UnsupportedOperationException();
     }
     protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {

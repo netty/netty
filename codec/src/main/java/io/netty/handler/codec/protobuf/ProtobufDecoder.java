@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferInputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -29,7 +29,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 
 /**
- * Decodes a received {@link ChannelBuffer} into a
+ * Decodes a received {@link ByteBuf} into a
  * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
  * {@link Message} and {@link MessageLite}.  Please note that this decoder must
  * be used with a proper {@link FrameDecoder} such as {@link ProtobufVarint32FrameDecoder}
@@ -48,7 +48,7 @@ import com.google.protobuf.MessageLite;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
  * </pre>
- * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
+ * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -61,7 +61,7 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufDecoder extends MessageToMessageDecoder<ChannelBuffer, MessageLite> {
+public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLite> {
 
     private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
@@ -83,11 +83,11 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ChannelBuffer, Mess
 
     @Override
     public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ChannelBuffer;
+        return msg instanceof ByteBuf;
     }
 
     @Override
-    public MessageLite decode(ChannelHandlerContext ctx, ChannelBuffer msg) throws Exception {
+    public MessageLite decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         if (msg.hasArray()) {
             final int offset = msg.readerIndex();
             if (extensionRegistry == null) {
@@ -100,10 +100,10 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ChannelBuffer, Mess
         } else {
             if (extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream(msg)).build();
+                        new ByteBufInputStream(msg)).build();
             } else {
                 return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream(msg), extensionRegistry).build();
+                        new ByteBufInputStream(msg), extensionRegistry).build();
             }
         }
     }

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
- * Compresses a {@link ChannelBuffer} using the deflate algorithm.
+ * Compresses a {@link ByteBuf} using the deflate algorithm.
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
@@ -263,7 +263,7 @@ public class ZlibEncoder extends ByteToByteEncoder {
 
     @Override
     public void encode(ChannelHandlerContext ctx,
-            ChannelBuffer in, ChannelBuffer out) throws Exception {
+            ByteBuf in, ByteBuf out) throws Exception {
         if (finished.get()) {
             return;
         }
@@ -363,7 +363,7 @@ public class ZlibEncoder extends ByteToByteEncoder {
             return future;
         }
 
-        ChannelBuffer footer;
+        ByteBuf footer;
         synchronized (z) {
             try {
                 // Configure input.

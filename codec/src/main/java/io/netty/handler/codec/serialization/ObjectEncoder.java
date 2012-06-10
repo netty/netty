@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -26,7 +26,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 /**
- * An encoder which serializes a Java object into a {@link ChannelBuffer}.
+ * An encoder which serializes a Java object into a {@link ByteBuf}.
  * <p>
  * Please note that the serialized form this encoder produces is not
  * compatible with the standard {@link ObjectInputStream}.  Please use
@@ -45,10 +45,10 @@ public class ObjectEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         int startIdx = out.writerIndex();
 
-        ChannelBufferOutputStream bout = new ChannelBufferOutputStream(out);
+        ByteBufOutputStream bout = new ByteBufOutputStream(out);
         bout.write(LENGTH_PLACEHOLDER);
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(msg);

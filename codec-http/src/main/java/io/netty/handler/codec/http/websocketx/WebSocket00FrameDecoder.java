@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.VoidEnum;
 
 /**
- * Decodes {@link ChannelBuffer}s into {@link WebSocketFrame}s.
+ * Decodes {@link ByteBuf}s into {@link WebSocketFrame}s.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
@@ -53,7 +53,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
     }
 
     @Override
-    public WebSocketFrame decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public WebSocketFrame decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());
@@ -71,7 +71,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
         }
     }
 
-    private WebSocketFrame decodeBinaryFrame(byte type, ChannelBuffer buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeBinaryFrame(byte type, ByteBuf buffer) throws TooLongFrameException {
         long frameSize = 0;
         int lengthFieldSize = 0;
         byte b;
@@ -97,7 +97,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
         return new BinaryWebSocketFrame(buffer.readBytes((int) frameSize));
     }
 
-    private WebSocketFrame decodeTextFrame(ChannelBuffer buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeTextFrame(ByteBuf buffer) throws TooLongFrameException {
         int ridx = buffer.readerIndex();
         int rbytes = actualReadableBytes();
         int delimPos = buffer.indexOf(ridx, ridx + rbytes, (byte) 0xFF);
@@ -117,7 +117,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
             throw new TooLongFrameException();
         }
 
-        ChannelBuffer binaryData = buffer.readBytes(frameSize);
+        ByteBuf binaryData = buffer.readBytes(frameSize);
         buffer.skipBytes(1);
 
         int ffDelimPos = binaryData.indexOf(binaryData.readerIndex(), binaryData.writerIndex(), (byte) 0xFF);

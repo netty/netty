@@ -53,7 +53,7 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -86,9 +86,9 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
-    private ChannelBuffer framePayload;
+    private ByteBuf framePayload;
     private int framePayloadBytesRead;
-    private ChannelBuffer maskingKey;
+    private ByteBuf maskingKey;
 
     private final boolean allowExtensions;
     private final boolean maskedPayload;
@@ -119,7 +119,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
 
     @Override
     public WebSocketFrame decode(
-            ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+            ChannelHandlerContext ctx, ByteBuf in) throws Exception {
 
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
@@ -243,7 +243,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
             // Sometimes, the payload may not be delivered in 1 nice packet
             // We need to accumulate the data until we have it all
             int rbytes = actualReadableBytes();
-            ChannelBuffer payloadBuffer = null;
+            ByteBuf payloadBuffer = null;
 
             long willHaveReadByteCount = framePayloadBytesRead + rbytes;
             // logger.debug("Frame rbytes=" + rbytes + " willHaveReadByteCount="
@@ -359,7 +359,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void unmask(ChannelBuffer frame) {
+    private void unmask(ByteBuf frame) {
         byte[] bytes = frame.array();
         for (int i = 0; i < bytes.length; i++) {
             frame.setByte(i, frame.getByte(i) ^ maskingKey.getByte(i % 4));
@@ -402,7 +402,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
     }
 
     protected void checkCloseFrameBody(
-            ChannelHandlerContext ctx, ChannelBuffer buffer) throws CorruptedFrameException {
+            ChannelHandlerContext ctx, ByteBuf buffer) throws CorruptedFrameException {
         if (buffer == null || buffer.capacity() == 0) {
             return;
         }

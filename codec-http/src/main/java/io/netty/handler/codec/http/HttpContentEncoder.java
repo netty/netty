@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -44,7 +44,7 @@ import java.util.Queue;
  * <p>
  * This handler must be placed after {@link HttpMessageEncoder} in the pipeline
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
- * converts them into {@link ChannelBuffer}s.
+ * converts them into {@link ByteBuf}s.
  */
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
@@ -115,9 +115,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                     result.getTargetContentEncoding());
 
             if (!m.isChunked()) {
-                ChannelBuffer content = m.getContent();
+                ByteBuf content = m.getContent();
                 // Encode the content.
-                ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                ByteBuf newContent = ChannelBuffers.dynamicBuffer();
                 encode(content, newContent);
                 finishEncode(newContent);
 
@@ -131,12 +131,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             }
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
-            ChannelBuffer content = c.getContent();
+            ByteBuf content = c.getContent();
 
             // Encode the chunk if necessary.
             if (encoder != null) {
                 if (!c.isLast()) {
-                    ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                    ByteBuf newContent = ChannelBuffers.dynamicBuffer();
                     encode(content, newContent);
                     if (content.readable()) {
                         c.setContent(newContent);
@@ -144,7 +144,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                         return null;
                     }
                 } else {
-                    ChannelBuffer lastProduct = ChannelBuffers.dynamicBuffer();
+                    ByteBuf lastProduct = ChannelBuffers.dynamicBuffer();
                     finishEncode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced
@@ -176,21 +176,21 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      */
     protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
 
-    private void encode(ChannelBuffer in, ChannelBuffer out) {
+    private void encode(ByteBuf in, ByteBuf out) {
         encoder.writeOutbound(in);
         fetchEncoderOutput(out);
     }
 
-    private void finishEncode(ChannelBuffer out) {
+    private void finishEncode(ByteBuf out) {
         if (encoder.finish()) {
             fetchEncoderOutput(out);
         }
         encoder = null;
     }
 
-    private void fetchEncoderOutput(ChannelBuffer out) {
+    private void fetchEncoderOutput(ByteBuf out) {
         for (;;) {
-            ChannelBuffer buf = encoder.readOutbound();
+            ByteBuf buf = encoder.readOutbound();
             if (buf == null) {
                 break;
             }

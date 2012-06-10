@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 
 /**
@@ -36,7 +36,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public BinaryWebSocketFrame(ChannelBuffer binaryData) {
+    public BinaryWebSocketFrame(ByteBuf binaryData) {
         setBinaryData(binaryData);
     }
 
@@ -50,7 +50,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public BinaryWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public BinaryWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);

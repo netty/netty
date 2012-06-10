@@ -26,7 +26,7 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * A skeletal implementation for Java heap buffers.
  */
-public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
+public abstract class HeapByteBuf extends AbstractByteBuf {
 
     /**
      * The underlying heap byte array that this buffer is wrapping.
@@ -40,7 +40,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
      *
      * @param length the length of the new byte array
      */
-    public HeapChannelBuffer(int length) {
+    public HeapByteBuf(int length) {
         this(new byte[length], 0, 0);
     }
 
@@ -49,7 +49,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
      *
      * @param array the byte array to wrap
      */
-    public HeapChannelBuffer(byte[] array) {
+    public HeapByteBuf(byte[] array) {
         this(array, 0, array.length);
     }
 
@@ -60,7 +60,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
      * @param readerIndex  the initial reader index of this buffer
      * @param writerIndex  the initial writer index of this buffer
      */
-    protected HeapChannelBuffer(byte[] array, int readerIndex, int writerIndex) {
+    protected HeapByteBuf(byte[] array, int readerIndex, int writerIndex) {
         if (array == null) {
             throw new NullPointerException("array");
         }
@@ -100,9 +100,9 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
-        if (dst instanceof HeapChannelBuffer) {
-            getBytes(index, ((HeapChannelBuffer) dst).array, dstIndex, length);
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+        if (dst instanceof HeapByteBuf) {
+            getBytes(index, ((HeapByteBuf) dst).array, dstIndex, length);
         } else {
             dst.setBytes(dstIndex, array, index, length);
         }
@@ -136,9 +136,9 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
-        if (src instanceof HeapChannelBuffer) {
-            setBytes(index, ((HeapChannelBuffer) src).array, srcIndex, length);
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+        if (src instanceof HeapByteBuf) {
+            setBytes(index, ((HeapByteBuf) src).array, srcIndex, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
         }
@@ -169,23 +169,23 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
+    public ByteBuf slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
             if (length == array.length) {
-                ChannelBuffer slice = duplicate();
+                ByteBuf slice = duplicate();
                 slice.setIndex(0, length);
                 return slice;
             } else {
-                return new TruncatedChannelBuffer(this, length);
+                return new TruncatedByteBuf(this, length);
             }
         } else {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new SlicedChannelBuffer(this, index, length);
+            return new SlicedByteBuf(this, index, length);
         }
     }
 

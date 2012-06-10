@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -48,7 +48,7 @@ import java.util.Map.Entry;
  */
 public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
 
-    private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
+    private static final ByteBuf CONTINUE = ChannelBuffers.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
@@ -119,7 +119,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
 
             // Merge the received chunk into the content of the current message.
             HttpChunk chunk = (HttpChunk) msg;
-            ChannelBuffer content = currentMessage.getContent();
+            ByteBuf content = currentMessage.getContent();
 
             if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
                 // TODO: Respond with 413 Request Entity Too Large

@@ -15,7 +15,7 @@
  */
 package io.netty.example.proxy;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
@@ -34,8 +34,8 @@ public class HexDumpProxyBackendHandler extends ChannelInboundByteHandlerAdapter
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
-        ChannelBuffer out = inboundChannel.outboundByteBuffer();
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        ByteBuf out = inboundChannel.outboundByteBuffer();
         out.discardReadBytes();
         out.writeBytes(in);
         in.clear();

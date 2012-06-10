@@ -20,7 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * A {@link ChannelBufferFactory} which pre-allocates a large chunk of direct
+ * A {@link ByteBufFactory} which pre-allocates a large chunk of direct
  * buffer and returns its slice on demand.  Direct buffers are reclaimed via
  * {@link ReferenceQueue} in most JDK implementations, and therefore they are
  * deallocated less efficiently than an ordinary heap buffer.  Consequently,
@@ -30,19 +30,19 @@ import java.nio.ByteOrder;
  * this problem by allocating a large chunk of pre-allocated direct buffer and
  * reducing the number of the garbage collected internal direct buffer objects.
  */
-public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
+public class DirectByteBufFactory extends AbstractByteBufFactory {
 
-    private static final DirectChannelBufferFactory INSTANCE_BE =
-        new DirectChannelBufferFactory(ByteOrder.BIG_ENDIAN);
+    private static final DirectByteBufFactory INSTANCE_BE =
+        new DirectByteBufFactory(ByteOrder.BIG_ENDIAN);
 
-    private static final DirectChannelBufferFactory INSTANCE_LE =
-        new DirectChannelBufferFactory(ByteOrder.LITTLE_ENDIAN);
+    private static final DirectByteBufFactory INSTANCE_LE =
+        new DirectByteBufFactory(ByteOrder.LITTLE_ENDIAN);
 
-    public static ChannelBufferFactory getInstance() {
+    public static ByteBufFactory getInstance() {
         return INSTANCE_BE;
     }
 
-    public static ChannelBufferFactory getInstance(ByteOrder defaultEndianness) {
+    public static ByteBufFactory getInstance(ByteOrder defaultEndianness) {
         if (defaultEndianness == ByteOrder.BIG_ENDIAN) {
             return INSTANCE_BE;
         } else if (defaultEndianness == ByteOrder.LITTLE_ENDIAN) {
@@ -57,16 +57,16 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
     private final Object bigEndianLock = new Object();
     private final Object littleEndianLock = new Object();
     private final int preallocatedBufCapacity;
-    private ChannelBuffer preallocatedBEBuf;
+    private ByteBuf preallocatedBEBuf;
     private int preallocatedBEBufPos;
-    private ChannelBuffer preallocatedLEBuf;
+    private ByteBuf preallocatedLEBuf;
     private int preallocatedLEBufPos;
 
     /**
      * Creates a new factory whose default {@link ByteOrder} is
      * {@link ByteOrder#BIG_ENDIAN}.
      */
-    public DirectChannelBufferFactory() {
+    public DirectByteBufFactory() {
         this(ByteOrder.BIG_ENDIAN);
     }
 
@@ -74,7 +74,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
      * Creates a new factory whose default {@link ByteOrder} is
      * {@link ByteOrder#BIG_ENDIAN}.
      */
-    public DirectChannelBufferFactory(int preallocatedBufferCapacity) {
+    public DirectByteBufFactory(int preallocatedBufferCapacity) {
         this(ByteOrder.BIG_ENDIAN, preallocatedBufferCapacity);
     }
 
@@ -83,7 +83,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
      *
      * @param defaultOrder the default {@link ByteOrder} of this factory
      */
-    public DirectChannelBufferFactory(ByteOrder defaultOrder) {
+    public DirectByteBufFactory(ByteOrder defaultOrder) {
         this(defaultOrder, 1048576);
     }
 
@@ -92,7 +92,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
      *
      * @param defaultOrder the default {@link ByteOrder} of this factory
      */
-    public DirectChannelBufferFactory(ByteOrder defaultOrder, int preallocatedBufferCapacity) {
+    public DirectByteBufFactory(ByteOrder defaultOrder, int preallocatedBufferCapacity) {
         super(defaultOrder);
         if (preallocatedBufferCapacity <= 0) {
             throw new IllegalArgumentException(
@@ -103,7 +103,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
     }
 
     @Override
-    public ChannelBuffer getBuffer(ByteOrder order, int capacity) {
+    public ByteBuf getBuffer(ByteOrder order, int capacity) {
         if (order == null) {
             throw new NullPointerException("order");
         }
@@ -117,7 +117,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
             return ChannelBuffers.directBuffer(order, capacity);
         }
 
-        ChannelBuffer slice;
+        ByteBuf slice;
         if (order == ByteOrder.BIG_ENDIAN) {
             slice = allocateBigEndianBuffer(capacity);
         } else {
@@ -128,7 +128,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
     }
 
     @Override
-    public ChannelBuffer getBuffer(ByteOrder order, byte[] array, int offset, int length) {
+    public ByteBuf getBuffer(ByteOrder order, byte[] array, int offset, int length) {
         if (array == null) {
             throw new NullPointerException("array");
         }
@@ -142,26 +142,26 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
             throw new IndexOutOfBoundsException("length: " + length);
         }
 
-        ChannelBuffer buf = getBuffer(order, length);
+        ByteBuf buf = getBuffer(order, length);
         buf.writeBytes(array, offset, length);
         return buf;
     }
 
     @Override
-    public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
+    public ByteBuf getBuffer(ByteBuffer nioBuffer) {
         if (!nioBuffer.isReadOnly() && nioBuffer.isDirect()) {
             return ChannelBuffers.wrappedBuffer(nioBuffer);
         }
 
-        ChannelBuffer buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
+        ByteBuf buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
         int pos = nioBuffer.position();
         buf.writeBytes(nioBuffer);
         nioBuffer.position(pos);
         return buf;
     }
 
-    private ChannelBuffer allocateBigEndianBuffer(int capacity) {
-        ChannelBuffer slice;
+    private ByteBuf allocateBigEndianBuffer(int capacity) {
+        ByteBuf slice;
         synchronized (bigEndianLock) {
             if (preallocatedBEBuf == null) {
                 preallocatedBEBuf = ChannelBuffers.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
@@ -179,8 +179,8 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         return slice;
     }
 
-    private ChannelBuffer allocateLittleEndianBuffer(int capacity) {
-        ChannelBuffer slice;
+    private ByteBuf allocateLittleEndianBuffer(int capacity) {
+        ByteBuf slice;
         synchronized (littleEndianLock) {
             if (preallocatedLEBuf == null) {
                 preallocatedLEBuf = ChannelBuffers.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);

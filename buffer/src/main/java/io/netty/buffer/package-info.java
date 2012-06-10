@@ -21,7 +21,7 @@
  * Netty uses its own buffer API instead of NIO {@link java.nio.ByteBuffer} to
  * represent a sequence of bytes. This approach has significant advantage over
  * using {@link java.nio.ByteBuffer}.  Netty's new buffer type,
- * {@link io.netty.buffer.ChannelBuffer}, has been designed from ground
+ * {@link io.netty.buffer.ByteBuf}, has been designed from ground
  * up to address the problems of {@link java.nio.ByteBuffer} and to meet the
  * daily needs of network application developers.  To list a few cool features:
  * <ul>
@@ -35,13 +35,13 @@
  *
  * <h3>Extensibility</h3>
  *
- * {@link io.netty.buffer.ChannelBuffer} has rich set of operations
+ * {@link io.netty.buffer.ByteBuf} has rich set of operations
  * optimized for rapid protocol implementation.  For example,
- * {@link io.netty.buffer.ChannelBuffer} provides various operations
+ * {@link io.netty.buffer.ByteBuf} provides various operations
  * for accessing unsigned values and strings and searching for certain byte
  * sequence in a buffer.  You can also extend or wrap existing buffer type
  * to add convenient accessors.  The custom buffer type still implements
- * {@link io.netty.buffer.ChannelBuffer} interface rather than
+ * {@link io.netty.buffer.ByteBuf} interface rather than
  * introducing an incompatible type.
  *
  * <h3>Transparent Zero Copy</h3>
@@ -70,7 +70,7 @@
  * // The composite type is incompatible with the component type.
  * ByteBuffer[] message = new ByteBuffer[] { header, body };
  * </pre>
- * By contrast, {@link io.netty.buffer.ChannelBuffer} does not have such
+ * By contrast, {@link io.netty.buffer.ByteBuf} does not have such
  * caveats because it is fully extensible and has a built-in composite buffer
  * type.
  * <pre>
@@ -120,7 +120,7 @@
  * <h3>Better Performance</h3>
  *
  * Most frequently used buffer implementation of
- * {@link io.netty.buffer.ChannelBuffer} is a very thin wrapper of a
+ * {@link io.netty.buffer.ByteBuf} is a very thin wrapper of a
  * byte array (i.e. {@code byte[]}).  Unlike {@link java.nio.ByteBuffer}, it has
  * no complicated boundary check and index compensation, and therefore it is
  * easier for a JVM to optimize the buffer access.  More complicated buffer

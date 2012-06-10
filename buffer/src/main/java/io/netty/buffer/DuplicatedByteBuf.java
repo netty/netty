@@ -26,14 +26,14 @@ import java.nio.channels.ScatteringByteChannel;
 
 /**
  * A derived buffer which simply forwards all data access requests to its
- * parent.  It is recommended to use {@link ChannelBuffer#duplicate()} instead
+ * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements WrappedChannelBuffer {
+public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
 
-    public DuplicatedChannelBuffer(ChannelBuffer buffer) {
+    public DuplicatedByteBuf(ByteBuf buffer) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }
@@ -41,18 +41,18 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
-    private DuplicatedChannelBuffer(DuplicatedChannelBuffer buffer) {
+    private DuplicatedByteBuf(DuplicatedByteBuf buffer) {
         this.buffer = buffer.buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     @Override
-    public ChannelBuffer unwrap() {
+    public ByteBuf unwrap() {
         return buffer;
     }
 
     @Override
-    public ChannelBufferFactory factory() {
+    public ByteBufFactory factory() {
         return buffer.factory();
     }
 
@@ -112,22 +112,22 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        return new DuplicatedChannelBuffer(this);
+    public ByteBuf duplicate() {
+        return new DuplicatedByteBuf(this);
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         return buffer.copy(index, length);
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
+    public ByteBuf slice(int index, int length) {
         return buffer.slice(index, length);
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
@@ -172,7 +172,7 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
     }
 

@@ -24,21 +24,21 @@ import org.junit.Test;
  */
 public class ByteBufferBackedHeapChannelBufferTest extends AbstractChannelBufferTest {
 
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
-        buffer = new ByteBufferBackedChannelBuffer(ByteBuffer.allocate(length));
+    protected ByteBuf newBuffer(int length) {
+        buffer = new NioBufferBackedByteBuf(ByteBuffer.allocate(length));
         return buffer;
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new ByteBufferBackedChannelBuffer(null);
+        new NioBufferBackedByteBuf(null);
     }
 }

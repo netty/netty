@@ -22,24 +22,24 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * An {@link InputStream} which reads data from a {@link ChannelBuffer}.
+ * An {@link InputStream} which reads data from a {@link ByteBuf}.
  * <p>
  * A read operation against this stream will occur at the {@code readerIndex}
  * of its underlying buffer and the {@code readerIndex} will increase during
  * the read operation.  Please note that it only reads up to the number of
  * readable bytes determined at the moment of construction.  Therefore,
- * updating {@link ChannelBuffer#writerIndex()} will not affect the return
+ * updating {@link ByteBuf#writerIndex()} will not affect the return
  * value of {@link #available()}.
  * <p>
  * This stream implements {@link DataInput} for your convenience.
  * The endianness of the stream is not always big endian but depends on
  * the endianness of the underlying buffer.
- * @see ChannelBufferOutputStream
+ * @see ByteBufOutputStream
  * @apiviz.uses io.netty.buffer.ChannelBuffer
  */
-public class ChannelBufferInputStream extends InputStream implements DataInput {
+public class ByteBufInputStream extends InputStream implements DataInput {
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
     private final int startIndex;
     private final int endIndex;
 
@@ -48,7 +48,7 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
      * starting at the current {@code readerIndex} and ending at the current
      * {@code writerIndex}.
      */
-    public ChannelBufferInputStream(ChannelBuffer buffer) {
+    public ByteBufInputStream(ByteBuf buffer) {
         this(buffer, buffer.readableBytes());
     }
 
@@ -61,7 +61,7 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
      *         if {@code readerIndex + length} is greater than
      *            {@code writerIndex}
      */
-    public ChannelBufferInputStream(ChannelBuffer buffer, int length) {
+    public ByteBufInputStream(ByteBuf buffer, int length) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }

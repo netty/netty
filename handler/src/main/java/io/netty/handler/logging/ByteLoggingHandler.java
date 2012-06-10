@@ -15,7 +15,7 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
@@ -126,7 +126,7 @@ public class ByteLoggingHandler
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx)
             throws Exception {
-        ChannelBuffer buf = ctx.inboundByteBuffer();
+        ByteBuf buf = ctx.inboundByteBuffer();
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("RECEIVED", buf)));
         }
@@ -137,7 +137,7 @@ public class ByteLoggingHandler
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future)
             throws Exception {
-        ChannelBuffer buf = ctx.outboundByteBuffer();
+        ByteBuf buf = ctx.outboundByteBuffer();
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("WRITE", buf)));
         }
@@ -145,7 +145,7 @@ public class ByteLoggingHandler
         ctx.flush(future);
     }
 
-    protected String formatBuffer(String message, ChannelBuffer buf) {
+    protected String formatBuffer(String message, ByteBuf buf) {
         int length = buf.readableBytes();
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
         StringBuilder dump = new StringBuilder(rows * 80 + message.length() + 16);

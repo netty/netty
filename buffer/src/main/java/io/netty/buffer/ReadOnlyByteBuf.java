@@ -26,14 +26,14 @@ import java.nio.channels.ScatteringByteChannel;
 
 /**
  * A derived buffer which forbids any write requests to its parent.  It is
- * recommended to use {@link ChannelBuffers#unmodifiableBuffer(ChannelBuffer)}
+ * recommended to use {@link ChannelBuffers#unmodifiableBuffer(ByteBuf)}
  * instead of calling the constructor explicitly.
  */
-public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements WrappedChannelBuffer {
+public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
 
-    public ReadOnlyChannelBuffer(ChannelBuffer buffer) {
+    public ReadOnlyByteBuf(ByteBuf buffer) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }
@@ -41,18 +41,18 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
-    private ReadOnlyChannelBuffer(ReadOnlyChannelBuffer buffer) {
+    private ReadOnlyByteBuf(ReadOnlyByteBuf buffer) {
         this.buffer = buffer.buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     @Override
-    public ChannelBuffer unwrap() {
+    public ByteBuf unwrap() {
         return buffer;
     }
 
     @Override
-    public ChannelBufferFactory factory() {
+    public ByteBufFactory factory() {
         return buffer.factory();
     }
 
@@ -92,7 +92,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
@@ -156,7 +156,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
@@ -166,18 +166,18 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        return new ReadOnlyChannelBuffer(this);
+    public ByteBuf duplicate() {
+        return new ReadOnlyByteBuf(this);
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         return buffer.copy(index, length);
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
-        return new ReadOnlyChannelBuffer(buffer.slice(index, length));
+    public ByteBuf slice(int index, int length) {
+        return new ReadOnlyByteBuf(buffer.slice(index, length));
     }
 
     @Override

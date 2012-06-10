@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -140,7 +140,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
 
     ChannelBufferType bufferType();
 
-    ChannelBuffer outboundByteBuffer();
+    ByteBuf outboundByteBuffer();
     <T> Queue<T> outboundMessageBuffer();
 
     /**

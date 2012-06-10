@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelPipeline;
 
@@ -40,12 +40,12 @@ public interface HttpChunk {
      */
     HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
         @Override
-        public ChannelBuffer getContent() {
+        public ByteBuf getContent() {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
         @Override
-        public void setContent(ChannelBuffer content) {
+        public void setContent(ByteBuf content) {
             throw new IllegalStateException("read-only");
         }
 
@@ -115,11 +115,11 @@ public interface HttpChunk {
      * Returns the content of this chunk.  If this is the 'end of content'
      * marker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
      */
-    ChannelBuffer getContent();
+    ByteBuf getContent();
 
     /**
      * Sets the content of this chunk.  If an empty buffer is specified,
      * this chunk becomes the 'end of content' marker.
      */
-    void setContent(ChannelBuffer content);
+    void setContent(ByteBuf content);
 }

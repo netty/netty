@@ -15,7 +15,7 @@
  */
 package io.netty.example.echo;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
@@ -33,8 +33,8 @@ public class EchoServerHandler extends ChannelInboundByteHandlerAdapter {
             EchoServerHandler.class.getName());
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) {
-        ChannelBuffer out = ctx.nextOutboundByteBuffer();
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
+        ByteBuf out = ctx.nextOutboundByteBuffer();
         out.discardReadBytes();
         out.writeBytes(in);
         ctx.flush();

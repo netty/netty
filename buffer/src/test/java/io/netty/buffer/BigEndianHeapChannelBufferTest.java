@@ -24,22 +24,22 @@ import org.junit.Test;
  */
 public class BigEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
+    protected ByteBuf newBuffer(int length) {
         buffer = ChannelBuffers.buffer(length);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new BigEndianHeapChannelBuffer(null);
+        new BigEndianHeapByteBuf(null);
     }
 }

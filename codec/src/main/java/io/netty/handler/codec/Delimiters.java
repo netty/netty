@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 
 /**
@@ -27,8 +27,8 @@ public final class Delimiters {
      * Returns a {@code NUL (0x00)} delimiter, which could be used for
      * Flash XML socket or any similar protocols.
      */
-    public static ChannelBuffer[] nulDelimiter() {
-        return new ChannelBuffer[] {
+    public static ByteBuf[] nulDelimiter() {
+        return new ByteBuf[] {
                 ChannelBuffers.wrappedBuffer(new byte[] { 0 }) };
     }
 
@@ -36,8 +36,8 @@ public final class Delimiters {
      * Returns {@code CR ('\r')} and {@code LF ('\n')} delimiters, which could
      * be used for text-based line protocols.
      */
-    public static ChannelBuffer[] lineDelimiter() {
-        return new ChannelBuffer[] {
+    public static ByteBuf[] lineDelimiter() {
+        return new ByteBuf[] {
                 ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }),
                 ChannelBuffers.wrappedBuffer(new byte[] { '\n' }),
         };

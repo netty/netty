@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
- * Encodes a {@link WebSocketFrame} into a {@link ChannelBuffer}.
+ * Encodes a {@link WebSocketFrame} into a {@link ByteBuf}.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
@@ -40,10 +40,10 @@ public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame
     @Override
     public void encode(
             ChannelHandlerContext ctx,
-            WebSocketFrame msg, ChannelBuffer out) throws Exception {
+            WebSocketFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof TextWebSocketFrame) {
             // Text frame
-            ChannelBuffer data = msg.getBinaryData();
+            ByteBuf data = msg.getBinaryData();
             out.writeByte((byte) 0x00);
             out.writeBytes(data, data.readerIndex(), data.readableBytes());
             out.writeByte((byte) 0xFF);
@@ -53,7 +53,7 @@ public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame
             out.writeByte((byte) 0x00);
         } else {
             // Binary frame
-            ChannelBuffer data = msg.getBinaryData();
+            ByteBuf data = msg.getBinaryData();
             int dataLen = data.readableBytes();
             out.ensureWritableBytes(dataLen + 5);
 

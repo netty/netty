@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteDecoder;
 import io.netty.util.internal.jzlib.JZlib;
@@ -23,7 +23,7 @@ import io.netty.util.internal.jzlib.ZStream;
 
 
 /**
- * Decompresses a {@link ChannelBuffer} using the deflate algorithm.
+ * Decompresses a {@link ByteBuf} using the deflate algorithm.
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
@@ -89,7 +89,7 @@ public class ZlibDecoder extends ByteToByteDecoder {
     @Override
     public void decode(
             ChannelHandlerContext ctx,
-            ChannelBuffer in, ChannelBuffer out) throws Exception {
+            ByteBuf in, ByteBuf out) throws Exception {
 
         if (!in.readable()) {
             return;

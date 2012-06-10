@@ -18,7 +18,7 @@ package io.netty.testsuite.transport.socket;
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -123,7 +123,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<ChannelBuffer> {
+    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -137,7 +137,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         @Override
         public void messageReceived(
                 ChannelHandlerContext ctx,
-                ChannelBuffer msg) throws Exception {
+                ByteBuf msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];

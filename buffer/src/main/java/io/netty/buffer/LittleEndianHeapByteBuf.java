@@ -23,14 +23,14 @@ import java.nio.ByteOrder;
  * and {@link ChannelBuffers#wrappedBuffer(ByteOrder, byte[])} instead of
  * calling the constructor explicitly.
  */
-public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
+public class LittleEndianHeapByteBuf extends HeapByteBuf {
 
     /**
      * Creates a new little-endian heap buffer with a newly allocated byte array.
      *
      * @param length the length of the new byte array
      */
-    public LittleEndianHeapChannelBuffer(int length) {
+    public LittleEndianHeapByteBuf(int length) {
         super(length);
     }
 
@@ -39,17 +39,17 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
      *
      * @param array the byte array to wrap
      */
-    public LittleEndianHeapChannelBuffer(byte[] array) {
+    public LittleEndianHeapByteBuf(byte[] array) {
         super(array);
     }
 
-    private LittleEndianHeapChannelBuffer(byte[] array, int readerIndex, int writerIndex) {
+    private LittleEndianHeapByteBuf(byte[] array, int readerIndex, int writerIndex) {
         super(array, readerIndex, writerIndex);
     }
 
     @Override
-    public ChannelBufferFactory factory() {
-        return HeapChannelBufferFactory.getInstance(ByteOrder.LITTLE_ENDIAN);
+    public ByteBufFactory factory() {
+        return HeapByteBufFactory.getInstance(ByteOrder.LITTLE_ENDIAN);
     }
 
     @Override
@@ -123,12 +123,12 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        return new LittleEndianHeapChannelBuffer(array, readerIndex(), writerIndex());
+    public ByteBuf duplicate() {
+        return new LittleEndianHeapByteBuf(array, readerIndex(), writerIndex());
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         if (index < 0 || length < 0 || index + length > array.length) {
             throw new IndexOutOfBoundsException("Copy could not be completed. Bytes needed: "
                     + (index + length) + ", maximum: " + array.length);
@@ -136,6 +136,6 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
 
         byte[] copiedArray = new byte[length];
         System.arraycopy(array, index, copiedArray, 0, length);
-        return new LittleEndianHeapChannelBuffer(copiedArray);
+        return new LittleEndianHeapByteBuf(copiedArray);
     }
 }

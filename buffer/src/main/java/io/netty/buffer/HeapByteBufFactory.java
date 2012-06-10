@@ -19,24 +19,24 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * A {@link ChannelBufferFactory} which merely allocates a heap buffer with
- * the specified capacity.  {@link HeapChannelBufferFactory} should perform
+ * A {@link ByteBufFactory} which merely allocates a heap buffer with
+ * the specified capacity.  {@link HeapByteBufFactory} should perform
  * very well in most situations because it relies on the JVM garbage collector,
  * which is highly optimized for heap allocation.
  */
-public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
+public class HeapByteBufFactory extends AbstractByteBufFactory {
 
-    private static final HeapChannelBufferFactory INSTANCE_BE =
-        new HeapChannelBufferFactory(ByteOrder.BIG_ENDIAN);
+    private static final HeapByteBufFactory INSTANCE_BE =
+        new HeapByteBufFactory(ByteOrder.BIG_ENDIAN);
 
-    private static final HeapChannelBufferFactory INSTANCE_LE =
-        new HeapChannelBufferFactory(ByteOrder.LITTLE_ENDIAN);
+    private static final HeapByteBufFactory INSTANCE_LE =
+        new HeapByteBufFactory(ByteOrder.LITTLE_ENDIAN);
 
-    public static ChannelBufferFactory getInstance() {
+    public static ByteBufFactory getInstance() {
         return INSTANCE_BE;
     }
 
-    public static ChannelBufferFactory getInstance(ByteOrder endianness) {
+    public static ByteBufFactory getInstance(ByteOrder endianness) {
         if (endianness == ByteOrder.BIG_ENDIAN) {
             return INSTANCE_BE;
         } else if (endianness == ByteOrder.LITTLE_ENDIAN) {
@@ -52,7 +52,7 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
      * Creates a new factory whose default {@link ByteOrder} is
      * {@link ByteOrder#BIG_ENDIAN}.
      */
-    public HeapChannelBufferFactory() {
+    public HeapByteBufFactory() {
     }
 
     /**
@@ -60,27 +60,27 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
      *
      * @param defaultOrder the default {@link ByteOrder} of this factory
      */
-    public HeapChannelBufferFactory(ByteOrder defaultOrder) {
+    public HeapByteBufFactory(ByteOrder defaultOrder) {
         super(defaultOrder);
     }
 
     @Override
-    public ChannelBuffer getBuffer(ByteOrder order, int capacity) {
+    public ByteBuf getBuffer(ByteOrder order, int capacity) {
         return ChannelBuffers.buffer(order, capacity);
     }
 
     @Override
-    public ChannelBuffer getBuffer(ByteOrder order, byte[] array, int offset, int length) {
+    public ByteBuf getBuffer(ByteOrder order, byte[] array, int offset, int length) {
         return ChannelBuffers.wrappedBuffer(order, array, offset, length);
     }
 
     @Override
-    public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
+    public ByteBuf getBuffer(ByteBuffer nioBuffer) {
         if (nioBuffer.hasArray()) {
             return ChannelBuffers.wrappedBuffer(nioBuffer);
         }
 
-        ChannelBuffer buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
+        ByteBuf buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
         int pos = nioBuffer.position();
         buf.writeBytes(nioBuffer);
         nioBuffer.position(pos);

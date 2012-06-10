@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
@@ -147,7 +147,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected int doReadBytes(ChannelBuffer buf) throws Exception {
+    protected int doReadBytes(ByteBuf buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
@@ -159,7 +159,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected int doWriteBytes(ChannelBuffer buf) throws Exception {
+    protected int doWriteBytes(ByteBuf buf) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();

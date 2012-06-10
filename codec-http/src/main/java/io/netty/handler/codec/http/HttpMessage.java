@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 
 import java.util.Calendar;
@@ -85,13 +85,13 @@ public interface HttpMessage {
      * {@link #isChunked()} returns {@code true}, an
      * {@link ChannelBuffers#EMPTY_BUFFER} is returned.
      */
-    ChannelBuffer getContent();
+    ByteBuf getContent();
 
     /**
      * Sets the content of this message.  If {@code null} is specified,
      * the content of this message will be set to {@link ChannelBuffers#EMPTY_BUFFER}.
      */
-    void setContent(ChannelBuffer content);
+    void setContent(ByteBuf content);
 
     /**
      * Adds a new header with the specified name and value.

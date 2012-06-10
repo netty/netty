@@ -15,11 +15,11 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.AbstractChannelBuffer;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.AbstractByteBuf;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.buffer.HeapChannelBufferFactory;
+import io.netty.buffer.HeapByteBufFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,7 +54,7 @@ public final class ChannelBufferHolders {
         return byteBuffer(ChannelBuffers.dynamicBuffer());
     }
 
-    public static ChannelBufferHolder<Byte> byteBuffer(ChannelBuffer buffer) {
+    public static ChannelBufferHolder<Byte> byteBuffer(ByteBuf buffer) {
         return new ChannelBufferHolder<Byte>(buffer);
     }
 
@@ -99,11 +99,11 @@ public final class ChannelBufferHolders {
         }
     }
 
-    private static class NoopByteBuf extends AbstractChannelBuffer {
+    private static class NoopByteBuf extends AbstractByteBuf {
 
         @Override
-        public ChannelBufferFactory factory() {
-            return HeapChannelBufferFactory.getInstance();
+        public ByteBufFactory factory() {
+            return HeapByteBufFactory.getInstance();
         }
 
         @Override
@@ -147,7 +147,7 @@ public final class ChannelBufferHolders {
         }
 
         @Override
-        public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
+        public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
             // NOOP
         }
 
@@ -199,7 +199,7 @@ public final class ChannelBufferHolders {
         }
 
         @Override
-        public void setBytes(int index, ChannelBuffer src, int srcIndex,
+        public void setBytes(int index, ByteBuf src, int srcIndex,
                 int length) {
             // NOOP
         }
@@ -227,17 +227,17 @@ public final class ChannelBufferHolders {
         }
 
         @Override
-        public ChannelBuffer copy(int index, int length) {
+        public ByteBuf copy(int index, int length) {
             return this;
         }
 
         @Override
-        public ChannelBuffer slice(int index, int length) {
+        public ByteBuf slice(int index, int length) {
             return this;
         }
 
         @Override
-        public ChannelBuffer duplicate() {
+        public ByteBuf duplicate() {
             return this;
         }
 

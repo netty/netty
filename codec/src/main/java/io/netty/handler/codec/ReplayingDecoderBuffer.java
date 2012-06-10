@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.ChannelBufferIndexFinder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
+import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.Signal;
 
@@ -30,11 +30,11 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-class ReplayingDecoderBuffer implements ChannelBuffer {
+class ReplayingDecoderBuffer implements ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
     private boolean terminated;
 
     public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(ChannelBuffers.EMPTY_BUFFER);
@@ -43,7 +43,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         EMPTY_BUFFER.terminate();
     }
 
-    ReplayingDecoderBuffer(ChannelBuffer buffer) {
+    ReplayingDecoderBuffer(ByteBuf buffer) {
         this.buffer = buffer;
     }
 
@@ -91,17 +91,17 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public int compareTo(ChannelBuffer buffer) {
+    public int compareTo(ByteBuf buffer) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public ChannelBuffer copy() {
+    public ByteBuf copy() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
         return buffer.copy(index, length);
     }
@@ -117,7 +117,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer duplicate() {
+    public ByteBuf duplicate() {
         throw new UnreplayableOperationException();
     }
 
@@ -157,18 +157,18 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int length) {
+    public void getBytes(int index, ByteBuf dst, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst) {
+    public void getBytes(int index, ByteBuf dst) {
         throw new UnreplayableOperationException();
     }
 
@@ -260,7 +260,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Override
     public int indexOf(int fromIndex, int toIndex,
-            ChannelBufferIndexFinder indexFinder) {
+            ByteBufIndexFinder indexFinder) {
         int endIndex = buffer.indexOf(fromIndex, toIndex, indexFinder);
         if (endIndex < 0) {
             throw REPLAY;
@@ -278,7 +278,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public int bytesBefore(ChannelBufferIndexFinder indexFinder) {
+    public int bytesBefore(ByteBufIndexFinder indexFinder) {
         int bytes = buffer.bytesBefore(indexFinder);
         if (bytes < 0) {
             throw REPLAY;
@@ -297,7 +297,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public int bytesBefore(int length, ChannelBufferIndexFinder indexFinder) {
+    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
         checkReadableBytes(length);
         int bytes = buffer.bytesBefore(length, indexFinder);
         if (bytes < 0) {
@@ -317,7 +317,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Override
     public int bytesBefore(int index, int length,
-            ChannelBufferIndexFinder indexFinder) {
+            ByteBufIndexFinder indexFinder) {
         int bytes = buffer.bytesBefore(index, length, indexFinder);
         if (bytes < 0) {
             throw REPLAY;
@@ -336,7 +336,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public ChannelBufferFactory factory() {
+    public ByteBufFactory factory() {
         return buffer.factory();
     }
 
@@ -395,18 +395,18 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public void readBytes(ChannelBuffer dst, int dstIndex, int length) {
+    public void readBytes(ByteBuf dst, int dstIndex, int length) {
         checkReadableBytes(length);
         buffer.readBytes(dst, dstIndex, length);
     }
 
     @Override
-    public void readBytes(ChannelBuffer dst, int length) {
+    public void readBytes(ByteBuf dst, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void readBytes(ChannelBuffer dst) {
+    public void readBytes(ByteBuf dst) {
         throw new UnreplayableOperationException();
     }
 
@@ -417,13 +417,13 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer readBytes(int length) {
+    public ByteBuf readBytes(int length) {
         checkReadableBytes(length);
         return buffer.readBytes(length);
     }
 
     @Override
-    public ChannelBuffer readSlice(int length) {
+    public ByteBuf readSlice(int length) {
         checkReadableBytes(length);
         return buffer.readSlice(length);
     }
@@ -539,17 +539,17 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int length) {
+    public void setBytes(int index, ByteBuf src, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src) {
+    public void setBytes(int index, ByteBuf src) {
         throw new UnreplayableOperationException();
     }
 
@@ -617,12 +617,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer slice() {
+    public ByteBuf slice() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
+    public ByteBuf slice(int index, int length) {
         checkIndex(index, length);
         return buffer.slice(index, length);
     }
@@ -701,17 +701,17 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     @Override
-    public void writeBytes(ChannelBuffer src, int srcIndex, int length) {
+    public void writeBytes(ByteBuf src, int srcIndex, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(ChannelBuffer src, int length) {
+    public void writeBytes(ByteBuf src, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(ChannelBuffer src) {
+    public void writeBytes(ByteBuf src) {
         throw new UnreplayableOperationException();
     }
 

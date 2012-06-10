@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 
 /**
@@ -60,12 +60,12 @@ public interface SpdyDataFrame {
      * Returns the data payload of this frame.  If there is no data payload
      * {@link ChannelBuffers#EMPTY_BUFFER} is returned.
      */
-    ChannelBuffer getData();
+    ByteBuf getData();
 
     /**
      * Sets the data payload of this frame.  If {@code null} is specified,
      * the data payload will be set to {@link ChannelBuffers#EMPTY_BUFFER}.
      * The data payload cannot exceed 16777215 bytes.
      */
-    void setData(ChannelBuffer data);
+    void setData(ByteBuf data);
 }

@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandler;
 
 public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
 
     @Override
-    protected ChannelBuffer input(byte[] input) {
-        ChannelBuffer length = ChannelBuffers.buffer(4);
+    protected ByteBuf input(byte[] input) {
+        ByteBuf length = ChannelBuffers.buffer(4);
         length.writeInt(input.length);
         return ChannelBuffers.wrappedBuffer(length, ChannelBuffers.wrappedBuffer(input));
     }

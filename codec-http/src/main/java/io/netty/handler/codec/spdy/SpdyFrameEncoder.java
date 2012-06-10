@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -28,7 +28,7 @@ import java.nio.ByteOrder;
 import java.util.Set;
 
 /**
- * Encodes a SPDY Data or Control Frame into a {@link ChannelBuffer}.
+ * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
  */
 public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
@@ -91,11 +91,11 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            ChannelBuffer data = spdyDataFrame.getData();
+            ByteBuf data = spdyDataFrame.getData();
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
             out.ensureWritableBytes(SPDY_HEADER_SIZE + data.readableBytes());
             out.writeInt(spdyDataFrame.getStreamID() & 0x7FFFFFFF);
@@ -106,7 +106,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            ChannelBuffer data = compressHeaderBlock(
+            ByteBuf data = compressHeaderBlock(
                     encodeHeaderBlock(version, spdySynStreamFrame));
             byte flags = spdySynStreamFrame.isLast() ? SPDY_FLAG_FIN : 0;
             if (spdySynStreamFrame.isUnidirectional()) {
@@ -144,7 +144,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            ChannelBuffer data = compressHeaderBlock(
+            ByteBuf data = compressHeaderBlock(
                     encodeHeaderBlock(version, spdySynReplyFrame));
             byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
             int headerBlockLength = data.readableBytes();
@@ -249,7 +249,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            ChannelBuffer data = compressHeaderBlock(
+            ByteBuf data = compressHeaderBlock(
                     encodeHeaderBlock(version, spdyHeadersFrame));
             byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
             int headerBlockLength = data.readableBytes();
@@ -284,7 +284,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         }
     }
 
-    private static void writeLengthField(int version, ChannelBuffer buffer, int length) {
+    private static void writeLengthField(int version, ByteBuf buffer, int length) {
         if (version < 3) {
             buffer.writeShort(length);
         } else {
@@ -292,7 +292,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         }
     }
 
-    private static void setLengthField(int version, ChannelBuffer buffer, int writerIndex, int length) {
+    private static void setLengthField(int version, ByteBuf buffer, int writerIndex, int length) {
         if (version < 3) {
             buffer.setShort(writerIndex, length);
         } else {
@@ -300,7 +300,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         }
     }
 
-    private static ChannelBuffer encodeHeaderBlock(int version, SpdyHeaderBlock headerFrame)
+    private static ByteBuf encodeHeaderBlock(int version, SpdyHeaderBlock headerFrame)
             throws Exception {
         Set<String> names = headerFrame.getHeaderNames();
         int numHeaders = names.size();
@@ -311,7 +311,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             throw new IllegalArgumentException(
                     "header block contains too many headers");
         }
-        ChannelBuffer headerBlock = ChannelBuffers.dynamicBuffer(
+        ByteBuf headerBlock = ChannelBuffers.dynamicBuffer(
                 ByteOrder.BIG_ENDIAN, 256);
         writeLengthField(version, headerBlock, numHeaders);
         for (String name: names) {
@@ -338,12 +338,12 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         return headerBlock;
     }
 
-    private synchronized ChannelBuffer compressHeaderBlock(
-            ChannelBuffer uncompressed) throws Exception {
+    private synchronized ByteBuf compressHeaderBlock(
+            ByteBuf uncompressed) throws Exception {
         if (uncompressed.readableBytes() == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
-        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
+        ByteBuf compressed = ChannelBuffers.dynamicBuffer();
         synchronized (headerBlockCompressor) {
             if (!finished) {
                 headerBlockCompressor.setInput(uncompressed);

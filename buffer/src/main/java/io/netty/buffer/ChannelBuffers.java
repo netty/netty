@@ -30,7 +30,7 @@ import java.util.List;
 
 
 /**
- * Creates a new {@link ChannelBuffer} by allocating new space or by wrapping
+ * Creates a new {@link ByteBuf} by allocating new space or by wrapping
  * or copying existing byte arrays, byte buffers and a string.
  *
  * <h3>Use static import</h3>
@@ -39,11 +39,11 @@ import java.util.List;
  * <pre>
  * import static io.netty.buffer.{@link ChannelBuffers}.*;
  *
- * {@link ChannelBuffer} heapBuffer    = buffer(128);
- * {@link ChannelBuffer} directBuffer  = directBuffer(256);
- * {@link ChannelBuffer} dynamicBuffer = dynamicBuffer(512);
- * {@link ChannelBuffer} wrappedBuffer = wrappedBuffer(new byte[128], new byte[256]);
- * {@link ChannelBuffer} copiedBuffe r = copiedBuffer({@link ByteBuffer}.allocate(128));
+ * {@link ByteBuf} heapBuffer    = buffer(128);
+ * {@link ByteBuf} directBuffer  = directBuffer(256);
+ * {@link ByteBuf} dynamicBuffer = dynamicBuffer(512);
+ * {@link ByteBuf} wrappedBuffer = wrappedBuffer(new byte[128], new byte[256]);
+ * {@link ByteBuf} copiedBuffe r = copiedBuffer({@link ByteBuffer}.allocate(128));
  * </pre>
  *
  * <h3>Allocating a new buffer</h3>
@@ -99,7 +99,7 @@ public final class ChannelBuffers {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ChannelBuffer EMPTY_BUFFER = new BigEndianHeapChannelBuffer(0);
+    public static final ByteBuf EMPTY_BUFFER = new BigEndianHeapByteBuf(0);
 
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
 
@@ -116,7 +116,7 @@ public final class ChannelBuffers {
      * {@code capacity}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer buffer(int capacity) {
+    public static ByteBuf buffer(int capacity) {
         return buffer(BIG_ENDIAN, capacity);
     }
 
@@ -125,17 +125,17 @@ public final class ChannelBuffers {
      * and {@code capacity}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer buffer(ByteOrder endianness, int capacity) {
+    public static ByteBuf buffer(ByteOrder endianness, int capacity) {
         if (endianness == BIG_ENDIAN) {
             if (capacity == 0) {
                 return EMPTY_BUFFER;
             }
-            return new BigEndianHeapChannelBuffer(capacity);
+            return new BigEndianHeapByteBuf(capacity);
         } else if (endianness == LITTLE_ENDIAN) {
             if (capacity == 0) {
                 return EMPTY_BUFFER;
             }
-            return new LittleEndianHeapChannelBuffer(capacity);
+            return new LittleEndianHeapByteBuf(capacity);
         } else {
             throw new NullPointerException("endianness");
         }
@@ -146,7 +146,7 @@ public final class ChannelBuffers {
      * {@code capacity}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer directBuffer(int capacity) {
+    public static ByteBuf directBuffer(int capacity) {
         return directBuffer(BIG_ENDIAN, capacity);
     }
 
@@ -155,7 +155,7 @@ public final class ChannelBuffers {
      * {@code capacity}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer directBuffer(ByteOrder endianness, int capacity) {
+    public static ByteBuf directBuffer(ByteOrder endianness, int capacity) {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
@@ -163,7 +163,7 @@ public final class ChannelBuffers {
             return EMPTY_BUFFER;
         }
 
-        ChannelBuffer buffer = new ByteBufferBackedChannelBuffer(
+        ByteBuf buffer = new NioBufferBackedByteBuf(
                 ByteBuffer.allocateDirect(capacity).order(endianness));
         buffer.clear();
         return buffer;
@@ -174,16 +174,16 @@ public final class ChannelBuffers {
      * {@code 256} bytes.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer dynamicBuffer() {
+    public static ByteBuf dynamicBuffer() {
         return dynamicBuffer(BIG_ENDIAN, 256);
     }
 
-    public static ChannelBuffer dynamicBuffer(ChannelBufferFactory factory) {
+    public static ByteBuf dynamicBuffer(ByteBufFactory factory) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
 
-        return new DynamicChannelBuffer(factory.getDefaultOrder(), 256, factory);
+        return new DynamicByteBuf(factory.getDefaultOrder(), 256, factory);
     }
 
     /**
@@ -192,7 +192,7 @@ public final class ChannelBuffers {
      * reallocation overhead.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer dynamicBuffer(int estimatedLength) {
+    public static ByteBuf dynamicBuffer(int estimatedLength) {
         return dynamicBuffer(BIG_ENDIAN, estimatedLength);
     }
 
@@ -202,8 +202,8 @@ public final class ChannelBuffers {
      * less unexpected reallocation overhead.  The new buffer's
      * {@code readerIndex} and {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer dynamicBuffer(ByteOrder endianness, int estimatedLength) {
-        return new DynamicChannelBuffer(endianness, estimatedLength);
+    public static ByteBuf dynamicBuffer(ByteOrder endianness, int estimatedLength) {
+        return new DynamicByteBuf(endianness, estimatedLength);
     }
 
     /**
@@ -212,12 +212,12 @@ public final class ChannelBuffers {
      * less unexpected reallocation overhead.  The new buffer's {@code readerIndex}
      * and {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer dynamicBuffer(int estimatedLength, ChannelBufferFactory factory) {
+    public static ByteBuf dynamicBuffer(int estimatedLength, ByteBufFactory factory) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
 
-        return new DynamicChannelBuffer(factory.getDefaultOrder(), estimatedLength, factory);
+        return new DynamicByteBuf(factory.getDefaultOrder(), estimatedLength, factory);
     }
 
     /**
@@ -226,9 +226,9 @@ public final class ChannelBuffers {
      * More accurate estimation yields less unexpected reallocation overhead.
      * The new buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer dynamicBuffer(
-            ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
-        return new DynamicChannelBuffer(endianness, estimatedLength, factory);
+    public static ByteBuf dynamicBuffer(
+            ByteOrder endianness, int estimatedLength, ByteBufFactory factory) {
+        return new DynamicByteBuf(endianness, estimatedLength, factory);
     }
 
     /**
@@ -236,7 +236,7 @@ public final class ChannelBuffers {
      * A modification on the specified array's content will be visible to the
      * returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(byte[] array) {
+    public static ByteBuf wrappedBuffer(byte[] array) {
         return wrappedBuffer(BIG_ENDIAN, array);
     }
 
@@ -245,17 +245,17 @@ public final class ChannelBuffers {
      * specified {@code endianness}.  A modification on the specified array's
      * content will be visible to the returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[] array) {
+    public static ByteBuf wrappedBuffer(ByteOrder endianness, byte[] array) {
         if (endianness == BIG_ENDIAN) {
             if (array.length == 0) {
                 return EMPTY_BUFFER;
             }
-            return new BigEndianHeapChannelBuffer(array);
+            return new BigEndianHeapByteBuf(array);
         } else if (endianness == LITTLE_ENDIAN) {
             if (array.length == 0) {
                 return EMPTY_BUFFER;
             }
-            return new LittleEndianHeapChannelBuffer(array);
+            return new LittleEndianHeapByteBuf(array);
         } else {
             throw new NullPointerException("endianness");
         }
@@ -266,7 +266,7 @@ public final class ChannelBuffers {
      * specified {@code array}.  A modification on the specified array's
      * content will be visible to the returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(byte[] array, int offset, int length) {
+    public static ByteBuf wrappedBuffer(byte[] array, int offset, int length) {
         return wrappedBuffer(BIG_ENDIAN, array, offset, length);
     }
 
@@ -275,7 +275,7 @@ public final class ChannelBuffers {
      * {@code array} with the specified {@code endianness}.  A modification on
      * the specified array's content will be visible to the returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
+    public static ByteBuf wrappedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
@@ -286,14 +286,14 @@ public final class ChannelBuffers {
                 if (length == 0) {
                     return EMPTY_BUFFER;
                 } else {
-                    return new TruncatedChannelBuffer(wrappedBuffer(endianness, array), length);
+                    return new TruncatedByteBuf(wrappedBuffer(endianness, array), length);
                 }
             }
         } else {
             if (length == 0) {
                 return EMPTY_BUFFER;
             } else {
-                return new SlicedChannelBuffer(wrappedBuffer(endianness, array), offset, length);
+                return new SlicedByteBuf(wrappedBuffer(endianness, array), offset, length);
             }
         }
     }
@@ -303,7 +303,7 @@ public final class ChannelBuffers {
      * slice.  A modification on the specified buffer's content will be
      * visible to the returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(ByteBuffer buffer) {
+    public static ByteBuf wrappedBuffer(ByteBuffer buffer) {
         if (!buffer.hasRemaining()) {
             return EMPTY_BUFFER;
         }
@@ -314,7 +314,7 @@ public final class ChannelBuffers {
                     buffer.arrayOffset() + buffer.position(),
                     buffer.remaining());
         } else {
-            return new ByteBufferBackedChannelBuffer(buffer);
+            return new NioBufferBackedByteBuf(buffer);
         }
     }
 
@@ -323,7 +323,7 @@ public final class ChannelBuffers {
      * A modification on the specified buffer's content will be visible to the
      * returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(ChannelBuffer buffer) {
+    public static ByteBuf wrappedBuffer(ByteBuf buffer) {
         if (buffer.readable()) {
             return buffer.slice();
         } else {
@@ -336,7 +336,7 @@ public final class ChannelBuffers {
      * arrays without copying them.  A modification on the specified arrays'
      * content will be visible to the returned buffer.
      */
-    public static ChannelBuffer wrappedBuffer(byte[]... arrays) {
+    public static ByteBuf wrappedBuffer(byte[]... arrays) {
         return wrappedBuffer(BIG_ENDIAN, arrays);
     }
 
@@ -347,7 +347,7 @@ public final class ChannelBuffers {
      *
      * @param endianness the endianness of the new buffer
      */
-    public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[]... arrays) {
+    public static ByteBuf wrappedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
             break;
@@ -358,7 +358,7 @@ public final class ChannelBuffers {
             break;
         default:
             // Get the list of the component, while guessing the byte order.
-            final List<ChannelBuffer> components = new ArrayList<ChannelBuffer>(arrays.length);
+            final List<ByteBuf> components = new ArrayList<ByteBuf>(arrays.length);
             for (byte[] a: arrays) {
                 if (a == null) {
                     break;
@@ -373,15 +373,15 @@ public final class ChannelBuffers {
         return EMPTY_BUFFER;
     }
 
-    private static ChannelBuffer compositeBuffer(
-            ByteOrder endianness, List<ChannelBuffer> components) {
+    private static ByteBuf compositeBuffer(
+            ByteOrder endianness, List<ByteBuf> components) {
         switch (components.size()) {
         case 0:
             return EMPTY_BUFFER;
         case 1:
             return components.get(0);
         default:
-            return new CompositeChannelBuffer(endianness, components);
+            return new CompositeByteBuf(endianness, components);
         }
     }
 
@@ -394,7 +394,7 @@ public final class ChannelBuffers {
      *         if the specified buffers' endianness are different from each
      *         other
      */
-    public static ChannelBuffer wrappedBuffer(ChannelBuffer... buffers) {
+    public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
         switch (buffers.length) {
         case 0:
             break;
@@ -405,8 +405,8 @@ public final class ChannelBuffers {
             break;
         default:
             ByteOrder order = null;
-            final List<ChannelBuffer> components = new ArrayList<ChannelBuffer>(buffers.length);
-            for (ChannelBuffer c: buffers) {
+            final List<ByteBuf> components = new ArrayList<ByteBuf>(buffers.length);
+            for (ByteBuf c: buffers) {
                 if (c == null) {
                     break;
                 }
@@ -419,10 +419,10 @@ public final class ChannelBuffers {
                     } else {
                         order = c.order();
                     }
-                    if (c instanceof CompositeChannelBuffer) {
+                    if (c instanceof CompositeByteBuf) {
                         // Expand nested composition.
                         components.addAll(
-                                ((CompositeChannelBuffer) c).decompose(
+                                ((CompositeByteBuf) c).decompose(
                                         c.readerIndex(), c.readableBytes()));
                     } else {
                         // An ordinary buffer (non-composite)
@@ -444,7 +444,7 @@ public final class ChannelBuffers {
      *         if the specified buffers' endianness are different from each
      *         other
      */
-    public static ChannelBuffer wrappedBuffer(ByteBuffer... buffers) {
+    public static ByteBuf wrappedBuffer(ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
             break;
@@ -455,7 +455,7 @@ public final class ChannelBuffers {
             break;
         default:
             ByteOrder order = null;
-            final List<ChannelBuffer> components = new ArrayList<ChannelBuffer>(buffers.length);
+            final List<ByteBuf> components = new ArrayList<ByteBuf>(buffers.length);
             for (ByteBuffer b: buffers) {
                 if (b == null) {
                     break;
@@ -483,7 +483,7 @@ public final class ChannelBuffers {
      * specified {@code array}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0} and {@code array.length} respectively.
      */
-    public static ChannelBuffer copiedBuffer(byte[] array) {
+    public static ByteBuf copiedBuffer(byte[] array) {
         return copiedBuffer(BIG_ENDIAN, array);
     }
 
@@ -493,17 +493,17 @@ public final class ChannelBuffers {
      * {@code readerIndex} and {@code writerIndex} are {@code 0} and
      * {@code array.length} respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[] array) {
+    public static ByteBuf copiedBuffer(ByteOrder endianness, byte[] array) {
         if (endianness == BIG_ENDIAN) {
             if (array.length == 0) {
                 return EMPTY_BUFFER;
             }
-            return new BigEndianHeapChannelBuffer(array.clone());
+            return new BigEndianHeapByteBuf(array.clone());
         } else if (endianness == LITTLE_ENDIAN) {
             if (array.length == 0) {
                 return EMPTY_BUFFER;
             }
-            return new LittleEndianHeapChannelBuffer(array.clone());
+            return new LittleEndianHeapByteBuf(array.clone());
         } else {
             throw new NullPointerException("endianness");
         }
@@ -515,7 +515,7 @@ public final class ChannelBuffers {
      * {@code readerIndex} and {@code writerIndex} are {@code 0} and
      * the specified {@code length} respectively.
      */
-    public static ChannelBuffer copiedBuffer(byte[] array, int offset, int length) {
+    public static ByteBuf copiedBuffer(byte[] array, int offset, int length) {
         return copiedBuffer(BIG_ENDIAN, array, offset, length);
     }
 
@@ -525,7 +525,7 @@ public final class ChannelBuffers {
      * buffer's {@code readerIndex} and {@code writerIndex} are {@code 0} and
      * the specified {@code length} respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
+    public static ByteBuf copiedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
@@ -543,7 +543,7 @@ public final class ChannelBuffers {
      * and {@code writerIndex} are {@code 0} and {@code buffer.remaining}
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteBuffer buffer) {
+    public static ByteBuf copiedBuffer(ByteBuffer buffer) {
         int length = buffer.remaining();
         if (length == 0) {
             return EMPTY_BUFFER;
@@ -564,7 +564,7 @@ public final class ChannelBuffers {
      * and {@code writerIndex} are {@code 0} and {@code buffer.readableBytes}
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(ChannelBuffer buffer) {
+    public static ByteBuf copiedBuffer(ByteBuf buffer) {
         if (buffer.readable()) {
             return buffer.copy();
         } else {
@@ -578,7 +578,7 @@ public final class ChannelBuffers {
      * and {@code writerIndex} are {@code 0} and the sum of all arrays'
      * {@code length} respectively.
      */
-    public static ChannelBuffer copiedBuffer(byte[]... arrays) {
+    public static ByteBuf copiedBuffer(byte[]... arrays) {
         return copiedBuffer(BIG_ENDIAN, arrays);
     }
 
@@ -588,7 +588,7 @@ public final class ChannelBuffers {
      * buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}
      * and the sum of all arrays' {@code length} respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[]... arrays) {
+    public static ByteBuf copiedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
             return EMPTY_BUFFER;
@@ -634,7 +634,7 @@ public final class ChannelBuffers {
      *         if the specified buffers' endianness are different from each
      *         other
      */
-    public static ChannelBuffer copiedBuffer(ChannelBuffer... buffers) {
+    public static ByteBuf copiedBuffer(ByteBuf... buffers) {
         switch (buffers.length) {
         case 0:
             return EMPTY_BUFFER;
@@ -642,7 +642,7 @@ public final class ChannelBuffers {
             return copiedBuffer(buffers[0]);
         }
 
-        ChannelBuffer[] copiedBuffers = new ChannelBuffer[buffers.length];
+        ByteBuf[] copiedBuffers = new ByteBuf[buffers.length];
         for (int i = 0; i < buffers.length; i ++) {
             copiedBuffers[i] = copiedBuffer(buffers[i]);
         }
@@ -659,7 +659,7 @@ public final class ChannelBuffers {
      *         if the specified buffers' endianness are different from each
      *         other
      */
-    public static ChannelBuffer copiedBuffer(ByteBuffer... buffers) {
+    public static ByteBuf copiedBuffer(ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
             return EMPTY_BUFFER;
@@ -667,7 +667,7 @@ public final class ChannelBuffers {
             return copiedBuffer(buffers[0]);
         }
 
-        ChannelBuffer[] copiedBuffers = new ChannelBuffer[buffers.length];
+        ByteBuf[] copiedBuffers = new ByteBuf[buffers.length];
         for (int i = 0; i < buffers.length; i ++) {
             copiedBuffers[i] = copiedBuffer(buffers[i]);
         }
@@ -680,7 +680,7 @@ public final class ChannelBuffers {
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
-    public static ChannelBuffer copiedBuffer(CharSequence string, Charset charset) {
+    public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
         return copiedBuffer(BIG_ENDIAN, string, charset);
     }
 
@@ -690,7 +690,7 @@ public final class ChannelBuffers {
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
-    public static ChannelBuffer copiedBuffer(
+    public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
         return copiedBuffer(BIG_ENDIAN, string, offset, length, charset);
     }
@@ -702,7 +702,7 @@ public final class ChannelBuffers {
      * {@code writerIndex} are {@code 0} and the length of the encoded string
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, CharSequence string, Charset charset) {
+    public static ByteBuf copiedBuffer(ByteOrder endianness, CharSequence string, Charset charset) {
         if (string == null) {
             throw new NullPointerException("string");
         }
@@ -721,7 +721,7 @@ public final class ChannelBuffers {
      * {@code writerIndex} are {@code 0} and the length of the encoded string
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(
+    public static ByteBuf copiedBuffer(
             ByteOrder endianness, CharSequence string, int offset, int length, Charset charset) {
         if (string == null) {
             throw new NullPointerException("string");
@@ -757,7 +757,7 @@ public final class ChannelBuffers {
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
-    public static ChannelBuffer copiedBuffer(char[] array, Charset charset) {
+    public static ByteBuf copiedBuffer(char[] array, Charset charset) {
         return copiedBuffer(BIG_ENDIAN, array, 0, array.length, charset);
     }
 
@@ -767,7 +767,7 @@ public final class ChannelBuffers {
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
-    public static ChannelBuffer copiedBuffer(
+    public static ByteBuf copiedBuffer(
             char[] array, int offset, int length, Charset charset) {
         return copiedBuffer(BIG_ENDIAN, array, offset, length, charset);
     }
@@ -779,7 +779,7 @@ public final class ChannelBuffers {
      * {@code writerIndex} are {@code 0} and the length of the encoded string
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, char[] array, Charset charset) {
+    public static ByteBuf copiedBuffer(ByteOrder endianness, char[] array, Charset charset) {
         return copiedBuffer(endianness, array, 0, array.length, charset);
     }
 
@@ -790,7 +790,7 @@ public final class ChannelBuffers {
      * {@code writerIndex} are {@code 0} and the length of the encoded string
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(
+    public static ByteBuf copiedBuffer(
             ByteOrder endianness, char[] array, int offset, int length, Charset charset) {
         if (array == null) {
             throw new NullPointerException("array");
@@ -802,9 +802,9 @@ public final class ChannelBuffers {
                 endianness, CharBuffer.wrap(array, offset, length), charset);
     }
 
-    private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
+    private static ByteBuf copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
         ByteBuffer dst = ChannelBuffers.encodeString(buffer, charset);
-        ChannelBuffer result = wrappedBuffer(endianness, dst.array());
+        ByteBuf result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.remaining());
         return result;
     }
@@ -815,30 +815,30 @@ public final class ChannelBuffers {
      * {@code readerIndex} and {@code writerIndex} with the specified
      * {@code buffer}.
      */
-    public static ChannelBuffer unmodifiableBuffer(ChannelBuffer buffer) {
-        if (buffer instanceof ReadOnlyChannelBuffer) {
-            buffer = ((ReadOnlyChannelBuffer) buffer).unwrap();
+    public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
+        if (buffer instanceof ReadOnlyByteBuf) {
+            buffer = ((ReadOnlyByteBuf) buffer).unwrap();
         }
-        return new ReadOnlyChannelBuffer(buffer);
+        return new ReadOnlyByteBuf(buffer);
     }
 
     /**
      * Creates a new 4-byte buffer that holds the specified 32-bit integer.
      */
-    public static ChannelBuffer copyInt(int value) {
-        ChannelBuffer buf = buffer(4);
+    public static ByteBuf copyInt(int value) {
+        ByteBuf buf = buffer(4);
         buf.writeInt(value);
         return buf;
     }
 
     /**
-     * Create a {@link ChannelBuffer} that holds all the given values as int's
+     * Create a {@link ByteBuf} that holds all the given values as int's
      */
-    public static ChannelBuffer copyInt(int... values) {
+    public static ByteBuf copyInt(int... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 4);
+        ByteBuf buffer = buffer(values.length * 4);
         for (int v: values) {
             buffer.writeInt(v);
         }
@@ -848,8 +848,8 @@ public final class ChannelBuffers {
     /**
      * Creates a new 2-byte buffer that holds the specified 16-bit integer.
      */
-    public static ChannelBuffer copyShort(int value) {
-        ChannelBuffer buf = buffer(2);
+    public static ByteBuf copyShort(int value) {
+        ByteBuf buf = buffer(2);
         buf.writeShort(value);
         return buf;
     }
@@ -857,11 +857,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 16-bit integers.
      */
-    public static ChannelBuffer copyShort(short... values) {
+    public static ByteBuf copyShort(short... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 2);
+        ByteBuf buffer = buffer(values.length * 2);
         for (int v: values) {
             buffer.writeShort(v);
         }
@@ -871,11 +871,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 16-bit integers.
      */
-    public static ChannelBuffer copyShort(int... values) {
+    public static ByteBuf copyShort(int... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 2);
+        ByteBuf buffer = buffer(values.length * 2);
         for (int v: values) {
             buffer.writeShort(v);
         }
@@ -885,8 +885,8 @@ public final class ChannelBuffers {
     /**
      * Creates a new 3-byte buffer that holds the specified 24-bit integer.
      */
-    public static ChannelBuffer copyMedium(int value) {
-        ChannelBuffer buf = buffer(3);
+    public static ByteBuf copyMedium(int value) {
+        ByteBuf buf = buffer(3);
         buf.writeMedium(value);
         return buf;
     }
@@ -894,11 +894,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 24-bit integers.
      */
-    public static ChannelBuffer copyMedium(int... values) {
+    public static ByteBuf copyMedium(int... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 3);
+        ByteBuf buffer = buffer(values.length * 3);
         for (int v: values) {
             buffer.writeMedium(v);
         }
@@ -908,8 +908,8 @@ public final class ChannelBuffers {
     /**
      * Creates a new 8-byte buffer that holds the specified 64-bit integer.
      */
-    public static ChannelBuffer copyLong(long value) {
-        ChannelBuffer buf = buffer(8);
+    public static ByteBuf copyLong(long value) {
+        ByteBuf buf = buffer(8);
         buf.writeLong(value);
         return buf;
     }
@@ -917,11 +917,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 64-bit integers.
      */
-    public static ChannelBuffer copyLong(long... values) {
+    public static ByteBuf copyLong(long... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 8);
+        ByteBuf buffer = buffer(values.length * 8);
         for (long v: values) {
             buffer.writeLong(v);
         }
@@ -931,8 +931,8 @@ public final class ChannelBuffers {
     /**
      * Creates a new single-byte buffer that holds the specified boolean value.
      */
-    public static ChannelBuffer copyBoolean(boolean value) {
-        ChannelBuffer buf = buffer(1);
+    public static ByteBuf copyBoolean(boolean value) {
+        ByteBuf buf = buffer(1);
         buf.writeBoolean(value);
         return buf;
     }
@@ -940,11 +940,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified boolean values.
      */
-    public static ChannelBuffer copyBoolean(boolean... values) {
+    public static ByteBuf copyBoolean(boolean... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length);
+        ByteBuf buffer = buffer(values.length);
         for (boolean v: values) {
             buffer.writeBoolean(v);
         }
@@ -954,8 +954,8 @@ public final class ChannelBuffers {
     /**
      * Creates a new 4-byte buffer that holds the specified 32-bit floating point number.
      */
-    public static ChannelBuffer copyFloat(float value) {
-        ChannelBuffer buf = buffer(4);
+    public static ByteBuf copyFloat(float value) {
+        ByteBuf buf = buffer(4);
         buf.writeFloat(value);
         return buf;
     }
@@ -963,11 +963,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 32-bit floating point numbers.
      */
-    public static ChannelBuffer copyFloat(float... values) {
+    public static ByteBuf copyFloat(float... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 4);
+        ByteBuf buffer = buffer(values.length * 4);
         for (float v: values) {
             buffer.writeFloat(v);
         }
@@ -977,8 +977,8 @@ public final class ChannelBuffers {
     /**
      * Creates a new 8-byte buffer that holds the specified 64-bit floating point number.
      */
-    public static ChannelBuffer copyDouble(double value) {
-        ChannelBuffer buf = buffer(8);
+    public static ByteBuf copyDouble(double value) {
+        ByteBuf buf = buffer(8);
         buf.writeDouble(value);
         return buf;
     }
@@ -986,11 +986,11 @@ public final class ChannelBuffers {
     /**
      * Create a new buffer that holds a sequence of the specified 64-bit floating point numbers.
      */
-    public static ChannelBuffer copyDouble(double... values) {
+    public static ByteBuf copyDouble(double... values) {
         if (values == null || values.length == 0) {
             return EMPTY_BUFFER;
         }
-        ChannelBuffer buffer = buffer(values.length * 8);
+        ByteBuf buffer = buffer(values.length * 8);
         for (double v: values) {
             buffer.writeDouble(v);
         }
@@ -1001,7 +1001,7 @@ public final class ChannelBuffers {
      * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
      */
-    public static String hexDump(ChannelBuffer buffer) {
+    public static String hexDump(ByteBuf buffer) {
         return hexDump(buffer, buffer.readerIndex(), buffer.readableBytes());
     }
 
@@ -1009,7 +1009,7 @@ public final class ChannelBuffers {
      * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's sub-region.
      */
-    public static String hexDump(ChannelBuffer buffer, int fromIndex, int length) {
+    public static String hexDump(ByteBuf buffer, int fromIndex, int length) {
         if (length < 0) {
             throw new IllegalArgumentException("length: " + length);
         }
@@ -1035,7 +1035,7 @@ public final class ChannelBuffers {
      * Calculates the hash code of the specified buffer.  This method is
      * useful when implementing a new buffer type.
      */
-    public static int hashCode(ChannelBuffer buffer) {
+    public static int hashCode(ByteBuf buffer) {
         final int aLen = buffer.readableBytes();
         final int intCount = aLen >>> 2;
         final int byteCount = aLen & 3;
@@ -1070,7 +1070,7 @@ public final class ChannelBuffers {
      * identical to each other as described in {@code ChannelBuffer#equals(Object)}.
      * This method is useful when implementing a new buffer type.
      */
-    public static boolean equals(ChannelBuffer bufferA, ChannelBuffer bufferB) {
+    public static boolean equals(ByteBuf bufferA, ByteBuf bufferB) {
         final int aLen = bufferA.readableBytes();
         if (aLen != bufferB.readableBytes()) {
             return false;
@@ -1112,10 +1112,10 @@ public final class ChannelBuffers {
     }
 
     /**
-     * Compares the two specified buffers as described in {@link ChannelBuffer#compareTo(ChannelBuffer)}.
+     * Compares the two specified buffers as described in {@link ByteBuf#compareTo(ByteBuf)}.
      * This method is useful when implementing a new buffer type.
      */
-    public static int compare(ChannelBuffer bufferA, ChannelBuffer bufferB) {
+    public static int compare(ByteBuf bufferA, ByteBuf bufferB) {
         final int aLen = bufferA.readableBytes();
         final int bLen = bufferB.readableBytes();
         final int minLength = Math.min(aLen, bLen);
@@ -1167,10 +1167,10 @@ public final class ChannelBuffers {
     }
 
     /**
-     * The default implementation of {@link ChannelBuffer#indexOf(int, int, byte)}.
+     * The default implementation of {@link ByteBuf#indexOf(int, int, byte)}.
      * This method is useful when implementing a new buffer type.
      */
-    public static int indexOf(ChannelBuffer buffer, int fromIndex, int toIndex, byte value) {
+    public static int indexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         if (fromIndex <= toIndex) {
             return firstIndexOf(buffer, fromIndex, toIndex, value);
         } else {
@@ -1179,10 +1179,10 @@ public final class ChannelBuffers {
     }
 
     /**
-     * The default implementation of {@link ChannelBuffer#indexOf(int, int, ChannelBufferIndexFinder)}.
+     * The default implementation of {@link ByteBuf#indexOf(int, int, ByteBufIndexFinder)}.
      * This method is useful when implementing a new buffer type.
      */
-    public static int indexOf(ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
+    public static int indexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         if (fromIndex <= toIndex) {
             return firstIndexOf(buffer, fromIndex, toIndex, indexFinder);
         } else {
@@ -1220,7 +1220,7 @@ public final class ChannelBuffers {
                       swapInt((int) (value >>> 32)) & 0xffffffffL;
     }
 
-    private static int firstIndexOf(ChannelBuffer buffer, int fromIndex, int toIndex, byte value) {
+    private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
             return -1;
@@ -1235,7 +1235,7 @@ public final class ChannelBuffers {
         return -1;
     }
 
-    private static int lastIndexOf(ChannelBuffer buffer, int fromIndex, int toIndex, byte value) {
+    private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         fromIndex = Math.min(fromIndex, buffer.capacity());
         if (fromIndex < 0 || buffer.capacity() == 0) {
             return -1;
@@ -1251,7 +1251,7 @@ public final class ChannelBuffers {
     }
 
     private static int firstIndexOf(
-            ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
+            ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
             return -1;
@@ -1267,7 +1267,7 @@ public final class ChannelBuffers {
     }
 
     private static int lastIndexOf(
-            ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
+            ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         fromIndex = Math.min(fromIndex, buffer.capacity());
         if (fromIndex < 0 || buffer.capacity() == 0) {
             return -1;

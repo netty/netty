@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.NoSuchBufferException;
 
@@ -52,9 +52,9 @@ final class CodecUtil {
                 return true;
             }
 
-            if (msg instanceof ChannelBuffer && ctx.hasNextInboundByteBuffer()) {
-                ChannelBuffer altDst = ctx.nextInboundByteBuffer();
-                ChannelBuffer src = (ChannelBuffer) msg;
+            if (msg instanceof ByteBuf && ctx.hasNextInboundByteBuffer()) {
+                ByteBuf altDst = ctx.nextInboundByteBuffer();
+                ByteBuf src = (ByteBuf) msg;
                 altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
                 return true;
             }
@@ -64,9 +64,9 @@ final class CodecUtil {
                 return true;
             }
 
-            if (msg instanceof ChannelBuffer && ctx.hasNextOutboundByteBuffer()) {
-                ChannelBuffer altDst = ctx.nextOutboundByteBuffer();
-                ChannelBuffer src = (ChannelBuffer) msg;
+            if (msg instanceof ByteBuf && ctx.hasNextOutboundByteBuffer()) {
+                ByteBuf altDst = ctx.nextOutboundByteBuffer();
+                ByteBuf src = (ByteBuf) msg;
                 altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
                 return true;
             }

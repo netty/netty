@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelBufferType;
@@ -44,7 +44,7 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
             assert eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = pipeline();
-            final ChannelBuffer byteBuf = pipeline.inboundByteBuffer();
+            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
             boolean closed = false;
             boolean read = false;
             try {
@@ -76,7 +76,7 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         while (buf.readable()) {
             doWriteBytes(buf);
         }
@@ -84,10 +84,10 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     protected abstract int available();
-    protected abstract int doReadBytes(ChannelBuffer buf) throws Exception;
-    protected abstract int doWriteBytes(ChannelBuffer buf) throws Exception;
+    protected abstract int doReadBytes(ByteBuf buf) throws Exception;
+    protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
-    private void expandReadBuffer(ChannelBuffer byteBuf) {
+    private void expandReadBuffer(ByteBuf byteBuf) {
         int available = available();
         if (available > 0) {
             byteBuf.ensureWritableBytes(available);

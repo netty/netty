@@ -23,14 +23,14 @@ import java.nio.ByteOrder;
  * and {@link ChannelBuffers#wrappedBuffer(byte[])} instead of calling the
  * constructor explicitly.
  */
-public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
+public class BigEndianHeapByteBuf extends HeapByteBuf {
 
     /**
      * Creates a new big-endian heap buffer with a newly allocated byte array.
      *
      * @param length the length of the new byte array
      */
-    public BigEndianHeapChannelBuffer(int length) {
+    public BigEndianHeapByteBuf(int length) {
         super(length);
     }
 
@@ -39,17 +39,17 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
      *
      * @param array the byte array to wrap
      */
-    public BigEndianHeapChannelBuffer(byte[] array) {
+    public BigEndianHeapByteBuf(byte[] array) {
         super(array);
     }
 
-    private BigEndianHeapChannelBuffer(byte[] array, int readerIndex, int writerIndex) {
+    private BigEndianHeapByteBuf(byte[] array, int readerIndex, int writerIndex) {
         super(array, readerIndex, writerIndex);
     }
 
     @Override
-    public ChannelBufferFactory factory() {
-        return HeapChannelBufferFactory.getInstance(ByteOrder.BIG_ENDIAN);
+    public ByteBufFactory factory() {
+        return HeapByteBufFactory.getInstance(ByteOrder.BIG_ENDIAN);
     }
 
     @Override
@@ -123,12 +123,12 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        return new BigEndianHeapChannelBuffer(array, readerIndex(), writerIndex());
+    public ByteBuf duplicate() {
+        return new BigEndianHeapByteBuf(array, readerIndex(), writerIndex());
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         if (index < 0 || length < 0 || index + length > array.length) {
             throw new IndexOutOfBoundsException("Too many bytes to copy - Need "
                     + (index + length) + ", maximum is " + array.length);
@@ -136,6 +136,6 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
 
         byte[] copiedArray = new byte[length];
         System.arraycopy(array, index, copiedArray, 0, length);
-        return new BigEndianHeapChannelBuffer(copiedArray);
+        return new BigEndianHeapByteBuf(copiedArray);
     }
 }

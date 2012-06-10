@@ -16,7 +16,7 @@
 package io.netty.channel.group;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -105,8 +105,8 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     /**
      * Writes the specified {@code message} to all {@link Channel}s in this
      * group. If the specified {@code message} is an instance of
-     * {@link ChannelBuffer}, it is automatically
-     * {@linkplain ChannelBuffer#duplicate() duplicated} to avoid a race
+     * {@link ByteBuf}, it is automatically
+     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
      * condition. Please note that this operation is asynchronous as
      * {@link Channel#write(Object)} is.
      *

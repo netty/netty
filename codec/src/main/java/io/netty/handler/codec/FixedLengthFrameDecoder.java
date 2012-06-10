@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
- * A decoder that splits the received {@link ChannelBuffer}s by the fixed number
+ * A decoder that splits the received {@link ByteBuf}s by the fixed number
  * of bytes. For example, if you received the following four fragmented packets:
  * <pre>
  * +---+----+------+----+
@@ -55,7 +55,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
      * @param frameLength
      *        the length of the frame
      * @param allocateFullBuffer
-     *        <code>true</code> if the cumulative {@link ChannelBuffer} should use the
+     *        <code>true</code> if the cumulative {@link ByteBuf} should use the
      *        {@link #frameLength} as its initial size
      */
     public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {
@@ -78,7 +78,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {

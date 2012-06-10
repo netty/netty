@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.internal.StringUtil;
 
@@ -30,7 +30,7 @@ public class DefaultHttpMessage implements HttpMessage {
 
     private final HttpHeaders headers = new HttpHeaders();
     private HttpVersion version;
-    private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
+    private ByteBuf content = ChannelBuffers.EMPTY_BUFFER;
     private boolean chunked;
 
     /**
@@ -83,7 +83,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     @Override
-    public void setContent(ChannelBuffer content) {
+    public void setContent(ByteBuf content) {
         if (content == null) {
             content = ChannelBuffers.EMPTY_BUFFER;
         }
@@ -133,7 +133,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     @Override
-    public ChannelBuffer getContent() {
+    public ByteBuf getContent() {
         return content;
     }
 

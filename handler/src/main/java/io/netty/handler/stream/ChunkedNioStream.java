@@ -16,7 +16,7 @@
 package io.netty.handler.stream;
 
 import static io.netty.buffer.ChannelBuffers.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -117,7 +117,7 @@ public class ChunkedNioStream implements ChunkedInput {
         }
         byteBuffer.flip();
         // copy since buffer is keeped for next usage
-        ChannelBuffer buffer = copiedBuffer(byteBuffer);
+        ByteBuf buffer = copiedBuffer(byteBuffer);
         byteBuffer.clear();
         return buffer;
     }

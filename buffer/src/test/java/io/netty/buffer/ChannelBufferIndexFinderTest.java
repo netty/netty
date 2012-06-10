@@ -28,39 +28,39 @@ public class ChannelBufferIndexFinderTest {
 
     @Test
     public void testForward() {
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(
+        ByteBuf buf = ChannelBuffers.copiedBuffer(
                 "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx",
                 CharsetUtil.ISO_8859_1);
 
-        assertEquals(3, buf.indexOf(Integer.MIN_VALUE, buf.capacity(), ChannelBufferIndexFinder.CRLF));
-        assertEquals(6, buf.indexOf(3, buf.capacity(), ChannelBufferIndexFinder.NOT_CRLF));
-        assertEquals(9, buf.indexOf(6, buf.capacity(), ChannelBufferIndexFinder.CR));
-        assertEquals(11, buf.indexOf(9, buf.capacity(), ChannelBufferIndexFinder.NOT_CR));
-        assertEquals(14, buf.indexOf(11, buf.capacity(), ChannelBufferIndexFinder.LF));
-        assertEquals(16, buf.indexOf(14, buf.capacity(), ChannelBufferIndexFinder.NOT_LF));
-        assertEquals(19, buf.indexOf(16, buf.capacity(), ChannelBufferIndexFinder.NUL));
-        assertEquals(21, buf.indexOf(19, buf.capacity(), ChannelBufferIndexFinder.NOT_NUL));
-        assertEquals(24, buf.indexOf(21, buf.capacity(), ChannelBufferIndexFinder.LINEAR_WHITESPACE));
-        assertEquals(28, buf.indexOf(24, buf.capacity(), ChannelBufferIndexFinder.NOT_LINEAR_WHITESPACE));
-        assertEquals(-1, buf.indexOf(28, buf.capacity(), ChannelBufferIndexFinder.LINEAR_WHITESPACE));
+        assertEquals(3, buf.indexOf(Integer.MIN_VALUE, buf.capacity(), ByteBufIndexFinder.CRLF));
+        assertEquals(6, buf.indexOf(3, buf.capacity(), ByteBufIndexFinder.NOT_CRLF));
+        assertEquals(9, buf.indexOf(6, buf.capacity(), ByteBufIndexFinder.CR));
+        assertEquals(11, buf.indexOf(9, buf.capacity(), ByteBufIndexFinder.NOT_CR));
+        assertEquals(14, buf.indexOf(11, buf.capacity(), ByteBufIndexFinder.LF));
+        assertEquals(16, buf.indexOf(14, buf.capacity(), ByteBufIndexFinder.NOT_LF));
+        assertEquals(19, buf.indexOf(16, buf.capacity(), ByteBufIndexFinder.NUL));
+        assertEquals(21, buf.indexOf(19, buf.capacity(), ByteBufIndexFinder.NOT_NUL));
+        assertEquals(24, buf.indexOf(21, buf.capacity(), ByteBufIndexFinder.LINEAR_WHITESPACE));
+        assertEquals(28, buf.indexOf(24, buf.capacity(), ByteBufIndexFinder.NOT_LINEAR_WHITESPACE));
+        assertEquals(-1, buf.indexOf(28, buf.capacity(), ByteBufIndexFinder.LINEAR_WHITESPACE));
     }
 
     @Test
     public void testBackward() {
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(
+        ByteBuf buf = ChannelBuffers.copiedBuffer(
                 "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx",
                 CharsetUtil.ISO_8859_1);
 
-        assertEquals(27, buf.indexOf(Integer.MAX_VALUE, 0, ChannelBufferIndexFinder.LINEAR_WHITESPACE));
-        assertEquals(23, buf.indexOf(28, 0, ChannelBufferIndexFinder.NOT_LINEAR_WHITESPACE));
-        assertEquals(20, buf.indexOf(24, 0, ChannelBufferIndexFinder.NUL));
-        assertEquals(18, buf.indexOf(21, 0, ChannelBufferIndexFinder.NOT_NUL));
-        assertEquals(15, buf.indexOf(19, 0, ChannelBufferIndexFinder.LF));
-        assertEquals(13, buf.indexOf(16, 0, ChannelBufferIndexFinder.NOT_LF));
-        assertEquals(10, buf.indexOf(14, 0, ChannelBufferIndexFinder.CR));
-        assertEquals(8, buf.indexOf(11, 0, ChannelBufferIndexFinder.NOT_CR));
-        assertEquals(5, buf.indexOf(9, 0, ChannelBufferIndexFinder.CRLF));
-        assertEquals(2, buf.indexOf(6, 0, ChannelBufferIndexFinder.NOT_CRLF));
-        assertEquals(-1, buf.indexOf(3, 0, ChannelBufferIndexFinder.CRLF));
+        assertEquals(27, buf.indexOf(Integer.MAX_VALUE, 0, ByteBufIndexFinder.LINEAR_WHITESPACE));
+        assertEquals(23, buf.indexOf(28, 0, ByteBufIndexFinder.NOT_LINEAR_WHITESPACE));
+        assertEquals(20, buf.indexOf(24, 0, ByteBufIndexFinder.NUL));
+        assertEquals(18, buf.indexOf(21, 0, ByteBufIndexFinder.NOT_NUL));
+        assertEquals(15, buf.indexOf(19, 0, ByteBufIndexFinder.LF));
+        assertEquals(13, buf.indexOf(16, 0, ByteBufIndexFinder.NOT_LF));
+        assertEquals(10, buf.indexOf(14, 0, ByteBufIndexFinder.CR));
+        assertEquals(8, buf.indexOf(11, 0, ByteBufIndexFinder.NOT_CR));
+        assertEquals(5, buf.indexOf(9, 0, ByteBufIndexFinder.CRLF));
+        assertEquals(2, buf.indexOf(6, 0, ByteBufIndexFinder.NOT_CRLF));
+        assertEquals(-1, buf.indexOf(3, 0, ByteBufIndexFinder.CRLF));
     }
 }

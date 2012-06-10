@@ -15,21 +15,21 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
 public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         callDecode(ctx, in, ctx.nextOutboundByteBuffer());
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        ChannelBuffer in = ctx.inboundByteBuffer();
-        ChannelBuffer out = ctx.nextInboundByteBuffer();
+        ByteBuf in = ctx.inboundByteBuffer();
+        ByteBuf out = ctx.nextInboundByteBuffer();
         if (!in.readable()) {
             callDecode(ctx, in, out);
         }
@@ -53,7 +53,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         ctx.fireChannelInactive();
     }
 
-    private void callDecode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) {
+    private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         int oldOutSize = out.readableBytes();
         while (in.readable()) {
             int oldInSize = in.readableBytes();
@@ -77,9 +77,9 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         }
     }
 
-    public abstract void decode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
+    public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
 
-    public void decodeLast(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception {
+    public void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         decode(ctx, in, out);
     }
 }

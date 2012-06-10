@@ -40,12 +40,12 @@ public abstract class AbstractCompositeChannelBufferTest extends
         this.order = order;
     }
 
-    private List<ChannelBuffer> buffers;
-    private ChannelBuffer buffer;
+    private List<ByteBuf> buffers;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
-        buffers = new ArrayList<ChannelBuffer>();
+    protected ByteBuf newBuffer(int length) {
+        buffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < length; i += 10) {
             buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[1]));
@@ -68,7 +68,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
             buffers.add(ChannelBuffers.EMPTY_BUFFER);
         }
 
-        buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
+        buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ByteBuf[buffers.size()]));
         buffer.writerIndex(length);
         buffer = ChannelBuffers.wrappedBuffer(buffer);
         assertEquals(length, buffer.capacity());
@@ -79,8 +79,8 @@ public abstract class AbstractCompositeChannelBufferTest extends
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return buffers.toArray(new ChannelBuffer[buffers.size()]);
+    protected ByteBuf[] components() {
+        return buffers.toArray(new ByteBuf[buffers.size()]);
     }
 
     // Composite buffer does not waste bandwidth on discardReadBytes, but
@@ -92,7 +92,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
     @Test
     public void testDiscardReadBytes3() {
-        ChannelBuffer a, b;
+        ByteBuf a, b;
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(
                 wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 0, 5),
@@ -131,13 +131,13 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
     @Test
     public void testCompositeWrappedBuffer() {
-        ChannelBuffer header = dynamicBuffer(order, 12);
-        ChannelBuffer payload = dynamicBuffer(order, 512);
+        ByteBuf header = dynamicBuffer(order, 12);
+        ByteBuf payload = dynamicBuffer(order, 512);
 
         header.writeBytes(new byte[12]);
         payload.writeBytes(new byte[512]);
 
-        ChannelBuffer buffer = wrappedBuffer(header, payload);
+        ByteBuf buffer = wrappedBuffer(header, payload);
 
         assertTrue(header.readableBytes() == 12);
         assertTrue(payload.readableBytes() == 512);
@@ -148,7 +148,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
     @Test
     public void testSeveralBuffersEquals() {
-        ChannelBuffer a, b;
+        ByteBuf a, b;
         //XXX Same tests with several buffers in wrappedCheckedBuffer
         // Different length.
         a = wrappedBuffer(order, new byte[] { 1  });
@@ -224,7 +224,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
         assertEquals(
                 wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2, 3 })),
-                wrappedBuffer(new ChannelBuffer[] {
+                wrappedBuffer(new ByteBuf[] {
                         wrappedBuffer(order, new byte[] { 1, 2, 3 })
                 }));
 
@@ -251,7 +251,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
     @Test
     public void testWrittenBuffersEquals() {
         //XXX Same tests than testEquals with written AggregateChannelBuffers
-        ChannelBuffer a, b;
+        ByteBuf a, b;
         // Different length.
         a = wrappedBuffer(order, new byte[] { 1  });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }, new byte[1]));

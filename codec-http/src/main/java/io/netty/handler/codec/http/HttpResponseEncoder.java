@@ -16,11 +16,11 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Encodes an {@link HttpResponse} or an {@link HttpChunk} into
- * a {@link ChannelBuffer}.
+ * a {@link ByteBuf}.
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {
 
@@ -31,7 +31,7 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
     }
 
     @Override
-    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
+    protected void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception {
         HttpResponse response = (HttpResponse) message;
         buf.writeBytes(response.getProtocolVersion().toString().getBytes("ASCII"));
         buf.writeByte(SP);

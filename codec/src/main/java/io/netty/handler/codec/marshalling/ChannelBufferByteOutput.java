@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ChannelBuffers;
 
 import java.io.IOException;
@@ -24,26 +24,26 @@ import java.io.IOException;
 import org.jboss.marshalling.ByteOutput;
 
 /**
- * {@link ByteOutput} implementation which writes the data to a {@link ChannelBuffer}
+ * {@link ByteOutput} implementation which writes the data to a {@link ByteBuf}
  *
  *
  */
 class ChannelBufferByteOutput implements ByteOutput {
 
-    private final ChannelBuffer buffer;
+    private final ByteBuf buffer;
 
 
     /**
-     * Create a new instance which use the given {@link ChannelBuffer}
+     * Create a new instance which use the given {@link ByteBuf}
      */
-    public ChannelBufferByteOutput(ChannelBuffer buffer) {
+    public ChannelBufferByteOutput(ByteBuf buffer) {
         this.buffer = buffer;
     }
 
     /**
-     * Calls {@link #ChannelBufferByteOutput(ChannelBuffer)} with a dynamic {@link ChannelBuffer}
+     * Calls {@link #ChannelBufferByteOutput(ByteBuf)} with a dynamic {@link ByteBuf}
      */
-    public ChannelBufferByteOutput(ChannelBufferFactory factory, int estimatedLength) {
+    public ChannelBufferByteOutput(ByteBufFactory factory, int estimatedLength) {
         this(ChannelBuffers.dynamicBuffer(estimatedLength, factory));
     }
 
@@ -73,10 +73,10 @@ class ChannelBufferByteOutput implements ByteOutput {
     }
 
     /**
-     * Return the {@link ChannelBuffer} which contains the written content
+     * Return the {@link ByteBuf} which contains the written content
      *
      */
-    public ChannelBuffer getBuffer() {
+    public ByteBuf getBuffer() {
         return buffer;
     }
 

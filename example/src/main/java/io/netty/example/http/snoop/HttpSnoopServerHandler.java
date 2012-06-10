@@ -19,7 +19,7 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -95,7 +95,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             if (request.isChunked()) {
                 readingChunks = true;
             } else {
-                ChannelBuffer content = request.getContent();
+                ByteBuf content = request.getContent();
                 if (content.readable()) {
                     buf.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
                 }

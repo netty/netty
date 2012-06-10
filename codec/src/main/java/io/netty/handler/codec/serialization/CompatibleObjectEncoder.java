@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.Attribute;
@@ -28,7 +28,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 
 /**
- * An encoder which serializes a Java object into a {@link ChannelBuffer}
+ * An encoder which serializes a Java object into a {@link ByteBuf}
  * (interoperability version).
  * <p>
  * This encoder is interoperable with the standard Java object streams such as
@@ -81,11 +81,11 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ChannelBuffer out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         Attribute<ObjectOutputStream> oosAttr = ctx.attr(OOS);
         ObjectOutputStream oos = oosAttr.get();
         if (oos == null) {
-            oos = newObjectOutputStream(new ChannelBufferOutputStream(out));
+            oos = newObjectOutputStream(new ByteBufOutputStream(out));
             ObjectOutputStream newOos = oosAttr.setIfAbsent(oos);
             if (newOos != null) {
                 oos = newOos;

@@ -15,16 +15,16 @@
  */
 package io.netty.channel.socket;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.net.InetSocketAddress;
 
 public class DatagramPacket {
 
-    private final ChannelBuffer data;
+    private final ByteBuf data;
     private final InetSocketAddress remoteAddress;
 
-    public DatagramPacket(ChannelBuffer data, InetSocketAddress remoteAddress) {
+    public DatagramPacket(ByteBuf data, InetSocketAddress remoteAddress) {
         if (data == null) {
             throw new NullPointerException("data");
         }
@@ -36,7 +36,7 @@ public class DatagramPacket {
         this.remoteAddress = remoteAddress;
     }
 
-    public ChannelBuffer data() {
+    public ByteBuf data() {
         return data;
     }
 

@@ -31,17 +31,17 @@ import java.util.List;
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
- * is recommended to use {@link ChannelBuffers#wrappedBuffer(ChannelBuffer...)}
+ * is recommended to use {@link ChannelBuffers#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class CompositeChannelBuffer extends AbstractChannelBuffer {
+public class CompositeByteBuf extends AbstractByteBuf {
 
     private final ByteOrder order;
-    private ChannelBuffer[] components;
+    private ByteBuf[] components;
     private int[] indices;
     private int lastAccessedComponentId;
 
-    public CompositeChannelBuffer(ByteOrder endianness, List<ChannelBuffer> buffers) {
+    public CompositeByteBuf(ByteOrder endianness, List<ByteBuf> buffers) {
         order = endianness;
         setComponents(buffers);
     }
@@ -49,7 +49,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     /**
      * Same with {@link #slice(int, int)} except that this method returns a list.
      */
-    public List<ChannelBuffer> decompose(int index, int length) {
+    public List<ByteBuf> decompose(int index, int length) {
         if (length == 0) {
             return Collections.emptyList();
         }
@@ -60,13 +60,13 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         int componentId = componentId(index);
-        List<ChannelBuffer> slice = new ArrayList<ChannelBuffer>(components.length);
+        List<ByteBuf> slice = new ArrayList<ByteBuf>(components.length);
 
         // The first component
-        ChannelBuffer first = components[componentId].duplicate();
+        ByteBuf first = components[componentId].duplicate();
         first.readerIndex(index - indices[componentId]);
 
-        ChannelBuffer buf = first;
+        ByteBuf buf = first;
         int bytesToSlice = length;
         do {
             int readableBytes = buf.readableBytes();
@@ -97,16 +97,16 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     /**
      * Setup this ChannelBuffer from the list
      */
-    private void setComponents(List<ChannelBuffer> newComponents) {
+    private void setComponents(List<ByteBuf> newComponents) {
         assert !newComponents.isEmpty();
 
         // Clear the cache.
         lastAccessedComponentId = 0;
 
         // Build the component array.
-        components = new ChannelBuffer[newComponents.size()];
+        components = new ByteBuf[newComponents.size()];
         for (int i = 0; i < components.length; i ++) {
-            ChannelBuffer c = newComponents.get(i);
+            ByteBuf c = newComponents.get(i);
             if (c.order() != order()) {
                 throw new IllegalArgumentException(
                         "All buffers must have the same endianness.");
@@ -129,7 +129,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         setIndex(0, capacity());
     }
 
-    private CompositeChannelBuffer(CompositeChannelBuffer buffer) {
+    private CompositeByteBuf(CompositeByteBuf buffer) {
         order = buffer.order;
         components = buffer.components.clone();
         indices = buffer.indices.clone();
@@ -137,8 +137,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBufferFactory factory() {
-        return HeapChannelBufferFactory.getInstance(order());
+    public ByteBufFactory factory() {
+        return HeapByteBufFactory.getInstance(order());
     }
 
     @Override
@@ -236,7 +236,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             s.getBytes(index - adjustment, dst, dstIndex, localLength);
@@ -260,7 +260,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int i = componentId;
         try {
             while (length > 0) {
-                ChannelBuffer s = components[i];
+                ByteBuf s = components[i];
                 int adjustment = indices[i];
                 int localLength = Math.min(length, s.capacity() - (index - adjustment));
                 dst.limit(dst.position() + localLength);
@@ -275,7 +275,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
@@ -285,7 +285,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             s.getBytes(index - adjustment, dst, dstIndex, localLength);
@@ -324,7 +324,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             s.getBytes(index - adjustment, out, localLength);
@@ -407,7 +407,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             s.setBytes(index - adjustment, src, srcIndex, localLength);
@@ -431,7 +431,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int i = componentId;
         try {
             while (length > 0) {
-                ChannelBuffer s = components[i];
+                ByteBuf s = components[i];
                 int adjustment = indices[i];
                 int localLength = Math.min(length, s.capacity() - (index - adjustment));
                 src.limit(src.position() + localLength);
@@ -446,7 +446,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || srcIndex > src.capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be written - Needs "
@@ -456,7 +456,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             s.setBytes(index - adjustment, src, srcIndex, localLength);
@@ -480,7 +480,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int readBytes = 0;
 
         do {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             int localReadBytes = s.setBytes(index - adjustment, in, localLength);
@@ -519,7 +519,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int i = componentId;
         int readBytes = 0;
         do {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             int localReadBytes = s.setBytes(index - adjustment, in, localLength);
@@ -540,31 +540,31 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        ChannelBuffer duplicate = new CompositeChannelBuffer(this);
+    public ByteBuf duplicate() {
+        ByteBuf duplicate = new CompositeByteBuf(this);
         duplicate.setIndex(readerIndex(), writerIndex());
         return duplicate;
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to copy - Needs "
                     + (index + length) + ", maximum is " + capacity());
         }
 
-        ChannelBuffer dst = factory().getBuffer(order(), length);
+        ByteBuf dst = factory().getBuffer(order(), length);
         copyTo(index, length, componentId, dst);
         return dst;
     }
 
-    private void copyTo(int index, int length, int componentId, ChannelBuffer dst) {
+    private void copyTo(int index, int length, int componentId, ByteBuf dst) {
         int dstIndex = 0;
         int i = componentId;
 
         while (length > 0) {
-            ChannelBuffer s = components[i];
+            ByteBuf s = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             s.getBytes(index - adjustment, dst, dstIndex, localLength);
@@ -578,7 +578,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
+    public ByteBuf slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
@@ -591,14 +591,14 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
-        List<ChannelBuffer> components = decompose(index, length);
+        List<ByteBuf> components = decompose(index, length);
         switch (components.size()) {
         case 0:
             return ChannelBuffers.EMPTY_BUFFER;
         case 1:
             return components.get(0);
         default:
-            return new CompositeChannelBuffer(order(), components);
+            return new CompositeByteBuf(order(), components);
         }
     }
 
@@ -636,7 +636,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         int i = componentId;
         while (length > 0) {
-            ChannelBuffer c = components[i];
+            ByteBuf c = components[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, c.capacity() - (index - adjustment));
             buffers.add(toNioBuffer(c, index - adjustment, localLength));
@@ -648,7 +648,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return buffers.toArray(new ByteBuffer[buffers.size()]);
     }
 
-    private static ByteBuffer toNioBuffer(ChannelBuffer buf, int index, int length) {
+    private static ByteBuffer toNioBuffer(ByteBuf buf, int index, int length) {
         if (buf.hasNioBuffer()) {
             return buf.nioBuffer(index, length);
         } else {
@@ -696,7 +696,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int localWriterIndex = this.writerIndex();
 
         final int bytesToMove = capacity() - localReaderIndex;
-        List<ChannelBuffer> list = decompose(localReaderIndex, bytesToMove);
+        List<ByteBuf> list = decompose(localReaderIndex, bytesToMove);
 
 
         // If the list is empty we need to assign a new one because
@@ -704,13 +704,13 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         //
         // See https://github.com/netty/netty/issues/325
         if (list.isEmpty()) {
-            list = new ArrayList<ChannelBuffer>(1);
+            list = new ArrayList<ByteBuf>(1);
         }
 
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.
-        final ChannelBuffer padding = ChannelBuffers.buffer(order(), localReaderIndex);
+        final ByteBuf padding = ChannelBuffers.buffer(order(), localReaderIndex);
         padding.writerIndex(localReaderIndex);
         list.add(padding);
 

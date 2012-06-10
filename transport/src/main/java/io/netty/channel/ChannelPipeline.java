@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -153,7 +153,7 @@ import java.util.Queue;
  * the complexity and characteristics of the protocol and business logic:
  *
  * <ol>
- * <li>Protocol Decoder - translates binary data (e.g. {@link ChannelBuffer})
+ * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf})
  *                        into a Java object.</li>
  * <li>Protocol Encoder - translates a Java object into binary data.</li>
  * <li><tt>ExecutionHandler</tt> - applies a thread model.</li>
@@ -207,9 +207,9 @@ import java.util.Queue;
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
     Queue<Object> inboundMessageBuffer();
-    ChannelBuffer inboundByteBuffer();
+    ByteBuf inboundByteBuffer();
     Queue<Object> outboundMessageBuffer();
-    ChannelBuffer outboundByteBuffer();
+    ByteBuf outboundByteBuffer();
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.

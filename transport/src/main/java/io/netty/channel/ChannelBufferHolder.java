@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.util.Queue;
 
@@ -23,7 +23,7 @@ public final class ChannelBufferHolder<E> {
 
     private final ChannelBufferType type;
     private final Queue<E> msgBuf;
-    private final ChannelBuffer byteBuf;
+    private final ByteBuf byteBuf;
 
     ChannelBufferHolder(Queue<E> msgBuf) {
         if (msgBuf == null) {
@@ -35,7 +35,7 @@ public final class ChannelBufferHolder<E> {
 
     }
 
-    ChannelBufferHolder(ChannelBuffer byteBuf) {
+    ChannelBufferHolder(ByteBuf byteBuf) {
         if (byteBuf == null) {
             throw new NullPointerException("byteBuf");
         }
@@ -55,7 +55,7 @@ public final class ChannelBufferHolder<E> {
         return msgBuf;
     }
 
-    public ChannelBuffer byteBuffer() {
+    public ByteBuf byteBuffer() {
         if (byteBuf == null) {
             throw new NoSuchBufferException();
         }

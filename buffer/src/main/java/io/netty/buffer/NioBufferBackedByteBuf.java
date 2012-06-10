@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
  * and {@link ChannelBuffers#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
-public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
+public class NioBufferBackedByteBuf extends AbstractByteBuf {
 
     private final ByteBuffer buffer;
     private final ByteBuffer tmpBuf;
@@ -39,7 +39,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     /**
      * Creates a new buffer which wraps the specified buffer's slice.
      */
-    public ByteBufferBackedChannelBuffer(ByteBuffer buffer) {
+    public NioBufferBackedByteBuf(ByteBuffer buffer) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }
@@ -51,7 +51,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         writerIndex(capacity);
     }
 
-    private ByteBufferBackedChannelBuffer(ByteBufferBackedChannelBuffer buffer) {
+    private NioBufferBackedByteBuf(NioBufferBackedByteBuf buffer) {
         this.buffer = buffer.buffer;
         tmpBuf = this.buffer.duplicate();
         order = buffer.order;
@@ -60,11 +60,11 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBufferFactory factory() {
+    public ByteBufFactory factory() {
         if (buffer.isDirect()) {
-            return DirectChannelBufferFactory.getInstance(order());
+            return DirectByteBufFactory.getInstance(order());
         } else {
-            return HeapChannelBufferFactory.getInstance(order());
+            return HeapByteBufFactory.getInstance(order());
         }
     }
 
@@ -126,9 +126,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
-        if (dst instanceof ByteBufferBackedChannelBuffer) {
-            ByteBufferBackedChannelBuffer bbdst = (ByteBufferBackedChannelBuffer) dst;
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+        if (dst instanceof NioBufferBackedByteBuf) {
+            NioBufferBackedByteBuf bbdst = (NioBufferBackedByteBuf) dst;
             ByteBuffer data = bbdst.tmpBuf;
             data.clear().position(dstIndex).limit(dstIndex + length);
             getBytes(index, data);
@@ -190,9 +190,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
-        if (src instanceof ByteBufferBackedChannelBuffer) {
-            ByteBufferBackedChannelBuffer bbsrc = (ByteBufferBackedChannelBuffer) src;
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+        if (src instanceof NioBufferBackedByteBuf) {
+            NioBufferBackedByteBuf bbsrc = (NioBufferBackedByteBuf) src;
             ByteBuffer data = bbsrc.tmpBuf;
 
             data.clear().position(srcIndex).limit(srcIndex + length);
@@ -292,28 +292,28 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
+    public ByteBuf slice(int index, int length) {
         if (index == 0 && length == capacity()) {
-            ChannelBuffer slice = duplicate();
+            ByteBuf slice = duplicate();
             slice.setIndex(0, length);
             return slice;
         } else {
             if (index >= 0 && length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new ByteBufferBackedChannelBuffer(
+            return new NioBufferBackedByteBuf(
                     ((ByteBuffer) tmpBuf.clear().position(
                             index).limit(index + length)).order(order()));
         }
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        return new ByteBufferBackedChannelBuffer(this);
+    public ByteBuf duplicate() {
+        return new NioBufferBackedByteBuf(this);
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
+    public ByteBuf copy(int index, int length) {
         ByteBuffer src;
         try {
             src = (ByteBuffer) tmpBuf.clear().position(index).limit(index + length);
@@ -326,6 +326,6 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         dst.put(src);
         dst.order(order());
         dst.clear();
-        return new ByteBufferBackedChannelBuffer(dst);
+        return new NioBufferBackedByteBuf(dst);
     }
 }

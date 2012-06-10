@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.net.SocketAddress;
 import java.util.Queue;
@@ -40,7 +40,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelBuffer outboundByteBuffer() {
+    public ByteBuf outboundByteBuffer() {
         throw new NoSuchBufferException();
     }
 
@@ -75,7 +75,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 

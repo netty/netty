@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import static io.netty.channel.DefaultChannelHandlerContext.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
 import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
 import io.netty.logging.InternalLogger;
@@ -892,7 +892,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelBuffer inboundByteBuffer() {
+    public ByteBuf inboundByteBuffer() {
         if (channel.bufferType() != ChannelBufferType.BYTE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
@@ -906,7 +906,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelBuffer outboundByteBuffer() {
+    public ByteBuf outboundByteBuffer() {
         return nextOutboundByteBuffer(tail);
     }
 
@@ -936,7 +936,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    ChannelBuffer nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+    ByteBuf nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
@@ -1249,7 +1249,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             notifyHandlerException(t);
         } finally {
             if (ctx.outByteBuf != null) {
-                ChannelBuffer buf = ctx.outByteBuf;
+                ByteBuf buf = ctx.outByteBuf;
                 if (!buf.readable()) {
                     buf.discardReadBytes();
                 }
@@ -1281,7 +1281,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 break;
             }
 
-            if (message instanceof ChannelBuffer && ctx.hasOutboundByteBuffer()) {
+            if (message instanceof ByteBuf && ctx.hasOutboundByteBuffer()) {
                 executor = ctx.executor();
                 break;
             }
@@ -1293,7 +1293,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (msgBuf) {
                 ctx.outMsgBuf.add(message);
             } else {
-                ChannelBuffer buf = (ChannelBuffer) message;
+                ByteBuf buf = (ByteBuf) message;
                 ctx.outByteBuf.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
             }
             flush0(ctx, future);

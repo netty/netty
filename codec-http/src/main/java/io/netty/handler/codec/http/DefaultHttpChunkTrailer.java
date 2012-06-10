@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 
 import java.util.List;
@@ -96,12 +96,12 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
     }
 
     @Override
-    public ChannelBuffer getContent() {
+    public ByteBuf getContent() {
         return ChannelBuffers.EMPTY_BUFFER;
     }
 
     @Override
-    public void setContent(ChannelBuffer content) {
+    public void setContent(ByteBuf content) {
         throw new IllegalStateException("read-only");
     }
 }

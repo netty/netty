@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ChannelBuffers;
 
 import java.io.DataOutputStream;
@@ -80,14 +80,14 @@ public class ObjectEncoderOutputStream extends OutputStream implements
 
     @Override
     public void writeObject(Object obj) throws IOException {
-        ChannelBufferOutputStream bout = new ChannelBufferOutputStream(
+        ByteBufOutputStream bout = new ByteBufOutputStream(
                 ChannelBuffers.dynamicBuffer(estimatedLength));
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(obj);
         oout.flush();
         oout.close();
 
-        ChannelBuffer buffer = bout.buffer();
+        ByteBuf buffer = bout.buffer();
         int objectSize = buffer.readableBytes();
         writeInt(objectSize);
         buffer.getBytes(0, this, objectSize);

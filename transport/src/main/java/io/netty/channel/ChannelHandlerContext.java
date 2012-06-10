@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeMap;
 
 import java.nio.channels.Channels;
@@ -138,21 +138,21 @@ public interface ChannelHandlerContext
 
     boolean hasInboundByteBuffer();
     boolean hasInboundMessageBuffer();
-    ChannelBuffer inboundByteBuffer();
+    ByteBuf inboundByteBuffer();
     <T> Queue<T> inboundMessageBuffer();
 
     boolean hasOutboundByteBuffer();
     boolean hasOutboundMessageBuffer();
-    ChannelBuffer outboundByteBuffer();
+    ByteBuf outboundByteBuffer();
     <T> Queue<T> outboundMessageBuffer();
 
     boolean hasNextInboundByteBuffer();
     boolean hasNextInboundMessageBuffer();
-    ChannelBuffer nextInboundByteBuffer();
+    ByteBuf nextInboundByteBuffer();
     Queue<Object> nextInboundMessageBuffer();
 
     boolean hasNextOutboundByteBuffer();
     boolean hasNextOutboundMessageBuffer();
-    ChannelBuffer nextOutboundByteBuffer();
+    ByteBuf nextOutboundByteBuffer();
     Queue<Object> nextOutboundMessageBuffer();
 }

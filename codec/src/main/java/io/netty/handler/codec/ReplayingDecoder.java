@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -41,7 +41,7 @@ import io.netty.util.VoidEnum;
  *   {@code @Override}
  *   protected Object decode({@link ChannelHandlerContext} ctx,
  *                           {@link Channel} channel,
- *                           {@link ChannelBuffer} buf) throws Exception {
+ *                           {@link ByteBuf} buf) throws Exception {
  *
  *     if (buf.readableBytes() &lt; 4) {
  *        return <strong>null</strong>;
@@ -66,7 +66,7 @@ import io.netty.util.VoidEnum;
  *
  *   protected Object decode({@link ChannelHandlerContext} ctx,
  *                           {@link Channel} channel,
- *                           {@link ChannelBuffer} buf,
+ *                           {@link ByteBuf} buf,
  *                           {@link VoidEnum} state) throws Exception {
  *
  *     return buf.readBytes(buf.readInt());
@@ -76,7 +76,7 @@ import io.netty.util.VoidEnum;
  *
  * <h3>How does this work?</h3>
  * <p>
- * {@link ReplayingDecoder} passes a specialized {@link ChannelBuffer}
+ * {@link ReplayingDecoder} passes a specialized {@link ByteBuf}
  * implementation which throws an {@link Error} of certain type when there's not
  * enough data in the buffer.  In the {@code IntegerHeaderFrameDecoder} above,
  * you just assumed that there will be 4 or more bytes in the buffer when
@@ -111,7 +111,7 @@ import io.netty.util.VoidEnum;
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public Object decode(.., {@link ChannelBuffer} buffer, ..) throws Exception {
+ *   public Object decode(.., {@link ByteBuf} buffer, ..) throws Exception {
  *
  *     // A message contains 2 integers.
  *     values.offer(buffer.readInt());
@@ -131,7 +131,7 @@ import io.netty.util.VoidEnum;
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public Object decode(.., {@link ChannelBuffer} buffer, ..) throws Exception {
+ *   public Object decode(.., {@link ByteBuf} buffer, ..) throws Exception {
  *
  *     // Revert the state of the variable that might have been changed
  *     // since the last partial decode.
@@ -185,7 +185,7 @@ import io.netty.util.VoidEnum;
  *   {@code @Override}
  *   protected Object decode({@link ChannelHandlerContext} ctx,
  *                           {@link Channel} channel,
- *                           {@link ChannelBuffer} buf,
+ *                           {@link ByteBuf} buf,
  *                           <b>MyDecoderState</b> state) throws Exception {
  *     switch (state) {
  *     case READ_LENGTH:
@@ -215,7 +215,7 @@ import io.netty.util.VoidEnum;
  *   {@code @Override}
  *   protected Object decode({@link ChannelHandlerContext} ctx,
  *                           {@link Channel} channel,
- *                           {@link ChannelBuffer} buf,
+ *                           {@link ByteBuf} buf,
  *                           {@link VoidEnum} state) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
@@ -251,7 +251,7 @@ import io.netty.util.VoidEnum;
  *     {@code @Override}
  *     protected Object decode({@link ChannelHandlerContext} ctx,
  *                             {@link Channel} ch,
- *                             {@link ChannelBuffer} buf,
+ *                             {@link ByteBuf} buf,
  *                             {@link VoidEnum} state) {
  *         ...
  *         // Decode the first message
@@ -283,7 +283,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
     private final ChannelBufferHolder<Byte> in = ChannelBufferHolders.byteBuffer();
-    private final ChannelBuffer cumulation = in.byteBuffer();
+    private final ByteBuf cumulation = in.byteBuffer();
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(cumulation);
     private S state;
     private int checkpoint = -1;
@@ -352,7 +352,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
      * do not need to access the internal buffer directly to write a decoder.
      * Use it only when you must use it at your own risk.
      */
-    protected ChannelBuffer internalBuffer() {
+    protected ByteBuf internalBuffer() {
         return cumulation;
     }
 
@@ -370,7 +370,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         replayable.terminate();
-        ChannelBuffer in = cumulation;
+        ByteBuf in = cumulation;
         if (in.readable()) {
             callDecode(ctx);
         }
@@ -395,7 +395,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
 
     @Override
     protected void callDecode(ChannelHandlerContext ctx) {
-        ChannelBuffer in = cumulation;
+        ByteBuf in = cumulation;
         boolean decoded = false;
         while (in.readable()) {
             try {
@@ -462,7 +462,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
         }
     }
 
-    private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) {
+    private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
         checkpoint -= in.readerIndex();
         in.discardReadBytes();
         ctx.fireInboundBufferUpdated();

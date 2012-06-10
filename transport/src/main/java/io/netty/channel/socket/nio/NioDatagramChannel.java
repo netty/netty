@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -176,7 +176,7 @@ public final class NioDatagramChannel
     @Override
     protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
         DatagramPacket packet = (DatagramPacket) buf.peek();
-        ChannelBuffer data = packet.data();
+        ByteBuf data = packet.data();
         ByteBuffer nioData;
         if (data.hasNioBuffer()) {
             nioData = data.nioBuffer();

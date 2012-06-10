@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.TooLongFrameException;
 
 
 /**
- * Decodes {@link ChannelBuffer}s into {@link HttpRequest}s and {@link HttpChunk}s.
+ * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpChunk}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">

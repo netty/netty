@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -25,7 +25,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import java.util.List;
 
 /**
- * Decodes {@link ChannelBuffer}s into {@link HttpMessage}s and
+ * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
  * {@link HttpChunk}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
@@ -103,7 +103,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     private final int maxHeaderSize;
     private final int maxChunkSize;
     private HttpMessage message;
-    private ChannelBuffer content;
+    private ByteBuf content;
     private long chunkSize;
     private int headerSize;
     private int contentRead;
@@ -166,7 +166,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {
@@ -409,7 +409,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
 
     private Object reset() {
         HttpMessage message = this.message;
-        ChannelBuffer content = this.content;
+        ByteBuf content = this.content;
 
         if (content != null) {
             message.setContent(content);
@@ -421,7 +421,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return message;
     }
 
-    private static void skipControlCharacters(ChannelBuffer buffer) {
+    private static void skipControlCharacters(ByteBuf buffer) {
         for (;;) {
             char c = (char) buffer.readUnsignedByte();
             if (!Character.isISOControl(c) &&
@@ -432,7 +432,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         }
     }
 
-    private Object readFixedLengthContent(ChannelBuffer buffer) {
+    private Object readFixedLengthContent(ByteBuf buffer) {
         //we have a content-length so we just read the correct number of bytes
         long length = HttpHeaders.getContentLength(message, -1);
         assert length <= Integer.MAX_VALUE;
@@ -457,7 +457,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return reset();
     }
 
-    private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+    private State readHeaders(ByteBuf buffer) throws TooLongFrameException {
         headerSize = 0;
         final HttpMessage message = this.message;
         String line = readHeader(buffer);
@@ -507,7 +507,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return nextState;
     }
 
-    private HttpChunkTrailer readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+    private HttpChunkTrailer readTrailingHeaders(ByteBuf buffer) throws TooLongFrameException {
         headerSize = 0;
         String line = readHeader(buffer);
         String lastHeader = null;
@@ -544,7 +544,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return HttpChunk.LAST_CHUNK;
     }
 
-    private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
+    private String readHeader(ByteBuf buffer) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int headerSize = this.headerSize;
 
@@ -600,7 +600,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return Integer.parseInt(hex, 16);
     }
 
-    private static String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
+    private static String readLine(ByteBuf buffer, int maxLineLength) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int lineLength = 0;
         while (true) {

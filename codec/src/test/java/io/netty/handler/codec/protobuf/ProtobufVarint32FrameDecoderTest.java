@@ -19,7 +19,7 @@ import static io.netty.buffer.ChannelBuffers.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 
 import org.junit.Before;
@@ -43,7 +43,7 @@ public class ProtobufVarint32FrameDecoderTest {
         assertThat(ch.readInbound(), is(nullValue()));
         ch.writeInbound(wrappedBuffer(b, 3, b.length - 3));
         assertThat(
-                (ChannelBuffer) ch.readInbound(),
+                (ByteBuf) ch.readInbound(),
                 is(wrappedBuffer(new byte[] { 1, 1, 1, 1 })));
     }
 
@@ -60,6 +60,6 @@ public class ProtobufVarint32FrameDecoderTest {
         ch.writeInbound(wrappedBuffer(b, 127, 600));
         assertThat(ch.readInbound(), is(nullValue()));
         ch.writeInbound(wrappedBuffer(b, 727, b.length - 727));
-        assertThat((ChannelBuffer) ch.readInbound(), is(wrappedBuffer(b, 2, b.length - 2)));
+        assertThat((ByteBuf) ch.readInbound(), is(wrappedBuffer(b, 2, b.length - 2)));
     }
 }

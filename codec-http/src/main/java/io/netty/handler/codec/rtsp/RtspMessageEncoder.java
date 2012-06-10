@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpMessageEncoder;
 
 /**
  * Encodes an RTSP message represented in {@link HttpMessage} into
- * a {@link ChannelBuffer}.
+ * a {@link ByteBuf}.
 
  *
  * @apiviz.landmark
@@ -40,7 +40,7 @@ public abstract class RtspMessageEncoder extends HttpMessageEncoder {
 
     @Override
     public void encode(ChannelHandlerContext ctx, Object msg,
-            ChannelBuffer out) throws Exception {
+            ByteBuf out) throws Exception {
         // Ignore unrelated message types such as HttpChunk.
         if (!(msg instanceof HttpMessage)) {
             throw new UnsupportedMessageTypeException(msg, HttpMessage.class);

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 
 /**
@@ -37,7 +37,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public PingWebSocketFrame(ChannelBuffer binaryData) {
+    public PingWebSocketFrame(ByteBuf binaryData) {
         setBinaryData(binaryData);
     }
 
@@ -51,7 +51,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public PingWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public PingWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);

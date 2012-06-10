@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 import java.util.zip.Deflater;
 
@@ -43,14 +43,14 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void setInput(ChannelBuffer decompressed) {
+    public void setInput(ByteBuf decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         compressor.setInput(in);
     }
 
     @Override
-    public void encode(ChannelBuffer compressed) {
+    public void encode(ByteBuf compressed) {
         while (!compressor.needsInput()) {
             int numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
             compressed.writeBytes(out, 0, numBytes);

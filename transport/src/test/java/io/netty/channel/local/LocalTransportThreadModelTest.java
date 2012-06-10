@@ -16,7 +16,7 @@
 package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -409,7 +409,7 @@ public class LocalTransportThreadModelTest {
             }
 
             Queue<Integer> in = ctx.inboundMessageBuffer();
-            ChannelBuffer out = ctx.nextInboundByteBuffer();
+            ByteBuf out = ctx.nextInboundByteBuffer();
 
             for (;;) {
                 Integer msg = in.poll();
@@ -432,7 +432,7 @@ public class LocalTransportThreadModelTest {
             // Don't let the write request go to the server-side channel - just swallow.
             boolean swallow = this == ctx.pipeline().first();
 
-            ChannelBuffer in = ctx.outboundByteBuffer();
+            ByteBuf in = ctx.outboundByteBuffer();
             Queue<Object> out = ctx.nextOutboundMessageBuffer();
             while (in.readableBytes() >= 4) {
                 int msg = in.readInt();
@@ -493,7 +493,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            ChannelBuffer in = ctx.inboundByteBuffer();
+            ByteBuf in = ctx.inboundByteBuffer();
             Queue<Object> out = ctx.nextInboundMessageBuffer();
 
             while (in.readableBytes() >= 4) {
@@ -512,7 +512,7 @@ public class LocalTransportThreadModelTest {
             Assert.assertSame(t, Thread.currentThread());
 
             Queue<Integer> in = ctx.outboundMessageBuffer();
-            ChannelBuffer out = ctx.nextOutboundByteBuffer();
+            ByteBuf out = ctx.nextOutboundByteBuffer();
 
             for (;;) {
                 Integer msg = in.poll();

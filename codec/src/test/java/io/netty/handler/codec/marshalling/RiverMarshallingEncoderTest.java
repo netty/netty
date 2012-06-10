@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 
 public class RiverMarshallingEncoderTest extends RiverCompatibleMarshallingEncoderTest {
 
     @Override
-    protected ChannelBuffer truncate(ChannelBuffer buf) {
+    protected ByteBuf truncate(ByteBuf buf) {
         buf.readInt();
         return buf;
     }

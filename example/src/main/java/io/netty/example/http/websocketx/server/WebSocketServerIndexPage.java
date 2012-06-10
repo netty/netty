@@ -15,7 +15,7 @@
  */
 package io.netty.example.http.websocketx.server;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.CharsetUtil;
 
@@ -26,7 +26,7 @@ public final class WebSocketServerIndexPage {
 
     private static final String NEWLINE = "\r\n";
 
-    public static ChannelBuffer getContent(String webSocketLocation) {
+    public static ByteBuf getContent(String webSocketLocation) {
         return ChannelBuffers.copiedBuffer(
                 "<html><head><title>Web Socket Test</title></head>" + NEWLINE +
                 "<body>" + NEWLINE +

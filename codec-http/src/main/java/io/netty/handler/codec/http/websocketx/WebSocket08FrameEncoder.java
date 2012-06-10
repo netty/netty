@@ -53,7 +53,7 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -100,11 +100,11 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
 
     @Override
     public void encode(ChannelHandlerContext ctx,
-            WebSocketFrame msg, ChannelBuffer out) throws Exception {
+            WebSocketFrame msg, ByteBuf out) throws Exception {
         byte[] mask;
 
         WebSocketFrame frame = msg;
-        ChannelBuffer data = frame.getBinaryData();
+        ByteBuf data = frame.getBinaryData();
         if (data == null) {
             data = ChannelBuffers.EMPTY_BUFFER;
         }

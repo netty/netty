@@ -24,22 +24,22 @@ import org.junit.Test;
  */
 public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
 
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
-        buffer = new DuplicatedChannelBuffer(ChannelBuffers.buffer(length));
+    protected ByteBuf newBuffer(int length) {
+        buffer = new DuplicatedByteBuf(ChannelBuffers.buffer(length));
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new DuplicatedChannelBuffer(null);
+        new DuplicatedByteBuf(null);
     }
 }

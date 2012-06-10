@@ -18,7 +18,7 @@ package io.netty.testsuite.transport.socket;
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -166,7 +166,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         @Override
         public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ChannelBuffer in)
+                ChannelHandlerContext ctx, ByteBuf in)
                 throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);

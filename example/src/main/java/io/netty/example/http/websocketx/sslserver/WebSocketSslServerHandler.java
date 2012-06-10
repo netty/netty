@@ -20,7 +20,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -72,7 +72,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         if (req.getUri().equals("/")) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
 
-            ChannelBuffer content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
+            ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
 
             res.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
             setContentLength(res, content.readableBytes());

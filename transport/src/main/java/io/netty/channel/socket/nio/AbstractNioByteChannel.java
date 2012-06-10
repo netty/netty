@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelBufferType;
@@ -47,7 +47,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = pipeline();
-            final ChannelBuffer byteBuf = pipeline.inboundByteBuffer();
+            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
             boolean closed = false;
             boolean read = false;
             try {
@@ -85,7 +85,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ChannelBuffer buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
             // Reset reader/writerIndex to 0 if the buffer is empty.
             buf.clear();
@@ -105,10 +105,10 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
-    protected abstract int doReadBytes(ChannelBuffer buf) throws Exception;
-    protected abstract int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception;
+    protected abstract int doReadBytes(ByteBuf buf) throws Exception;
+    protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
-    private static boolean expandReadBuffer(ChannelBuffer byteBuf) {
+    private static boolean expandReadBuffer(ByteBuf byteBuf) {
         if (!byteBuf.writable()) {
             // FIXME: Magic number
             byteBuf.ensureWritableBytes(4096);

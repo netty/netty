@@ -15,7 +15,7 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -209,8 +209,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public ChannelGroupFuture write(Object message) {
         Map<Integer, ChannelFuture> futures =
             new LinkedHashMap<Integer, ChannelFuture>(size());
-        if (message instanceof ChannelBuffer) {
-            ChannelBuffer buf = (ChannelBuffer) message;
+        if (message instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) message;
             for (Channel c: nonServerChannels.values()) {
                 futures.put(c.id(), c.write(buf.duplicate()));
             }

@@ -24,10 +24,10 @@ import java.nio.ByteOrder;
  */
 public class LittleEndianDirectChannelBufferTest extends AbstractChannelBufferTest {
 
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
+    protected ByteBuf newBuffer(int length) {
         buffer = ChannelBuffers.directBuffer(ByteOrder.LITTLE_ENDIAN, length);
         assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
@@ -35,7 +35,7 @@ public class LittleEndianDirectChannelBufferTest extends AbstractChannelBufferTe
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 }

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.CharsetUtil;
 
@@ -51,7 +51,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame. Must be UTF-8 encoded
      */
-    public TextWebSocketFrame(ChannelBuffer binaryData) {
+    public TextWebSocketFrame(ByteBuf binaryData) {
         setBinaryData(binaryData);
     }
 
@@ -85,7 +85,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame. Must be UTF-8 encoded
      */
-    public TextWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public TextWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);

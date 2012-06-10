@@ -27,10 +27,10 @@ import org.junit.Test;
 public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
 
     private final Random random = new Random();
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
+    protected ByteBuf newBuffer(int length) {
         buffer = ChannelBuffers.wrappedBuffer(
                 new byte[length * 2], random.nextInt(length - 1) + 1, length);
         assertEquals(length, buffer.writerIndex());
@@ -38,12 +38,12 @@ public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new SlicedChannelBuffer(null, 0, 0);
+        new SlicedByteBuf(null, 0, 0);
     }
 }

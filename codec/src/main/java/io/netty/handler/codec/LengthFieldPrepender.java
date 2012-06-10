@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -26,7 +26,7 @@ import java.nio.ByteOrder;
  * An encoder that prepends the length of the message.  The length value is
  * prepended as a binary form.  It is encoded in either big endian or little
  * endian depending on the default {@link ByteOrder} of the current
- * {@link ChannelBufferFactory}.
+ * {@link ByteBufFactory}.
  * <p>
  * For example, <tt>{@link LengthFieldPrepender}(2)</tt> will encode the
  * following 12-bytes string:
@@ -51,7 +51,7 @@ import java.nio.ByteOrder;
  * </pre>
  */
 @Sharable
-public class LengthFieldPrepender extends MessageToByteEncoder<ChannelBuffer> {
+public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
     private final int lengthFieldLength;
     private final boolean lengthIncludesLengthFieldLength;
@@ -98,13 +98,13 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ChannelBuffer> {
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof ChannelBuffer;
+        return msg instanceof ByteBuf;
     }
 
     @Override
     public void encode(
             ChannelHandlerContext ctx,
-            ChannelBuffer msg, ChannelBuffer out) throws Exception {
+            ByteBuf msg, ByteBuf out) throws Exception {
 
         int length = lengthIncludesLengthFieldLength?
                 msg.readableBytes() + lengthFieldLength : msg.readableBytes();

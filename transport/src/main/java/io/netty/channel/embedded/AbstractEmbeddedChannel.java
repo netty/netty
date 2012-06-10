@@ -15,7 +15,7 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelBufferHolder;
@@ -47,7 +47,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final Queue<Object> lastInboundMessageBuffer = new ArrayDeque<Object>();
-    private final ChannelBuffer lastInboundByteBuffer = ChannelBuffers.dynamicBuffer();
+    private final ByteBuf lastInboundByteBuffer = ChannelBuffers.dynamicBuffer();
     protected final Object lastOutboundBuffer;
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
@@ -106,7 +106,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         return lastInboundMessageBuffer;
     }
 
-    public ChannelBuffer lastInboundByteBuffer() {
+    public ByteBuf lastInboundByteBuffer() {
         return lastInboundByteBuffer;
     }
 

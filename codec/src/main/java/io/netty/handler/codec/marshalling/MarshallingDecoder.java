@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -28,7 +28,7 @@ import org.jboss.marshalling.Unmarshaller;
  * Decoder which MUST be used with {@link MarshallingEncoder}.
  *
  * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out
- * of the {@link ChannelBuffer}.
+ * of the {@link ByteBuf}.
  *
  */
 public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
@@ -61,8 +61,8 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
 
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
-        ChannelBuffer frame = (ChannelBuffer) super.decode(ctx, in);
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        ByteBuf frame = (ByteBuf) super.decode(ctx, in);
         if (frame == null) {
             return null;
         }
@@ -83,7 +83,7 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
+    protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
         return buffer.slice(index, length);
     }
 }

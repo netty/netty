@@ -24,10 +24,10 @@ import org.junit.Test;
  */
 public class TruncatedChannelBufferTest extends AbstractChannelBufferTest {
 
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
     @Override
-    protected ChannelBuffer newBuffer(int length) {
+    protected ByteBuf newBuffer(int length) {
         buffer = ChannelBuffers.wrappedBuffer(
                 new byte[length * 2], 0, length);
         assertEquals(length, buffer.writerIndex());
@@ -35,12 +35,12 @@ public class TruncatedChannelBufferTest extends AbstractChannelBufferTest {
     }
 
     @Override
-    protected ChannelBuffer[] components() {
-        return new ChannelBuffer[] { buffer };
+    protected ByteBuf[] components() {
+        return new ByteBuf[] { buffer };
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new TruncatedChannelBuffer(null, 0);
+        new TruncatedByteBuf(null, 0);
     }
 }

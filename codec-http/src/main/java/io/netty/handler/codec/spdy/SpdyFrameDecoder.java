@@ -16,14 +16,14 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
 /**
- * Decodes {@link ChannelBuffer}s into SPDY Data and Control Frames.
+ * Decodes {@link ByteBuf}s into SPDY Data and Control Frames.
  */
 public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
 
@@ -47,7 +47,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     // Header block decoding fields
     private int headerSize;
     private int numHeaders;
-    private ChannelBuffer decompressed;
+    private ByteBuf decompressed;
 
     private static enum State {
         READ_COMMON_HEADER,
@@ -101,7 +101,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decodeLast(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             return decode(ctx, in);
         } finally {
@@ -110,7 +110,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch(state) {
         case READ_COMMON_HEADER:
             state = readCommonHeader(buffer);
@@ -317,7 +317,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
         }
     }
 
-    private State readCommonHeader(ChannelBuffer buffer) {
+    private State readCommonHeader(ByteBuf buffer) {
         // Wait until entire header is readable
         if (buffer.readableBytes() < SPDY_HEADER_SIZE) {
             return State.READ_COMMON_HEADER;
@@ -376,7 +376,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
         }
     }
 
-    private Object readControlFrame(ChannelBuffer buffer) {
+    private Object readControlFrame(ByteBuf buffer) {
         int streamID;
         int statusCode;
         switch (type) {
@@ -435,7 +435,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
         }
     }
 
-    private SpdyHeaderBlock readHeaderBlockFrame(ChannelBuffer buffer) {
+    private SpdyHeaderBlock readHeaderBlockFrame(ByteBuf buffer) {
         int minLength;
         int streamID;
         switch (type) {
@@ -548,7 +548,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
         }
     }
 
-    private void decodeHeaderBlock(ChannelBuffer buffer) throws Exception {
+    private void decodeHeaderBlock(ByteBuf buffer) throws Exception {
         if (decompressed == null) {
             // First time we start to decode a header block
             // Initialize header block decoding fields

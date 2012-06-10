@@ -15,7 +15,7 @@
  */
 package io.netty.example.discard;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -54,7 +54,7 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
 
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in)
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
         in.clear();
@@ -76,7 +76,7 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
 
     private void generateTraffic() {
         // Fill the outbound buffer up to 64KiB
-        ChannelBuffer out = ctx.nextOutboundByteBuffer();
+        ByteBuf out = ctx.nextOutboundByteBuffer();
         while (out.readableBytes() < 65536) {
             out.writeBytes(content);
         }

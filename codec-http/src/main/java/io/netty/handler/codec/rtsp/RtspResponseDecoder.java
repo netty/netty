@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpMessage;
@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
- * Decodes {@link ChannelBuffer}s into RTSP responses represented in
+ * Decodes {@link ByteBuf}s into RTSP responses represented in
  * {@link HttpResponse}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>

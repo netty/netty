@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.DetectionUtil;
 
 abstract class SpdyHeaderBlockCompressor {
@@ -32,7 +32,7 @@ abstract class SpdyHeaderBlockCompressor {
         }
     }
 
-    abstract void setInput(ChannelBuffer decompressed);
-    abstract void encode(ChannelBuffer compressed);
+    abstract void setInput(ByteBuf decompressed);
+    abstract void encode(ByteBuf compressed);
     abstract void end();
 }

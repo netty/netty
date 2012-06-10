@@ -19,9 +19,9 @@ package io.netty.buffer;
  * The common interface for buffer wrappers and derived buffers.  Most users won't
  * need to use this interface.  It is used internally in most cases.
  */
-public interface WrappedChannelBuffer extends ChannelBuffer {
+public interface WrappedByteBuf extends ByteBuf {
     /**
      * Returns this buffer's parent that this buffer is wrapping.
      */
-    ChannelBuffer unwrap();
+    ByteBuf unwrap();
 }

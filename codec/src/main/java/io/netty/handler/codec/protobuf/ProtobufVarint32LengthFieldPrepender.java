@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -38,7 +38,7 @@ import com.google.protobuf.CodedOutputStream;
  * @see com.google.protobuf.CodedOutputStream
  */
 @Sharable
-public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ChannelBuffer> {
+public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Creates a new instance.
@@ -48,19 +48,19 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<C
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof ChannelBuffer;
+        return msg instanceof ByteBuf;
     }
 
     @Override
     public void encode(
-            ChannelHandlerContext ctx, ChannelBuffer msg, ChannelBuffer out) throws Exception {
-        ChannelBuffer body = msg;
+            ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
+        ByteBuf body = msg;
         int bodyLen = body.readableBytes();
         int headerLen = CodedOutputStream.computeRawVarint32Size(bodyLen);
         out.ensureWritableBytes(headerLen + bodyLen);
 
         CodedOutputStream headerOut =
-                CodedOutputStream.newInstance(new ChannelBufferOutputStream(out));
+                CodedOutputStream.newInstance(new ByteBufOutputStream(out));
         headerOut.writeRawVarint32(bodyLen);
         headerOut.flush();
 

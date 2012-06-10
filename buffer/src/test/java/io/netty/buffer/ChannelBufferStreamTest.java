@@ -29,16 +29,16 @@ public class ChannelBufferStreamTest {
 
     @Test
     public void testAll() throws Exception {
-        ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
+        ByteBuf buf = ChannelBuffers.dynamicBuffer();
 
         try {
-            new ChannelBufferOutputStream(null);
+            new ByteBufOutputStream(null);
             fail();
         } catch (NullPointerException e) {
             // Expected
         }
 
-        ChannelBufferOutputStream out = new ChannelBufferOutputStream(buf);
+        ByteBufOutputStream out = new ByteBufOutputStream(buf);
         assertSame(buf, out.buffer());
         out.writeBoolean(true);
         out.writeBoolean(false);
@@ -61,32 +61,32 @@ public class ChannelBufferStreamTest {
         out.close();
 
         try {
-            new ChannelBufferInputStream(null);
+            new ByteBufInputStream(null);
             fail();
         } catch (NullPointerException e) {
             // Expected
         }
 
         try {
-            new ChannelBufferInputStream(null, 0);
+            new ByteBufInputStream(null, 0);
             fail();
         } catch (NullPointerException e) {
             // Expected
         }
 
         try {
-            new ChannelBufferInputStream(buf, -1);
+            new ByteBufInputStream(buf, -1);
         } catch (IllegalArgumentException e) {
             // Expected
         }
 
         try {
-            new ChannelBufferInputStream(buf, buf.capacity() + 1);
+            new ByteBufInputStream(buf, buf.capacity() + 1);
         } catch (IndexOutOfBoundsException e) {
             // Expected
         }
 
-        ChannelBufferInputStream in = new ChannelBufferInputStream(buf);
+        ByteBufInputStream in = new ByteBufInputStream(buf);
 
         assertTrue(in.markSupported());
         in.mark(Integer.MAX_VALUE);
@@ -171,8 +171,8 @@ public class ChannelBufferStreamTest {
 
     @Test
     public void testEmptyReadLine() throws Exception {
-        ChannelBuffer buf = ChannelBuffers.buffer(0);
-        ChannelBufferInputStream in = new ChannelBufferInputStream(buf);
+        ByteBuf buf = ChannelBuffers.buffer(0);
+        ByteBufInputStream in = new ByteBufInputStream(buf);
 
         String s = in.readLine();
         assertEquals(0, s.length());

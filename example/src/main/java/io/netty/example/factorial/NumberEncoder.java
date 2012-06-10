@@ -15,7 +15,7 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
@@ -30,7 +30,7 @@ public class NumberEncoder extends MessageToByteEncoder<Number> {
 
     @Override
     public void encode(
-            ChannelHandlerContext ctx, Number msg, ChannelBuffer out) throws Exception {
+            ChannelHandlerContext ctx, Number msg, ByteBuf out) throws Exception {
         // Convert to a BigInteger first for easier implementation.
         BigInteger v;
         if (msg instanceof BigInteger) {

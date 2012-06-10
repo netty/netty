@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.internal.StringUtil;
 
@@ -27,7 +27,7 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     private int streamID;
     private boolean last;
     private boolean compressed;
-    private ChannelBuffer data = ChannelBuffers.EMPTY_BUFFER;
+    private ByteBuf data = ChannelBuffers.EMPTY_BUFFER;
 
     /**
      * Creates a new instance.
@@ -73,12 +73,12 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     }
 
     @Override
-    public ChannelBuffer getData() {
+    public ByteBuf getData() {
         return data;
     }
 
     @Override
-    public void setData(ChannelBuffer data) {
+    public void setData(ByteBuf data) {
         if (data == null) {
             data = ChannelBuffers.EMPTY_BUFFER;
         }

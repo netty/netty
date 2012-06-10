@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -28,7 +28,7 @@ import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
 
 /**
- * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
+ * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ByteBuf}.
  *
  * If you can you should use {@link MarshallingDecoder}.
  */
@@ -55,7 +55,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize != Integer.MAX_VALUE) {
@@ -76,7 +76,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
     }
 
     @Override
-    public Object decodeLast(ChannelHandlerContext ctx, ChannelBuffer buffer) throws Exception {
+    public Object decodeLast(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return null;

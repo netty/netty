@@ -15,19 +15,19 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
  * Encodes an RTSP request represented in {@link HttpRequest} into
- * a {@link ChannelBuffer}.
+ * a {@link ByteBuf}.
 
  */
 public class RtspRequestEncoder extends RtspMessageEncoder {
 
     @Override
-    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message)
+    protected void encodeInitialLine(ByteBuf buf, HttpMessage message)
             throws Exception {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().toString().getBytes("ASCII"));

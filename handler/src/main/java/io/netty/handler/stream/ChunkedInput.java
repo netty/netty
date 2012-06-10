@@ -15,7 +15,7 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * A data stream of indefinite length which is consumed by {@link ChunkedWriteHandler}.
@@ -25,13 +25,13 @@ public interface ChunkedInput {
 
     /**
      * Fetches a chunked data from the stream.  The returned chunk is usually
-     * a {@link ChannelBuffer}, but you could extend an existing implementation
-     * to convert the {@link ChannelBuffer} into a different type that your
+     * a {@link ByteBuf}, but you could extend an existing implementation
+     * to convert the {@link ByteBuf} into a different type that your
      * handler or encoder understands.  Once this method returns the last chunk
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
      * call must return {@code false}.
      *
-     * @return the fetched chunk, which is usually {@link ChannelBuffer}.
+     * @return the fetched chunk, which is usually {@link ByteBuf}.
      *         {@code null} if there is no data left in the stream.
      *         Please note that {@code null} does not necessarily mean that the
      *         stream has reached at its end.  In a slow stream, the next chunk

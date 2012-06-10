@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
@@ -144,12 +144,12 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doReadBytes(ChannelBuffer byteBuf) throws Exception {
+    protected int doReadBytes(ByteBuf byteBuf) throws Exception {
         return byteBuf.writeBytes(javaChannel(), byteBuf.writableBytes());
     }
 
     @Override
-    protected int doWriteBytes(ChannelBuffer buf, boolean lastSpin) throws Exception {
+    protected int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
 
         // FIXME: This is not as efficient as Netty 3's SendBufferPool if heap buffer is used

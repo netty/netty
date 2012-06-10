@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
@@ -24,8 +24,8 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        ChannelBuffer in = ctx.outboundByteBuffer();
-        ChannelBuffer out = ctx.nextOutboundByteBuffer();
+        ByteBuf in = ctx.outboundByteBuffer();
+        ByteBuf out = ctx.nextOutboundByteBuffer();
 
         int oldOutSize = out.readableBytes();
         while (in.readable()) {
@@ -50,5 +50,5 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         }
     }
 
-    public abstract void encode(ChannelHandlerContext ctx, ChannelBuffer in, ChannelBuffer out) throws Exception;
+    public abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
 }

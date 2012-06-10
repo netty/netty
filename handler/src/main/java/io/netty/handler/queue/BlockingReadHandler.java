@@ -15,7 +15,7 @@
  */
 package io.netty.handler.queue;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.BlockingOperationException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
@@ -45,8 +45,8 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * Here is an example that demonstrates the usage:
  * <pre>
- * {@link BlockingReadHandler}&lt;{@link ChannelBuffer}&gt; reader =
- *         new {@link BlockingReadHandler}&lt;{@link ChannelBuffer}&gt;();
+ * {@link BlockingReadHandler}&lt;{@link ByteBuf}&gt; reader =
+ *         new {@link BlockingReadHandler}&lt;{@link ByteBuf}&gt;();
  * {@link ChannelPipeline} p = ...;
  * p.addLast("reader", reader);
  *
@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit;
  *
  * // Read a message from a channel in a blocking manner.
  * try {
- *     {@link ChannelBuffer} buf = reader.read(60, TimeUnit.SECONDS);
+ *     {@link ByteBuf} buf = reader.read(60, TimeUnit.SECONDS);
  *     if (buf == null) {
  *         // Connection closed.
  *     } else {

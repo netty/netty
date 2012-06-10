@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferInputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
@@ -24,7 +24,7 @@ import java.io.ObjectOutputStream;
 import java.io.StreamCorruptedException;
 
 /**
- * A decoder which deserializes the received {@link ChannelBuffer}s into Java
+ * A decoder which deserializes the received {@link ByteBuf}s into Java
  * objects.
  * <p>
  * Please note that the serialized form this decoder expects is not
@@ -66,18 +66,18 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
-        ChannelBuffer frame = (ChannelBuffer) super.decode(ctx, in);
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        ByteBuf frame = (ByteBuf) super.decode(ctx, in);
         if (frame == null) {
             return null;
         }
 
         return new CompactObjectInputStream(
-                new ChannelBufferInputStream(frame), classResolver).readObject();
+                new ByteBufInputStream(frame), classResolver).readObject();
     }
 
     @Override
-    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
+    protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
         return buffer.slice(index, length);
     }
 }

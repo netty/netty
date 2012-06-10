@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -328,8 +328,8 @@ public class SslHandler
 
     @Override
     public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        final ChannelBuffer in = ctx.outboundByteBuffer();
-        final ChannelBuffer out = ctx.nextOutboundByteBuffer();
+        final ByteBuf in = ctx.outboundByteBuffer();
+        final ByteBuf out = ctx.nextOutboundByteBuffer();
 
         out.discardReadBytes();
 
@@ -400,7 +400,7 @@ public class SslHandler
         }
     }
 
-    private static SSLEngineResult wrap(SSLEngine engine, ChannelBuffer in, ChannelBuffer out) throws SSLException {
+    private static SSLEngineResult wrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
         ByteBuffer in0 = in.nioBuffer();
         for (;;) {
             ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
@@ -463,8 +463,8 @@ public class SslHandler
 
     @Override
     public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
-        final ChannelBuffer in = ctx.inboundByteBuffer();
-        final ChannelBuffer out = ctx.nextInboundByteBuffer();
+        final ByteBuf in = ctx.inboundByteBuffer();
+        final ByteBuf out = ctx.nextInboundByteBuffer();
         out.discardReadBytes();
 
         boolean wrapLater = false;
@@ -522,7 +522,7 @@ public class SslHandler
         }
     }
 
-    private static SSLEngineResult unwrap(SSLEngine engine, ChannelBuffer in, ChannelBuffer out) throws SSLException {
+    private static SSLEngineResult unwrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
         ByteBuffer in0 = in.nioBuffer();
         for (;;) {
             ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());

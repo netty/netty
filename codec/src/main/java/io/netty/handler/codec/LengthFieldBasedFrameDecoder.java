@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
 /**
- * A decoder that splits the received {@link ChannelBuffer}s dynamically by the
+ * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the length field in the message.  It is particularly useful when you
  * decode a binary message which has an integer header field that represents the
  * length of the message body or the whole message.
@@ -54,7 +54,7 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
  * <h3>2 bytes length field at offset 0, strip header</h3>
  *
  * Because we can get the length of the content by calling
- * {@link ChannelBuffer#readableBytes()}, you might want to strip the length
+ * {@link ByteBuf#readableBytes()}, you might want to strip the length
  * field by specifying <tt>initialBytesToStrip</tt>.  In this example, we
  * specified <tt>2</tt>, that is same with the length of the length field, to
  * strip the first two bytes.
@@ -307,7 +307,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (discardingTooLongFrame) {
             long bytesToDiscard = this.bytesToDiscard;
             int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());
@@ -386,7 +386,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
         // extract frame
         int readerIndex = in.readerIndex();
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
-        ChannelBuffer frame = extractFrame(in, readerIndex, actualFrameLength);
+        ByteBuf frame = extractFrame(in, readerIndex, actualFrameLength);
         in.readerIndex(readerIndex + actualFrameLength);
         return frame;
     }
@@ -413,21 +413,21 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
 
     /**
      * Extract the sub-region of the specified buffer. This method is called by
-     * {@link #decode(ChannelInboundHandlerContext, ChannelBuffer)} for each
+     * {@link #decode(ChannelInboundHandlerContext, ByteBuf)} for each
      * frame.  The default implementation returns a copy of the sub-region.
      * For example, you could override this method to use an alternative
-     * {@link ChannelBufferFactory}.
+     * {@link ByteBufFactory}.
      * <p>
      * If you are sure that the frame and its content are not accessed after
-     * the current {@link #decode(ChannelInboundHandlerContext, ChannelBuffer)}
+     * the current {@link #decode(ChannelInboundHandlerContext, ByteBuf)}
      * call returns, you can even avoid memory copy by returning the sliced
      * sub-region (i.e. <tt>return buffer.slice(index, length)</tt>).
      * It's often useful when you convert the extracted frame into an object.
      * Refer to the source code of {@link ObjectDecoder} to see how this method
      * is overridden to avoid memory copy.
      */
-    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
-        ChannelBuffer frame = buffer.factory().getBuffer(length);
+    protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
+        ByteBuf frame = buffer.factory().getBuffer(length);
         frame.writeBytes(buffer, index, length);
         return frame;
     }

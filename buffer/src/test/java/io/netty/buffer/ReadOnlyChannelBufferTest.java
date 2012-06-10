@@ -35,44 +35,44 @@ public class ReadOnlyChannelBufferTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new ReadOnlyChannelBuffer(null);
+        new ReadOnlyByteBuf(null);
     }
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1)) instanceof ReadOnlyChannelBuffer);
+        assertTrue(ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1)) instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void testUnwrap() {
-        ChannelBuffer buf = ChannelBuffers.buffer(1);
-        assertSame(buf, ((WrappedChannelBuffer) ChannelBuffers.unmodifiableBuffer(buf)).unwrap());
+        ByteBuf buf = ChannelBuffers.buffer(1);
+        assertSame(buf, ((WrappedByteBuf) ChannelBuffers.unmodifiableBuffer(buf)).unwrap());
     }
 
     @Test
     public void shouldHaveSameByteOrder() {
-        ChannelBuffer buf = ChannelBuffers.buffer(ChannelBuffers.LITTLE_ENDIAN, 1);
+        ByteBuf buf = ChannelBuffers.buffer(ChannelBuffers.LITTLE_ENDIAN, 1);
         assertSame(ChannelBuffers.LITTLE_ENDIAN, ChannelBuffers.unmodifiableBuffer(buf).order());
     }
 
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
-        ChannelBuffer buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
-        assertTrue(buf.duplicate() instanceof ReadOnlyChannelBuffer);
-        assertTrue(buf.slice() instanceof ReadOnlyChannelBuffer);
-        assertTrue(buf.slice(0, 1) instanceof ReadOnlyChannelBuffer);
-        assertTrue(buf.duplicate() instanceof ReadOnlyChannelBuffer);
+        ByteBuf buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
+        assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
+        assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
+        assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
+        assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void shouldReturnWritableCopy() {
-        ChannelBuffer buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
-        assertFalse(buf.copy() instanceof ReadOnlyChannelBuffer);
+        ByteBuf buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
+        assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
-        ChannelBuffer buf = createStrictMock(ChannelBuffer.class);
+        ByteBuf buf = createStrictMock(ByteBuf.class);
         expect(buf.readerIndex()).andReturn(0).anyTimes();
         expect(buf.writerIndex()).andReturn(0).anyTimes();
         expect(buf.capacity()).andReturn(0).anyTimes();
@@ -80,7 +80,7 @@ public class ReadOnlyChannelBufferTest {
         expect(buf.getBytes(1, (GatheringByteChannel) null, 2)).andReturn(3);
         buf.getBytes(4, (OutputStream) null, 5);
         buf.getBytes(6, (byte[]) null, 7, 8);
-        buf.getBytes(9, (ChannelBuffer) null, 10, 11);
+        buf.getBytes(9, (ByteBuf) null, 10, 11);
         buf.getBytes(12, (ByteBuffer) null);
         expect(buf.getByte(13)).andReturn(Byte.valueOf((byte) 14));
         expect(buf.getShort(15)).andReturn(Short.valueOf((short) 16));
@@ -95,11 +95,11 @@ public class ReadOnlyChannelBufferTest {
 
         replay(buf);
 
-        ChannelBuffer roBuf = unmodifiableBuffer(buf);
+        ByteBuf roBuf = unmodifiableBuffer(buf);
         assertEquals(3, roBuf.getBytes(1, (GatheringByteChannel) null, 2));
         roBuf.getBytes(4, (OutputStream) null, 5);
         roBuf.getBytes(6, (byte[]) null, 7, 8);
-        roBuf.getBytes(9, (ChannelBuffer) null, 10, 11);
+        roBuf.getBytes(9, (ByteBuf) null, 10, 11);
         roBuf.getBytes(12, (ByteBuffer) null);
         assertEquals((byte) 14, roBuf.getByte(13));
         assertEquals((short) 16, roBuf.getShort(15));
@@ -163,7 +163,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes4() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ChannelBuffer) null, 0, 0);
+        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuf) null, 0, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -38,7 +38,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * <p>
  * This handler must be placed after {@link HttpMessageDecoder} in the pipeline
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
- * converts {@link ChannelBuffer}s into HTTP requests.
+ * converts {@link ByteBuf}s into HTTP requests.
  */
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
 
@@ -82,9 +82,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                         getTargetContentEncoding(contentEncoding));
 
                 if (!m.isChunked()) {
-                    ChannelBuffer content = m.getContent();
+                    ByteBuf content = m.getContent();
                     // Decode the content
-                    ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                    ByteBuf newContent = ChannelBuffers.dynamicBuffer();
                     decode(content, newContent);
                     finishDecode(newContent);
 
@@ -99,12 +99,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
             }
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
-            ChannelBuffer content = c.getContent();
+            ByteBuf content = c.getContent();
 
             // Decode the chunk if necessary.
             if (decoder != null) {
                 if (!c.isLast()) {
-                    ChannelBuffer newContent = ChannelBuffers.dynamicBuffer();
+                    ByteBuf newContent = ChannelBuffers.dynamicBuffer();
                     decode(content, newContent);
                     if (newContent.readable()) {
                         c.setContent(newContent);
@@ -112,7 +112,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                         return null;
                     }
                 } else {
-                    ChannelBuffer lastProduct = ChannelBuffers.dynamicBuffer();
+                    ByteBuf lastProduct = ChannelBuffers.dynamicBuffer();
                     finishDecode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced
@@ -151,21 +151,21 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
         return HttpHeaders.Values.IDENTITY;
     }
 
-    private void decode(ChannelBuffer in, ChannelBuffer out) {
+    private void decode(ByteBuf in, ByteBuf out) {
         decoder.writeInbound(in);
         fetchDecoderOutput(out);
     }
 
-    private void finishDecode(ChannelBuffer out) {
+    private void finishDecode(ByteBuf out) {
         if (decoder.finish()) {
             fetchDecoderOutput(out);
         }
         decoder = null;
     }
 
-    private void fetchDecoderOutput(ChannelBuffer out) {
+    private void fetchDecoderOutput(ByteBuf out) {
         for (;;) {
-            ChannelBuffer buf = (ChannelBuffer) decoder.readInbound();
+            ByteBuf buf = (ByteBuf) decoder.readInbound();
             if (buf == null) {
                 break;
             }

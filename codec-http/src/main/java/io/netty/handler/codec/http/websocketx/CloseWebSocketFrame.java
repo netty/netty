@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.CharsetUtil;
 
@@ -78,7 +78,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
         }
 
-        ChannelBuffer binaryData = ChannelBuffers.buffer(2 + reasonBytes.length);
+        ByteBuf binaryData = ChannelBuffers.buffer(2 + reasonBytes.length);
         binaryData.writeShort(statusCode);
         if (reasonBytes.length > 0) {
             binaryData.writeBytes(reasonBytes);
@@ -98,7 +98,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame. Must be 2 byte integer followed by optional UTF-8 encoded string.
      */
-    public CloseWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public CloseWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         if (binaryData == null) {
@@ -113,7 +113,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * a status code is set, -1 is returned.
      */
     public int getStatusCode() {
-        ChannelBuffer binaryData = getBinaryData();
+        ByteBuf binaryData = getBinaryData();
         if (binaryData == null || binaryData.capacity() == 0) {
             return -1;
         }
@@ -130,7 +130,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * text is not supplied, an empty string is returned.
      */
     public String getReasonText() {
-        ChannelBuffer binaryData = getBinaryData();
+        ByteBuf binaryData = getBinaryData();
         if (binaryData == null || binaryData.capacity() <= 2) {
             return "";
         }

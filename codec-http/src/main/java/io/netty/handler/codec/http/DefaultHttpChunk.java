@@ -15,31 +15,31 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * The default {@link HttpChunk} implementation.
  */
 public class DefaultHttpChunk implements HttpChunk {
 
-    private ChannelBuffer content;
+    private ByteBuf content;
     private boolean last;
 
     /**
      * Creates a new instance with the specified chunk content. If an empty
      * buffer is specified, this chunk becomes the 'end of content' marker.
      */
-    public DefaultHttpChunk(ChannelBuffer content) {
+    public DefaultHttpChunk(ByteBuf content) {
         setContent(content);
     }
 
     @Override
-    public ChannelBuffer getContent() {
+    public ByteBuf getContent() {
         return content;
     }
 
     @Override
-    public void setContent(ChannelBuffer content) {
+    public void setContent(ByteBuf content) {
         if (content == null) {
             throw new NullPointerException("content");
         }

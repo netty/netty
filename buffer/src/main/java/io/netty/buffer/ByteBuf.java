@@ -38,14 +38,14 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h3>Random Access Indexing</h3>
  *
- * Just like an ordinary primitive byte array, {@link ChannelBuffer} uses
+ * Just like an ordinary primitive byte array, {@link ByteBuf} uses
  * <a href="http://en.wikipedia.org/wiki/Zero-based_numbering">zero-based indexing</a>.
  * It means the index of the first byte is always {@code 0} and the index of the last byte is
  * always {@link #capacity() capacity - 1}.  For example, to iterate all bytes of a buffer, you
  * can do the following, regardless of its internal implementation:
  *
  * <pre>
- * {@link ChannelBuffer} buffer = ...;
+ * {@link ByteBuf} buffer = ...;
  * for (int i = 0; i &lt; buffer.capacity(); i ++) {
  *     byte b = buffer.getByte(i);
  *     System.out.println((char) b);
@@ -54,7 +54,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h3>Sequential Access Indexing</h3>
  *
- * {@link ChannelBuffer} provides two pointer variables to support sequential
+ * {@link ByteBuf} provides two pointer variables to support sequential
  * read and write operations - {@link #readerIndex() readerIndex} for a read
  * operation and {@link #writerIndex() writerIndex} for a write operation
  * respectively.  The following diagram shows how a buffer is segmented into
@@ -75,7 +75,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * starts with {@code read} or {@code skip} will get or skip the data at the
  * current {@link #readerIndex() readerIndex} and increase it by the number of
  * read bytes.  If the argument of the read operation is also a
- * {@link ChannelBuffer} and no destination index is specified, the specified
+ * {@link ByteBuf} and no destination index is specified, the specified
  * buffer's {@link #readerIndex() readerIndex} is increased together.
  * <p>
  * If there's not enough content left, {@link IndexOutOfBoundsException} is
@@ -84,7 +84,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <pre>
  * // Iterates the readable bytes of a buffer.
- * {@link ChannelBuffer} buffer = ...;
+ * {@link ByteBuf} buffer = ...;
  * while (buffer.readable()) {
  *     System.out.println(buffer.readByte());
  * }
@@ -95,7 +95,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * This segment is a undefined space which needs to be filled.  Any operation
  * whose name ends with {@code write} will write the data at the current
  * {@link #writerIndex() writerIndex} and increase it by the number of written
- * bytes.  If the argument of the write operation is also a {@link ChannelBuffer},
+ * bytes.  If the argument of the write operation is also a {@link ByteBuf},
  * and no source index is specified, the specified buffer's
  * {@link #readerIndex() readerIndex} is increased together.
  * <p>
@@ -107,7 +107,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <pre>
  * // Fills the writable bytes of a buffer with random integers.
- * {@link ChannelBuffer} buffer = ...;
+ * {@link ByteBuf} buffer = ...;
  * while (buffer.writableBytes() >= 4) {
  *     buffer.writeInt(random.nextInt());
  * }
@@ -176,7 +176,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * Various {@link #indexOf(int, int, byte)} methods help you locate an index of
  * a value which meets a certain criteria.  Complicated dynamic sequential
- * search can be done with {@link ChannelBufferIndexFinder} as well as simple
+ * search can be done with {@link ByteBufIndexFinder} as well as simple
  * static single byte search.
  * <p>
  * If you are decoding variable length data such as NUL-terminated string, you
@@ -206,35 +206,35 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h4>Byte array</h4>
  *
- * If a {@link ChannelBuffer} is backed by a byte array (i.e. {@code byte[]}),
+ * If a {@link ByteBuf} is backed by a byte array (i.e. {@code byte[]}),
  * you can access it directly via the {@link #array()} method.  To determine
  * if a buffer is backed by a byte array, {@link #hasArray()} should be used.
  *
  * <h4>NIO Buffers</h4>
  *
- * If a {@link ChannelBuffer} can be converted into an NIO {@link ByteBuffer} which shares its
+ * If a {@link ByteBuf} can be converted into an NIO {@link ByteBuffer} which shares its
  * content (i.e. view buffer), you can get it via the {@link #nioBuffer()} method.  To determine
  * if a buffer can be converted into an NIO buffer, use {@link #nioBuffer()}.
  *
  * <h4>Strings</h4>
  *
- * Various {@link #toString(Charset)} methods convert a {@link ChannelBuffer}
+ * Various {@link #toString(Charset)} methods convert a {@link ByteBuf}
  * into a {@link String}.  Please note that {@link #toString()} is not a
  * conversion method.
  *
  * <h4>I/O Streams</h4>
  *
- * Please refer to {@link ChannelBufferInputStream} and
- * {@link ChannelBufferOutputStream}.
+ * Please refer to {@link ByteBufInputStream} and
+ * {@link ByteBufOutputStream}.
  * @apiviz.landmark
  */
-public interface ChannelBuffer extends Comparable<ChannelBuffer> {
+public interface ByteBuf extends Comparable<ByteBuf> {
 
     /**
-     * Returns the factory which creates a {@link ChannelBuffer} whose
+     * Returns the factory which creates a {@link ByteBuf} whose
      * type and default {@link ByteOrder} are same with this buffer.
      */
-    ChannelBufferFactory factory();
+    ByteBufFactory factory();
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
@@ -292,7 +292,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <pre>
      * // Create a buffer whose readerIndex, writerIndex and capacity are
      * // 0, 0 and 8 respectively.
-     * {@link ChannelBuffer} buf = {@link ChannelBuffers}.buffer(8);
+     * {@link ByteBuf} buf = {@link ChannelBuffers}.buffer(8);
      *
      * // IndexOutOfBoundsException is thrown because the specified
      * // readerIndex (2) cannot be greater than the current writerIndex (0).
@@ -305,7 +305,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <pre>
      * // Create a buffer whose readerIndex, writerIndex and capacity are
      * // 0, 8 and 8 respectively.
-     * {@link ChannelBuffer} buf = {@link ChannelBuffers}.wrappedBuffer(new byte[8]);
+     * {@link ByteBuf} buf = {@link ChannelBuffers}.wrappedBuffer(new byte[8]);
      *
      * // readerIndex becomes 8.
      * buf.readLong();
@@ -588,10 +588,10 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index} until the destination becomes
      * non-writable.  This method is basically same with
-     * {@link #getBytes(int, ChannelBuffer, int, int)}, except that this
+     * {@link #getBytes(int, ByteBuf, int, int)}, except that this
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * {@link #getBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * the source buffer (i.e. {@code this}).
      *
@@ -600,15 +600,15 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code index + dst.writableBytes} is greater than
      *            {@code this.capacity}
      */
-    void  getBytes(int index, ChannelBuffer dst);
+    void  getBytes(int index, ByteBuf dst);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index}.  This method is basically same
-     * with {@link #getBytes(int, ChannelBuffer, int, int)}, except that this
+     * with {@link #getBytes(int, ByteBuf, int, int)}, except that this
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * {@link #getBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * the source buffer (i.e. {@code this}).
      *
@@ -620,7 +620,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *            {@code this.capacity}, or
      *         if {@code length} is greater than {@code dst.writableBytes}
      */
-    void  getBytes(int index, ChannelBuffer dst, int length);
+    void  getBytes(int index, ByteBuf dst, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -639,7 +639,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code dstIndex + length} is greater than
      *            {@code dst.capacity}
      */
-    void  getBytes(int index, ChannelBuffer dst, int dstIndex, int length);
+    void  getBytes(int index, ByteBuf dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -838,10 +838,10 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Transfers the specified source buffer's data to this buffer starting at
      * the specified absolute {@code index} until the source buffer becomes
      * unreadable.  This method is basically same with
-     * {@link #setBytes(int, ChannelBuffer, int, int)}, except that this
+     * {@link #setBytes(int, ByteBuf, int, int)}, except that this
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
-     * {@link #setBytes(int, ChannelBuffer, int, int)} does not.
+     * {@link #setBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * the source buffer (i.e. {@code this}).
      *
@@ -850,15 +850,15 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code index + src.readableBytes} is greater than
      *            {@code this.capacity}
      */
-    void setBytes(int index, ChannelBuffer src);
+    void setBytes(int index, ByteBuf src);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
      * the specified absolute {@code index}.  This method is basically same
-     * with {@link #setBytes(int, ChannelBuffer, int, int)}, except that this
+     * with {@link #setBytes(int, ByteBuf, int, int)}, except that this
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
-     * {@link #setBytes(int, ChannelBuffer, int, int)} does not.
+     * {@link #setBytes(int, ByteBuf, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * the source buffer (i.e. {@code this}).
      *
@@ -870,7 +870,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *            {@code this.capacity}, or
      *         if {@code length} is greater than {@code src.readableBytes}
      */
-    void setBytes(int index, ChannelBuffer src, int length);
+    void setBytes(int index, ByteBuf src, int length);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -889,7 +889,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code srcIndex + length} is greater than
      *            {@code src.capacity}
      */
-    void setBytes(int index, ChannelBuffer src, int srcIndex, int length);
+    void setBytes(int index, ByteBuf src, int srcIndex, int length);
 
     /**
      * Transfers the specified source array's data to this buffer starting at
@@ -1116,7 +1116,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
-    ChannelBuffer readBytes(int length);
+    ByteBuf readBytes(int length);
 
     /**
      * Returns a new slice of this buffer's sub-region starting at the current
@@ -1130,38 +1130,38 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
-    ChannelBuffer readSlice(int length);
+    ByteBuf readSlice(int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the current {@code readerIndex} until the destination becomes
      * non-writable, and increases the {@code readerIndex} by the number of the
      * transferred bytes.  This method is basically same with
-     * {@link #readBytes(ChannelBuffer, int, int)}, except that this method
+     * {@link #readBytes(ByteBuf, int, int)}, except that this method
      * increases the {@code writerIndex} of the destination by the number of
-     * the transferred bytes while {@link #readBytes(ChannelBuffer, int, int)}
+     * the transferred bytes while {@link #readBytes(ByteBuf, int, int)}
      * does not.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code dst.writableBytes} is greater than
      *            {@code this.readableBytes}
      */
-    void readBytes(ChannelBuffer dst);
+    void readBytes(ByteBuf dst);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the current {@code readerIndex} and increases the {@code readerIndex}
      * by the number of the transferred bytes (= {@code length}).  This method
-     * is basically same with {@link #readBytes(ChannelBuffer, int, int)},
+     * is basically same with {@link #readBytes(ByteBuf, int, int)},
      * except that this method increases the {@code writerIndex} of the
      * destination by the number of the transferred bytes (= {@code length})
-     * while {@link #readBytes(ChannelBuffer, int, int)} does not.
+     * while {@link #readBytes(ByteBuf, int, int)} does not.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes} or
      *         if {@code length} is greater than {@code dst.writableBytes}
      */
-    void readBytes(ChannelBuffer dst, int length);
+    void readBytes(ByteBuf dst, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1177,7 +1177,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code dstIndex + length} is greater than
      *            {@code dst.capacity}
      */
-    void readBytes(ChannelBuffer dst, int dstIndex, int length);
+    void readBytes(ByteBuf dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1346,25 +1346,25 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * the current {@code writerIndex} until the source buffer becomes
      * unreadable, and increases the {@code writerIndex} by the number of
      * the transferred bytes.  This method is basically same with
-     * {@link #writeBytes(ChannelBuffer, int, int)}, except that this method
+     * {@link #writeBytes(ByteBuf, int, int)}, except that this method
      * increases the {@code readerIndex} of the source buffer by the number of
-     * the transferred bytes while {@link #writeBytes(ChannelBuffer, int, int)}
+     * the transferred bytes while {@link #writeBytes(ByteBuf, int, int)}
      * does not.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code src.readableBytes} is greater than
      *            {@code this.writableBytes}
      */
-    void writeBytes(ChannelBuffer src);
+    void writeBytes(ByteBuf src);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
      * the current {@code writerIndex} and increases the {@code writerIndex}
      * by the number of the transferred bytes (= {@code length}).  This method
-     * is basically same with {@link #writeBytes(ChannelBuffer, int, int)},
+     * is basically same with {@link #writeBytes(ByteBuf, int, int)},
      * except that this method increases the {@code readerIndex} of the source
      * buffer by the number of the transferred bytes (= {@code length}) while
-     * {@link #writeBytes(ChannelBuffer, int, int)} does not.
+     * {@link #writeBytes(ByteBuf, int, int)} does not.
      *
      * @param length the number of bytes to transfer
      *
@@ -1372,7 +1372,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code length} is greater than {@code this.writableBytes} or
      *         if {@code length} is greater then {@code src.readableBytes}
      */
-    void writeBytes(ChannelBuffer src, int length);
+    void writeBytes(ByteBuf src, int length);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -1388,7 +1388,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *            {@code src.capacity}, or
      *         if {@code length} is greater than {@code this.writableBytes}
      */
-    void writeBytes(ChannelBuffer src, int srcIndex, int length);
+    void writeBytes(ByteBuf src, int srcIndex, int length);
 
     /**
      * Transfers the specified source array's data to this buffer starting at
@@ -1504,7 +1504,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         returned {@code true}.  {@code -1} if the {@code indexFinder}
      *         did not return {@code true} at all.
      */
-    int indexOf(int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder);
+    int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder);
 
     /**
      * Locates the first occurrence of the specified {@code value} in this
@@ -1532,7 +1532,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code true}.  {@code -1} if the {@code indexFinder} did not
      *         return {@code true} at all.
      */
-    int bytesBefore(ChannelBufferIndexFinder indexFinder);
+    int bytesBefore(ByteBufIndexFinder indexFinder);
 
     /**
      * Locates the first occurrence of the specified {@code value} in this
@@ -1566,7 +1566,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
-    int bytesBefore(int length, ChannelBufferIndexFinder indexFinder);
+    int bytesBefore(int length, ByteBufIndexFinder indexFinder);
 
     /**
      * Locates the first occurrence of the specified {@code value} in this
@@ -1600,7 +1600,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code index + length} is greater than {@code this.capacity}
      */
-    int bytesBefore(int index, int length, ChannelBufferIndexFinder indexFinder);
+    int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder);
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
@@ -1609,7 +1609,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      */
-    ChannelBuffer copy();
+    ByteBuf copy();
 
     /**
      * Returns a copy of this buffer's sub-region.  Modifying the content of
@@ -1617,7 +1617,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      */
-    ChannelBuffer copy(int index, int length);
+    ByteBuf copy(int index, int length);
 
     /**
      * Returns a slice of this buffer's readable bytes. Modifying the content
@@ -1627,7 +1627,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      */
-    ChannelBuffer slice();
+    ByteBuf slice();
 
     /**
      * Returns a slice of this buffer's sub-region. Modifying the content of
@@ -1636,7 +1636,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      */
-    ChannelBuffer slice(int index, int length);
+    ByteBuf slice(int index, int length);
 
     /**
      * Returns a buffer which shares the whole region of this buffer.
@@ -1646,7 +1646,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      */
-    ChannelBuffer duplicate();
+    ByteBuf duplicate();
 
     /**
      * Returns {@code true} if and only if {@link #nioBuffer()} method will not fail.
@@ -1744,7 +1744,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Please note that it does not compare {@link #readerIndex()} nor
      * {@link #writerIndex()}.  This method also returns {@code false} for
      * {@code null} and an object which is not an instance of
-     * {@link ChannelBuffer} type.
+     * {@link ByteBuf} type.
      */
     @Override
     boolean equals(Object obj);
@@ -1756,7 +1756,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@code memcmp} and {@link String#compareTo(String)}.
      */
     @Override
-    int compareTo(ChannelBuffer buffer);
+    int compareTo(ByteBuf buffer);
 
     /**
      * Returns the string representation of this buffer.  This method does not

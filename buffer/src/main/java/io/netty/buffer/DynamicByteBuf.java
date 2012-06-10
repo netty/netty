@@ -29,21 +29,21 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link ChannelBuffers#dynamicBuffer(int)} instead of
  * calling the constructor explicitly.
  */
-public class DynamicChannelBuffer extends AbstractChannelBuffer {
+public class DynamicByteBuf extends AbstractByteBuf {
 
-    private final ChannelBufferFactory factory;
+    private final ByteBufFactory factory;
     private final ByteOrder endianness;
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
-    public DynamicChannelBuffer(int estimatedLength) {
+    public DynamicByteBuf(int estimatedLength) {
         this(ByteOrder.BIG_ENDIAN, estimatedLength);
     }
 
-    public DynamicChannelBuffer(ByteOrder endianness, int estimatedLength) {
-        this(endianness, estimatedLength, HeapChannelBufferFactory.getInstance(endianness));
+    public DynamicByteBuf(ByteOrder endianness, int estimatedLength) {
+        this(endianness, estimatedLength, HeapByteBufFactory.getInstance(endianness));
     }
 
-    public DynamicChannelBuffer(ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
+    public DynamicByteBuf(ByteOrder endianness, int estimatedLength, ByteBufFactory factory) {
         if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }
@@ -82,13 +82,13 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
             }
         }
 
-        ChannelBuffer newBuffer = factory().getBuffer(order(), newCapacity);
+        ByteBuf newBuffer = factory().getBuffer(order(), newCapacity);
         newBuffer.writeBytes(buffer, 0, writerIndex());
         buffer = newBuffer;
     }
 
     @Override
-    public ChannelBufferFactory factory() {
+    public ByteBufFactory factory() {
         return factory;
     }
 
@@ -153,7 +153,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
+    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
@@ -205,7 +205,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
+    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
     }
 
@@ -263,7 +263,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void writeBytes(ChannelBuffer src, int srcIndex, int length) {
+    public void writeBytes(ByteBuf src, int srcIndex, int length) {
         ensureWritableBytes(length);
         super.writeBytes(src, srcIndex, length);
     }
@@ -294,30 +294,30 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public ChannelBuffer duplicate() {
-        return new DuplicatedChannelBuffer(this);
+    public ByteBuf duplicate() {
+        return new DuplicatedByteBuf(this);
     }
 
     @Override
-    public ChannelBuffer copy(int index, int length) {
-        DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(order(), Math.max(length, 64), factory());
+    public ByteBuf copy(int index, int length) {
+        DynamicByteBuf copiedBuffer = new DynamicByteBuf(order(), Math.max(length, 64), factory());
         copiedBuffer.buffer = buffer.copy(index, length);
         copiedBuffer.setIndex(0, length);
         return copiedBuffer;
     }
 
     @Override
-    public ChannelBuffer slice(int index, int length) {
+    public ByteBuf slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new TruncatedChannelBuffer(this, length);
+            return new TruncatedByteBuf(this, length);
         } else {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new SlicedChannelBuffer(this, index, length);
+            return new SlicedByteBuf(this, index, length);
         }
     }
 

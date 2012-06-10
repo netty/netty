@@ -16,8 +16,8 @@
 package io.netty.handler.codec;
 
 import static org.junit.Assert.*;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferIndexFinder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -48,14 +48,14 @@ public class ReplayingDecoderTest {
         assertNull(ch.readInbound());
     }
 
-    private static final class LineDecoder extends ReplayingDecoder<ChannelBuffer, VoidEnum> {
+    private static final class LineDecoder extends ReplayingDecoder<ByteBuf, VoidEnum> {
 
         LineDecoder() {
         }
 
         @Override
-        public ChannelBuffer decode(ChannelHandlerContext ctx, ChannelBuffer in) {
-            ChannelBuffer msg = in.readBytes(in.bytesBefore(ChannelBufferIndexFinder.LF));
+        public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf in) {
+            ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
             in.skipBytes(1);
             return msg;
         }

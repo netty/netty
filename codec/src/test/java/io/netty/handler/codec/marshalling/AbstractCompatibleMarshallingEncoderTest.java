@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 
@@ -43,7 +43,7 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         ch.writeOutbound(testObject);
         Assert.assertTrue(ch.finish());
 
-        ChannelBuffer buffer = ch.readOutbound();
+        ByteBuf buffer = ch.readOutbound();
 
         Unmarshaller unmarshaller = marshallerFactory.createUnmarshaller(configuration);
         unmarshaller.start(Marshalling.createByteInput(truncate(buffer).nioBuffer()));
@@ -57,7 +57,7 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         unmarshaller.finish();
         unmarshaller.close();
     }
-    protected ChannelBuffer truncate(ChannelBuffer buf) {
+    protected ByteBuf truncate(ByteBuf buf) {
         return buf;
     }
 

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Base class for web socket frames
@@ -36,19 +36,19 @@ public abstract class WebSocketFrame {
     /**
      * Contents of this frame
      */
-    private ChannelBuffer binaryData;
+    private ByteBuf binaryData;
 
     /**
      * Returns binary data
      */
-    public ChannelBuffer getBinaryData() {
+    public ByteBuf getBinaryData() {
         return binaryData;
     }
 
     /**
      * Sets the binary data for this frame
      */
-    public void setBinaryData(ChannelBuffer binaryData) {
+    public void setBinaryData(ByteBuf binaryData) {
         this.binaryData = binaryData;
     }
 

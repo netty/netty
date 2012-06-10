@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
@@ -45,7 +45,7 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapt
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        ChannelBuffer in = ctx.inboundByteBuffer();
+        ByteBuf in = ctx.inboundByteBuffer();
         if (in.readable()) {
             callDecode(ctx);
         }
@@ -67,7 +67,7 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapt
     }
 
     protected void callDecode(ChannelHandlerContext ctx) {
-        ChannelBuffer in = ctx.inboundByteBuffer();
+        ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
         for (;;) {
@@ -127,7 +127,7 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapt
         // the new handler.
         ctx.pipeline().addAfter(ctx.name(), newHandlerName, newHandler);
 
-        ChannelBuffer in = ctx.inboundByteBuffer();
+        ByteBuf in = ctx.inboundByteBuffer();
         try {
             if (in.readable()) {
                 ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());
@@ -138,9 +138,9 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapt
         }
     }
 
-    public abstract O decode(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception;
+    public abstract O decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 
-    public O decodeLast(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+    public O decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         return decode(ctx, in);
     }
 }

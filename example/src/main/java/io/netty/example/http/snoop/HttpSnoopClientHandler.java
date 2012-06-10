@@ -15,7 +15,7 @@
  */
 package io.netty.example.http.snoop;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
@@ -58,7 +58,7 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
                 readingChunks = true;
                 System.out.println("CHUNKED CONTENT {");
             } else {
-                ChannelBuffer content = response.getContent();
+                ByteBuf content = response.getContent();
                 if (content.readable()) {
                     System.out.println("CONTENT {");
                     System.out.println(content.toString(CharsetUtil.UTF_8));

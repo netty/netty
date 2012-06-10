@@ -18,9 +18,9 @@ package io.netty.buffer;
 import java.nio.ByteOrder;
 
 /**
- * A skeletal implementation of {@link ChannelBufferFactory}.
+ * A skeletal implementation of {@link ByteBufFactory}.
  */
-public abstract class AbstractChannelBufferFactory implements ChannelBufferFactory {
+public abstract class AbstractByteBufFactory implements ByteBufFactory {
 
     private final ByteOrder defaultOrder;
 
@@ -28,7 +28,7 @@ public abstract class AbstractChannelBufferFactory implements ChannelBufferFacto
      * Creates a new factory whose default {@link ByteOrder} is
      * {@link ByteOrder#BIG_ENDIAN}.
      */
-    protected AbstractChannelBufferFactory() {
+    protected AbstractByteBufFactory() {
         this(ByteOrder.BIG_ENDIAN);
     }
 
@@ -37,7 +37,7 @@ public abstract class AbstractChannelBufferFactory implements ChannelBufferFacto
      *
      * @param defaultOrder the default {@link ByteOrder} of this factory
      */
-    protected AbstractChannelBufferFactory(ByteOrder defaultOrder) {
+    protected AbstractByteBufFactory(ByteOrder defaultOrder) {
         if (defaultOrder == null) {
             throw new NullPointerException("defaultOrder");
         }
@@ -45,12 +45,12 @@ public abstract class AbstractChannelBufferFactory implements ChannelBufferFacto
     }
 
     @Override
-    public ChannelBuffer getBuffer(int capacity) {
+    public ByteBuf getBuffer(int capacity) {
         return getBuffer(getDefaultOrder(), capacity);
     }
 
     @Override
-    public ChannelBuffer getBuffer(byte[] array, int offset, int length) {
+    public ByteBuf getBuffer(byte[] array, int offset, int length) {
         return getBuffer(getDefaultOrder(), array, offset, length);
     }
 

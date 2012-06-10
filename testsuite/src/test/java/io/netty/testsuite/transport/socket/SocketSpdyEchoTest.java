@@ -18,7 +18,7 @@ package io.netty.testsuite.transport.socket;
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -43,9 +43,9 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
     private static final Random random = new Random();
     static final int ignoredBytes = 20;
 
-    private static ChannelBuffer createFrames(int version) {
+    private static ByteBuf createFrames(int version) {
         int length = version < 3 ? 1176 : 1174;
-        ChannelBuffer frames = ChannelBuffers.buffer(length);
+        ByteBuf frames = ChannelBuffers.buffer(length);
 
         // SPDY UNKNOWN Frame
         frames.writeByte(0x80);
@@ -177,7 +177,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
 
-        ChannelBuffer frames = createFrames(version);
+        ByteBuf frames = createFrames(version);
 
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
         final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames);
@@ -247,15 +247,15 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     private class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-        final ChannelBuffer frames;
+        final ByteBuf frames;
         volatile int counter;
 
-        SpdyEchoTestClientHandler(ChannelBuffer frames) {
+        SpdyEchoTestClientHandler(ByteBuf frames) {
             this.frames = frames;
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception {
+        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

@@ -15,7 +15,7 @@
  */
 
 /**
- * Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ChannelBuffer}s
+ * Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ByteBuf}s
  * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>
  * and <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>.
  *

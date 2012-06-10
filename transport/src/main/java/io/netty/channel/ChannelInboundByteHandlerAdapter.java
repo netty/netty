@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 
 public abstract class ChannelInboundByteHandlerAdapter extends ChannelInboundHandlerAdapter<Byte> {
@@ -27,7 +27,7 @@ public abstract class ChannelInboundByteHandlerAdapter extends ChannelInboundHan
 
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ChannelBuffer in = ctx.inboundByteBuffer();
+        ByteBuf in = ctx.inboundByteBuffer();
         try {
             inboundBufferUpdated(ctx, in);
         } finally {
@@ -37,5 +37,5 @@ public abstract class ChannelInboundByteHandlerAdapter extends ChannelInboundHan
         }
     }
 
-    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ChannelBuffer in) throws Exception;
+    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.QueueFactory;
@@ -48,9 +48,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final ChannelHandler handler;
 
     final Queue<Object> inMsgBuf;
-    final ChannelBuffer inByteBuf;
+    final ByteBuf inByteBuf;
     final Queue<Object> outMsgBuf;
-    final ChannelBuffer outByteBuf;
+    final ByteBuf outByteBuf;
 
     // When the two handlers run in a different thread and they are next to each other,
     // each other's buffers can be accessed at the same time resulting in a race condition.
@@ -117,7 +117,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             } finally {
-                ChannelBuffer buf = inByteBuf;
+                ByteBuf buf = inByteBuf;
                 if (buf != null) {
                     if (!buf.readable()) {
                         buf.discardReadBytes();
@@ -359,7 +359,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelBuffer inboundByteBuffer() {
+    public ByteBuf inboundByteBuffer() {
         if (inByteBuf == null) {
             throw new NoSuchBufferException();
         }
@@ -386,7 +386,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelBuffer outboundByteBuffer() {
+    public ByteBuf outboundByteBuffer() {
         if (outByteBuf == null) {
             throw new NoSuchBufferException();
         }
@@ -441,7 +441,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelBuffer nextInboundByteBuffer() {
+    public ByteBuf nextInboundByteBuffer() {
         DefaultChannelHandlerContext ctx = next;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
@@ -494,7 +494,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelBuffer nextOutboundByteBuffer() {
+    public ByteBuf nextOutboundByteBuffer() {
         return pipeline.nextOutboundByteBuffer(prev);
     }
 
@@ -763,21 +763,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class ByteBridge {
-        final ChannelBuffer byteBuf = ChannelBuffers.dynamicBuffer();
-        final BlockingQueue<ChannelBuffer> exchangeBuf = QueueFactory.createQueue();
+        final ByteBuf byteBuf = ChannelBuffers.dynamicBuffer();
+        final BlockingQueue<ByteBuf> exchangeBuf = QueueFactory.createQueue();
 
         void fill() {
             if (!byteBuf.readable()) {
                 return;
             }
-            ChannelBuffer data = byteBuf.readBytes(byteBuf.readableBytes());
+            ByteBuf data = byteBuf.readBytes(byteBuf.readableBytes());
             byteBuf.discardReadBytes();
             exchangeBuf.add(data);
         }
 
-        void flush(ChannelBuffer out) {
+        void flush(ByteBuf out) {
             for (;;) {
-                ChannelBuffer data = exchangeBuf.poll();
+                ByteBuf data = exchangeBuf.poll();
                 if (data == null) {
                     break;
                 }
