@@ -16,14 +16,14 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 
-public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapter<Byte> {
+public abstract class ByteToMessageDecoder<O>
+    extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
     private ChannelHandlerContext ctx;
 
@@ -34,8 +34,8 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.byteBuffer();
+    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ByteBufs.dynamicBuffer();
     }
 
     @Override
@@ -118,7 +118,7 @@ public abstract class ByteToMessageDecoder<O> extends ChannelInboundHandlerAdapt
      * All remaining bytes in the inbound buffer will be forwarded to the new handler's
      * inbound buffer.
      */
-    public void replace(String newHandlerName, ChannelInboundHandler<Byte> newHandler) {
+    public void replace(String newHandlerName, ChannelInboundByteHandler newHandler) {
         if (!ctx.executor().inEventLoop()) {
             throw new IllegalStateException("not in event loop");
         }

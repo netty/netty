@@ -15,13 +15,17 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
+
 import java.util.Queue;
 
-public abstract class ChannelInboundMessageHandlerAdapter<I> extends ChannelInboundHandlerAdapter<I> {
+public abstract class ChannelInboundMessageHandlerAdapter<I>
+        extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     @Override
-    public ChannelBufferHolder<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
+    public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return MessageBufs.buffer();
     }
 
     @Override

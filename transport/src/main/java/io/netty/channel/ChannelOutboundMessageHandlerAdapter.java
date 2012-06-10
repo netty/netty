@@ -15,10 +15,13 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 
-public abstract class ChannelOutboundMessageHandlerAdapter<I> extends ChannelOutboundHandlerAdapter<I> {
+public abstract class ChannelOutboundMessageHandlerAdapter<I>
+        extends ChannelOutboundHandlerAdapter implements ChannelOutboundMessageHandler<I> {
     @Override
-    public ChannelBufferHolder<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
+    public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return MessageBufs.buffer();
     }
 }

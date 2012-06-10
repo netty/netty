@@ -19,18 +19,17 @@ import java.util.Queue;
 
 public final class MessageBufs {
 
-    public static <T> MessageBuf<T> messageBuffer() {
+    public static <T> MessageBuf<T> buffer() {
         return new DefaultMessageBuf<T>();
     }
 
-    public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
+    public static <T> MessageBuf<T> buffer(int initialCapacity) {
         return new DefaultMessageBuf<T>(initialCapacity);
     }
 
-    public static <T> MessageBuf<T> messageBuffer(Queue<T> queue) {
+    public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
         return new QueueBackedMessageBuf<T>(queue);
     }
-
 
     private MessageBufs() { }
 }

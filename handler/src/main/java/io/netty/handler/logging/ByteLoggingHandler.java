@@ -16,16 +16,14 @@
 package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundByteHandler;
 
 public class ByteLoggingHandler
-        extends LoggingHandler
-        implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<Byte> {
+        extends LoggingHandler implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
 
     private static final String NEWLINE = String.format("%n");
 
@@ -111,17 +109,14 @@ public class ByteLoggingHandler
         super(name);
     }
     @Override
-    public ChannelBufferHolder<Byte> newOutboundBuffer(ChannelHandlerContext ctx)
-            throws Exception {
-        return ChannelBufferHolders.byteBuffer();
+    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ByteBufs.dynamicBuffer();
     }
 
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx)
-            throws Exception {
-        return ChannelBufferHolders.byteBuffer();
+    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ByteBufs.dynamicBuffer();
     }
-
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx)

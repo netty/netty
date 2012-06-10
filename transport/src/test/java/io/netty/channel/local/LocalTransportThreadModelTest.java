@@ -17,16 +17,19 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufs;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelOutboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.DefaultEventExecutor;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
@@ -330,7 +333,8 @@ public class LocalTransportThreadModelTest {
 
     private static class ThreadNameAuditor
             extends ChannelHandlerAdapter
-            implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
+            implements ChannelInboundMessageHandler<Object>,
+                       ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
@@ -338,15 +342,13 @@ public class LocalTransportThreadModelTest {
         private final Queue<String> outboundThreadNames = QueueFactory.createQueue();
 
         @Override
-        public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
-        public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
@@ -379,7 +381,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder1
             extends ChannelHandlerAdapter
-            implements ChannelInboundHandler<Integer>, ChannelOutboundHandler<Byte> {
+            implements ChannelInboundMessageHandler<Integer>, ChannelOutboundByteHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -387,15 +389,13 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public ChannelBufferHolder<Integer> newInboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Integer> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
-        public ChannelBufferHolder<Byte> newOutboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.byteBuffer();
+        public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return ByteBufs.dynamicBuffer();
         }
 
         @Override
@@ -464,7 +464,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder2
             extends ChannelHandlerAdapter
-            implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<Integer> {
+            implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<Integer> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -472,15 +472,15 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public ChannelBufferHolder<Byte> newInboundBuffer(
+        public ByteBuf newInboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.byteBuffer();
+            return ByteBufs.dynamicBuffer();
         }
 
         @Override
-        public ChannelBufferHolder<Integer> newOutboundBuffer(
+        public MessageBuf<Integer> newOutboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+            return MessageBufs.buffer();
         }
 
         @Override
@@ -541,7 +541,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder3
             extends ChannelHandlerAdapter
-            implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
+            implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -549,20 +549,17 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
-        public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx) throws Exception {
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -619,7 +616,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageDiscarder
             extends ChannelHandlerAdapter
-            implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
+            implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -628,20 +625,17 @@ public class LocalTransportThreadModelTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public ChannelBufferHolder<Object> newInboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
-        public ChannelBufferHolder<Object> newOutboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ChannelBufferHolders.messageBuffer();
+        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return MessageBufs.buffer();
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx) throws Exception {
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();

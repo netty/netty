@@ -21,8 +21,6 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,12 +48,6 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
     private boolean readingChunks;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
-
-    @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
-    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {

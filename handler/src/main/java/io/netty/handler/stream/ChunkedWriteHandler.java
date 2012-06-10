@@ -16,23 +16,21 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBufs;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -69,23 +67,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @apiviz.has io.netty.handler.stream.ChunkedInput oneway - - reads from
  */
 public class ChunkedWriteHandler
-        extends ChannelHandlerAdapter implements ChannelOutboundHandler<Object> {
+        extends ChannelHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
     private static final int MAX_PENDING_WRITES = 4;
 
-    private final Queue<Object> queue = new LinkedList<Object>();
+    private final MessageBuf<Object> queue = MessageBufs.buffer();
 
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
     private Object currentEvent;
 
     @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer(queue);
+    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return queue;
     }
 
     private boolean isWritable() {

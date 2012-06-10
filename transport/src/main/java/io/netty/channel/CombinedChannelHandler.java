@@ -15,27 +15,27 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuf;
+
 import java.net.SocketAddress;
 
 public class CombinedChannelHandler
-        extends ChannelHandlerAdapter
-        implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
+        extends ChannelHandlerAdapter implements ChannelInboundHandler, ChannelOutboundHandler {
 
-    private ChannelOutboundHandler<Object> out;
-    private ChannelInboundHandler<Object> in;
+    private ChannelOutboundHandler out;
+    private ChannelInboundHandler in;
 
     protected CombinedChannelHandler() {
         // User will call init in the subclass constructor.
     }
 
     public CombinedChannelHandler(
-            ChannelInboundHandler<?> inboundHandler, ChannelOutboundHandler<?> outboundHandler) {
+            ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         init(inboundHandler, outboundHandler);
     }
 
-    @SuppressWarnings("unchecked")
-    protected void init(ChannelInboundHandler<?> inboundHandler,
-            ChannelOutboundHandler<?> outboundHandler) {
+    protected void init(
+            ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         if (inboundHandler == null) {
             throw new NullPointerException("inboundHandler");
         }
@@ -58,18 +58,18 @@ public class CombinedChannelHandler
             throw new IllegalStateException("init() cannot be called more than once.");
         }
 
-        in = (ChannelInboundHandler<Object>) inboundHandler;
-        out = (ChannelOutboundHandler<Object>) outboundHandler;
+        in = inboundHandler;
+        out = outboundHandler;
     }
 
     @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(
+    public ChannelBuf newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return in.newInboundBuffer(ctx);
     }
 
     @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(
+    public ChannelBuf newOutboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
     }

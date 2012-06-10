@@ -18,6 +18,8 @@ package io.netty.channel;
 import static io.netty.channel.DefaultChannelPipeline.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
+import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.QueueFactory;
 
@@ -174,7 +176,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
         this.type = Collections.unmodifiableSet(type);
-        this.directions = typeValue;
+        directions = typeValue;
 
         this.prev = prev;
         this.next = next;
@@ -200,27 +202,28 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         if (type.contains(ChannelHandlerType.INBOUND)) {
-            ChannelBufferHolder<Object> holder;
+            ChannelBuf buf;
             try {
-                holder = ((ChannelInboundHandler<Object>) handler).newInboundBuffer(this);
+                buf = ((ChannelInboundHandler) handler).newInboundBuffer(this);
             } catch (Exception e) {
                 throw new ChannelPipelineException("A user handler failed to create a new inbound buffer.", e);
             }
 
-            switch (holder.type()) {
-            case BYTE:
-                inByteBuf = holder.byteBuffer();
+            if (buf == null) {
+                throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
+            }
+
+            if (buf instanceof ByteBuf) {
+                inByteBuf = (ByteBuf) buf;
                 inByteBridge = new AtomicReference<ByteBridge>();
                 inMsgBuf = null;
                 inMsgBridge = null;
-                break;
-            case MESSAGE:
+            } else if (buf instanceof MessageBuf) {
                 inByteBuf = null;
                 inByteBridge = null;
-                inMsgBuf = holder.messageBuffer();
+                inMsgBuf = (Queue<Object>) buf;
                 inMsgBridge = new AtomicReference<MessageBridge>();
-                break;
-            default:
+            } else {
                 throw new Error();
             }
         } else {
@@ -231,27 +234,28 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         if (type.contains(ChannelHandlerType.OUTBOUND)) {
-            ChannelBufferHolder<Object> holder;
+            ChannelBuf buf;
             try {
-                holder = ((ChannelOutboundHandler<Object>) handler).newOutboundBuffer(this);
+                buf = ((ChannelOutboundHandler) handler).newOutboundBuffer(this);
             } catch (Exception e) {
                 throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
             }
 
-            switch (holder.type()) {
-            case BYTE:
-                outByteBuf = holder.byteBuffer();
+            if (buf == null) {
+                throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
+            }
+
+            if (buf instanceof ByteBuf) {
+                outByteBuf = (ByteBuf) buf;
                 outByteBridge = new AtomicReference<ByteBridge>();
                 outMsgBuf = null;
                 outMsgBridge = null;
-                break;
-            case MESSAGE:
+            } else if (buf instanceof MessageBuf) {
                 outByteBuf = null;
                 outByteBridge = null;
-                outMsgBuf = holder.messageBuffer();
+                outMsgBuf = (Queue<Object>) buf;
                 outMsgBridge = new AtomicReference<MessageBridge>();
-                break;
-            default:
+            } else {
                 throw new Error();
             }
         } else {

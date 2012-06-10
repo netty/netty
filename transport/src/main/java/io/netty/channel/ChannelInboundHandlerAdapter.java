@@ -16,8 +16,8 @@
 package io.netty.channel;
 
 
-public abstract class ChannelInboundHandlerAdapter<I> extends ChannelStateHandlerAdapter
-        implements ChannelInboundHandler<I> {
+public abstract class ChannelInboundHandlerAdapter
+        extends ChannelStateHandlerAdapter implements ChannelInboundHandler {
     @Override
     public abstract void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
 }

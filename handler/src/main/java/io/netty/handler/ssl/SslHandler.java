@@ -16,15 +16,14 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.logging.InternalLogger;
@@ -144,7 +143,7 @@ import javax.net.ssl.SSLException;
  */
 public class SslHandler
         extends ChannelHandlerAdapter
-        implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<Byte> {
+        implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SslHandler.class);
@@ -304,13 +303,13 @@ public class SslHandler
     }
 
     @Override
-    public ChannelBufferHolder<Byte> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.byteBuffer();
+    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ByteBufs.dynamicBuffer();
     }
 
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.byteBuffer();
+    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ByteBufs.dynamicBuffer();
     }
 
     @Override

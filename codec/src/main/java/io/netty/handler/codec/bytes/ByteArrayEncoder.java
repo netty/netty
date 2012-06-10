@@ -17,8 +17,8 @@ package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -53,8 +53,8 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ByteBuf> {
 
     @Override
-    public ChannelBufferHolder<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
+    public MessageBuf<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return MessageBufs.buffer();
     }
 
     @Override

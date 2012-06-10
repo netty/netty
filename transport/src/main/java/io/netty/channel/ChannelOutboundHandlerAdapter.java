@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-public abstract class ChannelOutboundHandlerAdapter<O>
-        extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler<O> {
+public abstract class ChannelOutboundHandlerAdapter
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler {
     @Override
     public abstract void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
 }

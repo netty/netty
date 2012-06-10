@@ -16,8 +16,6 @@
 package io.netty.example.http.snoop;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpChunk;
@@ -27,14 +25,6 @@ import io.netty.util.CharsetUtil;
 public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private boolean readingChunks;
-
-
-    @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
-    }
-
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {

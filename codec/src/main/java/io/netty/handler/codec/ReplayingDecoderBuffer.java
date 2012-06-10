@@ -61,6 +61,11 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    public boolean isPooled() {
+        return false;
+    }
+
+    @Override
     public boolean isDirect() {
         return buffer.isDirect();
     }

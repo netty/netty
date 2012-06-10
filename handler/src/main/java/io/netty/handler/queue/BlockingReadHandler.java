@@ -16,10 +16,10 @@
 package io.netty.handler.queue;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.channel.BlockingOperationException;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -96,10 +96,10 @@ public class BlockingReadHandler<E> extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(
+    public MessageBuf<Object> newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-        return ChannelBufferHolders.messageBuffer(queue);
+        return MessageBufs.wrappedBuffer(queue);
     }
 
     /**

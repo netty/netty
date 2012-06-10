@@ -16,13 +16,15 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufs;
 
 
-public abstract class ChannelInboundByteHandlerAdapter extends ChannelInboundHandlerAdapter<Byte> {
+public abstract class ChannelInboundByteHandlerAdapter
+        extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.byteBuffer();
+    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ByteBufs.dynamicBuffer();
     }
 
     @Override

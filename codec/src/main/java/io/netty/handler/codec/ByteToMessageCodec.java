@@ -16,16 +16,16 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelBufferHolder;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 
 public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         extends ChannelHandlerAdapter
-        implements ChannelInboundHandler<Byte>, ChannelOutboundHandler<OUTBOUND_IN> {
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<OUTBOUND_IN> {
 
     private final MessageToByteEncoder<OUTBOUND_IN> encoder =
             new MessageToByteEncoder<OUTBOUND_IN>() {
@@ -47,7 +47,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
     };
 
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(
+    public ByteBuf newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return decoder.newInboundBuffer(ctx);
     }
@@ -58,7 +58,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
     }
 
     @Override
-    public ChannelBufferHolder<OUTBOUND_IN> newOutboundBuffer(
+    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return encoder.newOutboundBuffer(ctx);
     }

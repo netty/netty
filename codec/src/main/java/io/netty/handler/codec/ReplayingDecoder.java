@@ -16,9 +16,8 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -282,12 +281,10 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
-    private final ChannelBufferHolder<Byte> in = ChannelBufferHolders.byteBuffer();
-    private final ByteBuf cumulation = in.byteBuffer();
+    private final ByteBuf cumulation = ByteBufs.dynamicBuffer();
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(cumulation);
     private S state;
     private int checkpoint = -1;
-    private volatile boolean inUse;
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -357,14 +354,9 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
     }
 
     @Override
-    public ChannelBufferHolder<Byte> newInboundBuffer(
+    public ByteBuf newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
-        if (inUse) {
-            throw new IllegalStateException(
-                    ReplayingDecoder.class.getSimpleName() + " cannot be shared.");
-        }
-        inUse = true;
-        return in;
+        return cumulation;
     }
 
     @Override

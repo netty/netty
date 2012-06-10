@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SpdySessionHandler
         extends ChannelHandlerAdapter
-        implements ChannelInboundHandler<Object>, ChannelOutboundHandler<Object> {
+        implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
     private static final SpdyProtocolException PROTOCOL_EXCEPTION = new SpdyProtocolException();
     private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");
@@ -87,15 +87,13 @@ public class SpdySessionHandler
     }
 
     @Override
-    public ChannelBufferHolder<Object> newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
+    public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return MessageBufs.buffer();
     }
 
     @Override
-    public ChannelBufferHolder<Object> newOutboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        return ChannelBufferHolders.messageBuffer();
+    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return MessageBufs.buffer();
     }
 
     @Override

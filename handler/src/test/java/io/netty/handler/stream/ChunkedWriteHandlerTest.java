@@ -18,8 +18,8 @@ package io.netty.handler.stream;
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
-import io.netty.channel.ChannelBufferHolder;
-import io.netty.channel.ChannelBufferHolders;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -135,11 +135,11 @@ public class ChunkedWriteHandlerTest {
             }
         };
 
-        ChannelOutboundHandlerAdapter<ByteBuf> testHandler = new ChannelOutboundHandlerAdapter<ByteBuf>() {
+        ChannelOutboundHandlerAdapter testHandler = new ChannelOutboundHandlerAdapter() {
 
             @Override
-            public ChannelBufferHolder<ByteBuf> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-                return ChannelBufferHolders.messageBuffer();
+            public MessageBuf<ByteBuf> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+                return MessageBufs.buffer();
             }
 
             @Override
