@@ -59,13 +59,16 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     }
 
     public final void run() {
-        try {
-            DeadLockProofWorker.PARENT.set(executor);
+        if (executor instanceof MemoryAwareThreadPoolExecutor) {
             doRun();
-        } finally {
-            DeadLockProofWorker.PARENT.remove();
+        } else {
+            try {
+                DeadLockProofWorker.PARENT.set(executor);
+                doRun();
+            } finally {
+                DeadLockProofWorker.PARENT.remove();
+            }
         }
-
     }
 
     protected abstract void doRun();
