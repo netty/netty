@@ -15,18 +15,17 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.buffer.ByteBufs.*;
 import io.netty.buffer.ByteBuf;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
 /**
- * A {@link ChunkedInput} that fetches data from a {@link ReadableByteChannel}
+ * A {@link ChunkedByteInput} that fetches data from a {@link ReadableByteChannel}
  * chunk by chunk.  Please note that the {@link ReadableByteChannel} must
  * operate in blocking mode.  Non-blocking mode channels are not supported.
  */
-public class ChunkedNioStream implements ChunkedInput {
+public class ChunkedNioStream implements ChunkedByteInput {
 
     private final ReadableByteChannel in;
 
@@ -97,10 +96,11 @@ public class ChunkedNioStream implements ChunkedInput {
     }
 
     @Override
-    public Object nextChunk() throws Exception {
+    public boolean readChunk(ByteBuf buffer) throws Exception {
         if (isEndOfInput()) {
-            return null;
+            return false;
         }
+        
         // buffer cannot be not be empty from there
         int readBytes = byteBuffer.position();
         for (;;) {
@@ -116,9 +116,9 @@ public class ChunkedNioStream implements ChunkedInput {
             }
         }
         byteBuffer.flip();
-        // copy since buffer is keeped for next usage
-        ByteBuf buffer = copiedBuffer(byteBuffer);
+        buffer.writeBytes(byteBuffer);
         byteBuffer.clear();
-        return buffer;
+        
+        return true;
     }
 }

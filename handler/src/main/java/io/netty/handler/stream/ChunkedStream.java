@@ -15,13 +15,13 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.buffer.ByteBufs.*;
+import io.netty.buffer.ByteBuf;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 
 /**
- * A {@link ChunkedInput} that fetches data from an {@link InputStream} chunk by
+ * A {@link ChunkedByteInput} that fetches data from an {@link InputStream} chunk by
  * chunk.
  * <p>
  * Please note that the {@link InputStream} instance that feeds data into
@@ -30,7 +30,7 @@ import java.io.PushbackInputStream;
  * Otherwise, {@link ChunkedStream} will generate many too small chunks or
  * block unnecessarily often.
  */
-public class ChunkedStream implements ChunkedInput {
+public class ChunkedStream implements ChunkedByteInput {
 
     static final int DEFAULT_CHUNK_SIZE = 8192;
 
@@ -93,9 +93,9 @@ public class ChunkedStream implements ChunkedInput {
     }
 
     @Override
-    public Object nextChunk() throws Exception {
+    public boolean readChunk(ByteBuf buffer) throws Exception {
         if (isEndOfInput()) {
-            return null;
+            return false;
         }
 
         final int availableBytes = in.available();
@@ -105,21 +105,9 @@ public class ChunkedStream implements ChunkedInput {
         } else {
             chunkSize = Math.min(this.chunkSize, in.available());
         }
-        final byte[] chunk = new byte[chunkSize];
-        int readBytes = 0;
-        for (;;) {
-            int localReadBytes = in.read(chunk, readBytes, chunkSize - readBytes);
-            if (localReadBytes < 0) {
-                break;
-            }
-            readBytes += localReadBytes;
-            offset += localReadBytes;
-
-            if (readBytes == chunkSize) {
-                break;
-            }
-        }
-
-        return wrappedBuffer(chunk, 0, readBytes);
+        
+        // transfer to buffer
+        offset =+ buffer.writeBytes(in, chunkSize);
+        return true;
     }
 }

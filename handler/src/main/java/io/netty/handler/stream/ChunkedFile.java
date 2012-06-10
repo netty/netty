@@ -15,20 +15,20 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.buffer.ByteBufs.*;
+import io.netty.buffer.ByteBuf;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
- * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
+ * A {@link ChunkedByteInput} that fetches data from a file chunk by chunk.
  * <p>
  * If your operating system supports
  * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
-public class ChunkedFile implements ChunkedInput {
+public class ChunkedFile implements ChunkedByteInput {
 
     private final RandomAccessFile file;
     private final long startOffset;
@@ -136,16 +136,21 @@ public class ChunkedFile implements ChunkedInput {
     }
 
     @Override
-    public Object nextChunk() throws Exception {
+    public boolean readChunk(ByteBuf buffer) throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
-            return null;
+            return false;
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
+        
+        // Check if the buffer is backed by an byte array. If so we can optimize it a bit an safe a copy
+        
         byte[] chunk = new byte[chunkSize];
         file.readFully(chunk);
+        buffer.writeBytes(chunk);
         this.offset = offset + chunkSize;
-        return wrappedBuffer(chunk);
+        
+        return true;
     }
 }

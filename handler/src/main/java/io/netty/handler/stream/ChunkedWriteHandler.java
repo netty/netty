@@ -15,7 +15,6 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.ByteBufs;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.MessageBufs;
 import io.netty.channel.Channel;
@@ -154,7 +153,7 @@ public class ChunkedWriteHandler
             }
 
             if (currentEvent instanceof ChunkedInput) {
-                closeInput((ChunkedInput) currentEvent);
+                closeInput((ChunkedInput<?>) currentEvent);
             } else if (currentEvent instanceof ChannelFuture) {
                 fireExceptionCaught = true;
                 ((ChannelFuture) currentEvent).setFailure(cause);
@@ -186,15 +185,15 @@ public class ChunkedWriteHandler
                 this.currentEvent = null;
                 ctx.flush((ChannelFuture) currentEvent);
             } else if (currentEvent instanceof ChunkedInput) {
-                final ChunkedInput chunks = (ChunkedInput) currentEvent;
-                Object chunk;
+                final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
+                boolean read;
                 boolean endOfInput;
                 boolean suspend;
                 try {
-                    chunk = chunks.nextChunk();
+                    read = readChunk(ctx, chunks);
                     endOfInput = chunks.isEndOfInput();
-                    if (chunk == null) {
-                        chunk = ByteBufs.EMPTY_BUFFER;
+
+                    if (!read) {
                         // No need to suspend when reached at the end.
                         suspend = !endOfInput;
                     } else {
@@ -226,7 +225,6 @@ public class ChunkedWriteHandler
                 }
 
                 pendingWrites.incrementAndGet();
-                ctx.nextOutboundMessageBuffer().add(chunk);
                 ChannelFuture f = ctx.flush();
                 if (endOfInput) {
                     this.currentEvent = null;
@@ -249,7 +247,7 @@ public class ChunkedWriteHandler
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
-                                closeInput((ChunkedInput) currentEvent);
+                                closeInput((ChunkedInput<?>) currentEvent);
                             }
                         }
                     });
@@ -259,7 +257,7 @@ public class ChunkedWriteHandler
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
-                                closeInput((ChunkedInput) currentEvent);
+                                closeInput((ChunkedInput<?>) currentEvent);
                             } else if (isWritable()) {
                                 resumeTransfer();
                             }
@@ -280,7 +278,25 @@ public class ChunkedWriteHandler
 
     }
 
-    static void closeInput(ChunkedInput chunks) {
+    /**
+     * Read the next {@link ChunkedInput} and transfer it the the outbound buffer. 
+     * 
+     * @param ctx           the {@link ChannelHandlerContext} this handler is bound to
+     * @param chunks        the {@link ChunkedInput} to read from
+     * @return read         <code>true</code> if something could be transfered to the outbound buffer
+     * @throws Exception    if something goes wrong
+     */
+    protected boolean readChunk(ChannelHandlerContext ctx, ChunkedInput<?> chunks) throws Exception {
+        if (chunks instanceof ChunkedByteInput) {
+            return ((ChunkedByteInput) chunks).readChunk(ctx.nextOutboundByteBuffer());
+        } else if (chunks instanceof ChunkedMessageInput) {
+            return ((ChunkedMessageInput) chunks).readChunk(ctx.nextOutboundMessageBuffer());
+        } else {
+            throw new IllegalArgumentException("ChunkedInput instance " + chunks + " not supported");
+        }
+    }
+    
+    static void closeInput(ChunkedInput<?> chunks) {
         try {
             chunks.close();
         } catch (Throwable t) {
