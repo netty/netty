@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 
 /**
  * Web Socket frame containing binary data
@@ -27,7 +27,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      * Creates a new empty binary frame.
      */
     public BinaryWebSocketFrame() {
-        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ByteBufs.EMPTY_BUFFER);
     }
 
     /**

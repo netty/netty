@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -206,8 +206,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
 
             ByteBuf spdyDataFrameData = spdyDataFrame.getData();
             int spdyDataFrameDataLen = spdyDataFrameData.readableBytes();
-            if (content == ChannelBuffers.EMPTY_BUFFER) {
-                content = ChannelBuffers.dynamicBuffer(spdyDataFrameDataLen);
+            if (content == ByteBufs.EMPTY_BUFFER) {
+                content = ByteBufs.dynamicBuffer(spdyDataFrameDataLen);
                 content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
                 httpMessage.setContent(content);
             } else {

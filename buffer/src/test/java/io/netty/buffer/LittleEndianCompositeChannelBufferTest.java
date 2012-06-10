@@ -21,6 +21,6 @@ package io.netty.buffer;
  */
 public class LittleEndianCompositeChannelBufferTest extends AbstractCompositeChannelBufferTest {
     public LittleEndianCompositeChannelBufferTest() {
-        super(ChannelBuffers.LITTLE_ENDIAN);
+        super(ByteBufs.LITTLE_ENDIAN);
     }
 }

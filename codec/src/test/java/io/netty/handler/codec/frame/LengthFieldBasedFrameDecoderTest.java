@@ -17,7 +17,7 @@ package io.netty.handler.codec.frame;
 
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -34,15 +34,15 @@ public class LengthFieldBasedFrameDecoderTest {
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4, false));
 
         for (int i = 0; i < 2; i ++) {
-            assertFalse(ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
+            assertFalse(ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
             try {
-                assertTrue(ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0 })));
+                assertTrue(ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0, 0 })));
                 Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 1, 'A' }));
+            ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0, 0, 0, 1, 'A' }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
@@ -55,13 +55,13 @@ public class LengthFieldBasedFrameDecoderTest {
 
         for (int i = 0; i < 2; i ++) {
             try {
-                assertTrue(ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
+                assertTrue(ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
                 Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
+            ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }

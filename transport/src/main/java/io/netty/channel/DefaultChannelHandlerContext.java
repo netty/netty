@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.QueueFactory;
 
@@ -763,7 +763,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class ByteBridge {
-        final ByteBuf byteBuf = ChannelBuffers.dynamicBuffer();
+        final ByteBuf byteBuf = ByteBufs.dynamicBuffer();
         final BlockingQueue<ByteBuf> exchangeBuf = QueueFactory.createQueue();
 
         void fill() {

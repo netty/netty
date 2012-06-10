@@ -19,7 +19,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 import static org.easymock.EasyMock.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.channel.DefaultChannelPipeline;
@@ -71,7 +71,7 @@ public class WebSocketServerHandshaker00Test {
         req.setHeader(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
 
-        ByteBuf buffer = ChannelBuffers.copiedBuffer("^n:ds[4U", Charset.defaultCharset());
+        ByteBuf buffer = ByteBufs.copiedBuffer("^n:ds[4U", Charset.defaultCharset());
         req.setContent(buffer);
 
         WebSocketServerHandshaker00 handsaker = new WebSocketServerHandshaker00("ws://example.com/chat", "chat", Integer.MAX_VALUE);

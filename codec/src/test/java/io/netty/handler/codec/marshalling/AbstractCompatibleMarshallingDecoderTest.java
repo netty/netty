@@ -17,7 +17,7 @@ package io.netty.handler.codec.marshalling;
 
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.CodecException;
@@ -64,7 +64,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
     }
 
     protected ByteBuf input(byte[] input) {
-        return ChannelBuffers.wrappedBuffer(input);
+        return ByteBufs.wrappedBuffer(input);
     }
 
     @Test

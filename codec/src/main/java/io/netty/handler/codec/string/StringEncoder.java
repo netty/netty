@@ -16,7 +16,7 @@
 package io.netty.handler.codec.string;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -79,6 +79,6 @@ public class StringEncoder extends MessageToMessageEncoder<String, ByteBuf> {
 
     @Override
     public ByteBuf encode(ChannelHandlerContext ctx, String msg) throws Exception {
-        return ChannelBuffers.copiedBuffer(msg, charset);
+        return ByteBufs.copiedBuffer(msg, charset);
     }
 }

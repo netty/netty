@@ -19,7 +19,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
@@ -154,11 +154,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             int a = (int) (Long.parseLong(key1.replaceAll("[^0-9]", "")) / key1.replaceAll("[^ ]", "").length());
             int b = (int) (Long.parseLong(key2.replaceAll("[^0-9]", "")) / key2.replaceAll("[^ ]", "").length());
             long c = req.getContent().readLong();
-            ByteBuf input = ChannelBuffers.buffer(16);
+            ByteBuf input = ByteBufs.buffer(16);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            ByteBuf output = ChannelBuffers.wrappedBuffer(WebSocketUtil.md5(input.array()));
+            ByteBuf output = ByteBufs.wrappedBuffer(WebSocketUtil.md5(input.array()));
             res.setContent(output);
         } else {
             // Old Hixie 75 handshake method with no challenge:

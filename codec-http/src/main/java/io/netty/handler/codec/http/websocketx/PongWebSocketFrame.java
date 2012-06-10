@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 
 /**
  * Web Socket frame containing binary data
@@ -27,7 +27,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
      * Creates a new empty pong frame.
      */
     public PongWebSocketFrame() {
-        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ByteBufs.EMPTY_BUFFER);
     }
 
     /**

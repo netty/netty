@@ -17,7 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -554,7 +554,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
             // Initialize header block decoding fields
             headerSize = 0;
             numHeaders = -1;
-            decompressed = ChannelBuffers.dynamicBuffer(8192);
+            decompressed = ByteBufs.dynamicBuffer(8192);
         }
 
         // Accumulate decompressed data

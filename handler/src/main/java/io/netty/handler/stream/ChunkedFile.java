@@ -15,7 +15,7 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import static io.netty.buffer.ByteBufs.*;
 
 import java.io.File;
 import java.io.IOException;

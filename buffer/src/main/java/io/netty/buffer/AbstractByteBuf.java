@@ -35,6 +35,11 @@ public abstract class AbstractByteBuf implements ByteBuf {
     private int markedWriterIndex;
 
     @Override
+    public boolean isPooled() {
+        return false;
+    }
+
+    @Override
     public int readerIndex() {
         return readerIndex;
     }
@@ -370,7 +375,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     public ByteBuf readBytes(int length) {
         checkReadableBytes(length);
         if (length == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
+            return ByteBufs.EMPTY_BUFFER;
         }
         ByteBuf buf = factory().getBuffer(order(), length);
         buf.writeBytes(this, readerIndex, length);
@@ -624,17 +629,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
             nioBuffer.flip();
         }
 
-        return ChannelBuffers.decodeString(nioBuffer, charset);
+        return ByteBufs.decodeString(nioBuffer, charset);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        return ChannelBuffers.indexOf(this, fromIndex, toIndex, value);
+        return ByteBufs.indexOf(this, fromIndex, toIndex, value);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return ChannelBuffers.indexOf(this, fromIndex, toIndex, indexFinder);
+        return ByteBufs.indexOf(this, fromIndex, toIndex, indexFinder);
     }
 
     @Override
@@ -680,7 +685,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public int hashCode() {
-        return ChannelBuffers.hashCode(this);
+        return ByteBufs.hashCode(this);
     }
 
     @Override
@@ -688,12 +693,12 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (!(o instanceof ByteBuf)) {
             return false;
         }
-        return ChannelBuffers.equals(this, (ByteBuf) o);
+        return ByteBufs.equals(this, (ByteBuf) o);
     }
 
     @Override
     public int compareTo(ByteBuf that) {
-        return ChannelBuffers.compare(this, that);
+        return ByteBufs.compare(this, that);
     }
 
     @Override

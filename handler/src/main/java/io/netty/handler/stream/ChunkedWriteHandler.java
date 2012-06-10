@@ -15,7 +15,7 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
@@ -197,7 +197,7 @@ public class ChunkedWriteHandler
                     chunk = chunks.nextChunk();
                     endOfInput = chunks.isEndOfInput();
                     if (chunk == null) {
-                        chunk = ChannelBuffers.EMPTY_BUFFER;
+                        chunk = ByteBufs.EMPTY_BUFFER;
                         // No need to suspend when reached at the end.
                         suspend = !endOfInput;
                     } else {

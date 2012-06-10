@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
- * is recommended to use {@link ChannelBuffers#wrappedBuffer(ByteBuf...)}
+ * is recommended to use {@link ByteBufs#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
 public class CompositeByteBuf extends AbstractByteBuf {
@@ -581,20 +581,20 @@ public class CompositeByteBuf extends AbstractByteBuf {
     public ByteBuf slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
-                return ChannelBuffers.EMPTY_BUFFER;
+                return ByteBufs.EMPTY_BUFFER;
             }
         } else if (index < 0 || index > capacity() - length) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
                     + " - Bytes needed: " + (index + length) + ", maximum is "
                     + capacity());
         } else if (length == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
+            return ByteBufs.EMPTY_BUFFER;
         }
 
         List<ByteBuf> components = decompose(index, length);
         switch (components.size()) {
         case 0:
-            return ChannelBuffers.EMPTY_BUFFER;
+            return ByteBufs.EMPTY_BUFFER;
         case 1:
             return components.get(0);
         default:
@@ -710,7 +710,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.
-        final ByteBuf padding = ChannelBuffers.buffer(order(), localReaderIndex);
+        final ByteBuf padding = ByteBufs.buffer(order(), localReaderIndex);
         padding.writerIndex(localReaderIndex);
         list.add(padding);
 

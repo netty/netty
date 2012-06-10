@@ -16,7 +16,7 @@
 package io.netty.example.echo;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
@@ -42,7 +42,7 @@ public class EchoClientHandler extends ChannelInboundByteHandlerAdapter {
         if (firstMessageSize <= 0) {
             throw new IllegalArgumentException("firstMessageSize: " + firstMessageSize);
         }
-        firstMessage = ChannelBuffers.buffer(firstMessageSize);
+        firstMessage = ByteBufs.buffer(firstMessageSize);
         for (int i = 0; i < firstMessage.capacity(); i ++) {
             firstMessage.writeByte((byte) i);
         }

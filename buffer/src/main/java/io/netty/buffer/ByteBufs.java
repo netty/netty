@@ -37,7 +37,7 @@ import java.util.List;
  * This classes is intended to be used with Java 5 static import statement:
  *
  * <pre>
- * import static io.netty.buffer.{@link ChannelBuffers}.*;
+ * import static io.netty.buffer.{@link ByteBufs}.*;
  *
  * {@link ByteBuf} heapBuffer    = buffer(128);
  * {@link ByteBuf} directBuffer  = directBuffer(256);
@@ -84,7 +84,7 @@ import java.util.List;
  * @apiviz.landmark
  * @apiviz.has io.netty.buffer.ChannelBuffer oneway - - creates
  */
-public final class ChannelBuffers {
+public final class ByteBufs {
 
     /**
      * Big endian byte order.
@@ -803,7 +803,7 @@ public final class ChannelBuffers {
     }
 
     private static ByteBuf copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = ChannelBuffers.encodeString(buffer, charset);
+        ByteBuffer dst = ByteBufs.encodeString(buffer, charset);
         ByteBuf result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.remaining());
         return result;
@@ -1321,7 +1321,7 @@ public final class ChannelBuffers {
         return dst.flip().toString();
     }
 
-    private ChannelBuffers() {
+    private ByteBufs() {
         // Unused
     }
 }

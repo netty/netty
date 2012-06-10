@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.VoidEnum;
@@ -32,17 +32,17 @@ public class ReplayingDecoderTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineDecoder());
 
         // Ordinary input
-        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
+        ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 'A' }));
         assertNull(ch.readInbound());
-        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'B' }));
+        ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 'B' }));
         assertNull(ch.readInbound());
-        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'C' }));
+        ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 'C' }));
         assertNull(ch.readInbound());
-        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { '\n' }));
-        assertEquals(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
+        ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { '\n' }));
+        assertEquals(ByteBufs.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
 
         // Truncated input
-        ch.writeInbound(ChannelBuffers.wrappedBuffer(new byte[] { 'A' }));
+        ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 'A' }));
         assertNull(ch.readInbound());
         ch.close();
         assertNull(ch.readInbound());

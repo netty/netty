@@ -30,7 +30,7 @@ public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ChannelBuffers.dynamicBuffer(length);
+        buffer = ByteBufs.dynamicBuffer(length);
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(0, buffer.writerIndex());

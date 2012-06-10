@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -27,7 +27,7 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     private int streamID;
     private boolean last;
     private boolean compressed;
-    private ByteBuf data = ChannelBuffers.EMPTY_BUFFER;
+    private ByteBuf data = ByteBufs.EMPTY_BUFFER;
 
     /**
      * Creates a new instance.
@@ -80,7 +80,7 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     @Override
     public void setData(ByteBuf data) {
         if (data == null) {
-            data = ChannelBuffers.EMPTY_BUFFER;
+            data = ByteBufs.EMPTY_BUFFER;
         }
         if (data.readableBytes() > SpdyCodecUtil.SPDY_MAX_LENGTH) {
             throw new IllegalArgumentException("data payload cannot exceed "

@@ -28,7 +28,7 @@ public class ChannelBufferIndexFinderTest {
 
     @Test
     public void testForward() {
-        ByteBuf buf = ChannelBuffers.copiedBuffer(
+        ByteBuf buf = ByteBufs.copiedBuffer(
                 "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx",
                 CharsetUtil.ISO_8859_1);
 
@@ -47,7 +47,7 @@ public class ChannelBufferIndexFinderTest {
 
     @Test
     public void testBackward() {
-        ByteBuf buf = ChannelBuffers.copiedBuffer(
+        ByteBuf buf = ByteBufs.copiedBuffer(
                 "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx",
                 CharsetUtil.ISO_8859_1);
 

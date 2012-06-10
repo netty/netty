@@ -15,31 +15,22 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
+import java.util.Queue;
 
-import org.junit.Test;
+public final class MessageBufs {
 
-/**
- * Tests duplicated channel buffers
- */
-public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
-
-    private ByteBuf buffer;
-
-    @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = new DuplicatedByteBuf(ByteBufs.buffer(length));
-        assertEquals(0, buffer.writerIndex());
-        return buffer;
+    public static <T> MessageBuf<T> messageBuffer() {
+        return new DefaultMessageBuf<T>();
     }
 
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
+    public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
+        return new DefaultMessageBuf<T>(initialCapacity);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new DuplicatedByteBuf(null);
+    public static <T> MessageBuf<T> messageBuffer(Queue<T> queue) {
+        return new QueueBackedMessageBuf<T>(queue);
     }
+
+
+    private MessageBufs() { }
 }

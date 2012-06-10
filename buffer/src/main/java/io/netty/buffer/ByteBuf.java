@@ -33,7 +33,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h3>Creation of a buffer</h3>
  *
  * It is recommended to create a new buffer using the helper methods in
- * {@link ChannelBuffers} rather than calling an individual implementation's
+ * {@link ByteBufs} rather than calling an individual implementation's
  * constructor.
  *
  * <h3>Random Access Indexing</h3>
@@ -228,7 +228,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * {@link ByteBufOutputStream}.
  * @apiviz.landmark
  */
-public interface ByteBuf extends Comparable<ByteBuf> {
+public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
 
     /**
      * Returns the factory which creates a {@link ByteBuf} whose
@@ -292,7 +292,7 @@ public interface ByteBuf extends Comparable<ByteBuf> {
      * <pre>
      * // Create a buffer whose readerIndex, writerIndex and capacity are
      * // 0, 0 and 8 respectively.
-     * {@link ByteBuf} buf = {@link ChannelBuffers}.buffer(8);
+     * {@link ByteBuf} buf = {@link ByteBufs}.buffer(8);
      *
      * // IndexOutOfBoundsException is thrown because the specified
      * // readerIndex (2) cannot be greater than the current writerIndex (0).
@@ -305,7 +305,7 @@ public interface ByteBuf extends Comparable<ByteBuf> {
      * <pre>
      * // Create a buffer whose readerIndex, writerIndex and capacity are
      * // 0, 8 and 8 respectively.
-     * {@link ByteBuf} buf = {@link ChannelBuffers}.wrappedBuffer(new byte[8]);
+     * {@link ByteBuf} buf = {@link ByteBufs}.wrappedBuffer(new byte[8]);
      *
      * // readerIndex becomes 8.
      * buf.readLong();

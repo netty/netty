@@ -15,31 +15,6 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
-
-import org.junit.Test;
-
-/**
- * Tests duplicated channel buffers
- */
-public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
-
-    private ByteBuf buffer;
-
-    @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = new DuplicatedByteBuf(ByteBufs.buffer(length));
-        assertEquals(0, buffer.writerIndex());
-        return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new DuplicatedByteBuf(null);
-    }
+public interface ChannelBuf {
+    boolean isPooled();
 }

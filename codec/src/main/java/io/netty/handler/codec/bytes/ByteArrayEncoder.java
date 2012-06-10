@@ -16,7 +16,7 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelHandlerContext;
@@ -67,6 +67,6 @@ public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ByteBuf> {
         if (msg.length == 0) {
             return null;
         }
-        return ChannelBuffers.wrappedBuffer(msg);
+        return ByteBufs.wrappedBuffer(msg);
     }
 }

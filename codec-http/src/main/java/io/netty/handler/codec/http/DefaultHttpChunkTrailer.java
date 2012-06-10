@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 
 import java.util.List;
 import java.util.Map;
@@ -97,7 +97,7 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
 
     @Override
     public ByteBuf getContent() {
-        return ChannelBuffers.EMPTY_BUFFER;
+        return ByteBufs.EMPTY_BUFFER;
     }
 
     @Override

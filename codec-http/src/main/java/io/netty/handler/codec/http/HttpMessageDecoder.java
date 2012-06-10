@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -204,7 +204,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             } else {
                 long contentLength = HttpHeaders.getContentLength(message, -1);
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                    content = ChannelBuffers.EMPTY_BUFFER;
+                    content = ByteBufs.EMPTY_BUFFER;
                     return reset();
                 }
 

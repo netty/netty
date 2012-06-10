@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import static io.netty.buffer.ByteBufs.*;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
@@ -40,24 +40,24 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1)) instanceof ReadOnlyByteBuf);
+        assertTrue(ByteBufs.unmodifiableBuffer(ByteBufs.buffer(1)) instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void testUnwrap() {
-        ByteBuf buf = ChannelBuffers.buffer(1);
-        assertSame(buf, ((WrappedByteBuf) ChannelBuffers.unmodifiableBuffer(buf)).unwrap());
+        ByteBuf buf = ByteBufs.buffer(1);
+        assertSame(buf, ((WrappedByteBuf) ByteBufs.unmodifiableBuffer(buf)).unwrap());
     }
 
     @Test
     public void shouldHaveSameByteOrder() {
-        ByteBuf buf = ChannelBuffers.buffer(ChannelBuffers.LITTLE_ENDIAN, 1);
-        assertSame(ChannelBuffers.LITTLE_ENDIAN, ChannelBuffers.unmodifiableBuffer(buf).order());
+        ByteBuf buf = ByteBufs.buffer(ByteBufs.LITTLE_ENDIAN, 1);
+        assertSame(ByteBufs.LITTLE_ENDIAN, ByteBufs.unmodifiableBuffer(buf).order());
     }
 
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
-        ByteBuf buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
+        ByteBuf buf = ByteBufs.unmodifiableBuffer(ByteBufs.buffer(1));
         assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
@@ -66,7 +66,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldReturnWritableCopy() {
-        ByteBuf buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
+        ByteBuf buf = ByteBufs.unmodifiableBuffer(ByteBufs.buffer(1));
         assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
     }
 

@@ -17,7 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -61,7 +61,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.bind().sync().channel();
 
-        cc.write(new DatagramPacket(ChannelBuffers.copyInt(1), addr)).sync();
+        cc.write(new DatagramPacket(ByteBufs.copyInt(1), addr)).sync();
         assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         sc.close().sync();

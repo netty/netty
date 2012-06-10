@@ -16,16 +16,16 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandler;
 
 public class RiverMarshallingDecoderTest extends RiverCompatibleMarshallingDecoderTest {
 
     @Override
     protected ByteBuf input(byte[] input) {
-        ByteBuf length = ChannelBuffers.buffer(4);
+        ByteBuf length = ByteBufs.buffer(4);
         length.writeInt(input.length);
-        return ChannelBuffers.wrappedBuffer(length, ChannelBuffers.wrappedBuffer(input));
+        return ByteBufs.wrappedBuffer(length, ByteBufs.wrappedBuffer(input));
     }
 
     @Override

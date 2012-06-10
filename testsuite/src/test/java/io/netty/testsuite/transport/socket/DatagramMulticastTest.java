@@ -17,7 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -68,7 +68,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cc.joinGroup(groupAddress, NetworkConstants.LOOPBACK_IF).sync();
 
-        sc.write(new DatagramPacket(ChannelBuffers.copyInt(1), groupAddress)).sync();
+        sc.write(new DatagramPacket(ByteBufs.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
 
         // leave the group
@@ -78,7 +78,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         Thread.sleep(1000);
 
         // we should not receive a message anymore as we left the group before
-        sc.write(new DatagramPacket(ChannelBuffers.copyInt(1), groupAddress)).sync();
+        sc.write(new DatagramPacket(ByteBufs.copyInt(1), groupAddress)).sync();
         mhandler.await();
 
         sc.close().awaitUninterruptibly();

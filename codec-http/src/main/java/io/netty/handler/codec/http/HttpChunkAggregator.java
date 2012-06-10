@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -48,7 +48,7 @@ import java.util.Map.Entry;
  */
 public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
 
-    private static final ByteBuf CONTINUE = ChannelBuffers.copiedBuffer(
+    private static final ByteBuf CONTINUE = ByteBufs.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
@@ -101,7 +101,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(ChannelBuffers.dynamicBuffer());
+                m.setContent(ByteBufs.dynamicBuffer());
                 this.currentMessage = m;
                 return null;
             } else {

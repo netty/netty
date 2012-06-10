@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
 
@@ -68,7 +68,7 @@ final class WebSocketUtil {
      * @return encoded string
      */
     static String base64(byte[] bytes) {
-        ByteBuf hashed = ChannelBuffers.wrappedBuffer(bytes);
+        ByteBuf hashed = ByteBufs.wrappedBuffer(bytes);
         return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
     }
 

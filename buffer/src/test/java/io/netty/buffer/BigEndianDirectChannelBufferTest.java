@@ -28,7 +28,7 @@ public class BigEndianDirectChannelBufferTest extends AbstractChannelBufferTest 
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ChannelBuffers.directBuffer(ByteOrder.BIG_ENDIAN, length);
+        buffer = ByteBufs.directBuffer(ByteOrder.BIG_ENDIAN, length);
         assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;

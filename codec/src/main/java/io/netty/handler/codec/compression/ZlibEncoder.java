@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -383,9 +383,9 @@ public class ZlibEncoder extends ByteToByteEncoder {
                     future.setFailure(ZlibUtil.exception(z, "compression failure", resultCode));
                     return future;
                 } else if (z.next_out_index != 0) {
-                    footer = ChannelBuffers.wrappedBuffer(out, 0, z.next_out_index);
+                    footer = ByteBufs.wrappedBuffer(out, 0, z.next_out_index);
                 } else {
-                    footer = ChannelBuffers.EMPTY_BUFFER;
+                    footer = ByteBufs.EMPTY_BUFFER;
                 }
             } finally {
                 z.deflateEnd();

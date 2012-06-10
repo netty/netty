@@ -140,7 +140,7 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     public ByteBuf slice(int index, int length) {
         checkIndex(index, length);
         if (length == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
+            return ByteBufs.EMPTY_BUFFER;
         }
         return new SlicedByteBuf(buffer, index + adjustment, length);
     }

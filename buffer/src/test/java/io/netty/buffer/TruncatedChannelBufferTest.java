@@ -28,7 +28,7 @@ public class TruncatedChannelBufferTest extends AbstractChannelBufferTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ChannelBuffers.wrappedBuffer(
+        buffer = ByteBufs.wrappedBuffer(
                 new byte[length * 2], 0, length);
         assertEquals(length, buffer.writerIndex());
         return buffer;

@@ -26,7 +26,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 /**
  * A dynamic capacity buffer which increases its capacity as needed.  It is
- * recommended to use {@link ChannelBuffers#dynamicBuffer(int)} instead of
+ * recommended to use {@link ByteBufs#dynamicBuffer(int)} instead of
  * calling the constructor explicitly.
  */
 public class DynamicByteBuf extends AbstractByteBuf {
@@ -310,12 +310,12 @@ public class DynamicByteBuf extends AbstractByteBuf {
     public ByteBuf slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
-                return ChannelBuffers.EMPTY_BUFFER;
+                return ByteBufs.EMPTY_BUFFER;
             }
             return new TruncatedByteBuf(this, length);
         } else {
             if (length == 0) {
-                return ChannelBuffers.EMPTY_BUFFER;
+                return ByteBufs.EMPTY_BUFFER;
             }
             return new SlicedByteBuf(this, index, length);
         }

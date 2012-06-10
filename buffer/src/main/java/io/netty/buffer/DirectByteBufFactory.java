@@ -111,10 +111,10 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
             throw new IllegalArgumentException("capacity: " + capacity);
         }
         if (capacity == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
+            return ByteBufs.EMPTY_BUFFER;
         }
         if (capacity >= preallocatedBufCapacity) {
-            return ChannelBuffers.directBuffer(order, capacity);
+            return ByteBufs.directBuffer(order, capacity);
         }
 
         ByteBuf slice;
@@ -136,7 +136,7 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
             throw new IndexOutOfBoundsException("offset: " + offset);
         }
         if (length == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
+            return ByteBufs.EMPTY_BUFFER;
         }
         if (offset + length > array.length) {
             throw new IndexOutOfBoundsException("length: " + length);
@@ -150,7 +150,7 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
     @Override
     public ByteBuf getBuffer(ByteBuffer nioBuffer) {
         if (!nioBuffer.isReadOnly() && nioBuffer.isDirect()) {
-            return ChannelBuffers.wrappedBuffer(nioBuffer);
+            return ByteBufs.wrappedBuffer(nioBuffer);
         }
 
         ByteBuf buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
@@ -164,14 +164,14 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
         ByteBuf slice;
         synchronized (bigEndianLock) {
             if (preallocatedBEBuf == null) {
-                preallocatedBEBuf = ChannelBuffers.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
+                preallocatedBEBuf = ByteBufs.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
                 slice = preallocatedBEBuf.slice(0, capacity);
                 preallocatedBEBufPos = capacity;
             } else if (preallocatedBEBuf.capacity() - preallocatedBEBufPos >= capacity) {
                 slice = preallocatedBEBuf.slice(preallocatedBEBufPos, capacity);
                 preallocatedBEBufPos += capacity;
             } else {
-                preallocatedBEBuf = ChannelBuffers.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
+                preallocatedBEBuf = ByteBufs.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
                 slice = preallocatedBEBuf.slice(0, capacity);
                 preallocatedBEBufPos = capacity;
             }
@@ -183,14 +183,14 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
         ByteBuf slice;
         synchronized (littleEndianLock) {
             if (preallocatedLEBuf == null) {
-                preallocatedLEBuf = ChannelBuffers.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);
+                preallocatedLEBuf = ByteBufs.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);
                 slice = preallocatedLEBuf.slice(0, capacity);
                 preallocatedLEBufPos = capacity;
             } else if (preallocatedLEBuf.capacity() - preallocatedLEBufPos >= capacity) {
                 slice = preallocatedLEBuf.slice(preallocatedLEBufPos, capacity);
                 preallocatedLEBufPos += capacity;
             } else {
-                preallocatedLEBuf = ChannelBuffers.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);
+                preallocatedLEBuf = ByteBufs.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);
                 slice = preallocatedLEBuf.slice(0, capacity);
                 preallocatedLEBufPos = capacity;
             }

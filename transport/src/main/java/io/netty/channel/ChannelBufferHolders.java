@@ -18,7 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.AbstractByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufFactory;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.buffer.HeapByteBufFactory;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public final class ChannelBufferHolders {
 
     public static ChannelBufferHolder<Byte> byteBuffer() {
         // TODO: Use more efficient implementation.
-        return byteBuffer(ChannelBuffers.dynamicBuffer());
+        return byteBuffer(ByteBufs.dynamicBuffer());
     }
 
     public static ChannelBufferHolder<Byte> byteBuffer(ByteBuf buffer) {

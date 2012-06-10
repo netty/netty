@@ -17,7 +17,7 @@ package io.netty.handler.stream;
 
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelBufferHolder;
 import io.netty.channel.ChannelBufferHolders;
 import io.netty.channel.ChannelFuture;
@@ -103,11 +103,11 @@ public class ChunkedWriteHandlerTest {
     // http://stackoverflow.com/questions/10409241/why-is-close-channelfuturelistener-not-notified/10426305#comment14126161_10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() {
-        ByteBuf buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+        ByteBuf buffer = ByteBufs.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
 
         ChunkedInput input = new ChunkedInput() {
             private boolean done;
-            private final ByteBuf buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final ByteBuf buffer = ByteBufs.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
 
             @Override
             public Object nextChunk() throws Exception {

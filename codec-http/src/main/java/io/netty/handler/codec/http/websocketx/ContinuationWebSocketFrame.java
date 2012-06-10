@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -31,7 +31,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ByteBufs.EMPTY_BUFFER);
     }
 
     /**
@@ -115,9 +115,9 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      */
     public void setText(String text) {
         if (text == null || text.isEmpty()) {
-            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(ByteBufs.EMPTY_BUFFER);
         } else {
-            setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(ByteBufs.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 

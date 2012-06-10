@@ -30,7 +30,7 @@ public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, length);
+        buffer = ByteBufs.buffer(ByteOrder.LITTLE_ENDIAN, length);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

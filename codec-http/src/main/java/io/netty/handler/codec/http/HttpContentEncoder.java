@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
@@ -117,7 +117,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             if (!m.isChunked()) {
                 ByteBuf content = m.getContent();
                 // Encode the content.
-                ByteBuf newContent = ChannelBuffers.dynamicBuffer();
+                ByteBuf newContent = ByteBufs.dynamicBuffer();
                 encode(content, newContent);
                 finishEncode(newContent);
 
@@ -136,7 +136,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // Encode the chunk if necessary.
             if (encoder != null) {
                 if (!c.isLast()) {
-                    ByteBuf newContent = ChannelBuffers.dynamicBuffer();
+                    ByteBuf newContent = ByteBufs.dynamicBuffer();
                     encode(content, newContent);
                     if (content.readable()) {
                         c.setContent(newContent);
@@ -144,7 +144,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                         return null;
                     }
                 } else {
-                    ByteBuf lastProduct = ChannelBuffers.dynamicBuffer();
+                    ByteBuf lastProduct = ByteBufs.dynamicBuffer();
                     finishEncode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced

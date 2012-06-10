@@ -98,7 +98,7 @@
  * of the resulting string and let {@link java.lang.StringBuffer} expand itself
  * on demand.  Netty allows you to do the same via a <em>dynamic</em> buffer
  * which is created by the
- * {@link io.netty.buffer.ChannelBuffers#dynamicBuffer()} method.
+ * {@link io.netty.buffer.ByteBufs#dynamicBuffer()} method.
  * <pre>
  * // A new dynamic buffer is created.  Internally, the actual buffer is created
  * // lazily to avoid potentially wasted memory space.

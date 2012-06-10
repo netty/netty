@@ -17,7 +17,7 @@ package io.netty.channel.group;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ServerChannel;
@@ -43,7 +43,7 @@ import java.util.Set;
  * recipients.add(channelA);
  * recipients.add(channelB);
  * ..
- * <strong>recipients.write({@link ChannelBuffers}.copiedBuffer(
+ * <strong>recipients.write({@link ByteBufs}.copiedBuffer(
  *         "Service will shut down for maintenance in 5 minutes.",
  *         {@link CharsetUtil}.UTF_8));</strong>
  * </pre>

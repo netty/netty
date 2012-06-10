@@ -16,14 +16,14 @@
 package io.netty.channel.embedded;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBufs;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelBufferType;
 
 public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
 
     public EmbeddedByteChannel(ChannelHandler... handlers) {
-        super(ChannelBuffers.dynamicBuffer(), handlers);
+        super(ByteBufs.dynamicBuffer(), handlers);
     }
 
     @Override

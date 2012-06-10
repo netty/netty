@@ -28,7 +28,7 @@ public class BigEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ChannelBuffers.buffer(length);
+        buffer = ByteBufs.buffer(length);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
