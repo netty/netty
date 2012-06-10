@@ -59,7 +59,7 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     }
 
     public final void run() {
-        if (executor instanceof MemoryAwareThreadPoolExecutor) {
+        if (e instanceof UpstreamMessageEvent && executor instanceof MemoryAwareThreadPoolExecutor) {
             doRun();
         } else {
             try {
