@@ -283,11 +283,12 @@ public class ChunkedWriteHandler
      * @return read         <code>true</code> if something could be transfered to the outbound buffer
      * @throws Exception    if something goes wrong
      */
+    @SuppressWarnings("unchecked")
     protected boolean readChunk(ChannelHandlerContext ctx, ChunkedInput<?> chunks) throws Exception {
         if (chunks instanceof ChunkedByteInput) {
             return ((ChunkedByteInput) chunks).readChunk(ctx.nextOutboundByteBuffer());
         } else if (chunks instanceof ChunkedMessageInput) {
-            return ((ChunkedMessageInput) chunks).readChunk(ctx.nextOutboundMessageBuffer());
+            return ((ChunkedMessageInput<Object>) chunks).readChunk(ctx.nextOutboundMessageBuffer());
         } else {
             throw new IllegalArgumentException("ChunkedInput instance " + chunks + " not supported");
         }

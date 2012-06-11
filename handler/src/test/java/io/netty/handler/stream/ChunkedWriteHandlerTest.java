@@ -15,11 +15,10 @@
  */
 package io.netty.handler.stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -31,7 +30,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
@@ -156,7 +154,7 @@ public class ChunkedWriteHandlerTest {
     @Test
     public void testChunkedMessageInput() {
 
-        ChunkedMessageInput input = new ChunkedMessageInput() {
+        ChunkedMessageInput<Object> input = new ChunkedMessageInput<Object>() {
             private boolean done;
 
             @Override
@@ -170,7 +168,7 @@ public class ChunkedWriteHandlerTest {
             }
 
             @Override
-            public boolean readChunk(Queue<Object> buffer) throws Exception {
+            public boolean readChunk(MessageBuf<Object> buffer) throws Exception {
                 if (done) {
                     return false;
                 }
@@ -190,7 +188,7 @@ public class ChunkedWriteHandlerTest {
         assertNull(ch.readOutbound());
 
     }
-    
+
     private static void check(ChunkedInput<?>... inputs) {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new ChunkedWriteHandler());
 
@@ -203,7 +201,7 @@ public class ChunkedWriteHandlerTest {
         int i = 0;
         int read = 0;
         for (;;) {
-            ByteBuf buffer = (ByteBuf) ch.readOutbound();
+            ByteBuf buffer = ch.readOutbound();
             if (buffer == null) {
                 break;
             }

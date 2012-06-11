@@ -17,10 +17,10 @@ package io.netty.channel;
 
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.util.AttributeMap;
 
 import java.nio.channels.Channels;
-import java.util.Queue;
 import java.util.Set;
 
 /**
@@ -139,20 +139,20 @@ public interface ChannelHandlerContext
     boolean hasInboundByteBuffer();
     boolean hasInboundMessageBuffer();
     ByteBuf inboundByteBuffer();
-    <T> Queue<T> inboundMessageBuffer();
+    <T> MessageBuf<T> inboundMessageBuffer();
 
     boolean hasOutboundByteBuffer();
     boolean hasOutboundMessageBuffer();
     ByteBuf outboundByteBuffer();
-    <T> Queue<T> outboundMessageBuffer();
+    <T> MessageBuf<T> outboundMessageBuffer();
 
     boolean hasNextInboundByteBuffer();
     boolean hasNextInboundMessageBuffer();
     ByteBuf nextInboundByteBuffer();
-    Queue<Object> nextInboundMessageBuffer();
+    MessageBuf<Object> nextInboundMessageBuffer();
 
     boolean hasNextOutboundByteBuffer();
     boolean hasNextOutboundMessageBuffer();
     ByteBuf nextOutboundByteBuffer();
-    Queue<Object> nextOutboundMessageBuffer();
+    MessageBuf<Object> nextOutboundMessageBuffer();
 }

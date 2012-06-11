@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,7 +24,6 @@ import java.nio.channels.Channels;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Queue;
 
 
 /**
@@ -206,9 +206,9 @@ import java.util.Queue;
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
-    Queue<Object> inboundMessageBuffer();
+    MessageBuf<Object> inboundMessageBuffer();
     ByteBuf inboundByteBuffer();
-    Queue<Object> outboundMessageBuffer();
+    MessageBuf<Object> outboundMessageBuffer();
     ByteBuf outboundByteBuffer();
 
     /**

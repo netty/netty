@@ -19,6 +19,7 @@ import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
 import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.MessageBufs;
 import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
 import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
@@ -33,7 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Queue;
 import java.util.concurrent.Future;
 
 /**
@@ -886,7 +886,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public Queue<Object> inboundMessageBuffer() {
+    public MessageBuf<Object> inboundMessageBuffer() {
         if (channel.bufferType() != ChannelBufferType.MESSAGE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
@@ -904,7 +904,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public Queue<Object> outboundMessageBuffer() {
+    public MessageBuf<Object> outboundMessageBuffer() {
         return nextOutboundMessageBuffer(tail);
     }
 
@@ -964,7 +964,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    Queue<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+    MessageBuf<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {

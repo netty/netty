@@ -20,14 +20,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.MessageBufs;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.QueueFactory;
 
 import java.net.SocketAddress;
-import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,9 +48,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     final int directions;
     private final ChannelHandler handler;
 
-    final Queue<Object> inMsgBuf;
+    final MessageBuf<Object> inMsgBuf;
     final ByteBuf inByteBuf;
-    final Queue<Object> outMsgBuf;
+    final MessageBuf<Object> outMsgBuf;
     final ByteBuf outByteBuf;
 
     // When the two handlers run in a different thread and they are next to each other,
@@ -221,7 +220,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } else if (buf instanceof MessageBuf) {
                 inByteBuf = null;
                 inByteBridge = null;
-                inMsgBuf = (Queue<Object>) buf;
+                inMsgBuf = (MessageBuf<Object>) buf;
                 inMsgBridge = new AtomicReference<MessageBridge>();
             } else {
                 throw new Error();
@@ -253,7 +252,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } else if (buf instanceof MessageBuf) {
                 outByteBuf = null;
                 outByteBridge = null;
-                outMsgBuf = (Queue<Object>) buf;
+                outMsgBuf = (MessageBuf<Object>) buf;
                 outMsgBridge = new AtomicReference<MessageBridge>();
             } else {
                 throw new Error();
@@ -372,11 +371,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Queue<T> inboundMessageBuffer() {
+    public <T> MessageBuf<T> inboundMessageBuffer() {
         if (inMsgBuf == null) {
             throw new NoSuchBufferException();
         }
-        return (Queue<T>) inMsgBuf;
+        return (MessageBuf<T>) inMsgBuf;
     }
 
     @Override
@@ -399,11 +398,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Queue<T> outboundMessageBuffer() {
+    public <T> MessageBuf<T> outboundMessageBuffer() {
         if (outMsgBuf == null) {
             throw new NoSuchBufferException();
         }
-        return (Queue<T>) outMsgBuf;
+        return (MessageBuf<T>) outMsgBuf;
     }
 
     @Override
@@ -471,7 +470,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public Queue<Object> nextInboundMessageBuffer() {
+    public MessageBuf<Object> nextInboundMessageBuffer() {
         DefaultChannelHandlerContext ctx = next;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
@@ -503,7 +502,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public Queue<Object> nextOutboundMessageBuffer() {
+    public MessageBuf<Object> nextOutboundMessageBuffer() {
         return pipeline.nextOutboundMessageBuffer(prev);
     }
 
@@ -740,7 +739,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class MessageBridge {
-        final Queue<Object> msgBuf = new ArrayDeque<Object>();
+        final MessageBuf<Object> msgBuf = MessageBufs.buffer();
         final BlockingQueue<Object[]> exchangeBuf = QueueFactory.createQueue();
 
         void fill() {
@@ -752,7 +751,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             exchangeBuf.add(data);
         }
 
-        void flush(Queue<Object> out) {
+        void flush(MessageBuf<Object> out) {
             for (;;) {
                 Object[] data = exchangeBuf.poll();
                 if (data == null) {

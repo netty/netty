@@ -15,12 +15,14 @@
  */
 package io.netty.handler.stream;
 
+import io.netty.buffer.MessageBuf;
+
 import java.util.Queue;
 
 /**
  * {@link ChunkedInput} which reads its chunks and transfer it to a {@link Queue}
  *
  */
-public interface ChunkedMessageInput extends ChunkedInput<Queue<Object>> {
+public interface ChunkedMessageInput<T> extends ChunkedInput<MessageBuf<T>> {
 
 }
