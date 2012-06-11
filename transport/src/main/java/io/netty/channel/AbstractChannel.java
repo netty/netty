@@ -816,9 +816,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         boolean setClosed() {
-            boolean set = super.setSuccess();
-            assert set;
-            return set;
+            return super.setSuccess();
         }
     }
 }
