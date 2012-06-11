@@ -16,7 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -236,7 +236,7 @@ public class ServerBootstrap {
 
         @Override
         public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override

@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -71,7 +71,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 3), data.length - i);
-            cc.write(ByteBufs.wrappedBuffer(data, i, length));
+            cc.write(Unpooled.wrappedBuffer(data, i, length));
             i += length;
         }
 

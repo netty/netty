@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -83,13 +83,13 @@ public interface HttpMessage {
     /**
      * Returns the content of this message.  If there is no content or
      * {@link #isChunked()} returns {@code true}, an
-     * {@link ByteBufs#EMPTY_BUFFER} is returned.
+     * {@link Unpooled#EMPTY_BUFFER} is returned.
      */
     ByteBuf getContent();
 
     /**
      * Sets the content of this message.  If {@code null} is specified,
-     * the content of this message will be set to {@link ByteBufs#EMPTY_BUFFER}.
+     * the content of this message will be set to {@link Unpooled#EMPTY_BUFFER}.
      */
     void setContent(ByteBuf content);
 
@@ -156,7 +156,7 @@ public interface HttpMessage {
      * consecutively, contain the actual content.
      * <p>
      * If this method is called with {@code true}, the content of this message
-     * becomes {@link ByteBufs#EMPTY_BUFFER}.
+     * becomes {@link Unpooled#EMPTY_BUFFER}.
      * <p>
      * Even if this method is called with {@code false}, {@link #isChunked()}
      * will keep returning {@code true} if the {@code "Transfer-Encoding"} of

@@ -17,7 +17,7 @@ package io.netty.handler.codec.frame;
 
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
@@ -36,15 +36,15 @@ public class DelimiterBasedFrameDecoderTest {
                 new DelimiterBasedFrameDecoder(1, true, false, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
-            ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 1, 2 }));
+            ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 }));
             try {
-                assertTrue(ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0 })));
+                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0 })));
                 Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 'A', 0 }));
+            ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A', 0 }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
@@ -57,13 +57,13 @@ public class DelimiterBasedFrameDecoderTest {
 
         for (int i = 0; i < 2; i ++) {
             try {
-                assertTrue(ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 1, 2 })));
+                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 })));
                 Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
-            ch.writeInbound(ByteBufs.wrappedBuffer(new byte[] { 0, 'A', 0 }));
+            ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 'A', 0 }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }

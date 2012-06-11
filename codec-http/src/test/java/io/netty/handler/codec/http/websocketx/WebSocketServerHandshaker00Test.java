@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpChunkAggregator;
@@ -50,7 +50,7 @@ public class WebSocketServerHandshaker00Test {
         req.setHeader(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
 
-        ByteBuf buffer = ByteBufs.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
+        ByteBuf buffer = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
         req.setContent(buffer);
 
         new WebSocketServerHandshaker00(

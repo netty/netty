@@ -20,7 +20,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -215,7 +215,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.setContent(ByteBufs.copiedBuffer(
+        response.setContent(Unpooled.copiedBuffer(
                 "Failure: " + status.toString() + "\r\n",
                 CharsetUtil.UTF_8));
 

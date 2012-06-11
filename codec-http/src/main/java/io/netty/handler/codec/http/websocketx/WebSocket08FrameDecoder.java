@@ -54,7 +54,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -257,7 +257,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
                 // Returning null means we will get called back
                 payloadBuffer = in.readBytes(rbytes);
                 if (framePayload == null) {
-                    framePayload = ByteBufs.buffer(toFrameLength(framePayloadLength));
+                    framePayload = Unpooled.buffer(toFrameLength(framePayloadLength));
                 }
                 framePayload.writeBytes(payloadBuffer);
                 framePayloadBytesRead += rbytes;

@@ -16,10 +16,9 @@
 package io.netty.channel.embedded;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -46,8 +45,8 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     private final ChannelConfig config = new DefaultChannelConfig();
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
-    private final MessageBuf<Object> lastInboundMessageBuffer = MessageBufs.buffer();
-    private final ByteBuf lastInboundByteBuffer = ByteBufs.dynamicBuffer();
+    private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer();
+    private final ByteBuf lastInboundByteBuffer = Unpooled.dynamicBuffer();
     protected final Object lastOutboundBuffer;
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED

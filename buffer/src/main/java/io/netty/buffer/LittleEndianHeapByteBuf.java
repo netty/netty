@@ -19,8 +19,8 @@ import java.nio.ByteOrder;
 
 
 /**
- * A little-endian Java heap buffer.  It is recommended to use {@link ByteBufs#buffer(ByteOrder, int)}
- * and {@link ByteBufs#wrappedBuffer(ByteOrder, byte[])} instead of
+ * A little-endian Java heap buffer.  It is recommended to use {@link Unpooled#buffer(ByteOrder, int)}
+ * and {@link Unpooled#wrappedBuffer(ByteOrder, byte[])} instead of
  * calling the constructor explicitly.
  */
 public class LittleEndianHeapByteBuf extends HeapByteBuf {

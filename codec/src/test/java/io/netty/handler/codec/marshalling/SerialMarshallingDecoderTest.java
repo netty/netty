@@ -16,16 +16,16 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 
 public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
 
     @Override
     protected ByteBuf input(byte[] input) {
-        ByteBuf length = ByteBufs.buffer(4);
+        ByteBuf length = Unpooled.buffer(4);
         length.writeInt(input.length);
-        return ByteBufs.wrappedBuffer(length, ByteBufs.wrappedBuffer(input));
+        return Unpooled.wrappedBuffer(length, Unpooled.wrappedBuffer(input));
     }
 
     @Override

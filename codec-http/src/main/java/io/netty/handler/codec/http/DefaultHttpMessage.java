@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
@@ -30,7 +30,7 @@ public class DefaultHttpMessage implements HttpMessage {
 
     private final HttpHeaders headers = new HttpHeaders();
     private HttpVersion version;
-    private ByteBuf content = ByteBufs.EMPTY_BUFFER;
+    private ByteBuf content = Unpooled.EMPTY_BUFFER;
     private boolean chunked;
 
     /**
@@ -73,7 +73,7 @@ public class DefaultHttpMessage implements HttpMessage {
     public void setChunked(boolean chunked) {
         this.chunked = chunked;
         if (chunked) {
-            setContent(ByteBufs.EMPTY_BUFFER);
+            setContent(Unpooled.EMPTY_BUFFER);
         }
     }
 
@@ -85,7 +85,7 @@ public class DefaultHttpMessage implements HttpMessage {
     @Override
     public void setContent(ByteBuf content) {
         if (content == null) {
-            content = ByteBufs.EMPTY_BUFFER;
+            content = Unpooled.EMPTY_BUFFER;
         }
         if (content.readable() && isChunked()) {
             throw new IllegalArgumentException(

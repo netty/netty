@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
@@ -39,7 +39,7 @@ public class HttpClientCodecTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        ch.writeInbound(ByteBufs.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
         ch.finish();
     }
 
@@ -49,7 +49,7 @@ public class HttpClientCodecTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        ch.writeInbound(ByteBufs.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.writeInbound(Unpooled.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
         ch.finish();
     }
 
@@ -76,7 +76,7 @@ public class HttpClientCodecTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
         ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        ch.writeInbound(ByteBufs.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.writeInbound(Unpooled.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
 
         try {
             ch.finish();

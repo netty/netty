@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 
 /**
  * A set of commonly used delimiters for {@link DelimiterBasedFrameDecoder}.
@@ -29,7 +29,7 @@ public final class Delimiters {
      */
     public static ByteBuf[] nulDelimiter() {
         return new ByteBuf[] {
-                ByteBufs.wrappedBuffer(new byte[] { 0 }) };
+                Unpooled.wrappedBuffer(new byte[] { 0 }) };
     }
 
     /**
@@ -38,8 +38,8 @@ public final class Delimiters {
      */
     public static ByteBuf[] lineDelimiter() {
         return new ByteBuf[] {
-                ByteBufs.wrappedBuffer(new byte[] { '\r', '\n' }),
-                ByteBufs.wrappedBuffer(new byte[] { '\n' }),
+                Unpooled.wrappedBuffer(new byte[] { '\r', '\n' }),
+                Unpooled.wrappedBuffer(new byte[] { '\n' }),
         };
     }
 

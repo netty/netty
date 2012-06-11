@@ -16,7 +16,7 @@
 package io.netty.example.qotm;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramPacket;
@@ -53,7 +53,7 @@ public class QuoteOfTheMomentClient {
 
             // Broadcast the QOTM request to port 8080.
             ch.write(new DatagramPacket(
-                    ByteBufs.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
+                    Unpooled.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
                     new InetSocketAddress("255.255.255.255", port)));
 
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a

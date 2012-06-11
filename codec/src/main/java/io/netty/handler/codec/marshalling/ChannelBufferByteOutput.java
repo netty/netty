@@ -17,7 +17,7 @@ package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufFactory;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ class ChannelBufferByteOutput implements ByteOutput {
      * Calls {@link #ChannelBufferByteOutput(ByteBuf)} with a dynamic {@link ByteBuf}
      */
     public ChannelBufferByteOutput(ByteBufFactory factory, int estimatedLength) {
-        this(ByteBufs.dynamicBuffer(estimatedLength, factory));
+        this(Unpooled.dynamicBuffer(estimatedLength, factory));
     }
 
     @Override

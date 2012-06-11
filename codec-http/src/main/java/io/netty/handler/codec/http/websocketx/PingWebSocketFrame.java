@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 
 /**
  * Web Socket frame containing binary data
@@ -28,7 +28,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      */
     public PingWebSocketFrame() {
         setFinalFragment(true);
-        setBinaryData(ByteBufs.EMPTY_BUFFER);
+        setBinaryData(Unpooled.EMPTY_BUFFER);
     }
 
     /**

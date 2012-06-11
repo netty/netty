@@ -375,7 +375,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     public ByteBuf readBytes(int length) {
         checkReadableBytes(length);
         if (length == 0) {
-            return ByteBufs.EMPTY_BUFFER;
+            return Unpooled.EMPTY_BUFFER;
         }
         ByteBuf buf = factory().getBuffer(order(), length);
         buf.writeBytes(this, readerIndex, length);
@@ -629,17 +629,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
             nioBuffer.flip();
         }
 
-        return ByteBufs.decodeString(nioBuffer, charset);
+        return Unpooled.decodeString(nioBuffer, charset);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        return ByteBufs.indexOf(this, fromIndex, toIndex, value);
+        return Unpooled.indexOf(this, fromIndex, toIndex, value);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return ByteBufs.indexOf(this, fromIndex, toIndex, indexFinder);
+        return Unpooled.indexOf(this, fromIndex, toIndex, indexFinder);
     }
 
     @Override
@@ -685,7 +685,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public int hashCode() {
-        return ByteBufs.hashCode(this);
+        return Unpooled.hashCode(this);
     }
 
     @Override
@@ -693,12 +693,12 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (!(o instanceof ByteBuf)) {
             return false;
         }
-        return ByteBufs.equals(this, (ByteBuf) o);
+        return Unpooled.equals(this, (ByteBuf) o);
     }
 
     @Override
     public int compareTo(ByteBuf that) {
-        return ByteBufs.compare(this, that);
+        return Unpooled.compare(this, that);
     }
 
     @Override

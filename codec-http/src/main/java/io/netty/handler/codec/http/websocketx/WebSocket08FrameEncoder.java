@@ -54,7 +54,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -106,7 +106,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
         WebSocketFrame frame = msg;
         ByteBuf data = frame.getBinaryData();
         if (data == null) {
-            data = ByteBufs.EMPTY_BUFFER;
+            data = Unpooled.EMPTY_BUFFER;
         }
 
         byte opcode;

@@ -17,7 +17,7 @@ package io.netty.handler.queue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.BlockingOperationException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -99,7 +99,7 @@ public class BlockingReadHandler<E> extends ChannelInboundMessageHandlerAdapter<
     public MessageBuf<Object> newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-        return MessageBufs.wrappedBuffer(queue);
+        return Unpooled.wrappedBuffer(queue);
     }
 
     /**

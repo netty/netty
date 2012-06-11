@@ -16,7 +16,7 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannel;
@@ -158,7 +158,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             if (remoteAddr == null) {
                 remoteAddr = remoteAddress();
             }
-            buf.add(new DatagramPacket(ByteBufs.wrappedBuffer(
+            buf.add(new DatagramPacket(Unpooled.wrappedBuffer(
                     data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
             return 1;
         } catch (SocketTimeoutException e) {

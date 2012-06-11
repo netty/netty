@@ -20,7 +20,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -123,7 +123,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-        response.setContent(ByteBufs.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
+        response.setContent(Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {

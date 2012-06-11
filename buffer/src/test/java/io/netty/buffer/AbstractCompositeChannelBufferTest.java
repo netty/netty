@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.ByteBufs.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;
@@ -47,30 +47,30 @@ public abstract class AbstractCompositeChannelBufferTest extends
     protected ByteBuf newBuffer(int length) {
         buffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < length; i += 10) {
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[1]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[2]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[3]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[4]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[5]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[6]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[7]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[8]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
-            buffers.add(ByteBufs.wrappedBuffer(order, new byte[9]));
-            buffers.add(ByteBufs.EMPTY_BUFFER);
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[1]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[2]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[3]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[4]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[5]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[6]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[7]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[8]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(order, new byte[9]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
         }
 
-        buffer = ByteBufs.wrappedBuffer(buffers.toArray(new ByteBuf[buffers.size()]));
+        buffer = Unpooled.wrappedBuffer(buffers.toArray(new ByteBuf[buffers.size()]));
         buffer.writerIndex(length);
-        buffer = ByteBufs.wrappedBuffer(buffer);
+        buffer = Unpooled.wrappedBuffer(buffer);
         assertEquals(length, buffer.capacity());
         assertEquals(length, buffer.readableBytes());
         assertFalse(buffer.writable());
@@ -113,20 +113,20 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a.writerIndex(a.writerIndex() + 1);
         b.writerIndex(b.writerIndex() + 1);
         assertEquals(a.writerIndex(), b.writerIndex());
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
         // now discard
         a.discardReadBytes();
         b.discardReadBytes();
         assertEquals(a.readerIndex(), b.readerIndex());
         assertEquals(a.writerIndex(), b.writerIndex());
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
         a.resetReaderIndex();
         b.resetReaderIndex();
         assertEquals(a.readerIndex(), b.readerIndex());
         a.resetWriterIndex();
         b.resetWriterIndex();
         assertEquals(a.writerIndex(), b.writerIndex());
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
     }
 
     @Test
@@ -154,57 +154,57 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1  });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }),
                 wrappedBuffer(order, new byte[] { 2 }));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Same content, same firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }),
                 wrappedBuffer(order, new byte[] { 2 }),
                 wrappedBuffer(order, new byte[] { 3 }));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Same content, different firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4 }, 1, 2),
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4 }, 3, 1));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Different content, same firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2 }),
                 wrappedBuffer(order, new byte[] { 4 }));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Different content, different firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 4, 5 }, 1, 2),
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 4, 5 }, 3, 1));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Same content, same firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2, 3 }),
                 wrappedBuffer(order, new byte[] { 4, 5, 6 }),
                 wrappedBuffer(order, new byte[] { 7, 8, 9, 10 }));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Same content, different firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 5),
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Different content, same firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 6 }),
                 wrappedBuffer(order, new byte[] { 7, 8, 5, 9, 10 }));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Different content, different firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 5),
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
     }
     @Test
     public void testWrappedBuffer() {
@@ -259,7 +259,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 2 }));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Same content, same firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
@@ -269,7 +269,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 2 }));
         b.writeBytes(wrappedBuffer(order, new byte[] { 3 }));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Same content, different firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
@@ -278,7 +278,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4 }, 3, 1));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Different content, same firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
@@ -287,7 +287,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 4 }));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Different content, different firstIndex, short length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
@@ -296,7 +296,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 4, 5 }, 3, 1));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Same content, same firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
@@ -307,7 +307,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
                 wrappedBuffer(order, new byte[] { 4, 5, 6 }));
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 7, 8, 9, 10 }));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Same content, different firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
@@ -316,7 +316,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5));
-        assertTrue(ByteBufs.equals(a, b));
+        assertTrue(Unpooled.equals(a, b));
 
         // Different content, same firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
@@ -325,7 +325,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 7, 8, 5, 9, 10 }));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
 
         // Different content, different firstIndex, long length.
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
@@ -334,6 +334,6 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5));
-        assertFalse(ByteBufs.equals(a, b));
+        assertFalse(Unpooled.equals(a, b));
     }
 }

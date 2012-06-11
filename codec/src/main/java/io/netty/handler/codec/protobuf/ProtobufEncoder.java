@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.ByteBufs.*;
+import static io.netty.buffer.Unpooled.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;

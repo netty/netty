@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
@@ -45,7 +45,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     private static ByteBuf createFrames(int version) {
         int length = version < 3 ? 1176 : 1174;
-        ByteBuf frames = ByteBufs.buffer(length);
+        ByteBuf frames = Unpooled.buffer(length);
 
         // SPDY UNKNOWN Frame
         frames.writeByte(0x80);

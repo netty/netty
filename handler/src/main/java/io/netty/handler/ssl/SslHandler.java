@@ -16,7 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -304,12 +304,12 @@ public class SslHandler
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ByteBufs.dynamicBuffer();
+        return Unpooled.dynamicBuffer();
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ByteBufs.dynamicBuffer();
+        return Unpooled.dynamicBuffer();
     }
 
     @Override

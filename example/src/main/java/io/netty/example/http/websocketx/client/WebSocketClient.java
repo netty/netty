@@ -37,7 +37,7 @@
 package io.netty.example.http.websocketx.client;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -108,7 +108,7 @@ public class WebSocketClient {
 
             // Ping
             System.out.println("WebSocket Client sending ping");
-            ch.write(new PingWebSocketFrame(ByteBufs.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
+            ch.write(new PingWebSocketFrame(Unpooled.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
 
             // Close
             System.out.println("WebSocket Client sending close");

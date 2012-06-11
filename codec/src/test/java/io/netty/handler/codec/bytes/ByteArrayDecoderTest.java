@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.bytes;
 
-import static io.netty.buffer.ByteBufs.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
 import io.netty.channel.embedded.EmbeddedMessageChannel;

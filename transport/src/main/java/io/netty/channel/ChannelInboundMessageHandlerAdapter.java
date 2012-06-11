@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 
 import java.util.Queue;
 
@@ -25,7 +25,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return MessageBufs.buffer();
+        return Unpooled.messageBuffer();
     }
 
     @Override

@@ -16,7 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -72,7 +72,7 @@ public class ChunkedWriteHandler
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
 
-    private final MessageBuf<Object> queue = MessageBufs.buffer();
+    private final MessageBuf<Object> queue = Unpooled.messageBuffer();
     private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();

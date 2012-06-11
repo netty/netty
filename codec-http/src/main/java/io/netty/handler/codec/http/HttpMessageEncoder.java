@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.buffer.ByteBufs.*;
+import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.ByteBufs.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 import io.netty.util.CharsetUtil;
 

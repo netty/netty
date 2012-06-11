@@ -16,7 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -169,7 +169,7 @@ public final class NioDatagramChannel
         }
 
         data.flip();
-        buf.add(new DatagramPacket(ByteBufs.wrappedBuffer(data), remoteAddress));
+        buf.add(new DatagramPacket(Unpooled.wrappedBuffer(data), remoteAddress));
         return 1;
     }
 

@@ -172,7 +172,7 @@ public abstract class HeapByteBuf extends AbstractByteBuf {
     public ByteBuf slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
-                return ByteBufs.EMPTY_BUFFER;
+                return Unpooled.EMPTY_BUFFER;
             }
             if (length == array.length) {
                 ByteBuf slice = duplicate();
@@ -183,7 +183,7 @@ public abstract class HeapByteBuf extends AbstractByteBuf {
             }
         } else {
             if (length == 0) {
-                return ByteBufs.EMPTY_BUFFER;
+                return Unpooled.EMPTY_BUFFER;
             }
             return new SlicedByteBuf(this, index, length);
         }

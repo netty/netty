@@ -66,18 +66,18 @@ public class HeapByteBufFactory extends AbstractByteBufFactory {
 
     @Override
     public ByteBuf getBuffer(ByteOrder order, int capacity) {
-        return ByteBufs.buffer(order, capacity);
+        return Unpooled.buffer(order, capacity);
     }
 
     @Override
     public ByteBuf getBuffer(ByteOrder order, byte[] array, int offset, int length) {
-        return ByteBufs.wrappedBuffer(order, array, offset, length);
+        return Unpooled.wrappedBuffer(order, array, offset, length);
     }
 
     @Override
     public ByteBuf getBuffer(ByteBuffer nioBuffer) {
         if (nioBuffer.hasArray()) {
-            return ByteBufs.wrappedBuffer(nioBuffer);
+            return Unpooled.wrappedBuffer(nioBuffer);
         }
 
         ByteBuf buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());

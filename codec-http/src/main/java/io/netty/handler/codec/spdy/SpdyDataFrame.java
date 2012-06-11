@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 
 /**
  * A SPDY Protocol Data Frame
@@ -58,13 +58,13 @@ public interface SpdyDataFrame {
 
     /**
      * Returns the data payload of this frame.  If there is no data payload
-     * {@link ByteBufs#EMPTY_BUFFER} is returned.
+     * {@link Unpooled#EMPTY_BUFFER} is returned.
      */
     ByteBuf getData();
 
     /**
      * Sets the data payload of this frame.  If {@code null} is specified,
-     * the data payload will be set to {@link ByteBufs#EMPTY_BUFFER}.
+     * the data payload will be set to {@link Unpooled#EMPTY_BUFFER}.
      * The data payload cannot exceed 16777215 bytes.
      */
     void setData(ByteBuf data);

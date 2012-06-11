@@ -31,7 +31,7 @@ public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ByteBufs.wrappedBuffer(
+        buffer = Unpooled.wrappedBuffer(
                 new byte[length * 2], random.nextInt(length - 1) + 1, length);
         assertEquals(length, buffer.writerIndex());
         return buffer;

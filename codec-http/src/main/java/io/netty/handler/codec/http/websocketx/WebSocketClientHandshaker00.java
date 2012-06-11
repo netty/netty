@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -164,7 +164,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             }
         }
 
-        request.setContent(ByteBufs.copiedBuffer(key3));
+        request.setContent(Unpooled.copiedBuffer(key3));
 
         ChannelFuture future = channel.write(request);
 

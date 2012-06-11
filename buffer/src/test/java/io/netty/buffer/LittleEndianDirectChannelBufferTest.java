@@ -28,7 +28,7 @@ public class LittleEndianDirectChannelBufferTest extends AbstractChannelBufferTe
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = ByteBufs.directBuffer(ByteOrder.LITTLE_ENDIAN, length);
+        buffer = Unpooled.directBuffer(ByteOrder.LITTLE_ENDIAN, length);
         assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;

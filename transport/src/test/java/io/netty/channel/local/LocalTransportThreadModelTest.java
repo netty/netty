@@ -17,9 +17,8 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -343,12 +342,12 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
@@ -390,12 +389,12 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public MessageBuf<Integer> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ByteBufs.dynamicBuffer();
+            return Unpooled.dynamicBuffer();
         }
 
         @Override
@@ -474,13 +473,13 @@ public class LocalTransportThreadModelTest {
         @Override
         public ByteBuf newInboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return ByteBufs.dynamicBuffer();
+            return Unpooled.dynamicBuffer();
         }
 
         @Override
         public MessageBuf<Integer> newOutboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
@@ -550,12 +549,12 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
@@ -626,12 +625,12 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return MessageBufs.buffer();
+            return Unpooled.messageBuffer();
         }
 
         @Override

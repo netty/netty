@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -28,7 +28,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Creates a new empty text frame.
      */
     public TextWebSocketFrame() {
-        setBinaryData(ByteBufs.EMPTY_BUFFER);
+        setBinaryData(Unpooled.EMPTY_BUFFER);
     }
 
     /**
@@ -39,9 +39,9 @@ public class TextWebSocketFrame extends WebSocketFrame {
      */
     public TextWebSocketFrame(String text) {
         if (text == null || text.isEmpty()) {
-            setBinaryData(ByteBufs.EMPTY_BUFFER);
+            setBinaryData(Unpooled.EMPTY_BUFFER);
         } else {
-            setBinaryData(ByteBufs.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 
@@ -69,9 +69,9 @@ public class TextWebSocketFrame extends WebSocketFrame {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         if (text == null || text.isEmpty()) {
-            setBinaryData(ByteBufs.EMPTY_BUFFER);
+            setBinaryData(Unpooled.EMPTY_BUFFER);
         } else {
-            setBinaryData(ByteBufs.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 
@@ -111,7 +111,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
         if (text == null) {
             throw new NullPointerException("text");
         }
-        setBinaryData(ByteBufs.copiedBuffer(text, CharsetUtil.UTF_8));
+        setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
     }
 
     @Override

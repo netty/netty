@@ -27,17 +27,18 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 
 
 /**
- * Creates a new {@link ByteBuf} by allocating new space or by wrapping
+ * Creates a new {@link ByteBuf} or a new {@link MessageBuf} by allocating new space or by wrapping
  * or copying existing byte arrays, byte buffers and a string.
  *
  * <h3>Use static import</h3>
  * This classes is intended to be used with Java 5 static import statement:
  *
  * <pre>
- * import static io.netty.buffer.{@link ByteBufs}.*;
+ * import static io.netty.buffer.{@link Unpooled}.*;
  *
  * {@link ByteBuf} heapBuffer    = buffer(128);
  * {@link ByteBuf} directBuffer  = directBuffer(256);
@@ -84,7 +85,7 @@ import java.util.List;
  * @apiviz.landmark
  * @apiviz.has io.netty.buffer.ChannelBuffer oneway - - creates
  */
-public final class ByteBufs {
+public final class Unpooled {
 
     /**
      * Big endian byte order.
@@ -109,6 +110,18 @@ public final class ByteBufs {
             HEXDUMP_TABLE[(i << 1) + 0] = DIGITS[i >>> 4 & 0x0F];
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i >>> 0 & 0x0F];
         }
+    }
+
+    public static <T> MessageBuf<T> messageBuffer() {
+        return new DefaultMessageBuf<T>();
+    }
+
+    public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
+        return new DefaultMessageBuf<T>(initialCapacity);
+    }
+
+    public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
+        return new QueueBackedMessageBuf<T>(queue);
     }
 
     /**
@@ -803,7 +816,7 @@ public final class ByteBufs {
     }
 
     private static ByteBuf copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = ByteBufs.encodeString(buffer, charset);
+        ByteBuffer dst = Unpooled.encodeString(buffer, charset);
         ByteBuf result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.remaining());
         return result;
@@ -1321,7 +1334,7 @@ public final class ByteBufs {
         return dst.flip().toString();
     }
 
-    private ByteBufs() {
+    private Unpooled() {
         // Unused
     }
 }

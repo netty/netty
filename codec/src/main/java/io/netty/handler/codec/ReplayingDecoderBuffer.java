@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ByteBufIndexFinder;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.util.Signal;
 
 import java.io.IOException;
@@ -37,7 +37,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     private final ByteBuf buffer;
     private boolean terminated;
 
-    public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(ByteBufs.EMPTY_BUFFER);
+    public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
 
     static {
         EMPTY_BUFFER.terminate();

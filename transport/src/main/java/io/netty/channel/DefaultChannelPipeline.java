@@ -17,10 +17,9 @@ package io.netty.channel;
 
 import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
 import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
 import io.netty.logging.InternalLogger;
@@ -1437,9 +1436,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.bufferType()) {
             case BYTE:
-                return ByteBufs.dynamicBuffer();
+                return Unpooled.dynamicBuffer();
             case MESSAGE:
-                return MessageBufs.buffer();
+                return Unpooled.messageBuffer();
             default:
                 throw new Error();
             }

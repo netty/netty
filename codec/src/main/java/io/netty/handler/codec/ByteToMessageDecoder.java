@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -35,7 +35,7 @@ public abstract class ByteToMessageDecoder<O>
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ByteBufs.dynamicBuffer();
+        return Unpooled.dynamicBuffer();
     }
 
     @Override

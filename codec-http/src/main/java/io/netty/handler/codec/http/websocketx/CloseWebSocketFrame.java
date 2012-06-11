@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -28,7 +28,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame.
      */
     public CloseWebSocketFrame() {
-        setBinaryData(ByteBufs.EMPTY_BUFFER);
+        setBinaryData(Unpooled.EMPTY_BUFFER);
     }
 
     /**
@@ -78,7 +78,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
         }
 
-        ByteBuf binaryData = ByteBufs.buffer(2 + reasonBytes.length);
+        ByteBuf binaryData = Unpooled.buffer(2 + reasonBytes.length);
         binaryData.writeShort(statusCode);
         if (reasonBytes.length > 0) {
             binaryData.writeBytes(reasonBytes);
@@ -102,7 +102,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         if (binaryData == null) {
-            setBinaryData(ByteBufs.EMPTY_BUFFER);
+            setBinaryData(Unpooled.EMPTY_BUFFER);
         } else {
             setBinaryData(binaryData);
         }

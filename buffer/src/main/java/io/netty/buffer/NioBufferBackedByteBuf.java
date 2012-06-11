@@ -25,8 +25,8 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 /**
- * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link ByteBufs#directBuffer(int)}
- * and {@link ByteBufs#wrappedBuffer(ByteBuffer)} instead of calling the
+ * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link Unpooled#directBuffer(int)}
+ * and {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
 public class NioBufferBackedByteBuf extends AbstractByteBuf {
@@ -299,7 +299,7 @@ public class NioBufferBackedByteBuf extends AbstractByteBuf {
             return slice;
         } else {
             if (index >= 0 && length == 0) {
-                return ByteBufs.EMPTY_BUFFER;
+                return Unpooled.EMPTY_BUFFER;
             }
             return new NioBufferBackedByteBuf(
                     ((ByteBuffer) tmpBuf.clear().position(

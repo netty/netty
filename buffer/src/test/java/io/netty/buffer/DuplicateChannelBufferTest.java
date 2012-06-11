@@ -28,7 +28,7 @@ public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = new DuplicatedByteBuf(ByteBufs.buffer(length));
+        buffer = new DuplicatedByteBuf(Unpooled.buffer(length));
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

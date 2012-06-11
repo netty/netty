@@ -19,8 +19,8 @@ import java.nio.ByteOrder;
 
 
 /**
- * A big-endian Java heap buffer.  It is recommended to use {@link ByteBufs#buffer(int)}
- * and {@link ByteBufs#wrappedBuffer(byte[])} instead of calling the
+ * A big-endian Java heap buffer.  It is recommended to use {@link Unpooled#buffer(int)}
+ * and {@link Unpooled#wrappedBuffer(byte[])} instead of calling the
  * constructor explicitly.
  */
 public class BigEndianHeapByteBuf extends HeapByteBuf {

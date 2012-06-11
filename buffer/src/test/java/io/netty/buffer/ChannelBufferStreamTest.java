@@ -29,7 +29,7 @@ public class ChannelBufferStreamTest {
 
     @Test
     public void testAll() throws Exception {
-        ByteBuf buf = ByteBufs.dynamicBuffer();
+        ByteBuf buf = Unpooled.dynamicBuffer();
 
         try {
             new ByteBufOutputStream(null);
@@ -171,7 +171,7 @@ public class ChannelBufferStreamTest {
 
     @Test
     public void testEmptyReadLine() throws Exception {
-        ByteBuf buf = ByteBufs.buffer(0);
+        ByteBuf buf = Unpooled.buffer(0);
         ByteBufInputStream in = new ByteBufInputStream(buf);
 
         String s = in.readLine();

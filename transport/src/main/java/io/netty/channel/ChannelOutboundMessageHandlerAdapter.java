@@ -16,12 +16,12 @@
 package io.netty.channel;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.MessageBufs;
+import io.netty.buffer.Unpooled;
 
 public abstract class ChannelOutboundMessageHandlerAdapter<I>
         extends ChannelOutboundHandlerAdapter implements ChannelOutboundMessageHandler<I> {
     @Override
     public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return MessageBufs.buffer();
+        return Unpooled.messageBuffer();
     }
 }

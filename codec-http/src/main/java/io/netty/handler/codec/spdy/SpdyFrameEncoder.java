@@ -17,7 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufs;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -305,13 +305,13 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         Set<String> names = headerFrame.getHeaderNames();
         int numHeaders = names.size();
         if (numHeaders == 0) {
-            return ByteBufs.EMPTY_BUFFER;
+            return Unpooled.EMPTY_BUFFER;
         }
         if (numHeaders > SPDY_MAX_NV_LENGTH) {
             throw new IllegalArgumentException(
                     "header block contains too many headers");
         }
-        ByteBuf headerBlock = ByteBufs.dynamicBuffer(
+        ByteBuf headerBlock = Unpooled.dynamicBuffer(
                 ByteOrder.BIG_ENDIAN, 256);
         writeLengthField(version, headerBlock, numHeaders);
         for (String name: names) {
@@ -341,9 +341,9 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     private synchronized ByteBuf compressHeaderBlock(
             ByteBuf uncompressed) throws Exception {
         if (uncompressed.readableBytes() == 0) {
-            return ByteBufs.EMPTY_BUFFER;
+            return Unpooled.EMPTY_BUFFER;
         }
-        ByteBuf compressed = ByteBufs.dynamicBuffer();
+        ByteBuf compressed = Unpooled.dynamicBuffer();
         synchronized (headerBlockCompressor) {
             if (!finished) {
                 headerBlockCompressor.setInput(uncompressed);
