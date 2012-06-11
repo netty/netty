@@ -25,7 +25,7 @@ public class TestUtils {
 
     /**
      * Return a free port which can be used to bind to
-     * 
+     *
      * @return port
      */
     public static int getFreePort() {
@@ -36,9 +36,9 @@ public class TestUtils {
                 socket.close();
                 return start;
             } catch (IOException e) {
-                // ignore 
+                // ignore
             }
-            
+
         }
         throw new RuntimeException("Unable to find a free port....");
     }

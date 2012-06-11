@@ -39,7 +39,7 @@ public final class LocalTimeProtocol {
     MIDEAST(9, 9),
     PACIFIC(10, 10),
     ;
-    
+
     public static final int AFRICA_VALUE = 0;
     public static final int AMERICA_VALUE = 1;
     public static final int ANTARCTICA_VALUE = 2;
@@ -51,10 +51,10 @@ public final class LocalTimeProtocol {
     public static final int INDIAN_VALUE = 8;
     public static final int MIDEAST_VALUE = 9;
     public static final int PACIFIC_VALUE = 10;
-    
-    
+
+
     public final int getNumber() { return value; }
-    
+
     public static Continent valueOf(int value) {
       switch (value) {
         case 0: return AFRICA;
@@ -71,7 +71,7 @@ public final class LocalTimeProtocol {
         default: return null;
       }
     }
-    
+
     public static com.google.protobuf.Internal.EnumLiteMap<Continent>
         internalGetValueMap() {
       return internalValueMap;
@@ -83,7 +83,7 @@ public final class LocalTimeProtocol {
               return Continent.valueOf(number);
             }
           };
-    
+
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
       return getDescriptor().getValues().get(index);
@@ -96,11 +96,11 @@ public final class LocalTimeProtocol {
         getDescriptor() {
       return io.netty.example.localtime.LocalTimeProtocol.getDescriptor().getEnumTypes().get(0);
     }
-    
+
     private static final Continent[] VALUES = {
-      AFRICA, AMERICA, ANTARCTICA, ARCTIC, ASIA, ATLANTIC, AUSTRALIA, EUROPE, INDIAN, MIDEAST, PACIFIC, 
+      AFRICA, AMERICA, ANTARCTICA, ARCTIC, ASIA, ATLANTIC, AUSTRALIA, EUROPE, INDIAN, MIDEAST, PACIFIC,
     };
-    
+
     public static Continent valueOf(
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
@@ -109,18 +109,18 @@ public final class LocalTimeProtocol {
       }
       return VALUES[desc.getIndex()];
     }
-    
+
     private final int index;
     private final int value;
-    
+
     private Continent(int index, int value) {
       this.index = index;
       this.value = value;
     }
-    
+
     // @@protoc_insertion_point(enum_scope:io.netty.example.localtime.Continent)
   }
-  
+
   public enum DayOfWeek
       implements com.google.protobuf.ProtocolMessageEnum {
     SUNDAY(0, 1),
@@ -131,7 +131,7 @@ public final class LocalTimeProtocol {
     FRIDAY(5, 6),
     SATURDAY(6, 7),
     ;
-    
+
     public static final int SUNDAY_VALUE = 1;
     public static final int MONDAY_VALUE = 2;
     public static final int TUESDAY_VALUE = 3;
@@ -139,10 +139,10 @@ public final class LocalTimeProtocol {
     public static final int THURSDAY_VALUE = 5;
     public static final int FRIDAY_VALUE = 6;
     public static final int SATURDAY_VALUE = 7;
-    
-    
+
+
     public final int getNumber() { return value; }
-    
+
     public static DayOfWeek valueOf(int value) {
       switch (value) {
         case 1: return SUNDAY;
@@ -155,7 +155,7 @@ public final class LocalTimeProtocol {
         default: return null;
       }
     }
-    
+
     public static com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>
         internalGetValueMap() {
       return internalValueMap;
@@ -167,7 +167,7 @@ public final class LocalTimeProtocol {
               return DayOfWeek.valueOf(number);
             }
           };
-    
+
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
       return getDescriptor().getValues().get(index);
@@ -180,11 +180,11 @@ public final class LocalTimeProtocol {
         getDescriptor() {
       return io.netty.example.localtime.LocalTimeProtocol.getDescriptor().getEnumTypes().get(1);
     }
-    
+
     private static final DayOfWeek[] VALUES = {
-      SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, 
+      SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY,
     };
-    
+
     public static DayOfWeek valueOf(
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
@@ -193,25 +193,25 @@ public final class LocalTimeProtocol {
       }
       return VALUES[desc.getIndex()];
     }
-    
+
     private final int index;
     private final int value;
-    
+
     private DayOfWeek(int index, int value) {
       this.index = index;
       this.value = value;
     }
-    
+
     // @@protoc_insertion_point(enum_scope:io.netty.example.localtime.DayOfWeek)
   }
-  
+
   public interface LocationOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .io.netty.example.localtime.Continent continent = 1;
     boolean hasContinent();
     io.netty.example.localtime.LocalTimeProtocol.Continent getContinent();
-    
+
     // required string city = 2;
     boolean hasCity();
     String getCity();
@@ -224,49 +224,49 @@ public final class LocalTimeProtocol {
       super(builder);
     }
     private Location(boolean noInit) {}
-    
+
     private static final Location defaultInstance;
     public static Location getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public Location getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Location_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Location_fieldAccessorTable;
     }
-    
+
     private int bitField0_;
     // required .io.netty.example.localtime.Continent continent = 1;
     public static final int CONTINENT_FIELD_NUMBER = 1;
     private io.netty.example.localtime.LocalTimeProtocol.Continent continent_;
     public boolean hasContinent() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return (bitField0_ & 0x00000001) == 0x00000001;
     }
     public io.netty.example.localtime.LocalTimeProtocol.Continent getContinent() {
       return continent_;
     }
-    
+
     // required string city = 2;
     public static final int CITY_FIELD_NUMBER = 2;
     private java.lang.Object city_;
     public boolean hasCity() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return (bitField0_ & 0x00000002) == 0x00000002;
     }
     public String getCity() {
       java.lang.Object ref = city_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         String s = bs.toStringUtf8();
         if (com.google.protobuf.Internal.isValidUtf8(bs)) {
@@ -278,7 +278,7 @@ public final class LocalTimeProtocol {
     private com.google.protobuf.ByteString getCityBytes() {
       java.lang.Object ref = city_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
         city_ = b;
         return b;
@@ -286,7 +286,7 @@ public final class LocalTimeProtocol {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       continent_ = io.netty.example.localtime.LocalTimeProtocol.Continent.AFRICA;
       city_ = "";
@@ -294,8 +294,10 @@ public final class LocalTimeProtocol {
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
+      if (isInitialized != -1) {
+        return isInitialized == 1;
+    }
+
       if (!hasContinent()) {
         memoizedIsInitialized = 0;
         return false;
@@ -307,30 +309,32 @@ public final class LocalTimeProtocol {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if ((bitField0_ & 0x00000001) == 0x00000001) {
         output.writeEnum(1, continent_.getNumber());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if ((bitField0_ & 0x00000002) == 0x00000002) {
         output.writeBytes(2, getCityBytes());
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
+      if (size != -1) {
+        return size;
+    }
+
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if ((bitField0_ & 0x00000001) == 0x00000001) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(1, continent_.getNumber());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if ((bitField0_ & 0x00000002) == 0x00000002) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(2, getCityBytes());
       }
@@ -338,14 +342,14 @@ public final class LocalTimeProtocol {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static io.netty.example.localtime.LocalTimeProtocol.Location parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -412,14 +416,14 @@ public final class LocalTimeProtocol {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(io.netty.example.localtime.LocalTimeProtocol.Location prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
@@ -433,17 +437,17 @@ public final class LocalTimeProtocol {
           getDescriptor() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Location_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Location_fieldAccessorTable;
       }
-      
+
       // Construct using io.netty.example.localtime.LocalTimeProtocol.Location.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
+
       private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
@@ -455,29 +459,29 @@ public final class LocalTimeProtocol {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         continent_ = io.netty.example.localtime.LocalTimeProtocol.Continent.AFRICA;
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = bitField0_ & ~0x00000001;
         city_ = "";
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = bitField0_ & ~0x00000002;
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return io.netty.example.localtime.LocalTimeProtocol.Location.getDescriptor();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.Location getDefaultInstanceForType() {
         return io.netty.example.localtime.LocalTimeProtocol.Location.getDefaultInstance();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.Location build() {
         io.netty.example.localtime.LocalTimeProtocol.Location result = buildPartial();
         if (!result.isInitialized()) {
@@ -485,7 +489,7 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       private io.netty.example.localtime.LocalTimeProtocol.Location buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         io.netty.example.localtime.LocalTimeProtocol.Location result = buildPartial();
@@ -495,16 +499,16 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.Location buildPartial() {
         io.netty.example.localtime.LocalTimeProtocol.Location result = new io.netty.example.localtime.LocalTimeProtocol.Location(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if ((from_bitField0_ & 0x00000001) == 0x00000001) {
           to_bitField0_ |= 0x00000001;
         }
         result.continent_ = continent_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if ((from_bitField0_ & 0x00000002) == 0x00000002) {
           to_bitField0_ |= 0x00000002;
         }
         result.city_ = city_;
@@ -512,7 +516,7 @@ public final class LocalTimeProtocol {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof io.netty.example.localtime.LocalTimeProtocol.Location) {
           return mergeFrom((io.netty.example.localtime.LocalTimeProtocol.Location)other);
@@ -521,49 +525,51 @@ public final class LocalTimeProtocol {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(io.netty.example.localtime.LocalTimeProtocol.Location other) {
-        if (other == io.netty.example.localtime.LocalTimeProtocol.Location.getDefaultInstance()) return this;
+        if (other == io.netty.example.localtime.LocalTimeProtocol.Location.getDefaultInstance()) {
+            return this;
+        }
         if (other.hasContinent()) {
           setContinent(other.getContinent());
         }
         if (other.hasCity()) {
           setCity(other.getCity());
         }
-        this.mergeUnknownFields(other.getUnknownFields());
+        mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasContinent()) {
-          
+
           return false;
         }
         if (!hasCity()) {
-          
+
           return false;
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
+            getUnknownFields());
         while (true) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
+              setUnknownFields(unknownFields.build());
               onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
+                setUnknownFields(unknownFields.build());
                 onChanged();
                 return this;
               }
@@ -588,13 +594,13 @@ public final class LocalTimeProtocol {
           }
         }
       }
-      
+
       private int bitField0_;
-      
+
       // required .io.netty.example.localtime.Continent continent = 1;
       private io.netty.example.localtime.LocalTimeProtocol.Continent continent_ = io.netty.example.localtime.LocalTimeProtocol.Continent.AFRICA;
       public boolean hasContinent() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return (bitField0_ & 0x00000001) == 0x00000001;
       }
       public io.netty.example.localtime.LocalTimeProtocol.Continent getContinent() {
         return continent_;
@@ -609,16 +615,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearContinent() {
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = bitField0_ & ~0x00000001;
         continent_ = io.netty.example.localtime.LocalTimeProtocol.Continent.AFRICA;
         onChanged();
         return this;
       }
-      
+
       // required string city = 2;
       private java.lang.Object city_ = "";
       public boolean hasCity() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return (bitField0_ & 0x00000002) == 0x00000002;
       }
       public String getCity() {
         java.lang.Object ref = city_;
@@ -640,7 +646,7 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearCity() {
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = bitField0_ & ~0x00000002;
         city_ = getDefaultInstance().getCity();
         onChanged();
         return this;
@@ -650,27 +656,27 @@ public final class LocalTimeProtocol {
         city_ = value;
         onChanged();
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.localtime.Location)
     }
-    
+
     static {
       defaultInstance = new Location(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.localtime.Location)
   }
-  
+
   public interface LocationsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .io.netty.example.localtime.Location location = 1;
-    java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location> 
+    java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location>
         getLocationList();
     io.netty.example.localtime.LocalTimeProtocol.Location getLocation(int index);
     int getLocationCount();
-    java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder> 
+    java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder>
         getLocationOrBuilderList();
     io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder getLocationOrBuilder(
         int index);
@@ -683,33 +689,33 @@ public final class LocalTimeProtocol {
       super(builder);
     }
     private Locations(boolean noInit) {}
-    
+
     private static final Locations defaultInstance;
     public static Locations getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public Locations getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Locations_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Locations_fieldAccessorTable;
     }
-    
+
     // repeated .io.netty.example.localtime.Location location = 1;
     public static final int LOCATION_FIELD_NUMBER = 1;
     private java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location> location_;
     public java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location> getLocationList() {
       return location_;
     }
-    public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder> 
+    public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder>
         getLocationOrBuilderList() {
       return location_;
     }
@@ -723,15 +729,17 @@ public final class LocalTimeProtocol {
         int index) {
       return location_.get(index);
     }
-    
+
     private void initFields() {
       location_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
+      if (isInitialized != -1) {
+        return isInitialized == 1;
+    }
+
       for (int i = 0; i < getLocationCount(); i++) {
         if (!getLocation(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -741,7 +749,7 @@ public final class LocalTimeProtocol {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -750,12 +758,14 @@ public final class LocalTimeProtocol {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
+      if (size != -1) {
+        return size;
+    }
+
       size = 0;
       for (int i = 0; i < location_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -765,14 +775,14 @@ public final class LocalTimeProtocol {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static io.netty.example.localtime.LocalTimeProtocol.Locations parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -839,14 +849,14 @@ public final class LocalTimeProtocol {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(io.netty.example.localtime.LocalTimeProtocol.Locations prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
@@ -860,17 +870,17 @@ public final class LocalTimeProtocol {
           getDescriptor() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Locations_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_Locations_fieldAccessorTable;
       }
-      
+
       // Construct using io.netty.example.localtime.LocalTimeProtocol.Locations.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
+
       private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
@@ -883,31 +893,31 @@ public final class LocalTimeProtocol {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (locationBuilder_ == null) {
           location_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = bitField0_ & ~0x00000001;
         } else {
           locationBuilder_.clear();
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return io.netty.example.localtime.LocalTimeProtocol.Locations.getDescriptor();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.Locations getDefaultInstanceForType() {
         return io.netty.example.localtime.LocalTimeProtocol.Locations.getDefaultInstance();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.Locations build() {
         io.netty.example.localtime.LocalTimeProtocol.Locations result = buildPartial();
         if (!result.isInitialized()) {
@@ -915,7 +925,7 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       private io.netty.example.localtime.LocalTimeProtocol.Locations buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         io.netty.example.localtime.LocalTimeProtocol.Locations result = buildPartial();
@@ -925,14 +935,14 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.Locations buildPartial() {
         io.netty.example.localtime.LocalTimeProtocol.Locations result = new io.netty.example.localtime.LocalTimeProtocol.Locations(this);
         int from_bitField0_ = bitField0_;
         if (locationBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          if ((bitField0_ & 0x00000001) == 0x00000001) {
             location_ = java.util.Collections.unmodifiableList(location_);
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = bitField0_ & ~0x00000001;
           }
           result.location_ = location_;
         } else {
@@ -941,7 +951,7 @@ public final class LocalTimeProtocol {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof io.netty.example.localtime.LocalTimeProtocol.Locations) {
           return mergeFrom((io.netty.example.localtime.LocalTimeProtocol.Locations)other);
@@ -950,14 +960,16 @@ public final class LocalTimeProtocol {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(io.netty.example.localtime.LocalTimeProtocol.Locations other) {
-        if (other == io.netty.example.localtime.LocalTimeProtocol.Locations.getDefaultInstance()) return this;
+        if (other == io.netty.example.localtime.LocalTimeProtocol.Locations.getDefaultInstance()) {
+            return this;
+        }
         if (locationBuilder_ == null) {
           if (!other.location_.isEmpty()) {
             if (location_.isEmpty()) {
               location_ = other.location_;
-              bitField0_ = (bitField0_ & ~0x00000001);
+              bitField0_ = bitField0_ & ~0x00000001;
             } else {
               ensureLocationIsMutable();
               location_.addAll(other.location_);
@@ -970,8 +982,8 @@ public final class LocalTimeProtocol {
               locationBuilder_.dispose();
               locationBuilder_ = null;
               location_ = other.location_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-              locationBuilder_ = 
+              bitField0_ = bitField0_ & ~0x00000001;
+              locationBuilder_ =
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getLocationFieldBuilder() : null;
             } else {
@@ -979,38 +991,38 @@ public final class LocalTimeProtocol {
             }
           }
         }
-        this.mergeUnknownFields(other.getUnknownFields());
+        mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         for (int i = 0; i < getLocationCount(); i++) {
           if (!getLocation(i).isInitialized()) {
-            
+
             return false;
           }
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
+            getUnknownFields());
         while (true) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
+              setUnknownFields(unknownFields.build());
               onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
+                setUnknownFields(unknownFields.build());
                 onChanged();
                 return this;
               }
@@ -1025,9 +1037,9 @@ public final class LocalTimeProtocol {
           }
         }
       }
-      
+
       private int bitField0_;
-      
+
       // repeated .io.netty.example.localtime.Location location = 1;
       private java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location> location_ =
         java.util.Collections.emptyList();
@@ -1037,10 +1049,10 @@ public final class LocalTimeProtocol {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           io.netty.example.localtime.LocalTimeProtocol.Location, io.netty.example.localtime.LocalTimeProtocol.Location.Builder, io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder> locationBuilder_;
-      
+
       public java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location> getLocationList() {
         if (locationBuilder_ == null) {
           return java.util.Collections.unmodifiableList(location_);
@@ -1150,7 +1162,7 @@ public final class LocalTimeProtocol {
       public Builder clearLocation() {
         if (locationBuilder_ == null) {
           location_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = bitField0_ & ~0x00000001;
           onChanged();
         } else {
           locationBuilder_.clear();
@@ -1178,7 +1190,7 @@ public final class LocalTimeProtocol {
           return locationBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder> 
+      public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder>
            getLocationOrBuilderList() {
         if (locationBuilder_ != null) {
           return locationBuilder_.getMessageOrBuilderList();
@@ -1195,63 +1207,63 @@ public final class LocalTimeProtocol {
         return getLocationFieldBuilder().addBuilder(
             index, io.netty.example.localtime.LocalTimeProtocol.Location.getDefaultInstance());
       }
-      public java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location.Builder> 
+      public java.util.List<io.netty.example.localtime.LocalTimeProtocol.Location.Builder>
            getLocationBuilderList() {
         return getLocationFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          io.netty.example.localtime.LocalTimeProtocol.Location, io.netty.example.localtime.LocalTimeProtocol.Location.Builder, io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder> 
+          io.netty.example.localtime.LocalTimeProtocol.Location, io.netty.example.localtime.LocalTimeProtocol.Location.Builder, io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder>
           getLocationFieldBuilder() {
         if (locationBuilder_ == null) {
           locationBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               io.netty.example.localtime.LocalTimeProtocol.Location, io.netty.example.localtime.LocalTimeProtocol.Location.Builder, io.netty.example.localtime.LocalTimeProtocol.LocationOrBuilder>(
                   location_,
-                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  (bitField0_ & 0x00000001) == 0x00000001,
                   getParentForChildren(),
                   isClean());
           location_ = null;
         }
         return locationBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.localtime.Locations)
     }
-    
+
     static {
       defaultInstance = new Locations(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.localtime.Locations)
   }
-  
+
   public interface LocalTimeOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required uint32 year = 1;
     boolean hasYear();
     int getYear();
-    
+
     // required uint32 month = 2;
     boolean hasMonth();
     int getMonth();
-    
+
     // required uint32 dayOfMonth = 4;
     boolean hasDayOfMonth();
     int getDayOfMonth();
-    
+
     // required .io.netty.example.localtime.DayOfWeek dayOfWeek = 5;
     boolean hasDayOfWeek();
     io.netty.example.localtime.LocalTimeProtocol.DayOfWeek getDayOfWeek();
-    
+
     // required uint32 hour = 6;
     boolean hasHour();
     int getHour();
-    
+
     // required uint32 minute = 7;
     boolean hasMinute();
     int getMinute();
-    
+
     // required uint32 second = 8;
     boolean hasSecond();
     int getSecond();
@@ -1264,97 +1276,97 @@ public final class LocalTimeProtocol {
       super(builder);
     }
     private LocalTime(boolean noInit) {}
-    
+
     private static final LocalTime defaultInstance;
     public static LocalTime getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public LocalTime getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTime_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTime_fieldAccessorTable;
     }
-    
+
     private int bitField0_;
     // required uint32 year = 1;
     public static final int YEAR_FIELD_NUMBER = 1;
     private int year_;
     public boolean hasYear() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return (bitField0_ & 0x00000001) == 0x00000001;
     }
     public int getYear() {
       return year_;
     }
-    
+
     // required uint32 month = 2;
     public static final int MONTH_FIELD_NUMBER = 2;
     private int month_;
     public boolean hasMonth() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return (bitField0_ & 0x00000002) == 0x00000002;
     }
     public int getMonth() {
       return month_;
     }
-    
+
     // required uint32 dayOfMonth = 4;
     public static final int DAYOFMONTH_FIELD_NUMBER = 4;
     private int dayOfMonth_;
     public boolean hasDayOfMonth() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return (bitField0_ & 0x00000004) == 0x00000004;
     }
     public int getDayOfMonth() {
       return dayOfMonth_;
     }
-    
+
     // required .io.netty.example.localtime.DayOfWeek dayOfWeek = 5;
     public static final int DAYOFWEEK_FIELD_NUMBER = 5;
     private io.netty.example.localtime.LocalTimeProtocol.DayOfWeek dayOfWeek_;
     public boolean hasDayOfWeek() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return (bitField0_ & 0x00000008) == 0x00000008;
     }
     public io.netty.example.localtime.LocalTimeProtocol.DayOfWeek getDayOfWeek() {
       return dayOfWeek_;
     }
-    
+
     // required uint32 hour = 6;
     public static final int HOUR_FIELD_NUMBER = 6;
     private int hour_;
     public boolean hasHour() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return (bitField0_ & 0x00000010) == 0x00000010;
     }
     public int getHour() {
       return hour_;
     }
-    
+
     // required uint32 minute = 7;
     public static final int MINUTE_FIELD_NUMBER = 7;
     private int minute_;
     public boolean hasMinute() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return (bitField0_ & 0x00000020) == 0x00000020;
     }
     public int getMinute() {
       return minute_;
     }
-    
+
     // required uint32 second = 8;
     public static final int SECOND_FIELD_NUMBER = 8;
     private int second_;
     public boolean hasSecond() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
+      return (bitField0_ & 0x00000040) == 0x00000040;
     }
     public int getSecond() {
       return second_;
     }
-    
+
     private void initFields() {
       year_ = 0;
       month_ = 0;
@@ -1367,8 +1379,10 @@ public final class LocalTimeProtocol {
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
+      if (isInitialized != -1) {
+        return isInitialized == 1;
+    }
+
       if (!hasYear()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1400,65 +1414,67 @@ public final class LocalTimeProtocol {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if ((bitField0_ & 0x00000001) == 0x00000001) {
         output.writeUInt32(1, year_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if ((bitField0_ & 0x00000002) == 0x00000002) {
         output.writeUInt32(2, month_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if ((bitField0_ & 0x00000004) == 0x00000004) {
         output.writeUInt32(4, dayOfMonth_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if ((bitField0_ & 0x00000008) == 0x00000008) {
         output.writeEnum(5, dayOfWeek_.getNumber());
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if ((bitField0_ & 0x00000010) == 0x00000010) {
         output.writeUInt32(6, hour_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if ((bitField0_ & 0x00000020) == 0x00000020) {
         output.writeUInt32(7, minute_);
       }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+      if ((bitField0_ & 0x00000040) == 0x00000040) {
         output.writeUInt32(8, second_);
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
+      if (size != -1) {
+        return size;
+    }
+
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if ((bitField0_ & 0x00000001) == 0x00000001) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(1, year_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if ((bitField0_ & 0x00000002) == 0x00000002) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(2, month_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if ((bitField0_ & 0x00000004) == 0x00000004) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(4, dayOfMonth_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if ((bitField0_ & 0x00000008) == 0x00000008) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(5, dayOfWeek_.getNumber());
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if ((bitField0_ & 0x00000010) == 0x00000010) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(6, hour_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if ((bitField0_ & 0x00000020) == 0x00000020) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(7, minute_);
       }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+      if ((bitField0_ & 0x00000040) == 0x00000040) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(8, second_);
       }
@@ -1466,14 +1482,14 @@ public final class LocalTimeProtocol {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static io.netty.example.localtime.LocalTimeProtocol.LocalTime parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1540,14 +1556,14 @@ public final class LocalTimeProtocol {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(io.netty.example.localtime.LocalTimeProtocol.LocalTime prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
@@ -1561,17 +1577,17 @@ public final class LocalTimeProtocol {
           getDescriptor() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTime_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTime_fieldAccessorTable;
       }
-      
+
       // Construct using io.netty.example.localtime.LocalTimeProtocol.LocalTime.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
+
       private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
@@ -1583,39 +1599,39 @@ public final class LocalTimeProtocol {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         year_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = bitField0_ & ~0x00000001;
         month_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = bitField0_ & ~0x00000002;
         dayOfMonth_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = bitField0_ & ~0x00000004;
         dayOfWeek_ = io.netty.example.localtime.LocalTimeProtocol.DayOfWeek.SUNDAY;
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = bitField0_ & ~0x00000008;
         hour_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = bitField0_ & ~0x00000010;
         minute_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = bitField0_ & ~0x00000020;
         second_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = bitField0_ & ~0x00000040;
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return io.netty.example.localtime.LocalTimeProtocol.LocalTime.getDescriptor();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.LocalTime getDefaultInstanceForType() {
         return io.netty.example.localtime.LocalTimeProtocol.LocalTime.getDefaultInstance();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.LocalTime build() {
         io.netty.example.localtime.LocalTimeProtocol.LocalTime result = buildPartial();
         if (!result.isInitialized()) {
@@ -1623,7 +1639,7 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       private io.netty.example.localtime.LocalTimeProtocol.LocalTime buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         io.netty.example.localtime.LocalTimeProtocol.LocalTime result = buildPartial();
@@ -1633,36 +1649,36 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.LocalTime buildPartial() {
         io.netty.example.localtime.LocalTimeProtocol.LocalTime result = new io.netty.example.localtime.LocalTimeProtocol.LocalTime(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if ((from_bitField0_ & 0x00000001) == 0x00000001) {
           to_bitField0_ |= 0x00000001;
         }
         result.year_ = year_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if ((from_bitField0_ & 0x00000002) == 0x00000002) {
           to_bitField0_ |= 0x00000002;
         }
         result.month_ = month_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if ((from_bitField0_ & 0x00000004) == 0x00000004) {
           to_bitField0_ |= 0x00000004;
         }
         result.dayOfMonth_ = dayOfMonth_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if ((from_bitField0_ & 0x00000008) == 0x00000008) {
           to_bitField0_ |= 0x00000008;
         }
         result.dayOfWeek_ = dayOfWeek_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+        if ((from_bitField0_ & 0x00000010) == 0x00000010) {
           to_bitField0_ |= 0x00000010;
         }
         result.hour_ = hour_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+        if ((from_bitField0_ & 0x00000020) == 0x00000020) {
           to_bitField0_ |= 0x00000020;
         }
         result.minute_ = minute_;
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+        if ((from_bitField0_ & 0x00000040) == 0x00000040) {
           to_bitField0_ |= 0x00000040;
         }
         result.second_ = second_;
@@ -1670,7 +1686,7 @@ public final class LocalTimeProtocol {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof io.netty.example.localtime.LocalTimeProtocol.LocalTime) {
           return mergeFrom((io.netty.example.localtime.LocalTimeProtocol.LocalTime)other);
@@ -1679,9 +1695,11 @@ public final class LocalTimeProtocol {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(io.netty.example.localtime.LocalTimeProtocol.LocalTime other) {
-        if (other == io.netty.example.localtime.LocalTimeProtocol.LocalTime.getDefaultInstance()) return this;
+        if (other == io.netty.example.localtime.LocalTimeProtocol.LocalTime.getDefaultInstance()) {
+            return this;
+        }
         if (other.hasYear()) {
           setYear(other.getYear());
         }
@@ -1703,60 +1721,60 @@ public final class LocalTimeProtocol {
         if (other.hasSecond()) {
           setSecond(other.getSecond());
         }
-        this.mergeUnknownFields(other.getUnknownFields());
+        mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasYear()) {
-          
+
           return false;
         }
         if (!hasMonth()) {
-          
+
           return false;
         }
         if (!hasDayOfMonth()) {
-          
+
           return false;
         }
         if (!hasDayOfWeek()) {
-          
+
           return false;
         }
         if (!hasHour()) {
-          
+
           return false;
         }
         if (!hasMinute()) {
-          
+
           return false;
         }
         if (!hasSecond()) {
-          
+
           return false;
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
+            getUnknownFields());
         while (true) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
+              setUnknownFields(unknownFields.build());
               onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
+                setUnknownFields(unknownFields.build());
                 onChanged();
                 return this;
               }
@@ -1806,13 +1824,13 @@ public final class LocalTimeProtocol {
           }
         }
       }
-      
+
       private int bitField0_;
-      
+
       // required uint32 year = 1;
       private int year_ ;
       public boolean hasYear() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return (bitField0_ & 0x00000001) == 0x00000001;
       }
       public int getYear() {
         return year_;
@@ -1824,16 +1842,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearYear() {
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = bitField0_ & ~0x00000001;
         year_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 month = 2;
       private int month_ ;
       public boolean hasMonth() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return (bitField0_ & 0x00000002) == 0x00000002;
       }
       public int getMonth() {
         return month_;
@@ -1845,16 +1863,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearMonth() {
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = bitField0_ & ~0x00000002;
         month_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 dayOfMonth = 4;
       private int dayOfMonth_ ;
       public boolean hasDayOfMonth() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return (bitField0_ & 0x00000004) == 0x00000004;
       }
       public int getDayOfMonth() {
         return dayOfMonth_;
@@ -1866,16 +1884,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearDayOfMonth() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = bitField0_ & ~0x00000004;
         dayOfMonth_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required .io.netty.example.localtime.DayOfWeek dayOfWeek = 5;
       private io.netty.example.localtime.LocalTimeProtocol.DayOfWeek dayOfWeek_ = io.netty.example.localtime.LocalTimeProtocol.DayOfWeek.SUNDAY;
       public boolean hasDayOfWeek() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return (bitField0_ & 0x00000008) == 0x00000008;
       }
       public io.netty.example.localtime.LocalTimeProtocol.DayOfWeek getDayOfWeek() {
         return dayOfWeek_;
@@ -1890,16 +1908,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearDayOfWeek() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = bitField0_ & ~0x00000008;
         dayOfWeek_ = io.netty.example.localtime.LocalTimeProtocol.DayOfWeek.SUNDAY;
         onChanged();
         return this;
       }
-      
+
       // required uint32 hour = 6;
       private int hour_ ;
       public boolean hasHour() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return (bitField0_ & 0x00000010) == 0x00000010;
       }
       public int getHour() {
         return hour_;
@@ -1911,16 +1929,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearHour() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = bitField0_ & ~0x00000010;
         hour_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 minute = 7;
       private int minute_ ;
       public boolean hasMinute() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return (bitField0_ & 0x00000020) == 0x00000020;
       }
       public int getMinute() {
         return minute_;
@@ -1932,16 +1950,16 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearMinute() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = bitField0_ & ~0x00000020;
         minute_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 second = 8;
       private int second_ ;
       public boolean hasSecond() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return (bitField0_ & 0x00000040) == 0x00000040;
       }
       public int getSecond() {
         return second_;
@@ -1953,32 +1971,32 @@ public final class LocalTimeProtocol {
         return this;
       }
       public Builder clearSecond() {
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = bitField0_ & ~0x00000040;
         second_ = 0;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.localtime.LocalTime)
     }
-    
+
     static {
       defaultInstance = new LocalTime(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.localtime.LocalTime)
   }
-  
+
   public interface LocalTimesOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .io.netty.example.localtime.LocalTime localTime = 1;
-    java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime> 
+    java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime>
         getLocalTimeList();
     io.netty.example.localtime.LocalTimeProtocol.LocalTime getLocalTime(int index);
     int getLocalTimeCount();
-    java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder> 
+    java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder>
         getLocalTimeOrBuilderList();
     io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder getLocalTimeOrBuilder(
         int index);
@@ -1991,33 +2009,33 @@ public final class LocalTimeProtocol {
       super(builder);
     }
     private LocalTimes(boolean noInit) {}
-    
+
     private static final LocalTimes defaultInstance;
     public static LocalTimes getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public LocalTimes getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTimes_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTimes_fieldAccessorTable;
     }
-    
+
     // repeated .io.netty.example.localtime.LocalTime localTime = 1;
     public static final int LOCALTIME_FIELD_NUMBER = 1;
     private java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime> localTime_;
     public java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime> getLocalTimeList() {
       return localTime_;
     }
-    public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder> 
+    public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder>
         getLocalTimeOrBuilderList() {
       return localTime_;
     }
@@ -2031,15 +2049,17 @@ public final class LocalTimeProtocol {
         int index) {
       return localTime_.get(index);
     }
-    
+
     private void initFields() {
       localTime_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
+      if (isInitialized != -1) {
+        return isInitialized == 1;
+    }
+
       for (int i = 0; i < getLocalTimeCount(); i++) {
         if (!getLocalTime(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -2049,7 +2069,7 @@ public final class LocalTimeProtocol {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2058,12 +2078,14 @@ public final class LocalTimeProtocol {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
+      if (size != -1) {
+        return size;
+    }
+
       size = 0;
       for (int i = 0; i < localTime_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -2073,14 +2095,14 @@ public final class LocalTimeProtocol {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static io.netty.example.localtime.LocalTimeProtocol.LocalTimes parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2147,14 +2169,14 @@ public final class LocalTimeProtocol {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(io.netty.example.localtime.LocalTimeProtocol.LocalTimes prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
@@ -2168,17 +2190,17 @@ public final class LocalTimeProtocol {
           getDescriptor() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTimes_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return io.netty.example.localtime.LocalTimeProtocol.internal_static_io_netty_example_localtime_LocalTimes_fieldAccessorTable;
       }
-      
+
       // Construct using io.netty.example.localtime.LocalTimeProtocol.LocalTimes.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
+
       private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
@@ -2191,31 +2213,31 @@ public final class LocalTimeProtocol {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (localTimeBuilder_ == null) {
           localTime_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = bitField0_ & ~0x00000001;
         } else {
           localTimeBuilder_.clear();
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return io.netty.example.localtime.LocalTimeProtocol.LocalTimes.getDescriptor();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.LocalTimes getDefaultInstanceForType() {
         return io.netty.example.localtime.LocalTimeProtocol.LocalTimes.getDefaultInstance();
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.LocalTimes build() {
         io.netty.example.localtime.LocalTimeProtocol.LocalTimes result = buildPartial();
         if (!result.isInitialized()) {
@@ -2223,7 +2245,7 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       private io.netty.example.localtime.LocalTimeProtocol.LocalTimes buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         io.netty.example.localtime.LocalTimeProtocol.LocalTimes result = buildPartial();
@@ -2233,14 +2255,14 @@ public final class LocalTimeProtocol {
         }
         return result;
       }
-      
+
       public io.netty.example.localtime.LocalTimeProtocol.LocalTimes buildPartial() {
         io.netty.example.localtime.LocalTimeProtocol.LocalTimes result = new io.netty.example.localtime.LocalTimeProtocol.LocalTimes(this);
         int from_bitField0_ = bitField0_;
         if (localTimeBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          if ((bitField0_ & 0x00000001) == 0x00000001) {
             localTime_ = java.util.Collections.unmodifiableList(localTime_);
-            bitField0_ = (bitField0_ & ~0x00000001);
+            bitField0_ = bitField0_ & ~0x00000001;
           }
           result.localTime_ = localTime_;
         } else {
@@ -2249,7 +2271,7 @@ public final class LocalTimeProtocol {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof io.netty.example.localtime.LocalTimeProtocol.LocalTimes) {
           return mergeFrom((io.netty.example.localtime.LocalTimeProtocol.LocalTimes)other);
@@ -2258,14 +2280,16 @@ public final class LocalTimeProtocol {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(io.netty.example.localtime.LocalTimeProtocol.LocalTimes other) {
-        if (other == io.netty.example.localtime.LocalTimeProtocol.LocalTimes.getDefaultInstance()) return this;
+        if (other == io.netty.example.localtime.LocalTimeProtocol.LocalTimes.getDefaultInstance()) {
+            return this;
+        }
         if (localTimeBuilder_ == null) {
           if (!other.localTime_.isEmpty()) {
             if (localTime_.isEmpty()) {
               localTime_ = other.localTime_;
-              bitField0_ = (bitField0_ & ~0x00000001);
+              bitField0_ = bitField0_ & ~0x00000001;
             } else {
               ensureLocalTimeIsMutable();
               localTime_.addAll(other.localTime_);
@@ -2278,8 +2302,8 @@ public final class LocalTimeProtocol {
               localTimeBuilder_.dispose();
               localTimeBuilder_ = null;
               localTime_ = other.localTime_;
-              bitField0_ = (bitField0_ & ~0x00000001);
-              localTimeBuilder_ = 
+              bitField0_ = bitField0_ & ~0x00000001;
+              localTimeBuilder_ =
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getLocalTimeFieldBuilder() : null;
             } else {
@@ -2287,38 +2311,38 @@ public final class LocalTimeProtocol {
             }
           }
         }
-        this.mergeUnknownFields(other.getUnknownFields());
+        mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         for (int i = 0; i < getLocalTimeCount(); i++) {
           if (!getLocalTime(i).isInitialized()) {
-            
+
             return false;
           }
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
+            getUnknownFields());
         while (true) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
+              setUnknownFields(unknownFields.build());
               onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
+                setUnknownFields(unknownFields.build());
                 onChanged();
                 return this;
               }
@@ -2333,9 +2357,9 @@ public final class LocalTimeProtocol {
           }
         }
       }
-      
+
       private int bitField0_;
-      
+
       // repeated .io.netty.example.localtime.LocalTime localTime = 1;
       private java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime> localTime_ =
         java.util.Collections.emptyList();
@@ -2345,10 +2369,10 @@ public final class LocalTimeProtocol {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           io.netty.example.localtime.LocalTimeProtocol.LocalTime, io.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder, io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder> localTimeBuilder_;
-      
+
       public java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime> getLocalTimeList() {
         if (localTimeBuilder_ == null) {
           return java.util.Collections.unmodifiableList(localTime_);
@@ -2458,7 +2482,7 @@ public final class LocalTimeProtocol {
       public Builder clearLocalTime() {
         if (localTimeBuilder_ == null) {
           localTime_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = bitField0_ & ~0x00000001;
           onChanged();
         } else {
           localTimeBuilder_.clear();
@@ -2486,7 +2510,7 @@ public final class LocalTimeProtocol {
           return localTimeBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder> 
+      public java.util.List<? extends io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder>
            getLocalTimeOrBuilderList() {
         if (localTimeBuilder_ != null) {
           return localTimeBuilder_.getMessageOrBuilderList();
@@ -2503,36 +2527,36 @@ public final class LocalTimeProtocol {
         return getLocalTimeFieldBuilder().addBuilder(
             index, io.netty.example.localtime.LocalTimeProtocol.LocalTime.getDefaultInstance());
       }
-      public java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder> 
+      public java.util.List<io.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder>
            getLocalTimeBuilderList() {
         return getLocalTimeFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          io.netty.example.localtime.LocalTimeProtocol.LocalTime, io.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder, io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder> 
+          io.netty.example.localtime.LocalTimeProtocol.LocalTime, io.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder, io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder>
           getLocalTimeFieldBuilder() {
         if (localTimeBuilder_ == null) {
           localTimeBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               io.netty.example.localtime.LocalTimeProtocol.LocalTime, io.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder, io.netty.example.localtime.LocalTimeProtocol.LocalTimeOrBuilder>(
                   localTime_,
-                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  (bitField0_ & 0x00000001) == 0x00000001,
                   getParentForChildren(),
                   isClean());
           localTime_ = null;
         }
         return localTimeBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.localtime.LocalTimes)
     }
-    
+
     static {
       defaultInstance = new LocalTimes(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.localtime.LocalTimes)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_io_netty_example_localtime_Location_descriptor;
   private static
@@ -2553,7 +2577,7 @@ public final class LocalTimeProtocol {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_io_netty_example_localtime_LocalTimes_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -2627,6 +2651,6 @@ public final class LocalTimeProtocol {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

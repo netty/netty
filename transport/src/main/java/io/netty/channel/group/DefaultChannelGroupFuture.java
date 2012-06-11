@@ -15,6 +15,7 @@
  */
 package io.netty.channel.group;
 
+import static java.util.concurrent.TimeUnit.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -30,8 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import static java.util.concurrent.TimeUnit.*;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.

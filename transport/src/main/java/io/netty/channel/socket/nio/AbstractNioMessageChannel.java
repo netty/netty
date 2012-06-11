@@ -16,8 +16,8 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelBufferType;
+import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;

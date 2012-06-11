@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import org.jboss.marshalling.ByteInput;
-
 import java.io.IOException;
+
+import org.jboss.marshalling.ByteInput;
 
 /**
  * {@link ByteInput} implementation which wraps another {@link ByteInput} and throws a {@link TooBigObjectException}

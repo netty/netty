@@ -17,8 +17,8 @@ package io.netty.channel.embedded;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelBufferType;
+import io.netty.channel.ChannelHandler;
 
 public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
 

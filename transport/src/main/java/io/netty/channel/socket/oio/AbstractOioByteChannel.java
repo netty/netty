@@ -17,8 +17,8 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelBufferType;
+import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 

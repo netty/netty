@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -24,8 +25,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 
 import java.util.Set;
-
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.

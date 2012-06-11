@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket;
 
+import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -26,8 +27,6 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Map;
-
-import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.

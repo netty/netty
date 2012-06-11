@@ -17,8 +17,8 @@ package io.netty.handler.stream;
 
 import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedByteChannel;
