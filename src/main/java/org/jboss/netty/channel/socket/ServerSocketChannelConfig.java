@@ -16,6 +16,7 @@
 package org.jboss.netty.channel.socket;
 
 import java.net.ServerSocket;
+import java.net.StandardSocketOptions;
 
 import org.jboss.netty.channel.ChannelConfig;
 
@@ -55,22 +56,22 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
     void setBacklog(int backlog);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     boolean isReuseAddress();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     void setReuseAddress(boolean reuseAddress);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 

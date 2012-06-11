@@ -231,12 +231,13 @@ public class ClientBootstrap extends Bootstrap {
     }
 
     /**
-     * Attempts to bind a channel with the specified {@code localAddress}. later the channel can be connected
-     * to a remoteAddress by calling {@link Channel#connect(SocketAddress)}.This method is useful where bind and connect
-     * need to be done in separate steps.
+     * Attempts to bind a channel with the specified {@code localAddress}. later the channel can
+     * be connected to a remoteAddress by calling {@link Channel#connect(SocketAddress)}.This method
+     * is useful where bind and connect need to be done in separate steps.
      *
      * This can also be useful if you want to set an attachment to the {@link Channel} via
-     * {@link Channel#setAttachment(Object)} so you can use it after the {@link #bind(SocketAddress)} was done.
+     * {@link Channel#setAttachment(Object)} so you can use it after the {@link #bind(SocketAddress)}
+     * was done.
      * <br>
      * For example:
      *

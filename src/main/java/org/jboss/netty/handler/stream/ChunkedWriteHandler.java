@@ -73,7 +73,8 @@ import org.jboss.netty.util.internal.QueueFactory;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.stream.ChunkedInput oneway - - reads from
  */
-public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler, LifeCycleAwareChannelHandler {
+public class ChunkedWriteHandler
+        implements ChannelUpstreamHandler, ChannelDownstreamHandler, LifeCycleAwareChannelHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
@@ -251,8 +252,9 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                                     this.currentEvent = null;
                                     writeFuture = currentEvent.getFuture();
 
-                                    // Register a listener which will close the input once the write is complete. This is needed because the Chunk may have
-                                    // some resource bound that can not be closed before its not written
+                                    // Register a listener which will close the input once the write
+                                    // is complete. This is needed because the Chunk may have some
+                                    // resource bound that can not be closed before its not written
                                     //
                                     // See https://github.com/netty/netty/issues/303
                                     writeFuture.addListener(new ChannelFutureListener() {

@@ -55,7 +55,9 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     volatile LocalAddress localAddress;
     volatile LocalAddress remoteAddress;
 
-    DefaultLocalChannel(LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, DefaultLocalChannel pairedChannel) {
+    DefaultLocalChannel(
+            LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline,
+            ChannelSink sink, DefaultLocalChannel pairedChannel) {
         super(parent, factory, pipeline, sink);
         this.pairedChannel = pairedChannel;
         config = new DefaultChannelConfig();

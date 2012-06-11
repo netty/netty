@@ -25,11 +25,11 @@ import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
- * Abstract base class for {@link WorkerPool} implementations that create the {@link Worker}'s up-front and return them in a "fair" fashion when calling
- * {@link #nextWorker()}
- *
+ * Abstract base class for {@link WorkerPool} implementations that create the {@link Worker}'s
+ * up-front and return them in a "fair" fashion when calling {@link #nextWorker()}
  */
-public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> implements WorkerPool<E> , ExternalResourceReleasable {
+public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
+        implements WorkerPool<E>, ExternalResourceReleasable {
 
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
@@ -39,7 +39,8 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
      * Create a new instance
      *
      * @param workerExecutor the {@link Executor} to use for the {@link Worker}'s
-     * @param allowShutdownOnIdle allow the {@link Worker}'s to shutdown when there is not {@link Channel} is registered with it
+     * @param allowShutdownOnIdle allow the {@link Worker}'s to shutdown when there is not
+     *                            {@link Channel} is registered with it
      * @param workerCount the count of {@link Worker}'s to create
      */
     AbstractNioWorkerPool(Executor workerExecutor, int workerCount, boolean allowShutDownOnIdle) {
@@ -65,7 +66,8 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
      *
      *
      * @param executor the {@link Executor} to use
-     * @param allowShutdownOnIdle allow the {@link Worker} to shutdown when there is not {@link Channel} is registered with it
+     * @param allowShutdownOnIdle allow the {@link Worker} to shutdown when there is not
+     *                            {@link Channel} is registered with it
      * @return worker the new {@link Worker}
      */
     protected abstract E createWorker(Executor executor, boolean allowShutdownOnIdle);

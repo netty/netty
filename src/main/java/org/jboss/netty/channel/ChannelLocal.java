@@ -48,7 +48,8 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
     private final boolean removeOnClose;
 
     /**
-     * Creates a {@link Channel} local variable by calling {@link #ChannelLocal(boolean)} with <code>false</code> as parameter
+     * Creates a {@link Channel} local variable by calling {@link #ChannelLocal(boolean)} with
+     * <code>false</code> as parameter
      */
     public ChannelLocal() {
         this(false);
@@ -57,7 +58,8 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
     /**
      * Creates a {@link Channel} local variable.
      *
-     * @param removeOnClose if <code>true</code> the {@link ChannelLocal} will remove a {@link Channel} from it own once the {@link Channel} was closed.
+     * @param removeOnClose if <code>true</code> the {@link ChannelLocal} will remove a
+     *                      {@link Channel} from it own once the {@link Channel} was closed.
      */
     public ChannelLocal(boolean removeOnClose) {
         this.removeOnClose = removeOnClose;

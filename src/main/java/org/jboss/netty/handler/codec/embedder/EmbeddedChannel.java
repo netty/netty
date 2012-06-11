@@ -25,7 +25,8 @@ import org.jboss.netty.channel.DefaultChannelConfig;
 
 /**
  * TODO Make EmbeddedChannel implement ChannelConfig and ChannelSink to reduce overhead.
- * TODO Do not extend AbstractChannel to reduce overhead and remove the internal-use-only constructor in AbstractChannel.
+ * TODO Do not extend AbstractChannel to reduce overhead and remove the internal-use-only
+ *      constructor in AbstractChannel.
  */
 class EmbeddedChannel extends AbstractChannel {
 

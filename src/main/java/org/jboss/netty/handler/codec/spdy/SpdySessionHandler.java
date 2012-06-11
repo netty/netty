@@ -479,7 +479,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                         e.getFuture().addListener(new ChannelFutureListener() {
                             public void operationComplete(ChannelFuture future) throws Exception {
                                 if (!future.isSuccess()) {
-                                    issueStreamError(context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                                    issueStreamError(
+                                            context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
                                 }
                             }
                         });
@@ -504,7 +505,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                         e.getFuture().addListener(new ChannelFutureListener() {
                             public void operationComplete(ChannelFuture future) throws Exception {
                                 if (!future.isSuccess()) {
-                                    issueStreamError(context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                                    issueStreamError(
+                                            context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
                                 }
                             }
                         });
@@ -737,7 +739,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             return false;
         }
         spdySession.acceptStream(
-                streamID, priority, remoteSideClosed, localSideClosed, initialSendWindowSize, initialReceiveWindowSize);
+                streamID, priority, remoteSideClosed, localSideClosed,
+                initialSendWindowSize, initialReceiveWindowSize);
         if (isRemoteInitiatedID(streamID)) {
             lastGoodStreamID = streamID;
         }

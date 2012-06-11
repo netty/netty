@@ -16,6 +16,7 @@
 package org.jboss.netty.example.securechat;
 
 import java.security.KeyStore;
+import java.security.SecureRandom;
 import java.security.Security;
 
 import javax.net.ssl.KeyManager;
@@ -42,10 +43,10 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *     {@link SslHandler}.</li>
  * <li>When initializing an {@link SSLContext} on the client side,
  *     specify the {@link KeyManager} that contains the client certificate as
- *     the first argument of {@link SSLContext#init(KeyManager[], javax.net.ssl.TrustManager[], java.security.SecureRandom)}.</li>
+ *     the first argument of {@link SSLContext#init(KeyManager[], TrustManager[], SecureRandom)}.</li>
  * <li>When initializing an {@link SSLContext} on the server side,
  *     specify the proper {@link TrustManager} as the second argument of
- *     {@link SSLContext#init(KeyManager[], javax.net.ssl.TrustManager[], java.security.SecureRandom)}
+ *     {@link SSLContext#init(KeyManager[], TrustManager[], SecureRandom)}
  *     to validate the client certificate.</li>
  * </ul>
  */
