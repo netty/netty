@@ -96,15 +96,21 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doPreClose() throws Exception {
         if (state > 1) {
             // Closed already.
             return;
         }
 
+        // Update all internal state before the closeFuture is notified.
         LocalChannelRegistry.unregister(localAddress);
         localAddress = null;
         state = 2;
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        // All internal state was updated already at doPreClose().
     }
 
     @Override

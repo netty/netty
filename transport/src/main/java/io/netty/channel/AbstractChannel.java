@@ -708,6 +708,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract Runnable doRegister() throws Exception;
     protected abstract void doBind(SocketAddress localAddress) throws Exception;
     protected abstract void doDisconnect() throws Exception;
+    protected void doPreClose() throws Exception {
+        // NOOP by default
+    }
+
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
@@ -799,7 +803,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    private static final class CloseFuture extends DefaultChannelFuture implements ChannelFuture.Unsafe {
+    private final class CloseFuture extends DefaultChannelFuture implements ChannelFuture.Unsafe {
 
         CloseFuture(AbstractChannel ch) {
             super(ch, false);
@@ -816,6 +820,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         boolean setClosed() {
+            try {
+                doPreClose();
+            } catch (Exception e) {
+                logger.warn("doPreClose() raised an exception.", e);
+            }
             return super.setSuccess();
         }
     }

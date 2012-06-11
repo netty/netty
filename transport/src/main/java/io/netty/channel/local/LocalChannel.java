@@ -17,10 +17,10 @@ package io.netty.channel.local;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelBufferType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
@@ -171,17 +171,22 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doPreClose() throws Exception {
         if (state > 2) {
             // Closed already
             return;
         }
 
+        // Update all internal state before the closeFuture is notified.
         if (parent() == null) {
             LocalChannelRegistry.unregister(localAddress);
         }
         localAddress = null;
         state = 3;
+    }
+
+    @Override
+    protected void doClose() throws Exception {
         if (peer.isActive()) {
             peer.unsafe().close(peer.unsafe().voidFuture());
             peer = null;
