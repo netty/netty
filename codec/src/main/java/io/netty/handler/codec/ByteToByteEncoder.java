@@ -46,8 +46,9 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
 
         if (out.readableBytes() > oldOutSize) {
             in.discardReadBytes();
-            ctx.flush(future);
         }
+
+        ctx.flush(future);
     }
 
     public abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;

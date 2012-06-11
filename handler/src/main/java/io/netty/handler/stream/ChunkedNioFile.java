@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 /**
@@ -148,11 +147,9 @@ public class ChunkedNioFile implements ChunkedByteInput {
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        byte[] chunkArray = new byte[chunkSize];
-        ByteBuffer chunk = ByteBuffer.wrap(chunkArray);
         int readBytes = 0;
         for (;;) {
-            int localReadBytes = in.read(chunk);
+            int localReadBytes = buffer.writeBytes(in, chunkSize - readBytes);
             if (localReadBytes < 0) {
                 break;
             }
@@ -161,8 +158,6 @@ public class ChunkedNioFile implements ChunkedByteInput {
                 break;
             }
         }
-        chunk.flip();
-        buffer.writeBytes(chunk);
         this.offset += readBytes;
 
         return true;

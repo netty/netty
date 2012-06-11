@@ -71,21 +71,33 @@ public class ChunkedWriteHandler
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private static final int MAX_PENDING_WRITES = 4;
 
     private final MessageBuf<Object> queue = MessageBufs.buffer();
-
+    private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
     private Object currentEvent;
 
+    public ChunkedWriteHandler() {
+        this(4);
+    }
+
+    public ChunkedWriteHandler(int maxPendingWrites) {
+        if (maxPendingWrites <= 0) {
+            throw new IllegalArgumentException(
+                    "maxPendingWrites: " + maxPendingWrites + " (expected: > 0)");
+        }
+        this.maxPendingWrites = maxPendingWrites;
+    }
+
     @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
         return queue;
     }
 
     private boolean isWritable() {
-        return pendingWrites.get() < MAX_PENDING_WRITES;
+        return pendingWrites.get() < maxPendingWrites;
     }
 
     /**
@@ -136,9 +148,10 @@ public class ChunkedWriteHandler
         super.channelInactive(ctx);
     }
 
-    private void discard(final ChannelHandlerContext ctx, final Throwable cause) {
+    private void discard(final ChannelHandlerContext ctx, Throwable cause) {
 
         boolean fireExceptionCaught = false;
+        boolean success = true;
         for (;;) {
             Object currentEvent = this.currentEvent;
 
@@ -153,10 +166,27 @@ public class ChunkedWriteHandler
             }
 
             if (currentEvent instanceof ChunkedInput) {
-                closeInput((ChunkedInput<?>) currentEvent);
+                ChunkedInput<?> in = (ChunkedInput<?>) currentEvent;
+                try {
+                    if (!in.isEndOfInput()) {
+                        success = false;
+                    }
+                } catch (Exception e) {
+                    success = false;
+                    logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
+                }
+                closeInput(in);
             } else if (currentEvent instanceof ChannelFuture) {
-                fireExceptionCaught = true;
-                ((ChannelFuture) currentEvent).setFailure(cause);
+                ChannelFuture f = (ChannelFuture) currentEvent;
+                if (!success) {
+                    fireExceptionCaught = true;
+                    if (cause == null) {
+                        cause = new ClosedChannelException();
+                    }
+                    f.setFailure(cause);
+                } else {
+                    f.setSuccess();
+                }
             }
         }
 
@@ -168,7 +198,7 @@ public class ChunkedWriteHandler
     private void doFlush(final ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
         if (!channel.isActive()) {
-            discard(ctx, new ClosedChannelException());
+            discard(ctx, null);
             return;
         }
         while (isWritable()) {

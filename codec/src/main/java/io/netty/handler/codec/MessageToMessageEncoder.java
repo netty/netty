@@ -26,7 +26,6 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         Queue<I> in = ctx.outboundMessageBuffer();
-        boolean notify = false;
         for (;;) {
             try {
                 Object msg = in.poll();
@@ -36,7 +35,6 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
 
                 if (!isEncodable(msg)) {
                     ctx.nextOutboundMessageBuffer().add(msg);
-                    notify = true;
                     continue;
                 }
 
@@ -49,9 +47,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     continue;
                 }
 
-                if (CodecUtil.unfoldAndAdd(ctx, omsg, false)) {
-                    notify = true;
-                }
+                CodecUtil.unfoldAndAdd(ctx, omsg, false);
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
@@ -61,9 +57,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
             }
         }
 
-        if (notify) {
-            ctx.flush(future);
-        }
+        ctx.flush(future);
     }
 
     /**

@@ -29,8 +29,6 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
         Queue<I> in = ctx.outboundMessageBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        boolean notify = false;
-        int oldOutSize = out.readableBytes();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {
@@ -39,7 +37,6 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
 
             if (!isEncodable(msg)) {
                 ctx.nextOutboundMessageBuffer().add(msg);
-                notify = true;
                 continue;
             }
 
@@ -56,9 +53,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
             }
         }
 
-        if (out.readableBytes() > oldOutSize || notify) {
-            ctx.flush(future);
-        }
+        ctx.flush(future);
     }
 
     /**
