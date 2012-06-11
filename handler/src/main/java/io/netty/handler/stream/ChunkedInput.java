@@ -29,7 +29,7 @@ public interface ChunkedInput<B> {
     boolean isEndOfInput() throws Exception;
 
     /**
-     * Releases the resources associated with the stream.
+     * Releases the resources associated with the input.
      */
     void close() throws Exception;
 

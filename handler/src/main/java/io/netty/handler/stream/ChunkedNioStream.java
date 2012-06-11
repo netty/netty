@@ -30,7 +30,7 @@ public class ChunkedNioStream implements ChunkedByteInput {
     private final ReadableByteChannel in;
 
     private final int chunkSize;
-    private volatile long offset;
+    private long offset;
 
     /**
      * Associated ByteBuffer

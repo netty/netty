@@ -36,7 +36,7 @@ public class ChunkedStream implements ChunkedByteInput {
 
     private final PushbackInputStream in;
     private final int chunkSize;
-    private volatile long offset;
+    private long offset;
 
     /**
      * Creates a new instance that fetches data from the specified stream.
