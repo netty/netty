@@ -36,13 +36,12 @@ import java.util.List;
  */
 public class CompositeByteBuf extends AbstractByteBuf {
 
-    private final ByteOrder order;
     private ByteBuf[] components;
     private int[] indices;
     private int lastAccessedComponentId;
 
     public CompositeByteBuf(ByteOrder endianness, List<ByteBuf> buffers) {
-        order = endianness;
+        super(endianness);
         setComponents(buffers);
     }
 
@@ -130,7 +129,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
     }
 
     private CompositeByteBuf(CompositeByteBuf buffer) {
-        order = buffer.order;
+        super(buffer.order());
         components = buffer.components.clone();
         indices = buffer.indices.clone();
         setIndex(buffer.readerIndex(), buffer.writerIndex());
@@ -139,11 +138,6 @@ public class CompositeByteBuf extends AbstractByteBuf {
     @Override
     public ByteBufFactory factory() {
         return HeapByteBufFactory.getInstance(order());
-    }
-
-    @Override
-    public ByteOrder order() {
-        return order;
     }
 
     @Override
@@ -710,7 +704,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.
-        final ByteBuf padding = Unpooled.buffer(order(), localReaderIndex);
+        final ByteBuf padding = Unpooled.buffer(localReaderIndex).order(order());
         padding.writerIndex(localReaderIndex);
         list.add(padding);
 

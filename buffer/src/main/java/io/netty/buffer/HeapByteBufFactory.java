@@ -66,12 +66,12 @@ public class HeapByteBufFactory extends AbstractByteBufFactory {
 
     @Override
     public ByteBuf getBuffer(ByteOrder order, int capacity) {
-        return Unpooled.buffer(order, capacity);
+        return Unpooled.buffer(capacity).order(order);
     }
 
     @Override
     public ByteBuf getBuffer(ByteOrder order, byte[] array, int offset, int length) {
-        return Unpooled.wrappedBuffer(order, array, offset, length);
+        return Unpooled.wrappedBuffer(array, offset, length).order(order);
     }
 
     @Override

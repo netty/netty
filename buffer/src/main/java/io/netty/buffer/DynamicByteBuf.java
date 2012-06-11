@@ -32,30 +32,22 @@ import java.nio.channels.ScatteringByteChannel;
 public class DynamicByteBuf extends AbstractByteBuf {
 
     private final ByteBufFactory factory;
-    private final ByteOrder endianness;
     private ByteBuf buffer;
 
     public DynamicByteBuf(int estimatedLength) {
-        this(ByteOrder.BIG_ENDIAN, estimatedLength);
+        this(estimatedLength, HeapByteBufFactory.getInstance(ByteOrder.BIG_ENDIAN));
     }
 
-    public DynamicByteBuf(ByteOrder endianness, int estimatedLength) {
-        this(endianness, estimatedLength, HeapByteBufFactory.getInstance(endianness));
-    }
-
-    public DynamicByteBuf(ByteOrder endianness, int estimatedLength, ByteBufFactory factory) {
+    public DynamicByteBuf(int estimatedLength, ByteBufFactory factory) {
+        super(ByteOrder.BIG_ENDIAN);
         if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
-        }
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
         }
         if (factory == null) {
             throw new NullPointerException("factory");
         }
         this.factory = factory;
-        this.endianness = endianness;
-        buffer = factory.getBuffer(order(), estimatedLength);
+        buffer = factory.getBuffer(ByteOrder.BIG_ENDIAN, estimatedLength);
     }
 
     @Override
@@ -90,11 +82,6 @@ public class DynamicByteBuf extends AbstractByteBuf {
     @Override
     public ByteBufFactory factory() {
         return factory;
-    }
-
-    @Override
-    public ByteOrder order() {
-        return endianness;
     }
 
     @Override
@@ -300,7 +287,7 @@ public class DynamicByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        DynamicByteBuf copiedBuffer = new DynamicByteBuf(order(), Math.max(length, 64), factory());
+        DynamicByteBuf copiedBuffer = new DynamicByteBuf(Math.max(length, 64), factory());
         copiedBuffer.buffer = buffer.copy(index, length);
         copiedBuffer.setIndex(0, length);
         return copiedBuffer;

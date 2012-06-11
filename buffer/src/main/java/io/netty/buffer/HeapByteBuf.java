@@ -19,14 +19,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 /**
- * A skeletal implementation for Java heap buffers.
+ * Big endian Java heap buffer implementation.
  */
-public abstract class HeapByteBuf extends AbstractByteBuf {
+public class HeapByteBuf extends AbstractByteBuf {
 
     /**
      * The underlying heap byte array that this buffer is wrapping.
@@ -61,6 +62,7 @@ public abstract class HeapByteBuf extends AbstractByteBuf {
      * @param writerIndex  the initial writer index of this buffer
      */
     protected HeapByteBuf(byte[] array, int readerIndex, int writerIndex) {
+        super(ByteOrder.BIG_ENDIAN);
         if (array == null) {
             throw new NullPointerException("array");
         }
@@ -197,5 +199,92 @@ public abstract class HeapByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         return ByteBuffer.wrap(array, index, length).order(order());
+    }
+
+    @Override
+    public ByteBufFactory factory() {
+        return HeapByteBufFactory.getInstance(ByteOrder.BIG_ENDIAN);
+    }
+
+    @Override
+    public short getShort(int index) {
+        return (short) (array[index] << 8 | array[index + 1] & 0xFF);
+    }
+
+    @Override
+    public int getUnsignedMedium(int index) {
+        return  (array[index]     & 0xff) << 16 |
+                (array[index + 1] & 0xff) <<  8 |
+                (array[index + 2] & 0xff) <<  0;
+    }
+
+    @Override
+    public int getInt(int index) {
+        return  (array[index]     & 0xff) << 24 |
+                (array[index + 1] & 0xff) << 16 |
+                (array[index + 2] & 0xff) <<  8 |
+                (array[index + 3] & 0xff) <<  0;
+    }
+
+    @Override
+    public long getLong(int index) {
+        return  ((long) array[index]     & 0xff) << 56 |
+                ((long) array[index + 1] & 0xff) << 48 |
+                ((long) array[index + 2] & 0xff) << 40 |
+                ((long) array[index + 3] & 0xff) << 32 |
+                ((long) array[index + 4] & 0xff) << 24 |
+                ((long) array[index + 5] & 0xff) << 16 |
+                ((long) array[index + 6] & 0xff) <<  8 |
+                ((long) array[index + 7] & 0xff) <<  0;
+    }
+
+    @Override
+    public void setShort(int index, int value) {
+        array[index]     = (byte) (value >>> 8);
+        array[index + 1] = (byte) (value >>> 0);
+    }
+
+    @Override
+    public void setMedium(int index, int   value) {
+        array[index]     = (byte) (value >>> 16);
+        array[index + 1] = (byte) (value >>> 8);
+        array[index + 2] = (byte) (value >>> 0);
+    }
+
+    @Override
+    public void setInt(int index, int   value) {
+        array[index]     = (byte) (value >>> 24);
+        array[index + 1] = (byte) (value >>> 16);
+        array[index + 2] = (byte) (value >>> 8);
+        array[index + 3] = (byte) (value >>> 0);
+    }
+
+    @Override
+    public void setLong(int index, long  value) {
+        array[index]     = (byte) (value >>> 56);
+        array[index + 1] = (byte) (value >>> 48);
+        array[index + 2] = (byte) (value >>> 40);
+        array[index + 3] = (byte) (value >>> 32);
+        array[index + 4] = (byte) (value >>> 24);
+        array[index + 5] = (byte) (value >>> 16);
+        array[index + 6] = (byte) (value >>> 8);
+        array[index + 7] = (byte) (value >>> 0);
+    }
+
+    @Override
+    public ByteBuf duplicate() {
+        return new HeapByteBuf(array, readerIndex(), writerIndex());
+    }
+
+    @Override
+    public ByteBuf copy(int index, int length) {
+        if (index < 0 || length < 0 || index + length > array.length) {
+            throw new IndexOutOfBoundsException("Too many bytes to copy - Need "
+                    + (index + length) + ", maximum is " + array.length);
+        }
+
+        byte[] copiedArray = new byte[length];
+        System.arraycopy(array, index, copiedArray, 0, length);
+        return new HeapByteBuf(copiedArray);
     }
 }

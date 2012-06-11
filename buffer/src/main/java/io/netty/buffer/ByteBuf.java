@@ -248,6 +248,16 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     ByteOrder order();
 
     /**
+     * Returns a buffer with the specified {@code endianness} which shares the whole region,
+     * indexes, and marks of this buffer.  Modifying the content, the indexes, or the marks of the
+     * returned buffer or this buffer affects each other's content, indexes, and marks.  If the
+     * specified {@code endianness} is identical to this buffer's byte order, this method can
+     * return {@code this}.  This method does not modify {@code readerIndex} or {@code writerIndex}
+     * of this buffer.
+     */
+    ByteBuf order(ByteOrder endianness);
+
+    /**
      * Returns {@code true} if and only if this buffer is backed by an
      * NIO direct buffer.
      */

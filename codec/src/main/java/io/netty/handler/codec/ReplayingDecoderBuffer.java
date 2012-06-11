@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ByteBufIndexFinder;
+import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.Signal;
 
@@ -35,6 +36,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
     private final ByteBuf buffer;
+    private final SwappedByteBuf swapped;
     private boolean terminated;
 
     public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
@@ -45,6 +47,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
 
     ReplayingDecoderBuffer(ByteBuf buffer) {
         this.buffer = buffer;
+        swapped = new SwappedByteBuf(this);
     }
 
     void terminate() {
@@ -348,6 +351,17 @@ class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public ByteOrder order() {
         return buffer.order();
+    }
+
+    @Override
+    public ByteBuf order(ByteOrder endianness) {
+        if (endianness == null) {
+            throw new NullPointerException("endianness");
+        }
+        if (endianness == order()) {
+            return this;
+        }
+        return swapped;
     }
 
     @Override

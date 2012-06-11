@@ -17,8 +17,6 @@ package io.netty.buffer;
 
 import static org.junit.Assert.*;
 
-import java.nio.ByteOrder;
-
 import org.junit.Test;
 
 /**
@@ -44,24 +42,19 @@ public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
         return new ByteBuf[] { buffer };
     }
 
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new DynamicByteBuf(null, 0);
-    }
-
     @Test
     public void shouldNotFailOnInitialIndexUpdate() {
-        new DynamicByteBuf(ByteOrder.BIG_ENDIAN, 10).setIndex(0, 10);
+        new DynamicByteBuf(10).setIndex(0, 10);
     }
 
     @Test
     public void shouldNotFailOnInitialIndexUpdate2() {
-        new DynamicByteBuf(ByteOrder.BIG_ENDIAN, 10).writerIndex(10);
+        new DynamicByteBuf(10).writerIndex(10);
     }
 
     @Test
     public void shouldNotFailOnInitialIndexUpdate3() {
-        ByteBuf buf = new DynamicByteBuf(ByteOrder.BIG_ENDIAN, 10);
+        ByteBuf buf = new DynamicByteBuf(10);
         buf.writerIndex(10);
         buf.readerIndex(10);
     }

@@ -114,7 +114,7 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
             return Unpooled.EMPTY_BUFFER;
         }
         if (capacity >= preallocatedBufCapacity) {
-            return Unpooled.directBuffer(order, capacity);
+            return Unpooled.directBuffer(capacity).order(order);
         }
 
         ByteBuf slice;
@@ -164,14 +164,14 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
         ByteBuf slice;
         synchronized (bigEndianLock) {
             if (preallocatedBEBuf == null) {
-                preallocatedBEBuf = Unpooled.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
+                preallocatedBEBuf = Unpooled.directBuffer(preallocatedBufCapacity);
                 slice = preallocatedBEBuf.slice(0, capacity);
                 preallocatedBEBufPos = capacity;
             } else if (preallocatedBEBuf.capacity() - preallocatedBEBufPos >= capacity) {
                 slice = preallocatedBEBuf.slice(preallocatedBEBufPos, capacity);
                 preallocatedBEBufPos += capacity;
             } else {
-                preallocatedBEBuf = Unpooled.directBuffer(ByteOrder.BIG_ENDIAN, preallocatedBufCapacity);
+                preallocatedBEBuf = Unpooled.directBuffer(preallocatedBufCapacity);
                 slice = preallocatedBEBuf.slice(0, capacity);
                 preallocatedBEBufPos = capacity;
             }
@@ -183,14 +183,16 @@ public class DirectByteBufFactory extends AbstractByteBufFactory {
         ByteBuf slice;
         synchronized (littleEndianLock) {
             if (preallocatedLEBuf == null) {
-                preallocatedLEBuf = Unpooled.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);
+                preallocatedLEBuf = Unpooled.directBuffer(
+                        preallocatedBufCapacity).order(ByteOrder.LITTLE_ENDIAN);
                 slice = preallocatedLEBuf.slice(0, capacity);
                 preallocatedLEBufPos = capacity;
             } else if (preallocatedLEBuf.capacity() - preallocatedLEBufPos >= capacity) {
                 slice = preallocatedLEBuf.slice(preallocatedLEBufPos, capacity);
                 preallocatedLEBufPos += capacity;
             } else {
-                preallocatedLEBuf = Unpooled.directBuffer(ByteOrder.LITTLE_ENDIAN, preallocatedBufCapacity);
+                preallocatedLEBuf = Unpooled.directBuffer(
+                        preallocatedBufCapacity).order(ByteOrder.LITTLE_ENDIAN);
                 slice = preallocatedLEBuf.slice(0, capacity);
                 preallocatedLEBufPos = capacity;
             }

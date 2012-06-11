@@ -100,7 +100,15 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = new BigEndianHeapByteBuf(0);
+    public static final ByteBuf EMPTY_BUFFER = new HeapByteBuf(0) {
+        @Override
+        public ByteBuf order(ByteOrder endianness) {
+            if (endianness == null) {
+                throw new NullPointerException("endianness");
+            }
+            return this;
+        }
+    };
 
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
 
@@ -130,28 +138,10 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf buffer(int capacity) {
-        return buffer(BIG_ENDIAN, capacity);
-    }
-
-    /**
-     * Creates a new Java heap buffer with the specified {@code endianness}
-     * and {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf buffer(ByteOrder endianness, int capacity) {
-        if (endianness == BIG_ENDIAN) {
-            if (capacity == 0) {
-                return EMPTY_BUFFER;
-            }
-            return new BigEndianHeapByteBuf(capacity);
-        } else if (endianness == LITTLE_ENDIAN) {
-            if (capacity == 0) {
-                return EMPTY_BUFFER;
-            }
-            return new LittleEndianHeapByteBuf(capacity);
-        } else {
-            throw new NullPointerException("endianness");
+        if (capacity == 0) {
+            return EMPTY_BUFFER;
         }
+        return new HeapByteBuf(capacity);
     }
 
     /**
@@ -160,24 +150,11 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf directBuffer(int capacity) {
-        return directBuffer(BIG_ENDIAN, capacity);
-    }
-
-    /**
-     * Creates a new direct buffer with the specified {@code endianness} and
-     * {@code capacity}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf directBuffer(ByteOrder endianness, int capacity) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
         if (capacity == 0) {
             return EMPTY_BUFFER;
         }
 
-        ByteBuf buffer = new NioBufferBackedByteBuf(
-                ByteBuffer.allocateDirect(capacity).order(endianness));
+        ByteBuf buffer = new NioBufferBackedByteBuf(ByteBuffer.allocateDirect(capacity));
         buffer.clear();
         return buffer;
     }
@@ -188,15 +165,20 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf dynamicBuffer() {
-        return dynamicBuffer(BIG_ENDIAN, 256);
+        return dynamicBuffer(256);
     }
 
+    /**
+     * Creates a new big-endian dynamic buffer whose estimated data length is
+     * {@code 256} bytes.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
     public static ByteBuf dynamicBuffer(ByteBufFactory factory) {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
 
-        return new DynamicByteBuf(factory.getDefaultOrder(), 256, factory);
+        return new DynamicByteBuf(256, factory);
     }
 
     /**
@@ -206,17 +188,7 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf dynamicBuffer(int estimatedLength) {
-        return dynamicBuffer(BIG_ENDIAN, estimatedLength);
-    }
-
-    /**
-     * Creates a new dynamic buffer with the specified endianness and
-     * the specified estimated data length.  More accurate estimation yields
-     * less unexpected reallocation overhead.  The new buffer's
-     * {@code readerIndex} and {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf dynamicBuffer(ByteOrder endianness, int estimatedLength) {
-        return new DynamicByteBuf(endianness, estimatedLength);
+        return new DynamicByteBuf(estimatedLength);
     }
 
     /**
@@ -230,18 +202,7 @@ public final class Unpooled {
             throw new NullPointerException("factory");
         }
 
-        return new DynamicByteBuf(factory.getDefaultOrder(), estimatedLength, factory);
-    }
-
-    /**
-     * Creates a new dynamic buffer with the specified endianness and
-     * the specified estimated data length using the specified factory.
-     * More accurate estimation yields less unexpected reallocation overhead.
-     * The new buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf dynamicBuffer(
-            ByteOrder endianness, int estimatedLength, ByteBufFactory factory) {
-        return new DynamicByteBuf(endianness, estimatedLength, factory);
+        return new DynamicByteBuf(estimatedLength, factory);
     }
 
     /**
@@ -250,28 +211,10 @@ public final class Unpooled {
      * returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[] array) {
-        return wrappedBuffer(BIG_ENDIAN, array);
-    }
-
-    /**
-     * Creates a new buffer which wraps the specified {@code array} with the
-     * specified {@code endianness}.  A modification on the specified array's
-     * content will be visible to the returned buffer.
-     */
-    public static ByteBuf wrappedBuffer(ByteOrder endianness, byte[] array) {
-        if (endianness == BIG_ENDIAN) {
-            if (array.length == 0) {
-                return EMPTY_BUFFER;
-            }
-            return new BigEndianHeapByteBuf(array);
-        } else if (endianness == LITTLE_ENDIAN) {
-            if (array.length == 0) {
-                return EMPTY_BUFFER;
-            }
-            return new LittleEndianHeapByteBuf(array);
-        } else {
-            throw new NullPointerException("endianness");
+        if (array.length == 0) {
+            return EMPTY_BUFFER;
         }
+        return new HeapByteBuf(array);
     }
 
     /**
@@ -280,33 +223,21 @@ public final class Unpooled {
      * content will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[] array, int offset, int length) {
-        return wrappedBuffer(BIG_ENDIAN, array, offset, length);
-    }
-
-    /**
-     * Creates a new buffer which wraps the sub-region of the specified
-     * {@code array} with the specified {@code endianness}.  A modification on
-     * the specified array's content will be visible to the returned buffer.
-     */
-    public static ByteBuf wrappedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
         if (offset == 0) {
             if (length == array.length) {
-                return wrappedBuffer(endianness, array);
+                return wrappedBuffer(array);
             } else {
                 if (length == 0) {
                     return EMPTY_BUFFER;
                 } else {
-                    return new TruncatedByteBuf(wrappedBuffer(endianness, array), length);
+                    return new TruncatedByteBuf(wrappedBuffer(array), length);
                 }
             }
         } else {
             if (length == 0) {
                 return EMPTY_BUFFER;
             } else {
-                return new SlicedByteBuf(wrappedBuffer(endianness, array), offset, length);
+                return new SlicedByteBuf(wrappedBuffer(array), offset, length);
             }
         }
     }
@@ -322,10 +253,9 @@ public final class Unpooled {
         }
         if (buffer.hasArray()) {
             return wrappedBuffer(
-                    buffer.order(),
                     buffer.array(),
                     buffer.arrayOffset() + buffer.position(),
-                    buffer.remaining());
+                    buffer.remaining()).order(buffer.order());
         } else {
             return new NioBufferBackedByteBuf(buffer);
         }
@@ -350,23 +280,12 @@ public final class Unpooled {
      * content will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[]... arrays) {
-        return wrappedBuffer(BIG_ENDIAN, arrays);
-    }
-
-    /**
-     * Creates a new composite buffer which wraps the specified arrays without
-     * copying them.  A modification on the specified arrays' content will be
-     * visible to the returned buffer.
-     *
-     * @param endianness the endianness of the new buffer
-     */
-    public static ByteBuf wrappedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
             break;
         case 1:
             if (arrays[0].length != 0) {
-                return wrappedBuffer(endianness, arrays[0]);
+                return wrappedBuffer(arrays[0]);
             }
             break;
         default:
@@ -377,17 +296,21 @@ public final class Unpooled {
                     break;
                 }
                 if (a.length > 0) {
-                    components.add(wrappedBuffer(endianness, a));
+                    components.add(wrappedBuffer(a));
                 }
             }
-            return compositeBuffer(endianness, components);
+            return compositeBuffer(BIG_ENDIAN, components);
         }
 
         return EMPTY_BUFFER;
     }
 
-    private static ByteBuf compositeBuffer(
-            ByteOrder endianness, List<ByteBuf> components) {
+    /**
+     * Creates a new composite buffer which wraps the specified
+     * components without copying them.  A modification on the specified components'
+     * content will be visible to the returned buffer.
+     */
+    private static ByteBuf compositeBuffer(ByteOrder endianness, List<ByteBuf> components) {
         switch (components.size()) {
         case 0:
             return EMPTY_BUFFER;
@@ -426,8 +349,7 @@ public final class Unpooled {
                 if (c.readable()) {
                     if (order != null) {
                         if (!order.equals(c.order())) {
-                            throw new IllegalArgumentException(
-                                    "inconsistent byte order");
+                            throw new IllegalArgumentException("inconsistent byte order");
                         }
                     } else {
                         order = c.order();
@@ -476,8 +398,7 @@ public final class Unpooled {
                 if (b.hasRemaining()) {
                     if (order != null) {
                         if (!order.equals(b.order())) {
-                            throw new IllegalArgumentException(
-                                    "inconsistent byte order");
+                            throw new IllegalArgumentException("inconsistent byte order");
                         }
                     } else {
                         order = b.order();
@@ -497,29 +418,10 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0} and {@code array.length} respectively.
      */
     public static ByteBuf copiedBuffer(byte[] array) {
-        return copiedBuffer(BIG_ENDIAN, array);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is a copy of the specified {@code array}.  The new buffer's
-     * {@code readerIndex} and {@code writerIndex} are {@code 0} and
-     * {@code array.length} respectively.
-     */
-    public static ByteBuf copiedBuffer(ByteOrder endianness, byte[] array) {
-        if (endianness == BIG_ENDIAN) {
-            if (array.length == 0) {
-                return EMPTY_BUFFER;
-            }
-            return new BigEndianHeapByteBuf(array.clone());
-        } else if (endianness == LITTLE_ENDIAN) {
-            if (array.length == 0) {
-                return EMPTY_BUFFER;
-            }
-            return new LittleEndianHeapByteBuf(array.clone());
-        } else {
-            throw new NullPointerException("endianness");
+        if (array.length == 0) {
+            return EMPTY_BUFFER;
         }
+        return new HeapByteBuf(array.clone());
     }
 
     /**
@@ -529,25 +431,12 @@ public final class Unpooled {
      * the specified {@code length} respectively.
      */
     public static ByteBuf copiedBuffer(byte[] array, int offset, int length) {
-        return copiedBuffer(BIG_ENDIAN, array, offset, length);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is a copy of the specified {@code array}'s sub-region.  The new
-     * buffer's {@code readerIndex} and {@code writerIndex} are {@code 0} and
-     * the specified {@code length} respectively.
-     */
-    public static ByteBuf copiedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
         if (length == 0) {
             return EMPTY_BUFFER;
         }
         byte[] copy = new byte[length];
         System.arraycopy(array, offset, copy, 0, length);
-        return wrappedBuffer(endianness, copy);
+        return wrappedBuffer(copy);
     }
 
     /**
@@ -568,7 +457,7 @@ public final class Unpooled {
         } finally {
             buffer.position(position);
         }
-        return wrappedBuffer(buffer.order(), copy);
+        return wrappedBuffer(copy).order(buffer.order());
     }
 
     /**
@@ -592,16 +481,6 @@ public final class Unpooled {
      * {@code length} respectively.
      */
     public static ByteBuf copiedBuffer(byte[]... arrays) {
-        return copiedBuffer(BIG_ENDIAN, arrays);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is a merged copy of the specified {@code arrays}.  The new
-     * buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}
-     * and the sum of all arrays' {@code length} respectively.
-     */
-    public static ByteBuf copiedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
             return EMPTY_BUFFER;
@@ -609,7 +488,7 @@ public final class Unpooled {
             if (arrays[0].length == 0) {
                 return EMPTY_BUFFER;
             } else {
-                return copiedBuffer(endianness, arrays[0]);
+                return copiedBuffer(arrays[0]);
             }
         }
 
@@ -634,7 +513,7 @@ public final class Unpooled {
             j += a.length;
         }
 
-        return wrappedBuffer(endianness, mergedArray);
+        return wrappedBuffer(mergedArray);
     }
 
     /**
@@ -655,11 +534,41 @@ public final class Unpooled {
             return copiedBuffer(buffers[0]);
         }
 
-        ByteBuf[] copiedBuffers = new ByteBuf[buffers.length];
-        for (int i = 0; i < buffers.length; i ++) {
-            copiedBuffers[i] = copiedBuffer(buffers[i]);
+        // Merge the specified buffers into one buffer.
+        ByteOrder order = null;
+        int length = 0;
+        for (ByteBuf b: buffers) {
+            int bLen = b.readableBytes();
+            if (bLen <= 0) {
+                continue;
+            }
+            if (Integer.MAX_VALUE - length < bLen) {
+                throw new IllegalArgumentException(
+                        "The total length of the specified buffers is too big.");
+            }
+            length += bLen;
+            if (order != null) {
+                if (!order.equals(b.order())) {
+                    throw new IllegalArgumentException("inconsistent byte order");
+                }
+            } else {
+                order = b.order();
+            }
         }
-        return wrappedBuffer(copiedBuffers);
+
+        if (length == 0) {
+            return EMPTY_BUFFER;
+        }
+
+        byte[] mergedArray = new byte[length];
+        for (int i = 0, j = 0; i < buffers.length; i ++) {
+            ByteBuf b = buffers[i];
+            int bLen = b.readableBytes();
+            b.getBytes(b.readerIndex(), mergedArray, j, bLen);
+            j += bLen;
+        }
+
+        return wrappedBuffer(mergedArray).order(order);
     }
 
     /**
@@ -680,11 +589,43 @@ public final class Unpooled {
             return copiedBuffer(buffers[0]);
         }
 
-        ByteBuf[] copiedBuffers = new ByteBuf[buffers.length];
-        for (int i = 0; i < buffers.length; i ++) {
-            copiedBuffers[i] = copiedBuffer(buffers[i]);
+        // Merge the specified buffers into one buffer.
+        ByteOrder order = null;
+        int length = 0;
+        for (ByteBuffer b: buffers) {
+            int bLen = b.remaining();
+            if (bLen <= 0) {
+                continue;
+            }
+            if (Integer.MAX_VALUE - length < bLen) {
+                throw new IllegalArgumentException(
+                        "The total length of the specified buffers is too big.");
+            }
+            length += bLen;
+            if (order != null) {
+                if (!order.equals(b.order())) {
+                    throw new IllegalArgumentException("inconsistent byte order");
+                }
+            } else {
+                order = b.order();
+            }
         }
-        return wrappedBuffer(copiedBuffers);
+
+        if (length == 0) {
+            return EMPTY_BUFFER;
+        }
+
+        byte[] mergedArray = new byte[length];
+        for (int i = 0, j = 0; i < buffers.length; i ++) {
+            ByteBuffer b = buffers[i];
+            int bLen = b.remaining();
+            int oldPos = b.position();
+            b.get(mergedArray, j, bLen);
+            b.position(oldPos);
+            j += bLen;
+        }
+
+        return wrappedBuffer(mergedArray).order(order);
     }
 
     /**
@@ -694,7 +635,15 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, string, charset);
+        if (string == null) {
+            throw new NullPointerException("string");
+        }
+
+        if (string instanceof CharBuffer) {
+            return copiedBuffer((CharBuffer) string, charset);
+        }
+
+        return copiedBuffer(CharBuffer.wrap(string), charset);
     }
 
     /**
@@ -705,37 +654,6 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, string, offset, length, charset);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is the specified {@code string} encoded in the specified
-     * {@code charset}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0} and the length of the encoded string
-     * respectively.
-     */
-    public static ByteBuf copiedBuffer(ByteOrder endianness, CharSequence string, Charset charset) {
-        if (string == null) {
-            throw new NullPointerException("string");
-        }
-
-        if (string instanceof CharBuffer) {
-            return copiedBuffer(endianness, (CharBuffer) string, charset);
-        }
-
-        return copiedBuffer(endianness, CharBuffer.wrap(string), charset);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is a subregion of the specified {@code string} encoded in the
-     * specified {@code charset}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0} and the length of the encoded string
-     * respectively.
-     */
-    public static ByteBuf copiedBuffer(
-            ByteOrder endianness, CharSequence string, int offset, int length, Charset charset) {
         if (string == null) {
             throw new NullPointerException("string");
         }
@@ -747,7 +665,6 @@ public final class Unpooled {
             CharBuffer buf = (CharBuffer) string;
             if (buf.hasArray()) {
                 return copiedBuffer(
-                        endianness,
                         buf.array(),
                         buf.arrayOffset() + buf.position() + offset,
                         length, charset);
@@ -756,12 +673,10 @@ public final class Unpooled {
             buf = buf.slice();
             buf.limit(length);
             buf.position(offset);
-            return copiedBuffer(endianness, buf, charset);
+            return copiedBuffer(buf, charset);
         }
 
-        return copiedBuffer(
-                endianness, CharBuffer.wrap(string, offset, offset + length),
-                charset);
+        return copiedBuffer(CharBuffer.wrap(string, offset, offset + length), charset);
     }
 
     /**
@@ -771,7 +686,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, array, 0, array.length, charset);
+        return copiedBuffer(array, 0, array.length, charset);
     }
 
     /**
@@ -780,44 +695,19 @@ public final class Unpooled {
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
-    public static ByteBuf copiedBuffer(
-            char[] array, int offset, int length, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, array, offset, length, charset);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is the specified {@code array} encoded in the specified
-     * {@code charset}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0} and the length of the encoded string
-     * respectively.
-     */
-    public static ByteBuf copiedBuffer(ByteOrder endianness, char[] array, Charset charset) {
-        return copiedBuffer(endianness, array, 0, array.length, charset);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is a subregion of the specified {@code array} encoded in the
-     * specified {@code charset}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0} and the length of the encoded string
-     * respectively.
-     */
-    public static ByteBuf copiedBuffer(
-            ByteOrder endianness, char[] array, int offset, int length, Charset charset) {
+    public static ByteBuf copiedBuffer(char[] array, int offset, int length, Charset charset) {
         if (array == null) {
             throw new NullPointerException("array");
         }
         if (length == 0) {
             return EMPTY_BUFFER;
         }
-        return copiedBuffer(
-                endianness, CharBuffer.wrap(array, offset, length), charset);
+        return copiedBuffer(CharBuffer.wrap(array, offset, length), charset);
     }
 
-    private static ByteBuf copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
+    private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
         ByteBuffer dst = Unpooled.encodeString(buffer, charset);
-        ByteBuf result = wrappedBuffer(endianness, dst.array());
+        ByteBuf result = wrappedBuffer(dst.array());
         result.writerIndex(dst.remaining());
         return result;
     }
@@ -836,7 +726,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 4-byte buffer that holds the specified 32-bit integer.
+     * Creates a new 4-byte big-endian buffer that holds the specified 32-bit integer.
      */
     public static ByteBuf copyInt(int value) {
         ByteBuf buf = buffer(4);
@@ -845,7 +735,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a {@link ByteBuf} that holds all the given values as int's
+     * Create a big-endian buffer that holds a sequence of the specified 32-bit integers.
      */
     public static ByteBuf copyInt(int... values) {
         if (values == null || values.length == 0) {
@@ -859,7 +749,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 2-byte buffer that holds the specified 16-bit integer.
+     * Creates a new 2-byte big-endian buffer that holds the specified 16-bit integer.
      */
     public static ByteBuf copyShort(int value) {
         ByteBuf buf = buffer(2);
@@ -868,7 +758,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified 16-bit integers.
+     * Create a new big-endian buffer that holds a sequence of the specified 16-bit integers.
      */
     public static ByteBuf copyShort(short... values) {
         if (values == null || values.length == 0) {
@@ -882,7 +772,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified 16-bit integers.
+     * Create a new big-endian buffer that holds a sequence of the specified 16-bit integers.
      */
     public static ByteBuf copyShort(int... values) {
         if (values == null || values.length == 0) {
@@ -896,7 +786,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 3-byte buffer that holds the specified 24-bit integer.
+     * Creates a new 3-byte big-endian buffer that holds the specified 24-bit integer.
      */
     public static ByteBuf copyMedium(int value) {
         ByteBuf buf = buffer(3);
@@ -905,7 +795,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified 24-bit integers.
+     * Create a new big-endian buffer that holds a sequence of the specified 24-bit integers.
      */
     public static ByteBuf copyMedium(int... values) {
         if (values == null || values.length == 0) {
@@ -919,7 +809,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 8-byte buffer that holds the specified 64-bit integer.
+     * Creates a new 8-byte big-endian buffer that holds the specified 64-bit integer.
      */
     public static ByteBuf copyLong(long value) {
         ByteBuf buf = buffer(8);
@@ -928,7 +818,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified 64-bit integers.
+     * Create a new big-endian buffer that holds a sequence of the specified 64-bit integers.
      */
     public static ByteBuf copyLong(long... values) {
         if (values == null || values.length == 0) {
@@ -942,7 +832,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new single-byte buffer that holds the specified boolean value.
+     * Creates a new single-byte big-endian buffer that holds the specified boolean value.
      */
     public static ByteBuf copyBoolean(boolean value) {
         ByteBuf buf = buffer(1);
@@ -951,7 +841,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified boolean values.
+     * Create a new big-endian buffer that holds a sequence of the specified boolean values.
      */
     public static ByteBuf copyBoolean(boolean... values) {
         if (values == null || values.length == 0) {
@@ -965,7 +855,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 4-byte buffer that holds the specified 32-bit floating point number.
+     * Creates a new 4-byte big-endian buffer that holds the specified 32-bit floating point number.
      */
     public static ByteBuf copyFloat(float value) {
         ByteBuf buf = buffer(4);
@@ -974,7 +864,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified 32-bit floating point numbers.
+     * Create a new big-endian buffer that holds a sequence of the specified 32-bit floating point numbers.
      */
     public static ByteBuf copyFloat(float... values) {
         if (values == null || values.length == 0) {
@@ -988,7 +878,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 8-byte buffer that holds the specified 64-bit floating point number.
+     * Creates a new 8-byte big-endian buffer that holds the specified 64-bit floating point number.
      */
     public static ByteBuf copyDouble(double value) {
         ByteBuf buf = buffer(8);
@@ -997,7 +887,7 @@ public final class Unpooled {
     }
 
     /**
-     * Create a new buffer that holds a sequence of the specified 64-bit floating point numbers.
+     * Create a new big-endian buffer that holds a sequence of the specified 64-bit floating point numbers.
      */
     public static ByteBuf copyDouble(double... values) {
         if (values == null || values.length == 0) {
@@ -1214,7 +1104,11 @@ public final class Unpooled {
      * Toggles the endianness of the specified 24-bit medium integer.
      */
     public static int swapMedium(int value) {
-        return value << 16 & 0xff0000 | value & 0xff00 | value >>> 16 & 0xff;
+        int swapped = value << 16 & 0xff0000 | value & 0xff00 | value >>> 16 & 0xff;
+        if ((swapped & 0x800000) != 0) {
+            swapped |= 0xff000000;
+        }
+        return swapped;
     }
 
     /**

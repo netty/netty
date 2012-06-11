@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -33,28 +32,23 @@ public class NioBufferBackedByteBuf extends AbstractByteBuf {
 
     private final ByteBuffer buffer;
     private final ByteBuffer tmpBuf;
-    private final ByteOrder order;
     private final int capacity;
 
     /**
      * Creates a new buffer which wraps the specified buffer's slice.
      */
     public NioBufferBackedByteBuf(ByteBuffer buffer) {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
-
-        order = buffer.order();
-        this.buffer = buffer.slice().order(order);
+        super(buffer.order());
+        this.buffer = buffer.slice().order(order());
         tmpBuf = this.buffer.duplicate();
         capacity = buffer.remaining();
         writerIndex(capacity);
     }
 
     private NioBufferBackedByteBuf(NioBufferBackedByteBuf buffer) {
+        super(buffer.order());
         this.buffer = buffer.buffer;
         tmpBuf = this.buffer.duplicate();
-        order = buffer.order;
         capacity = buffer.capacity;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
@@ -71,11 +65,6 @@ public class NioBufferBackedByteBuf extends AbstractByteBuf {
     @Override
     public boolean isDirect() {
         return buffer.isDirect();
-    }
-
-    @Override
-    public ByteOrder order() {
-        return order;
     }
 
     @Override

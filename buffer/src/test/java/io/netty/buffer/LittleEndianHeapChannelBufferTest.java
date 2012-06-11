@@ -19,8 +19,6 @@ import static org.junit.Assert.*;
 
 import java.nio.ByteOrder;
 
-import org.junit.Test;
-
 /**
  * Tests little-endian heap channel buffers
  */
@@ -30,7 +28,7 @@ public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.buffer(ByteOrder.LITTLE_ENDIAN, length);
+        buffer = Unpooled.buffer(length).order(ByteOrder.LITTLE_ENDIAN);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
@@ -38,10 +36,5 @@ public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new LittleEndianHeapByteBuf(null);
     }
 }

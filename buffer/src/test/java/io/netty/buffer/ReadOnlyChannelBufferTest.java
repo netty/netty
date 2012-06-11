@@ -51,7 +51,9 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldHaveSameByteOrder() {
-        ByteBuf buf = Unpooled.buffer(Unpooled.LITTLE_ENDIAN, 1);
+        ByteBuf buf = Unpooled.buffer(1);
+        assertSame(Unpooled.BIG_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        buf = buf.order(LITTLE_ENDIAN);
         assertSame(Unpooled.LITTLE_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
     }
 
@@ -73,6 +75,7 @@ public class ReadOnlyChannelBufferTest {
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
         ByteBuf buf = createStrictMock(ByteBuf.class);
+        expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
         expect(buf.readerIndex()).andReturn(0).anyTimes();
         expect(buf.writerIndex()).andReturn(0).anyTimes();
         expect(buf.capacity()).andReturn(0).anyTimes();

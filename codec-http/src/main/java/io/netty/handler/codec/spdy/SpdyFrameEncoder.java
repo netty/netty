@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 
-import java.nio.ByteOrder;
 import java.util.Set;
 
 /**
@@ -311,8 +310,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             throw new IllegalArgumentException(
                     "header block contains too many headers");
         }
-        ByteBuf headerBlock = Unpooled.dynamicBuffer(
-                ByteOrder.BIG_ENDIAN, 256);
+        ByteBuf headerBlock = Unpooled.dynamicBuffer(256);
         writeLengthField(version, headerBlock, numHeaders);
         for (String name: names) {
             byte[] nameBytes = name.getBytes("UTF-8");

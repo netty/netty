@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -34,14 +33,13 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     private final ByteBuf buffer;
 
     public ReadOnlyByteBuf(ByteBuf buffer) {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        super(buffer.order());
         this.buffer = buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     private ReadOnlyByteBuf(ReadOnlyByteBuf buffer) {
+        super(buffer.buffer.order());
         this.buffer = buffer.buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
@@ -54,11 +52,6 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     @Override
     public ByteBufFactory factory() {
         return buffer.factory();
-    }
-
-    @Override
-    public ByteOrder order() {
-        return buffer.order();
     }
 
     @Override

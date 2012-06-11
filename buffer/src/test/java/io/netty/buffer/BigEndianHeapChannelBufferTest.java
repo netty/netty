@@ -40,6 +40,6 @@ public class BigEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new BigEndianHeapByteBuf(null);
+        new HeapByteBuf(null);
     }
 }

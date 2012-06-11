@@ -157,15 +157,15 @@ public class ChannelBuffersTest {
     @Test
     public void shouldReturnEmptyBufferWhenLengthIsZero() {
         assertSame(EMPTY_BUFFER, buffer(0));
-        assertSame(EMPTY_BUFFER, buffer(LITTLE_ENDIAN, 0));
+        assertSame(EMPTY_BUFFER, buffer(0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, directBuffer(0));
 
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(LITTLE_ENDIAN, new byte[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(LITTLE_ENDIAN, new byte[8], 0, 0));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 8, 0));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(LITTLE_ENDIAN, new byte[8], 8, 0));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 8, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocateDirect(0)));
         assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BUFFER));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0][]));
@@ -178,11 +178,11 @@ public class ChannelBuffersTest {
         assertSame(EMPTY_BUFFER, wrappedBuffer(buffer(0), buffer(0)));
 
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]));
-        assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 0, 0));
-        assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[8], 0, 0));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 0, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 8, 0));
-        assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[8], 8, 0));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 8, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocateDirect(0)));
         assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BUFFER));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0][]));
@@ -208,31 +208,11 @@ public class ChannelBuffersTest {
                 > 0);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void shouldDisallowNullEndian1() {
-        buffer(null, 0);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldDisallowNullEndian2() {
-        directBuffer(null, 0);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldDisallowNullEndian3() {
-        wrappedBuffer(null, new byte[0]);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldDisallowNullEndian4() {
-        wrappedBuffer(null, new byte[0], 0, 0);
-    }
-
     @Test
     public void shouldAllowEmptyBufferToCreateCompositeBuffer() {
         ByteBuf buf = wrappedBuffer(
                 EMPTY_BUFFER,
-                wrappedBuffer(LITTLE_ENDIAN, new byte[16]),
+                wrappedBuffer(new byte[16]).order(LITTLE_ENDIAN),
                 EMPTY_BUFFER);
         assertEquals(16, buf.capacity());
     }

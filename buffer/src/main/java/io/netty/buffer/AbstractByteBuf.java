@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -29,10 +30,21 @@ import java.nio.charset.Charset;
  */
 public abstract class AbstractByteBuf implements ByteBuf {
 
+    private final SwappedByteBuf swappedBuf;
+    private final ByteOrder order;
+
     private int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
+
+    protected AbstractByteBuf(ByteOrder endianness) {
+        if (endianness == null) {
+            throw new NullPointerException("endianness");
+        }
+        order = endianness;
+        swappedBuf = new SwappedByteBuf(this);
+    }
 
     @Override
     public boolean isPooled() {
@@ -147,6 +159,22 @@ public abstract class AbstractByteBuf implements ByteBuf {
             throw new IndexOutOfBoundsException("Writable bytes exceeded: Got "
                     + writableBytes + ", maximum is " + writableBytes());
         }
+    }
+
+    @Override
+    public final ByteOrder order() {
+        return order;
+    }
+
+    @Override
+    public ByteBuf order(ByteOrder endianness) {
+        if (endianness == null) {
+            throw new NullPointerException("endianness");
+        }
+        if (endianness == order()) {
+            return this;
+        }
+        return swappedBuf;
     }
 
     @Override
@@ -690,10 +718,13 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ByteBuf)) {
-            return false;
+        if (this == o) {
+            return true;
         }
-        return Unpooled.equals(this, (ByteBuf) o);
+        if (o instanceof ByteBuf) {
+            return Unpooled.equals(this, (ByteBuf) o);
+        }
+        return false;
     }
 
     @Override

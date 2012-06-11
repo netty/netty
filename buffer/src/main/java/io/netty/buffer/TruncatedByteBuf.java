@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -36,6 +35,7 @@ public class TruncatedByteBuf extends AbstractByteBuf implements WrappedByteBuf 
     private final int length;
 
     public TruncatedByteBuf(ByteBuf buffer, int length) {
+        super(buffer.order());
         if (length > buffer.capacity()) {
             throw new IndexOutOfBoundsException("Length is too large, got "
                     + length + " but can't go higher than " + buffer.capacity());
@@ -54,11 +54,6 @@ public class TruncatedByteBuf extends AbstractByteBuf implements WrappedByteBuf 
     @Override
     public ByteBufFactory factory() {
         return buffer.factory();
-    }
-
-    @Override
-    public ByteOrder order() {
-        return buffer.order();
     }
 
     @Override

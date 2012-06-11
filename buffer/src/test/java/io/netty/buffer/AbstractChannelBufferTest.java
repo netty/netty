@@ -1458,12 +1458,12 @@ public abstract class AbstractChannelBufferTest {
         random.nextBytes(value);
         buffer.setBytes(0, value);
 
-        assertEquals(buffer, wrappedBuffer(BIG_ENDIAN, value));
-        assertEquals(buffer, wrappedBuffer(LITTLE_ENDIAN, value));
+        assertEquals(buffer, wrappedBuffer(value));
+        assertEquals(buffer, wrappedBuffer(value).order(LITTLE_ENDIAN));
 
         value[0] ++;
-        assertFalse(buffer.equals(wrappedBuffer(BIG_ENDIAN, value)));
-        assertFalse(buffer.equals(wrappedBuffer(LITTLE_ENDIAN, value)));
+        assertFalse(buffer.equals(wrappedBuffer(value)));
+        assertFalse(buffer.equals(wrappedBuffer(value).order(LITTLE_ENDIAN)));
     }
 
     @Test
@@ -1489,21 +1489,21 @@ public abstract class AbstractChannelBufferTest {
         buffer.setBytes(0, value);
 
 
-        assertEquals(0, buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)));
-        assertEquals(0, buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)));
+        assertEquals(0, buffer.compareTo(wrappedBuffer(value)));
+        assertEquals(0, buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)));
 
         value[0] ++;
-        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
         value[0] -= 2;
-        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) > 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) > 0);
         value[0] ++;
 
-        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value, 0, 31)) > 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value, 0, 31)) > 0);
-        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
-        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31).order(LITTLE_ENDIAN)) > 0);
+        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value)) < 0);
+        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
     }
 
     @Test
