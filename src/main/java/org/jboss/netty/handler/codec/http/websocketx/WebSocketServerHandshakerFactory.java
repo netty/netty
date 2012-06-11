@@ -52,15 +52,15 @@ public class WebSocketServerHandshakerFactory {
      * Constructor
      *
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath".
-     *            Subsequent web socket frames will be sent to this URL.
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web socket frame
      * @param maxFramePayloadLength
-     *            Maximum allowable frame payload length. Setting this value to your application's
-     *            requirement may reduce denial of service attacks using long data frames.
+     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
+     *            reduce denial of service attacks using long data frames.
      */
     public WebSocketServerHandshakerFactory(String webSocketURL, String subprotocols, boolean allowExtensions,
             long maxFramePayloadLength) {
@@ -73,8 +73,8 @@ public class WebSocketServerHandshakerFactory {
     /**
      * Instances a new handshaker
      *
-     * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web
-     *         socket version is not supported.
+     * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web socket version is not
+     *         supported.
      */
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
@@ -82,19 +82,16 @@ public class WebSocketServerHandshakerFactory {
         if (version != null) {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
                 // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
-                return new WebSocketServerHandshaker13(
-                        webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength);
+                return new WebSocketServerHandshaker13(webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength);
             } else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
                 // Version 8 of the wire protocol - version 10 of the draft hybi specification.
-                return new WebSocketServerHandshaker08(
-                        webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength);
+                return new WebSocketServerHandshaker08(webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength);
             } else {
                 return null;
             }
         } else {
             // Assume version 00 where version header was not specified
-            return new WebSocketServerHandshaker00(
-                    webSocketURL, subprotocols, maxFramePayloadLength);
+            return new WebSocketServerHandshaker00(webSocketURL, subprotocols, maxFramePayloadLength);
         }
     }
 

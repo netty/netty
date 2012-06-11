@@ -125,7 +125,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  * </pre>
  *
  * If the expected maximum number of keys is small and deterministic, you could
- * use a weak key map such as <a href="http://goo.gl/TqGl1">ConcurrentWeakHashMap</a>
+ * use a weak key map such as <a href="http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/src/jsr166y/ConcurrentWeakHashMap.java?view=markup">ConcurrentWeakHashMap</a>
  * or synchronized {@link WeakHashMap} instead of managing the life cycle of the
  * keys by yourself.
  *

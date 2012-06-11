@@ -25,16 +25,14 @@
  *
  * <P>Two classes implement this behavior:<br>
  * <ul>
- * <li>{@link org.jboss.netty.handler.traffic.TrafficCounter}: this class implements the counters
- *     needed by the handlers. It can be accessed to get some extra information like the read or
- *     write bytes since last check, the read and write bandwidth from last check...</li><br><br>
+ * <li> <tt>{@link org.jboss.netty.handler.traffic.TrafficCounter}</tt>: this class implements the counters needed by the handlers.
+ * It can be accessed to get some extra information like the read or write bytes since last check, the read and write
+ * bandwidth from last check...</li><br><br>
  *
- * <li>{@link org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler}: this abstract class
- *     implements the kernel of the traffic shaping. It could be extended to fit your needs. Two
- *     classes are proposed as default implementations: see
- *     {@link org.jboss.netty.handler.traffic.ChannelTrafficShapingHandler} and
- *     {@link org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler} respectively for
- *     Channel traffic shaping and Global traffic shaping.</li><br><br>
+ * <li> <tt>{@link org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler}</tt>: this abstract class implements the kernel
+ * of the traffic shaping. It could be extended to fit your needs. Two classes are proposed as default
+ * implementations: see {@link org.jboss.netty.handler.traffic.ChannelTrafficShapingHandler} and see {@link org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler}
+ * respectively for Channel traffic shaping and Global traffic shaping.</li><br><br>
  *
  * The insertion in the pipeline of one of those handlers can be wherever you want, but
  * <b>it must be placed before any <tt>{@link MemoryAwareThreadPoolExecutor}</tt>
@@ -64,16 +62,14 @@
  * [Global or per Channel] [Write or Read] Limitation in byte/s.</li><br>
  * A value of <tt>0</tt>
  * stands for no limitation, so the traffic shaping is deactivate (on what you specified).<br>
- * You can either change those values with the method <tt>configure</tt> in
- * {@link org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler}.<br>
+ * You can either change those values with the method <tt>configure</tt> in {@link org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler}.<br>
  * <br>
  *
  * <li>To activate or deactivate the statistics, you can adjust the delay to a low (suggested not less than 200ms
  * for efficiency reasons) or a high value (let say 24H in millisecond is huge enough to not get the problem)
  * or even using <tt>0</tt> which means no computation will be done.</li><br>
  * If you want to do anything with this statistics, just override the <tt>doAccounting</tt> method.<br>
- * This interval can be changed either from the method <tt>configure</tt> in
- * {@link org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler}
+ * This interval can be changed either from the method <tt>configure</tt> in {@link org.jboss.netty.handler.traffic.AbstractTrafficShapingHandler}
  * or directly using the method <tt>configure</tt> of {@link org.jboss.netty.handler.traffic.TrafficCounter}.<br><br>
  *
  * </ul></P><br><br>
@@ -85,9 +81,8 @@
  * <tt>pipeline.addLast("XXXXX_TRAFFIC_SHAPING", myHandler);</tt><br>
  * <tt>...</tt><br>
  * <tt>pipeline.addLast("MemoryExecutor",new ExecutionHandler(memoryAwareThreadPoolExecutor));</tt><br><br>
- * <P>Note that a new {@link org.jboss.netty.handler.traffic.ChannelTrafficShapingHandler} must be
- * created for each new channel, but only one {@link org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler}
- * must be created for all channels.</P>
+ * <P>Note that a new {@link org.jboss.netty.handler.traffic.ChannelTrafficShapingHandler} must be created for each new channel,
+ * but only one {@link org.jboss.netty.handler.traffic.GlobalTrafficShapingHandler} must be created for all channels.</P>
  *
  * <P>Note also that you can create different GlobalTrafficShapingHandler if you want to separate classes of
  * channels (for instance either from business point of view or from bind address point of view).</P>

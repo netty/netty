@@ -148,8 +148,7 @@ abstract class AbstractNioWorker implements Worker {
     }
 
     /**
-     * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for
-     * the {@link AbstractNioChannel}'s when they get registered
+     * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for the {@link AbstractNioChannel}'s when they get registered
      *
      * @return selector
      */

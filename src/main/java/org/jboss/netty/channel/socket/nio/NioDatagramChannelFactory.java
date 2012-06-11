@@ -144,8 +144,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     * Use {@link #NioDatagramChannelFactory(WorkerPool, InternetProtocolFamily)} if unsure.
     *
     * @param workerPool
-    * the {@link WorkerPool} which will be used to obtain the {@link NioDatagramWorker} that execute
-    * the I/O worker threads
+    * the {@link WorkerPool} which will be used to obtain the {@link NioDatagramWorker} that execute the I/O worker threads
     */
     public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
         this(workerPool, null);
@@ -187,8 +186,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * Creates a new instance.
      *
      * @param workerPool
-     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute
-     *        the I/O worker threads
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
      * @param family
      *        the {@link InternetProtocolFamily} to use. This should be used for UDP multicast.
      *        <strong>Be aware that this option is only considered when running on java7+</strong>

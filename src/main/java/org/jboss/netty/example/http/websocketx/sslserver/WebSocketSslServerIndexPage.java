@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.http.websocketx.server;
+package org.jboss.netty.example.http.websocketx.sslserver;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -22,7 +22,7 @@ import org.jboss.netty.util.CharsetUtil;
 /**
  * Generates the demo HTML page which is served at http://localhost:8080/
  */
-public final class WebSocketServerIndexPage {
+public final class WebSocketSslServerIndexPage {
 
     private static final String NEWLINE = "\r\n";
 
@@ -90,7 +90,7 @@ public final class WebSocketServerIndexPage {
                         CharsetUtil.US_ASCII);
     }
 
-    private WebSocketServerIndexPage() {
+    private WebSocketSslServerIndexPage() {
         // Unused
     }
 }

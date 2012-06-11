@@ -74,8 +74,7 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
 
     @Override
     protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer,
-            CompatibleObjectDecoderState state) throws Exception {
+            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, CompatibleObjectDecoderState state) throws Exception {
         bin.switchStream(new ChannelBufferInputStream(buffer));
         switch (state) {
         case READ_HEADER:

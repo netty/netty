@@ -167,8 +167,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
         switch (state) {
         case SKIP_CONTROL_CHARS: {
             try {
@@ -271,7 +270,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return readFixedLengthContent(buffer);
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            assert chunkSize <= Integer.MAX_VALUE;
+            assert this.chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
             int toRead = chunkSize;
@@ -324,7 +323,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return chunk;
         }
         case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            assert chunkSize <= Integer.MAX_VALUE;
+            assert this.chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
             int toRead = chunkSize;

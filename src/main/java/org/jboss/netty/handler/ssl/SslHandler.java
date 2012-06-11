@@ -70,10 +70,9 @@ import org.jboss.netty.util.internal.QueueFactory;
  * <h3>Handshake</h3>
  * <p>
  * If {@link #isIssueHandshake()} is {@code false}
- * (default) you will need to take care of calling {@link #handshake()} by your own. In most
- * situations were {@link SslHandler} is used in 'client mode' you want to issue a handshake once
- * the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code>
- * you don't need to worry about this as the {@link SslHandler} will take care of it.
+ * (default) you will need to take care of calling {@link #handshake()} by your own. In most situations were {@link SslHandler} is used in 'client mode'
+ * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to
+ * worry about this as the {@link SslHandler} will take care of it.
  * <p>
  *
  * <h3>Renegotiation</h3>
@@ -92,8 +91,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  * <ul>
  *   <li><a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a></li>
  *   <li><a href="http://www.ietf.org/rfc/rfc5746.txt">RFC5746</a></li>
- *   <li><a href="http://www.oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html">Phased
- *       Approach to Fixing the TLS Renegotiation Issue</a></li>
+ *   <li><a href="http://www.oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html">Phased Approach to Fixing the TLS Renegotiation Issue</a></li>
  * </ul>
  *
  * <h3>Closing the session</h3>
@@ -871,8 +869,7 @@ public class SslHandler extends FrameDecoder
 
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
-                    ChannelBuffer msg =
-                            ctx.getChannel().getConfig().getBufferFactory().getBuffer(outNetBuf.remaining());
+                    ChannelBuffer msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outNetBuf.remaining());
 
 
                     // Transfer the bytes to the new ChannelBuffer using some safe method that will also
@@ -942,8 +939,7 @@ public class SslHandler extends FrameDecoder
     }
 
     private ChannelBuffer unwrap(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelBuffer buffer, int offset, int length) throws SSLException {
+            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, int offset, int length) throws SSLException {
         ByteBuffer inNetBuf = buffer.toByteBuffer(offset, length);
         ByteBuffer outAppBuf = bufferPool.acquireBuffer();
 
@@ -1279,8 +1275,7 @@ public class SslHandler extends FrameDecoder
     @Override
     public void channelConnected(final ChannelHandlerContext ctx, final ChannelStateEvent e) throws Exception {
         if (issueHandshake) {
-            // issue and handshake and add a listener to it which will fire an exception event if
-            // an exception was thrown while doing the handshake
+            // issue and handshake and add a listener to it which will fire an exception event if an exception was thrown while doing the handshake
             handshake().addListener(new ChannelFutureListener() {
 
                 public void operationComplete(ChannelFuture future) throws Exception {

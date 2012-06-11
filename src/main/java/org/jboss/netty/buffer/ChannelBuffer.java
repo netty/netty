@@ -39,10 +39,11 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h3>Random Access Indexing</h3>
  *
  * Just like an ordinary primitive byte array, {@link ChannelBuffer} uses
- * <a href="http://en.wikipedia.org/wiki/Zero-based_numbering">zero-based indexing</a>.
- * It means the index of the first byte is always {@code 0} and the index of the last byte is
- * always {@link #capacity() capacity - 1}.  For example, to iterate all bytes of a buffer, you
- * can do the following, regardless of its internal implementation:
+ * <a href="http://en.wikipedia.org/wiki/Index_(information_technology)#Array_element_identifier">zero-based indexing</a>.
+ * It means the index of the first byte is always {@code 0} and the index of
+ * the last byte is always {@link #capacity() capacity - 1}.  For example, to
+ * iterate all bytes of a buffer, you can do the following, regardless of
+ * its internal implementation:
  *
  * <pre>
  * {@link ChannelBuffer} buffer = ...;
@@ -1723,15 +1724,13 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
             String charsetName, ChannelBufferIndexFinder terminatorFinder);
 
     /**
-     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and
-     * {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(int index, int length, String charsetName);
 
     /**
-     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and
-     * {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(

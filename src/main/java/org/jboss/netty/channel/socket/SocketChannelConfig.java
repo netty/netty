@@ -16,7 +16,6 @@
 package org.jboss.netty.channel.socket;
 
 import java.net.Socket;
-import java.net.StandardSocketOptions;
 
 import org.jboss.netty.channel.ChannelConfig;
 
@@ -51,72 +50,72 @@ import org.jboss.netty.channel.ChannelConfig;
 public interface SocketChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the {@link StandardSocketOptions#TCP_NODELAY} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_TCPNODELAY}</a> option.
      */
     boolean isTcpNoDelay();
 
     /**
-     * Sets the {@link StandardSocketOptions#TCP_NODELAY} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_TCPNODELAY}</a> option.
      */
     void setTcpNoDelay(boolean tcpNoDelay);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_LINGER} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_LINGER}</a> option.
      */
     int getSoLinger();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_LINGER} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_LINGER}</a> option.
      */
     void setSoLinger(int soLinger);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
      */
     int getSendBufferSize();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
      */
     void setSendBufferSize(int sendBufferSize);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_KEEPALIVE} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_KEEPALIVE}</a> option.
      */
     boolean isKeepAlive();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_KEEPALIVE} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_KEEPALIVE}</a> option.
      */
     void setKeepAlive(boolean keepAlive);
 
     /**
-     * Gets the {@link StandardSocketOptions#IP_TOS} option.
+     * Gets the traffic class.
      */
     int getTrafficClass();
 
     /**
-     * Sets the {@link StandardSocketOptions#IP_TOS} option.
+     * Sets the traffic class as specified in {@link Socket#setTrafficClass(int)}.
      */
     void setTrafficClass(int trafficClass);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
      */
     boolean isReuseAddress();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
      */
     void setReuseAddress(boolean reuseAddress);
 

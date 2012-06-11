@@ -38,9 +38,8 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
     private final WorkerPool<NioDatagramWorker> workerPool;
 
     /**
-     * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioDatagramWorker}s
-     * specified in workerCount.  The {@link NioDatagramWorker}s take care of reading and writing
-     * for the {@link NioDatagramChannel}.
+     * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioDatagramWorker}s specified in workerCount.
+     * The {@link NioDatagramWorker}s take care of reading and writing for the {@link NioDatagramChannel}.
      *
      * @param workerExecutor
      *        the {@link Executor} that will run the {@link NioDatagramWorker}s

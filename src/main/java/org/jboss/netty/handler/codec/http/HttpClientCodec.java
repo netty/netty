@@ -219,8 +219,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (failOnMissingResponse) {
                 long missingResponses = requestResponseCounter.get();
                 if (missingResponses > 0) {
-                    throw new PrematureChannelClosureException(
-                            "Channel closed but still missing " + missingResponses + " response(s)");
+                    throw new PrematureChannelClosureException("Channel closed but still missing " + missingResponses + " response(s)");
                 }
             }
         }

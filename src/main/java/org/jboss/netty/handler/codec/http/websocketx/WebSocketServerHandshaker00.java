@@ -67,8 +67,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
       * Constructor specifying the destination web socket location
       *
       * @param webSocketURL
-      *            URL for web socket communications. e.g "ws://myhost.com/mypath".
-      *            Subsequent web socket frames will be sent to this URL.
+      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+      *            sent to this URL.
       * @param subprotocols
       *            CSV of supported protocols
       * @param maxFramePayloadLength

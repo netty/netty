@@ -42,11 +42,9 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * </tr><tr>
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSizePredictor"}</td>
- * <td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
+ * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSizePredictorFactory"}</td>
- * <td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
+ * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
  * </tr>
  * </table>
  */

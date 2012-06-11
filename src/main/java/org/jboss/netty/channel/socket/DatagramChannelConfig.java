@@ -15,9 +15,9 @@
  */
 package org.jboss.netty.channel.socket;
 
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.StandardSocketOptions;
 
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
@@ -49,11 +49,9 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
  * </tr><tr>
  * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSizePredictor"}</td>
- * <td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
+ * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSizePredictorFactory"}</td>
- * <td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
+ * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
@@ -66,62 +64,64 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
 public interface DatagramChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
      */
     int getSendBufferSize();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
      */
     void setSendBufferSize(int sendBufferSize);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
     /**
-     * Gets the {@link StandardSocketOptions#IP_TOS} option.
+     * Gets the traffic class.
      */
     int getTrafficClass();
 
     /**
-     * Gets the {@link StandardSocketOptions#IP_TOS} option.
+     * Sets the traffic class as specified in {@link DatagramSocket#setTrafficClass(int)}.
      */
     void setTrafficClass(int trafficClass);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
      */
     boolean isReuseAddress();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
      */
     void setReuseAddress(boolean reuseAddress);
 
     /**
-     * Gets the {@link StandardSocketOptions#SO_BROADCAST} option.
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_BROADCAST}</a> option.
      */
     boolean isBroadcast();
 
     /**
-     * Sets the {@link StandardSocketOptions#SO_BROADCAST} option.
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_BROADCAST}</a> option.
      */
     void setBroadcast(boolean broadcast);
 
     /**
-     * Gets the {@link StandardSocketOptions#IP_MULTICAST_LOOP} option.
+     * Gets the setting for local loopback of multicast datagrams.
+     *
+     * @return {@code true} if and only if the loopback mode has been disabled
      */
     boolean isLoopbackModeDisabled();
 
     /**
-     * Sets the {@link StandardSocketOptions#IP_MULTICAST_LOOP} option.
+     * Sets the setting for local loopback of multicast datagrams.
      *
      * @param loopbackModeDisabled
      *        {@code true} if and only if the loopback mode has been disabled
@@ -129,12 +129,14 @@ public interface DatagramChannelConfig extends ChannelConfig {
     void setLoopbackModeDisabled(boolean loopbackModeDisabled);
 
     /**
-     * Gets the {@link StandardSocketOptions#IP_MULTICAST_TTL} option.
+     * Gets the default time-to-live for multicast packets sent out on the
+     * socket.
      */
     int getTimeToLive();
 
     /**
-     * Sets the {@link StandardSocketOptions#IP_MULTICAST_TTL} option.
+     * Sets the default time-to-live for multicast packets sent out on the
+     * {@link DatagramChannel} in order to control the scope of the multicasts.
      */
     void setTimeToLive(int ttl);
 
@@ -149,12 +151,14 @@ public interface DatagramChannelConfig extends ChannelConfig {
     void setInterface(InetAddress interfaceAddress);
 
     /**
-     * Gets the {@link StandardSocketOptions#IP_MULTICAST_IF} option.
+     * Gets the network interface for outgoing multicast datagrams sent on
+     * the {@link DatagramChannel}.
      */
     NetworkInterface getNetworkInterface();
 
     /**
-     * Sets the {@link StandardSocketOptions#IP_MULTICAST_IF} option.
+     * Sets the network interface for outgoing multicast datagrams sent on
+     * the {@link DatagramChannel}.
      */
     void setNetworkInterface(NetworkInterface networkInterface);
 

@@ -389,9 +389,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     }
 
     /**
-     * Calls {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer, Enum)}. This method
-     * should be never used by {@link ReplayingDecoder} itself.  But to be safe we should handle it
-     * anyway
+     * Calls {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer, Enum)}. This method should be never used by {@link ReplayingDecoder} itself.
+     * But to be safe we should handle it anyway
      */
     @Override
     protected final Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
@@ -521,9 +520,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
     }
 
-    private void callDecode(
-            ChannelHandlerContext context, Channel channel,
-            ChannelBuffer input, ChannelBuffer replayableInput, SocketAddress remoteAddress) throws Exception {
+    private void callDecode(ChannelHandlerContext context, Channel channel, ChannelBuffer input, ChannelBuffer replayableInput, SocketAddress remoteAddress) throws Exception {
         while (input.readable()) {
             int oldReaderIndex = checkpoint = input.readerIndex();
             Object result = null;

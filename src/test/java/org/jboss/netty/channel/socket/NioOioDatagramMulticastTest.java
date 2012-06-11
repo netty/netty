@@ -19,9 +19,7 @@ import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
-import org.junit.Ignore;
 
-@Ignore
 public class NioOioDatagramMulticastTest extends AbstractDatagramMulticastTest {
 
     @Override

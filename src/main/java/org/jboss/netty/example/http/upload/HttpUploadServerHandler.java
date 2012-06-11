@@ -430,8 +430,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         responseContent
                 .append("<tr><td>Fill with value: <br> <textarea name=\"thirdinfo\" cols=40 rows=10></textarea>");
         responseContent
-                .append("<tr><td>Fill with file (only file name will be transmitted): <br> " +
-                        "<input type=file name=\"myfile\">");
+                .append("<tr><td>Fill with file (only file name will be transmitted): <br> <input type=file name=\"myfile\">");
         responseContent.append("</td></tr>");
         responseContent
                 .append("<tr><td><INPUT TYPE=\"submit\" NAME=\"Send\" VALUE=\"Send\"></INPUT></td>");

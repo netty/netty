@@ -227,8 +227,7 @@ public final class ChannelBuffers {
      * More accurate estimation yields less unexpected reallocation overhead.
      * The new buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}.
      */
-    public static ChannelBuffer dynamicBuffer(
-            ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
+    public static ChannelBuffer dynamicBuffer(ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
         return new DynamicChannelBuffer(endianness, estimatedLength, factory);
     }
 
@@ -309,8 +308,7 @@ public final class ChannelBuffers {
             return EMPTY_BUFFER;
         }
         if (buffer.hasArray()) {
-            return wrappedBuffer(
-                    buffer.order(), buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
+            return wrappedBuffer(buffer.order(), buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         } else {
             return new ByteBufferBackedChannelBuffer(buffer);
         }
@@ -387,7 +385,7 @@ public final class ChannelBuffers {
      * Creates a new composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
-     *
+     * 
      * @throws IllegalArgumentException
      *         if the specified buffers' endianness are different from each
      *         other
@@ -401,7 +399,7 @@ public final class ChannelBuffers {
      * of the specified buffers will be visible to the returned buffer.
      * If gathering is <code>true</code> then gathering writes will be used when ever
      * possible.
-     *
+     * 
      * @throws IllegalArgumentException
      *         if the specified buffers' endianness are different from each
      *         other
@@ -446,7 +444,7 @@ public final class ChannelBuffers {
         }
         return EMPTY_BUFFER;
     }
-
+    
 
     /**
      * Creates a new composite buffer which wraps the slices of the specified
@@ -1052,8 +1050,7 @@ public final class ChannelBuffers {
      * The default implementation of {@link ChannelBuffer#indexOf(int, int, ChannelBufferIndexFinder)}.
      * This method is useful when implementing a new buffer type.
      */
-    public static int indexOf(
-            ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
+    public static int indexOf(ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
         if (fromIndex <= toIndex) {
             return firstIndexOf(buffer, fromIndex, toIndex, indexFinder);
         } else {
@@ -1121,8 +1118,7 @@ public final class ChannelBuffers {
         return -1;
     }
 
-    private static int firstIndexOf(
-            ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
+    private static int firstIndexOf(ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
             return -1;
@@ -1137,8 +1133,7 @@ public final class ChannelBuffers {
         return -1;
     }
 
-    private static int lastIndexOf(
-            ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
+    private static int lastIndexOf(ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
         fromIndex = Math.min(fromIndex, buffer.capacity());
         if (fromIndex < 0 || buffer.capacity() == 0) {
             return -1;

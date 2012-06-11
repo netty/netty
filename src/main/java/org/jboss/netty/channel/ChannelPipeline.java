@@ -168,8 +168,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * {@link ChannelPipeline} pipeline = {@link Channels#pipeline() Channels.pipeline()};
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
- * pipeline.addLast("executor", new {@link ExecutionHandler}(
- *         new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));
+ * pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));
  * pipeline.addLast("handler", new MyBusinessLogicHandler());
  * </pre>
  *

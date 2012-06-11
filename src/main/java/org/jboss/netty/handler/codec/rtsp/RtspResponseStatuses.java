@@ -107,8 +107,7 @@ public final class RtspResponseStatuses {
     /**
      * 407 Proxy Authentication Required
      */
-    public static final HttpResponseStatus PROXY_AUTHENTICATION_REQUIRED =
-            HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED;
+    public static final HttpResponseStatus PROXY_AUTHENTICATION_REQUIRED = HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED;
 
     /**
      * 408 Request Timeout

@@ -28,13 +28,13 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.util.ObjectSizeEstimator;
 
 /**
- * {@link Executor} which should be used for downstream {@link ChannelEvent}'s. This implementation
- * will take care of preserve the order of the events in a {@link Channel}.  If you don't need to
- * preserve the order just use one of the {@link Executor} implementations provided by the static
- * methods of {@link Executors}.
+ * {@link Executor} which should be used for downstream {@link ChannelEvent}'s. This implementation will take care of preserve the order of the events in a {@link Channel}.
+ * If you don't need to preserve the order just use one of the {@link Executor} implementations provided by the static methods of {@link Executors}.
  * <br>
  * <br>
+ *
  * For more informations about how the order is preserved see {@link OrderedMemoryAwareThreadPoolExecutor}
+ *
  */
 public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwareThreadPoolExecutor {
 
@@ -83,8 +83,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory
-     * size in this implementation
+     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory size in this implementation
      */
     @Override
     public void setObjectSizeEstimator(ObjectSizeEstimator objectSizeEstimator) {
@@ -100,8 +99,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory
-     * size in this implementation
+     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory size in this implementation
      */
     @Override
     public void setMaxChannelMemorySize(long maxChannelMemorySize) {
@@ -117,8 +115,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory
-     * size in this implementation
+     * Throws {@link UnsupportedOperationException} as there is not support for limit the memory size in this implementation
      */
     @Override
     public void setMaxTotalMemorySize(long maxTotalMemorySize) {

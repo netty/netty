@@ -75,8 +75,7 @@ public class MarshallingEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         Marshaller marshaller = provider.getMarshaller(ctx);
-        ChannelBufferByteOutput output = new ChannelBufferByteOutput(
-                ctx.getChannel().getConfig().getBufferFactory(), estimatedLength);
+        ChannelBufferByteOutput output = new ChannelBufferByteOutput(ctx.getChannel().getConfig().getBufferFactory(), estimatedLength);
         output.getBuffer().writeBytes(LENGTH_PLACEHOLDER);
         marshaller.start(output);
         marshaller.writeObject(msg);

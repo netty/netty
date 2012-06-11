@@ -43,8 +43,8 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
 
 
     /**
-     * Release all the previous created channels.
-     * This takes care of calling {@link LocalChannelRegistry#unregister(LocalAddress)} for each of them.
+     * Release all the previous created channels. This takes care of calling {@link LocalChannelRegistry#unregister(LocalAddress)}
+     * for each if them.
      */
     public void releaseExternalResources() {
         group.close().awaitUninterruptibly();

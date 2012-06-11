@@ -59,8 +59,7 @@ package org.jboss.netty.channel;
  * <p>
  * <strong>Caution:</strong>
  * <p>
- * Use the *Later(..) methods of the {@link Channels} class if you want to send an upstream event
- * from a {@link ChannelDownstreamHandler} otherwise you may run into threading issues.
+ * Use the *Later(..) methods of the {@link Channels} class if you want to send an upstream event from a {@link ChannelDownstreamHandler} otherwise you may run into threading issues.
  *
  * <h3>State management</h3>
  *

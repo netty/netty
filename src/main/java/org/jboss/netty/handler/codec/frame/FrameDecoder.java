@@ -214,8 +214,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
                 callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             } finally {
                 if (input.readable()) {
-                    // seems like there is something readable left in the input buffer. So create
-                    // the cumulation buffer and copy the input into it
+                    // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
                     (cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
                 }
             }
@@ -351,8 +350,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         }
     }
 
-    protected final void unfoldAndFireMessageReceived(
-            ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
+    protected final void unfoldAndFireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
         if (unfold) {
             if (result instanceof Object[]) {
                 for (Object r: (Object[]) result) {
@@ -371,8 +369,8 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     }
 
     /**
-     * Gets called on {@link #channelDisconnected(ChannelHandlerContext, ChannelStateEvent)} and
-     * {@link #channelClosed(ChannelHandlerContext, ChannelStateEvent)}
+     * Gets called on {@link #channelDisconnected(ChannelHandlerContext, ChannelStateEvent)} and {@link #channelClosed(ChannelHandlerContext, ChannelStateEvent)}
+     *
      */
     protected void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
@@ -422,8 +420,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
      */
     public void replace(String handlerName, ChannelHandler handler) {
         if (ctx == null) {
-            throw new IllegalStateException(
-                    "Replace cann only be called once the FrameDecoder is added to the ChannelPipeline");
+            throw new IllegalStateException("Replace cann only be called once the FrameDecoder is added to the ChannelPipeline");
         }
         ChannelPipeline pipeline = ctx.getPipeline();
         pipeline.addAfter(ctx.getName(), handlerName, handler);

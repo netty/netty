@@ -142,8 +142,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  *     }
  *
  *     {@literal @Override}
- *     public void channelInterestChanged(
- *             {@link ChannelHandlerContext} ctx, {@link ChannelStateEvent} e) throws Exception {
+ *     public void channelInterestChanged({@link ChannelHandlerContext} ctx, {@link ChannelStateEvent} e) throws Exception {
  *         if (e.getChannel().isWritable()) {
  *             flush();
  *         }
@@ -356,8 +355,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
     }
 
     /**
-     * Fail all buffered writes that are left. See
-     * <a href="https://github.com/netty/netty/issues/308>#308</a> for more details.
+     * Fail all buffered writes that are left. See <a href="https://github.com/netty/netty/issues/308>#308</a> for more details
      */
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
@@ -398,8 +396,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
     }
 
     /**
-     * Fail all buffered writes that are left.
-     * See <a href="https://github.com/netty/netty/issues/308>#308</a> for more details.
+     * Fail all buffered writes that are left. See <a href="https://github.com/netty/netty/issues/308>#308</a> for more details
      */
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         Throwable cause = null;

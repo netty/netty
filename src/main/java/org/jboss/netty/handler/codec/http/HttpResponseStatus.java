@@ -56,8 +56,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 203 Non-Authoritative Information (since HTTP/1.1)
      */
-    public static final HttpResponseStatus NON_AUTHORITATIVE_INFORMATION =
-            new HttpResponseStatus(203, "Non-Authoritative Information");
+    public static final HttpResponseStatus NON_AUTHORITATIVE_INFORMATION = new HttpResponseStatus(203, "Non-Authoritative Information");
 
     /**
      * 204 No Content
@@ -152,8 +151,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 407 Proxy Authentication Required
      */
-    public static final HttpResponseStatus PROXY_AUTHENTICATION_REQUIRED =
-            new HttpResponseStatus(407, "Proxy Authentication Required");
+    public static final HttpResponseStatus PROXY_AUTHENTICATION_REQUIRED = new HttpResponseStatus(407, "Proxy Authentication Required");
 
     /**
      * 408 Request Timeout
@@ -183,8 +181,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 413 Request Entity Too Large
      */
-    public static final HttpResponseStatus REQUEST_ENTITY_TOO_LARGE =
-            new HttpResponseStatus(413, "Request Entity Too Large");
+    public static final HttpResponseStatus REQUEST_ENTITY_TOO_LARGE = new HttpResponseStatus(413, "Request Entity Too Large");
 
     /**
      * 414 Request-URI Too Long
@@ -194,14 +191,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 415 Unsupported Media Type
      */
-    public static final HttpResponseStatus UNSUPPORTED_MEDIA_TYPE =
-            new HttpResponseStatus(415, "Unsupported Media Type");
+    public static final HttpResponseStatus UNSUPPORTED_MEDIA_TYPE = new HttpResponseStatus(415, "Unsupported Media Type");
 
     /**
      * 416 Requested Range Not Satisfiable
      */
-    public static final HttpResponseStatus REQUESTED_RANGE_NOT_SATISFIABLE =
-            new HttpResponseStatus(416, "Requested Range Not Satisfiable");
+    public static final HttpResponseStatus REQUESTED_RANGE_NOT_SATISFIABLE = new HttpResponseStatus(416, "Requested Range Not Satisfiable");
 
     /**
      * 417 Expectation Failed
@@ -236,8 +231,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 500 Internal Server Error
      */
-    public static final HttpResponseStatus INTERNAL_SERVER_ERROR =
-            new HttpResponseStatus(500, "Internal Server Error");
+    public static final HttpResponseStatus INTERNAL_SERVER_ERROR = new HttpResponseStatus(500, "Internal Server Error");
 
     /**
      * 501 Not Implemented
@@ -262,14 +256,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 505 HTTP Version Not Supported
      */
-    public static final HttpResponseStatus HTTP_VERSION_NOT_SUPPORTED =
-            new HttpResponseStatus(505, "HTTP Version Not Supported");
+    public static final HttpResponseStatus HTTP_VERSION_NOT_SUPPORTED = new HttpResponseStatus(505, "HTTP Version Not Supported");
 
     /**
      * 506 Variant Also Negotiates (RFC2295)
      */
-    public static final HttpResponseStatus VARIANT_ALSO_NEGOTIATES =
-            new HttpResponseStatus(506, "Variant Also Negotiates");
+    public static final HttpResponseStatus VARIANT_ALSO_NEGOTIATES = new HttpResponseStatus(506, "Variant Also Negotiates");
 
     /**
      * 507 Insufficient Storage (WebDAV, RFC4918)

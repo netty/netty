@@ -32,12 +32,10 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable {
     private final ChannelEventRunnableFilter filter;
 
     /**
-     * Create a new {@link ChainedExecutor} which will used the given
-     * {@link ChannelEventRunnableFilter} to see if the {@link #cur} {@link Executor} should get
-     * used.  Otherwise it will pass the work to the {@link #next} {@link Executor}
+     * Create a new {@link ChainedExecutor} which will used the given {@link ChannelEventRunnableFilter} to see if the {@link #cur} {@link Executor} should get used.
+     * Otherwise it will pass the work to the {@link #next} {@link Executor}
      *
-     * @param filter  the {@link ChannelEventRunnableFilter} which will be used to check if the
-     *                {@link ChannelEventRunnable} should be passed to the cur or next {@link Executor}
+     * @param filter  the {@link ChannelEventRunnableFilter} which will be used to check if the {@link ChannelEventRunnable} should be passed to the cur or next {@link Executor}
      * @param cur     the {@link Executor} to use if the {@link ChannelEventRunnableFilter} match
      * @param next    the {@link Executor} to use if the {@link ChannelEventRunnableFilter} does not match
      */
@@ -58,9 +56,8 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable {
     }
 
     /**
-     * Execute the passed {@link ChannelEventRunnable} with the current {@link Executor} if the
-     * {@link ChannelEventRunnableFilter} match.  Otherwise pass it to the next {@link Executor} in
-     * the chain.
+     * Execute the passed {@link ChannelEventRunnable} with the current {@link Executor} if the {@link ChannelEventRunnableFilter} match.
+     * Otherwise pass it to the next {@link Executor} in the chain.
      */
     public void execute(Runnable command) {
         assert command instanceof ChannelEventRunnable;

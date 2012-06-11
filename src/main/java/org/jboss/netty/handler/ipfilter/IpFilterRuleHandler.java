@@ -30,8 +30,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * Implementation of Filter of IP based on ALLOW and DENY rules.<br>
  * <br><br>
  * This implementation could be changed by implementing a new {@link IpFilterRule} than default
- * {@link IpV4SubnetFilterRule} (IPV4 support only), {@link IpSubnetFilterRule} (IPV4 and IPV6 support)
- * or {@link IpFilterRule} (IP and host name string pattern support) .<br>
+ * {@link IpV4SubnetFilterRule} (IPV4 support only), {@link IpSubnetFilterRule} (IPV4 and IPV6 support) or {@link IpFilterRule} (IP and host name string pattern support) .<br>
  * <br>
  * The check is done by going from step to step in the underlying array of IpFilterRule.<br>
  * Each {@link IpFilterRule} answers to the method accept if the {@link InetAddress} is accepted or not,

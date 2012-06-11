@@ -91,8 +91,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
     private final ChannelSink sink;
 
     /**
-     * Create a new {@link OioServerSocketChannelFactory} with a {@link Executors#newCachedThreadPool()}
-     * for the boss and worker executor.
+     * Create a new {@link OioServerSocketChannelFactory} with a {@link Executors#newCachedThreadPool()} for the boss and worker executor.
      *
      * See {@link #OioServerSocketChannelFactory(Executor, Executor)}
      */

@@ -51,11 +51,8 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
     /**
      * Creates a new instance.
      *
-     * @param frameLength
-     *        the length of the frame
-     * @param allocateFullBuffer
-     *        <code>true</code> if the cumulative {@link ChannelBuffer} should use the
-     *        {@link #frameLength} as its initial size
+     * @param frameLength  the length of the frame
+     * @param allocateFullBuffer <code>true</code> if the cumulative {@link ChannelBuffer} should use the {@link #frameLength} as its initial size
      */
     public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {
         if (frameLength <= 0) {

@@ -94,8 +94,8 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
         try {
             int length = 0;
 
-            // Add support to write a FileRegion. This in fact will not give any performance gain
-            // but at least it not fail and we did the best to emulate it
+            // Add support to write a FileRegion. This in fact will not give any performance gain but at least it not fail and
+            // we did the best to emulate it
             if (message instanceof FileRegion) {
                 FileRegion fr = (FileRegion) message;
                 try {

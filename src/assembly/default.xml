@@ -34,7 +34,6 @@
         <include>**/src/**</include>
       </includes>
       <excludes>
-        <exclude>**/bin/**</exclude>
         <exclude>**/target/**</exclude>
         <exclude>**/.*/**</exclude>
       </excludes>

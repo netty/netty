@@ -100,9 +100,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
 
     final C channel;
 
-    protected AbstractNioChannel(
-            Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline,
-            ChannelSink sink, AbstractNioWorker worker, C ch) {
+    protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, C ch) {
         super(id, parent, factory, pipeline, sink);
         this.worker = worker;
         this.channel = ch;
