@@ -657,17 +657,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
             nioBuffer.flip();
         }
 
-        return Unpooled.decodeString(nioBuffer, charset);
+        return ByteBufUtil.decodeString(nioBuffer, charset);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        return Unpooled.indexOf(this, fromIndex, toIndex, value);
+        return ByteBufUtil.indexOf(this, fromIndex, toIndex, value);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return Unpooled.indexOf(this, fromIndex, toIndex, indexFinder);
+        return ByteBufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
     }
 
     @Override
@@ -713,7 +713,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public int hashCode() {
-        return Unpooled.hashCode(this);
+        return ByteBufUtil.hashCode(this);
     }
 
     @Override
@@ -722,14 +722,14 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return true;
         }
         if (o instanceof ByteBuf) {
-            return Unpooled.equals(this, (ByteBuf) o);
+            return ByteBufUtil.equals(this, (ByteBuf) o);
         }
         return false;
     }
 
     @Override
     public int compareTo(ByteBuf that) {
-        return Unpooled.compare(this, that);
+        return ByteBufUtil.compare(this, that);
     }
 
     @Override

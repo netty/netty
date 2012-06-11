@@ -67,7 +67,7 @@ public class ChannelBuffersTest {
         for (Entry<byte[], Integer> e: map.entrySet()) {
             assertEquals(
                     e.getValue().intValue(),
-                    Unpooled.hashCode(wrappedBuffer(e.getKey())));
+                    ByteBufUtil.hashCode(wrappedBuffer(e.getKey())));
         }
     }
 
@@ -78,47 +78,47 @@ public class ChannelBuffersTest {
         // Different length.
         a = wrappedBuffer(new byte[] { 1  });
         b = wrappedBuffer(new byte[] { 1, 2 });
-        assertFalse(Unpooled.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 });
         b = wrappedBuffer(new byte[] { 1, 2, 3 });
-        assertTrue(Unpooled.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 });
         b = wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 3);
-        assertTrue(Unpooled.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 });
         b = wrappedBuffer(new byte[] { 1, 2, 4 });
-        assertFalse(Unpooled.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 });
         b = wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 3);
-        assertFalse(Unpooled.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-        assertTrue(Unpooled.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 10);
-        assertTrue(Unpooled.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(new byte[] { 1, 2, 3, 4, 6, 7, 8, 5, 9, 10 });
-        assertFalse(Unpooled.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 10);
-        assertFalse(Unpooled.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
     }
 
     @Test
@@ -144,11 +144,11 @@ public class ChannelBuffersTest {
         for (int i = 0; i < expected.size(); i ++) {
             for (int j = 0; j < expected.size(); j ++) {
                 if (i == j) {
-                    assertEquals(0, compare(expected.get(i), expected.get(j)));
+                    assertEquals(0, ByteBufUtil.compare(expected.get(i), expected.get(j)));
                 } else if (i < j) {
-                    assertTrue(compare(expected.get(i), expected.get(j)) < 0);
+                    assertTrue(ByteBufUtil.compare(expected.get(i), expected.get(j)) < 0);
                 } else {
-                    assertTrue(compare(expected.get(i), expected.get(j)) > 0);
+                    assertTrue(ByteBufUtil.compare(expected.get(i), expected.get(j)) > 0);
                 }
             }
         }
@@ -197,12 +197,12 @@ public class ChannelBuffersTest {
 
     @Test
     public void testCompare2() {
-        assertTrue(Unpooled.compare(
+        assertTrue(ByteBufUtil.compare(
                 Unpooled.wrappedBuffer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}),
                 Unpooled.wrappedBuffer(new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}))
                 > 0);
 
-        assertTrue(Unpooled.compare(
+        assertTrue(ByteBufUtil.compare(
                 Unpooled.wrappedBuffer(new byte[]{(byte) 0xFF}),
                 Unpooled.wrappedBuffer(new byte[]{(byte) 0x00}))
                 > 0);
@@ -303,14 +303,14 @@ public class ChannelBuffersTest {
 
     @Test
     public void testHexDump() {
-        assertEquals("", hexDump(EMPTY_BUFFER));
+        assertEquals("", ByteBufUtil.hexDump(EMPTY_BUFFER));
 
-        assertEquals("123456", hexDump(wrappedBuffer(
+        assertEquals("123456", ByteBufUtil.hexDump(wrappedBuffer(
                 new byte[] {
                         0x12, 0x34, 0x56
                 })));
 
-        assertEquals("1234567890abcdef", hexDump(wrappedBuffer(
+        assertEquals("1234567890abcdef", ByteBufUtil.hexDump(wrappedBuffer(
                 new byte[] {
                         0x12, 0x34, 0x56, 0x78,
                         (byte) 0x90, (byte) 0xAB, (byte) 0xCD, (byte) 0xEF
@@ -319,8 +319,8 @@ public class ChannelBuffersTest {
 
     @Test
     public void testSwapMedium() {
-        assertEquals(0x563412, swapMedium(0x123456));
-        assertEquals(0x80, swapMedium(0x800000));
+        assertEquals(0x563412, ByteBufUtil.swapMedium(0x123456));
+        assertEquals(0x80, ByteBufUtil.swapMedium(0x800000));
     }
 
     @Test

@@ -179,7 +179,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public short getShort(int index) {
-        return Unpooled.swapShort(buf.getShort(index));
+        return ByteBufUtil.swapShort(buf.getShort(index));
     }
 
     @Override
@@ -189,7 +189,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public int getMedium(int index) {
-        return Unpooled.swapMedium(buf.getMedium(index));
+        return ByteBufUtil.swapMedium(buf.getMedium(index));
     }
 
     @Override
@@ -199,7 +199,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public int getInt(int index) {
-        return Unpooled.swapInt(buf.getInt(index));
+        return ByteBufUtil.swapInt(buf.getInt(index));
     }
 
     @Override
@@ -209,7 +209,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public long getLong(int index) {
-        return Unpooled.swapLong(buf.getLong(index));
+        return ByteBufUtil.swapLong(buf.getLong(index));
     }
 
     @Override
@@ -279,22 +279,22 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public void setShort(int index, int value) {
-        buf.setShort(index, Unpooled.swapShort((short) value));
+        buf.setShort(index, ByteBufUtil.swapShort((short) value));
     }
 
     @Override
     public void setMedium(int index, int value) {
-        buf.setMedium(index, Unpooled.swapMedium(value));
+        buf.setMedium(index, ByteBufUtil.swapMedium(value));
     }
 
     @Override
     public void setInt(int index, int value) {
-        buf.setInt(index, Unpooled.swapInt(value));
+        buf.setInt(index, ByteBufUtil.swapInt(value));
     }
 
     @Override
     public void setLong(int index, long value) {
-        buf.setLong(index, Unpooled.swapLong(value));
+        buf.setLong(index, ByteBufUtil.swapLong(value));
     }
 
     @Override
@@ -374,7 +374,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public short readShort() {
-        return Unpooled.swapShort(buf.readShort());
+        return ByteBufUtil.swapShort(buf.readShort());
     }
 
     @Override
@@ -384,7 +384,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public int readMedium() {
-        return Unpooled.swapMedium(buf.readMedium());
+        return ByteBufUtil.swapMedium(buf.readMedium());
     }
 
     @Override
@@ -394,7 +394,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public int readInt() {
-        return Unpooled.swapInt(buf.readInt());
+        return ByteBufUtil.swapInt(buf.readInt());
     }
 
     @Override
@@ -404,7 +404,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public long readLong() {
-        return Unpooled.swapLong(buf.readLong());
+        return ByteBufUtil.swapLong(buf.readLong());
     }
 
     @Override
@@ -489,22 +489,22 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public void writeShort(int value) {
-        buf.writeShort(Unpooled.swapShort((short) value));
+        buf.writeShort(ByteBufUtil.swapShort((short) value));
     }
 
     @Override
     public void writeMedium(int value) {
-        buf.writeMedium(Unpooled.swapMedium(value));
+        buf.writeMedium(ByteBufUtil.swapMedium(value));
     }
 
     @Override
     public void writeInt(int value) {
-        buf.writeInt(Unpooled.swapInt(value));
+        buf.writeInt(ByteBufUtil.swapInt(value));
     }
 
     @Override
     public void writeLong(long value) {
-        buf.writeLong(Unpooled.swapLong(value));
+        buf.writeLong(ByteBufUtil.swapLong(value));
     }
 
     @Override
@@ -683,14 +683,14 @@ public class SwappedByteBuf implements WrappedByteBuf {
             return true;
         }
         if (obj instanceof ByteBuf) {
-            return Unpooled.equals(this, (ByteBuf) obj);
+            return ByteBufUtil.equals(this, (ByteBuf) obj);
         }
         return false;
     }
 
     @Override
     public int compareTo(ByteBuf buffer) {
-        return Unpooled.compare(this, buffer);
+        return ByteBufUtil.compare(this, buffer);
     }
 
     @Override
