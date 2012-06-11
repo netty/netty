@@ -219,7 +219,8 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
      * @throws InterruptedException
      *         if the operation has been interrupted
      */
-    public ChannelEvent readEvent(long timeout, TimeUnit unit) throws InterruptedException, BlockingReadTimeoutException {
+    public ChannelEvent readEvent(
+            long timeout, TimeUnit unit) throws InterruptedException, BlockingReadTimeoutException {
         detectDeadLock();
         if (isClosed()) {
             if (getQueue().isEmpty()) {

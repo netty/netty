@@ -134,10 +134,12 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
 
     /**
-     * Process the incoming messages and also is responsible for call {@link Channels#fireMessageReceived(Channel, Object)} once a message
-     * was processed without errors.
+     * Process the incoming messages and also is responsible for call
+     * {@link Channels#fireMessageReceived(Channel, Object)} once a message was processed without
+     * errors.
      *
-     * @return continue returns <code>true</code> as long as this worker should continue to try processing incoming messages
+     * @return continue returns <code>true</code> as long as this worker should continue to try
+     *         processing incoming messages
      * @throws IOException
      */
     abstract boolean process() throws IOException;

@@ -27,7 +27,8 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 /**
  * Decoder which MUST be used with {@link MarshallingEncoder}.
  *
- * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
+ * A {@link LengthFieldBasedFrameDecoder} which use an {@link Unmarshaller} to read the Object out
+ * of the {@link ChannelBuffer}.
  *
  */
 public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
@@ -77,8 +78,8 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
             unmarshaller.finish();
             return obj;
         } finally {
-            // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
-            // readable. This helps to be sure that we do not leak resource
+            // Call close in a finally block as the ReplayingDecoder will throw an Error if not
+            // enough bytes are readable. This helps to be sure that we do not leak resource
             unmarshaller.close();
         }
     }

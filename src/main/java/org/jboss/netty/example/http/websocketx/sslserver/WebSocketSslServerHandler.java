@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.example.http.websocketx.server.WebSocketServerIndexPage;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -75,7 +76,7 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
         if (req.getUri().equals("/")) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
 
-            ChannelBuffer content = WebSocketSslServerIndexPage.getContent(getWebSocketLocation(req));
+            ChannelBuffer content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
 
             res.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
             setContentLength(res, content.readableBytes());

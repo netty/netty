@@ -48,13 +48,13 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     /**
-     * Return <code>true</code> if gathering writes / reads should be used 
+     * Return <code>true</code> if gathering writes / reads should be used
      * for this {@link CompositeChannelBuffer}
      */
     public boolean useGathering() {
         return gathering && DetectionUtil.javaVersion() >= 7;
     }
-    
+
     /**
      * Same with {@link #slice(int, int)} except that this method returns a list.
      */
@@ -140,7 +140,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     private CompositeChannelBuffer(CompositeChannelBuffer buffer) {
         order = buffer.order;
-        this.gathering = buffer.gathering;
+        gathering = buffer.gathering;
         components = buffer.components.clone();
         indices = buffer.indices.clone();
         setIndex(buffer.readerIndex(), buffer.writerIndex());
