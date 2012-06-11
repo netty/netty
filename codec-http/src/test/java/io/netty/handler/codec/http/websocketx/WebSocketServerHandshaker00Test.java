@@ -17,12 +17,9 @@ package io.netty.handler.codec.http.websocketx;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-import static org.easymock.EasyMock.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufs;
-import io.netty.channel.Channel;
-import io.netty.channel.DefaultChannelFuture;
-import io.netty.channel.DefaultChannelPipeline;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -30,37 +27,19 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.util.CharsetUtil;
 
-import java.nio.charset.Charset;
-
-import org.easymock.Capture;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class WebSocketServerHandshaker00Test {
 
-    private static DefaultChannelPipeline createPipeline(Channel ch) {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(ch);
-        pipeline.addLast("chunkAggregator", new HttpChunkAggregator(42));
-        pipeline.addLast("wsdecoder", new HttpRequestDecoder());
-        pipeline.addLast("wsencoder", new HttpResponseEncoder());
-        return pipeline;
-    }
-
     @Test
     public void testPerformOpeningHandshake() {
-        Channel channelMock = EasyMock.createMock(Channel.class);
-
-        DefaultChannelPipeline pipeline = createPipeline(channelMock);
-        EasyMock.expect(channelMock.pipeline()).andReturn(pipeline);
-
-        // capture the http response in order to verify the headers
-        Capture<HttpResponse> res = new Capture<HttpResponse>();
-        EasyMock.expect(channelMock.write(capture(res))).andReturn(new DefaultChannelFuture(channelMock, true));
-
-        replay(channelMock);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+                new HttpChunkAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
         HttpRequest req = new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
         req.setHeader(Names.HOST, "server.example.com");
@@ -71,14 +50,20 @@ public class WebSocketServerHandshaker00Test {
         req.setHeader(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
 
-        ByteBuf buffer = ByteBufs.copiedBuffer("^n:ds[4U", Charset.defaultCharset());
+        ByteBuf buffer = ByteBufs.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
         req.setContent(buffer);
 
-        WebSocketServerHandshaker00 handsaker = new WebSocketServerHandshaker00("ws://example.com/chat", "chat", Integer.MAX_VALUE);
-        handsaker.handshake(channelMock, req);
+        new WebSocketServerHandshaker00(
+                "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
 
-        Assert.assertEquals("ws://example.com/chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_LOCATION));
-        Assert.assertEquals("chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
-        Assert.assertEquals("8jKS'y:G*Co,Wxa-", res.getValue().getContent().toString(Charset.defaultCharset()));
+        ByteBuf resBuf = ch.readOutbound();
+
+        EmbeddedByteChannel ch2 = new EmbeddedByteChannel(new HttpResponseDecoder());
+        ch2.writeInbound(resBuf);
+        HttpResponse res = (HttpResponse) ch2.readInbound();
+
+        Assert.assertEquals("ws://example.com/chat", res.getHeader(Names.SEC_WEBSOCKET_LOCATION));
+        Assert.assertEquals("chat", res.getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
+        Assert.assertEquals("8jKS'y:G*Co,Wxa-", res.getContent().toString(CharsetUtil.US_ASCII));
     }
 }
