@@ -205,7 +205,7 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 30000)
     public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoop l = new LocalEventLoop(4, new PrefixThreadFactory("l"));
         EventExecutor e1 = new DefaultEventExecutor(4, new PrefixThreadFactory("e1"));
