@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket;
 
-import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -28,12 +27,14 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.*;
+
 /**
  * The default {@link DatagramChannelConfig} implementation.
  */
 public class DefaultDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
 
-    private static int DEFAULT_RECEIVE_PACKET_SIZE = 2048;
+    private static final int DEFAULT_RECEIVE_PACKET_SIZE = 2048;
 
     private final DatagramSocket socket;
     private volatile int receivePacketSize = DEFAULT_RECEIVE_PACKET_SIZE;

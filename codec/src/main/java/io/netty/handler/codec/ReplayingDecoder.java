@@ -297,7 +297,7 @@ public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessa
      * Creates a new instance with the specified initial state.
      */
     protected ReplayingDecoder(S initialState) {
-        this.state = initialState;
+        state = initialState;
     }
 
     /**

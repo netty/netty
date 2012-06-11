@@ -269,7 +269,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return readFixedLengthContent(buffer);
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            assert this.chunkSize <= Integer.MAX_VALUE;
+            assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
             int toRead = chunkSize;
@@ -322,7 +322,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return chunk;
         }
         case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            assert this.chunkSize <= Integer.MAX_VALUE;
+            assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
             int toRead = chunkSize;
@@ -395,7 +395,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                 if (code == 101 && !res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
                     // It's Hixie 76 websocket handshake response
                     return false;
-                 }
+                }
                 return true;
             }
 
@@ -440,7 +440,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         if (toRead > actualReadableBytes()) {
             toRead = actualReadableBytes();
         }
-        contentRead = contentRead + toRead;
+        contentRead += toRead;
         if (length < contentRead) {
             if (!message.isChunked()) {
                 message.setChunked(true);

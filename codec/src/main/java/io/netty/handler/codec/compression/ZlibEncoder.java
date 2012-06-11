@@ -294,8 +294,7 @@ public class ZlibEncoder extends ByteToByteEncoder {
                     z.next_out = out.array();
                     z.next_out_index = out.arrayOffset() + out.writerIndex();
                 } else {
-                    byte[] array = new byte[maxOutputLength];
-                    z.next_out = array;
+                    z.next_out = new byte[maxOutputLength];
                     z.next_out_index = 0;
                 }
                 int oldNextOutIndex = z.next_out_index;

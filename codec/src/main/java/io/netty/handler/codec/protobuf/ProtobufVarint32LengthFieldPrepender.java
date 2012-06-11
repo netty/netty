@@ -35,7 +35,7 @@ import com.google.protobuf.CodedOutputStream;
  * +---------------+               +--------+---------------+
  * </pre> *
  *
- * @see com.google.protobuf.CodedOutputStream
+ * @see CodedOutputStream
  */
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
@@ -54,8 +54,7 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<B
     @Override
     public void encode(
             ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
-        ByteBuf body = msg;
-        int bodyLen = body.readableBytes();
+        int bodyLen = msg.readableBytes();
         int headerLen = CodedOutputStream.computeRawVarint32Size(bodyLen);
         out.ensureWritableBytes(headerLen + bodyLen);
 
@@ -64,6 +63,6 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<B
         headerOut.writeRawVarint32(bodyLen);
         headerOut.flush();
 
-        out.writeBytes(body);
+        out.writeBytes(msg, msg.readerIndex(), bodyLen);
     }
 }

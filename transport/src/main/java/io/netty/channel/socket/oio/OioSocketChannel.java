@@ -159,13 +159,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected int doWriteBytes(ByteBuf buf) throws Exception {
+    protected void doWriteBytes(ByteBuf buf) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
         }
-        final int length = buf.readableBytes();
-        buf.readBytes(os, length);
-        return length;
+        buf.readBytes(os, buf.readableBytes());
     }
 }

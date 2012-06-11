@@ -35,7 +35,7 @@ import com.google.protobuf.CodedInputStream;
  * +--------+---------------+      +---------------+
  * </pre>
  *
- * @see com.google.protobuf.CodedInputStream
+ * @see CodedInputStream
  */
 public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder<Object> {
 

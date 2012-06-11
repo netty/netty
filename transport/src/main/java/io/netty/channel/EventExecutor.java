@@ -22,7 +22,7 @@ public interface EventExecutor extends ScheduledExecutorService {
     boolean inEventLoop(Thread thread);
     Unsafe unsafe();
 
-    public interface Unsafe {
+    interface Unsafe {
         EventExecutor nextChild();
     }
 }

@@ -173,7 +173,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(Queue<Object> buf) throws Exception {
+    protected void doWriteMessages(Queue<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
         ByteBuf data = p.data();
         int length = data.readableBytes();
@@ -187,7 +187,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
 
         socket.send(tmpPacket);
-        return 1;
     }
 
     @Override

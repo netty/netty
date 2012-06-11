@@ -21,11 +21,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.VoidEnum;
-
-import java.io.ObjectStreamConstants;
-
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
+
+import java.io.ObjectStreamConstants;
 
 /**
  * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ByteBuf}.
@@ -88,8 +87,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidE
             }
         }
 
-        Object decoded = decode(ctx, buffer);
-        return decoded;
+        return decode(ctx, buffer);
     }
 
     @Override

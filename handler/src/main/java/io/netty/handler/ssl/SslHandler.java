@@ -344,7 +344,7 @@ public class SslHandler
         boolean unwrapLater = false;
         int bytesProduced = 0;
         try {
-            loop: for (;;) {
+            for (;;) {
                 SSLEngineResult result = wrap(engine, in, out);
                 bytesProduced += result.bytesProduced();
                 if (result.getStatus() == Status.CLOSED) {
@@ -380,7 +380,7 @@ public class SslHandler
                     }
 
                     if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
-                        break loop;
+                        break;
                     }
                 }
             }
@@ -503,7 +503,7 @@ public class SslHandler
                 }
 
                 if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
-                    break loop;
+                    break;
                 }
             }
 

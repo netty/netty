@@ -33,7 +33,7 @@ import java.nio.channels.FileChannel;
 public class ChunkedNioFile implements ChunkedByteInput {
 
     private final FileChannel in;
-    private long startOffset;
+    private final long startOffset;
     private final long endOffset;
     private final int chunkSize;
     private long offset;

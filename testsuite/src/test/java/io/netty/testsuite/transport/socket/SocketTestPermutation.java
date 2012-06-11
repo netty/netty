@@ -152,7 +152,7 @@ final class SocketTestPermutation {
     }
     private SocketTestPermutation() {}
 
-    static interface Factory<T> {
+    interface Factory<T> {
         T newInstance();
     }
 }

@@ -77,7 +77,6 @@ public class SpdySessionHandler
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(int version, boolean server) {
-        super();
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);

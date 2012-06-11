@@ -383,10 +383,8 @@ public final class RtspHeaders {
          */
         public static final String URL = "url";
 
-        protected Values() {
-        }
+        private Values() { }
     }
 
-    private RtspHeaders() {
-    }
+    private RtspHeaders() { }
 }

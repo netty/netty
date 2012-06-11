@@ -85,9 +85,7 @@ public class ByteLoggingHandler
         }
     }
 
-    public ByteLoggingHandler() {
-        super();
-    }
+    public ByteLoggingHandler() { }
 
     public ByteLoggingHandler(Class<?> clazz, LogLevel level) {
         super(clazz, level);

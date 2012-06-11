@@ -82,5 +82,5 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     }
 
     protected abstract int doReadMessages(Queue<Object> buf) throws Exception;
-    protected abstract int doWriteMessages(Queue<Object> buf) throws Exception;
+    protected abstract void doWriteMessages(Queue<Object> buf) throws Exception;
 }

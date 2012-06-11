@@ -17,15 +17,14 @@ package io.netty.example.securechat;
 
 import io.netty.handler.ssl.SslHandler;
 
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.Security;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.Security;
 
 /**
  * Creates a bogus {@link SSLContext}.  A client-side context created by this
@@ -62,8 +61,8 @@ public final class SecureChatSslContextFactory {
             algorithm = "SunX509";
         }
 
-        SSLContext serverContext = null;
-        SSLContext clientContext = null;
+        SSLContext serverContext;
+        SSLContext clientContext;
         try {
             KeyStore ks = KeyStore.getInstance("JKS");
             ks.load(SecureChatKeyStore.asInputStream(),

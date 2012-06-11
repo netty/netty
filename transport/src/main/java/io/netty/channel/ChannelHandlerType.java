@@ -23,7 +23,7 @@ public enum ChannelHandlerType {
 
     final int direction; // 0 - up (inbound), 1 - down (outbound)
 
-    private ChannelHandlerType(int direction) {
+    ChannelHandlerType(int direction) {
         this.direction = direction;
     }
 }

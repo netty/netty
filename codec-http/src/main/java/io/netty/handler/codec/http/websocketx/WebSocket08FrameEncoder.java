@@ -103,27 +103,26 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
             WebSocketFrame msg, ByteBuf out) throws Exception {
         byte[] mask;
 
-        WebSocketFrame frame = msg;
-        ByteBuf data = frame.getBinaryData();
+        ByteBuf data = msg.getBinaryData();
         if (data == null) {
             data = Unpooled.EMPTY_BUFFER;
         }
 
         byte opcode;
-        if (frame instanceof TextWebSocketFrame) {
+        if (msg instanceof TextWebSocketFrame) {
             opcode = OPCODE_TEXT;
-        } else if (frame instanceof PingWebSocketFrame) {
+        } else if (msg instanceof PingWebSocketFrame) {
             opcode = OPCODE_PING;
-        } else if (frame instanceof PongWebSocketFrame) {
+        } else if (msg instanceof PongWebSocketFrame) {
             opcode = OPCODE_PONG;
-        } else if (frame instanceof CloseWebSocketFrame) {
+        } else if (msg instanceof CloseWebSocketFrame) {
             opcode = OPCODE_CLOSE;
-        } else if (frame instanceof BinaryWebSocketFrame) {
+        } else if (msg instanceof BinaryWebSocketFrame) {
             opcode = OPCODE_BINARY;
-        } else if (frame instanceof ContinuationWebSocketFrame) {
+        } else if (msg instanceof ContinuationWebSocketFrame) {
             opcode = OPCODE_CONT;
         } else {
-            throw new UnsupportedOperationException("Cannot encode frame of type: " + frame.getClass().getName());
+            throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
         }
 
         int length = data.readableBytes();
@@ -133,10 +132,10 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
         }
 
         int b0 = 0;
-        if (frame.isFinalFragment()) {
+        if (msg.isFinalFragment()) {
             b0 |= 1 << 7;
         }
-        b0 |= frame.getRsv() % 8 << 4;
+        b0 |= msg.getRsv() % 8 << 4;
         b0 |= opcode % 128;
 
         if (opcode == OPCODE_PING && length > 125) {

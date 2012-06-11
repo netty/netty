@@ -514,8 +514,8 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
         ScheduledFutureTask(Runnable runnable, V result, long nanoTime) {
             super(runnable, result);
-            this.deadlineNanos = nanoTime;
-            this.periodNanos = 0;
+            deadlineNanos = nanoTime;
+            periodNanos = 0;
         }
 
         ScheduledFutureTask(Runnable runnable, V result, long nanoTime, long period) {
@@ -524,14 +524,14 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                 throw new IllegalArgumentException(
                         String.format("period: %d (expected: != 0)", period));
             }
-            this.deadlineNanos = nanoTime;
-            this.periodNanos = period;
+            deadlineNanos = nanoTime;
+            periodNanos = period;
         }
 
         ScheduledFutureTask(Callable<V> callable, long nanoTime) {
             super(callable);
-            this.deadlineNanos = nanoTime;
-            this.periodNanos = 0;
+            deadlineNanos = nanoTime;
+            periodNanos = 0;
         }
 
         public long deadlineNanos() {

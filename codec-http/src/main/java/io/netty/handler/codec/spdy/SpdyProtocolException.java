@@ -27,9 +27,7 @@ public class SpdyProtocolException extends Exception {
     /**
      * Creates a new instance.
      */
-    public SpdyProtocolException() {
-        super();
-    }
+    public SpdyProtocolException() { }
 
     /**
      * Creates a new instance.

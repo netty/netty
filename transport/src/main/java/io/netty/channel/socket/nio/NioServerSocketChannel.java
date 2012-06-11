@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Queue;
 
 public class NioServerSocketChannel extends AbstractNioMessageChannel
@@ -61,7 +62,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected java.nio.channels.ServerSocketChannel javaChannel() {
+    protected ServerSocketChannel javaChannel() {
         return (ServerSocketChannel) super.javaChannel();
     }
 
@@ -84,7 +85,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected int doReadMessages(Queue<Object> buf) throws Exception {
-        java.nio.channels.SocketChannel ch = javaChannel().accept();
+        SocketChannel ch = javaChannel().accept();
         if (ch == null) {
             return 0;
         }

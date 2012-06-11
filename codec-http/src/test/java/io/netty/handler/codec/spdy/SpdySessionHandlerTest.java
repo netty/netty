@@ -20,12 +20,11 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 public class SpdySessionHandlerTest {
 
@@ -278,7 +277,6 @@ public class SpdySessionHandlerTest {
         private final boolean server;
 
         EchoHandler(int closeSignal, boolean server) {
-            super();
             this.closeSignal = closeSignal;
             this.server = server;
         }

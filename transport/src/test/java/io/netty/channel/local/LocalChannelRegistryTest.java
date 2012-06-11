@@ -32,7 +32,7 @@ public class LocalChannelRegistryTest {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(LocalChannelRegistryTest.class);
 
-    private static String LOCAL_ADDR_ID = "test.id";
+    private static final String LOCAL_ADDR_ID = "test.id";
 
     @Test
     public void testLocalAddressReuse() throws Exception {

@@ -15,7 +15,6 @@
  */
 package io.netty.channel.group;
 
-import static java.util.concurrent.TimeUnit.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -31,6 +30,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
@@ -53,7 +54,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             boolean success = future.isSuccess();
-            boolean callSetDone = false;
+            boolean callSetDone;
             synchronized (DefaultChannelGroupFuture.this) {
                 if (success) {
                     successCount ++;
@@ -219,7 +220,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } finally {
                     waiters--;
                 }
@@ -247,7 +248,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } catch (InterruptedException e) {
                     interrupted = true;
                 } finally {
@@ -303,7 +304,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 try {
                     for (;;) {
                         try {
-                            this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                            wait(waitTime / 1000000, (int) (waitTime % 1000000));
                         } catch (InterruptedException e) {
                             if (interruptable) {
                                 throw e;
@@ -341,11 +342,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
-    boolean setDone() {
+    void setDone() {
         synchronized (this) {
             // Allow only once.
             if (done) {
-                return false;
+                return;
             }
 
             done = true;
@@ -355,7 +356,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
 
         notifyListeners();
-        return true;
     }
 
     private void notifyListeners() {

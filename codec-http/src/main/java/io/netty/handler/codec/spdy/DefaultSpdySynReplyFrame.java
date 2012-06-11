@@ -32,7 +32,6 @@ public class DefaultSpdySynReplyFrame extends DefaultSpdyHeaderBlock
      * @param streamID the Stream-ID of this frame
      */
     public DefaultSpdySynReplyFrame(int streamID) {
-        super();
         setStreamID(streamID);
     }
 

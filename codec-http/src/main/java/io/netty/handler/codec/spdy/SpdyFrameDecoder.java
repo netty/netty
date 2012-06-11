@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
+
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Decodes {@link ByteBuf}s into SPDY Data and Control Frames.
@@ -49,7 +50,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     private int numHeaders;
     private ByteBuf decompressed;
 
-    private static enum State {
+    private enum State {
         READ_COMMON_HEADER,
         READ_CONTROL_FRAME,
         READ_SETTINGS_FRAME,

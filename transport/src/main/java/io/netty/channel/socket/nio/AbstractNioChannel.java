@@ -144,13 +144,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                         connectTimeoutException = new ConnectException("connection timed out");
                                     }
                                     ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
-                                    if (connectFuture == null) {
-                                        return;
-                                    } else {
-                                        if (connectFuture.setFailure(connectTimeoutException)) {
-                                            pipeline().fireExceptionCaught(connectTimeoutException);
-                                            close(voidFuture());
-                                        }
+                                    if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
+                                        pipeline().fireExceptionCaught(connectTimeoutException);
+                                        close(voidFuture());
                                     }
                                 }
                             }, connectTimeoutMillis, TimeUnit.MILLISECONDS);

@@ -73,6 +73,16 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 }
             }
         }
+
+        private void expandReadBuffer(ByteBuf byteBuf) {
+            int available = available();
+            if (available > 0) {
+                byteBuf.ensureWritableBytes(available);
+            } else if (!byteBuf.writable()) {
+                // FIXME: Magic number
+                byteBuf.ensureWritableBytes(4096);
+            }
+        }
     }
 
     @Override
@@ -85,15 +95,5 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     protected abstract int available();
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
-    protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
-
-    private void expandReadBuffer(ByteBuf byteBuf) {
-        int available = available();
-        if (available > 0) {
-            byteBuf.ensureWritableBytes(available);
-        } else if (!byteBuf.writable()) {
-            // FIXME: Magic number
-            byteBuf.ensureWritableBytes(4096);
-        }
-    }
+    protected abstract void doWriteBytes(ByteBuf buf) throws Exception;
 }

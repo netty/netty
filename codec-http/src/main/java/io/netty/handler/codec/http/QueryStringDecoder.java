@@ -218,7 +218,7 @@ public class QueryStringDecoder {
         String name = null;
         int pos = 0; // Beginning of the unprocessed region
         int i;       // End of the unprocessed region
-        char c = 0;  // Current character
+        char c;  // Current character
         for (i = 0; i < s.length(); i++) {
             c = s.charAt(i);
             if (c == '=' && name == null) {
@@ -246,18 +246,12 @@ public class QueryStringDecoder {
 
         if (pos != i) {  // Are there characters we haven't dealt with?
             if (name == null) {     // Yes and we haven't seen any `='.
-                if (!addParam(params, decodeComponent(s.substring(pos, i), charset), "")) {
-                    return;
-                }
+                addParam(params, decodeComponent(s.substring(pos, i), charset), "");
             } else {                // Yes and this must be the last value.
-                if (!addParam(params, name, decodeComponent(s.substring(pos, i), charset))) {
-                    return;
-                }
+                addParam(params, name, decodeComponent(s.substring(pos, i), charset));
             }
         } else if (name != null) {  // Have we seen a name without value?
-            if (!addParam(params, name, "")) {
-                return;
-            }
+            addParam(params, name, "");
         }
     }
 

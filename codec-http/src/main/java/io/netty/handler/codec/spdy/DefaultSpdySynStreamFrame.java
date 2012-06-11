@@ -38,7 +38,6 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
      */
     public DefaultSpdySynStreamFrame(
             int streamID, int associatedToStreamID, byte priority) {
-        super();
         setStreamID(streamID);
         setAssociatedToStreamID(associatedToStreamID);
         setPriority(priority);

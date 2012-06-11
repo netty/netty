@@ -48,7 +48,7 @@ class OioChildEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            AbstractOioChannel ch = OioChildEventLoop.this.ch;
+            AbstractOioChannel ch = this.ch;
             if (ch == null || !ch.isActive()) {
                 Runnable task;
                 try {

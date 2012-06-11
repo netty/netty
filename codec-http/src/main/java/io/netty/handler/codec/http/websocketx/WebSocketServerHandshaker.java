@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpRequest;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -79,9 +80,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p: subprotocols) {
-            ret.add(p);
-        }
+        Collections.addAll(ret, subprotocols);
         return ret;
     }
 

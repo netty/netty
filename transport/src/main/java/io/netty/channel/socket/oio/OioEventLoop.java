@@ -270,7 +270,7 @@ public class OioEventLoop implements EventLoop {
             if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
                 throw tooManyChannels;
             }
-            loop = new OioChildEventLoop(OioEventLoop.this);
+            loop = new OioChildEventLoop(this);
         }
         activeChildren.add(loop);
         return loop;

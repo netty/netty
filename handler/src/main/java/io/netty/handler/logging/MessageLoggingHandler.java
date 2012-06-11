@@ -28,9 +28,7 @@ public class MessageLoggingHandler
         extends LoggingHandler
         implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
-    public MessageLoggingHandler() {
-        super();
-    }
+    public MessageLoggingHandler() { }
 
     public MessageLoggingHandler(Class<?> clazz, LogLevel level) {
         super(clazz, level);

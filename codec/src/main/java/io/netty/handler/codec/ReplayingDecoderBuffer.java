@@ -39,7 +39,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     private final SwappedByteBuf swapped;
     private boolean terminated;
 
-    public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
+    static final ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
 
     static {
         EMPTY_BUFFER.terminate();

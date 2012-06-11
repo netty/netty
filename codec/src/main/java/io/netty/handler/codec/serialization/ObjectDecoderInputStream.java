@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.serialization;
 
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -192,7 +193,7 @@ public class ObjectDecoderInputStream extends InputStream implements
     }
 
     /**
-     * @deprecated Use {@link java.io.BufferedReader#readLine()} instead.
+     * @deprecated Use {@link BufferedReader#readLine()} instead.
      */
     @Override
     @Deprecated

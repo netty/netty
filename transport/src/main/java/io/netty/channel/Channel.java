@@ -178,7 +178,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
 
     Unsafe unsafe();
 
-    public interface Unsafe {
+    interface Unsafe {
         ChannelHandlerContext directOutboundContext();
         ChannelFuture voidFuture();
 

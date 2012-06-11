@@ -63,11 +63,13 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     }
 
     @Override
+    @Deprecated
     public boolean isCompressed() {
         return compressed;
     }
 
     @Override
+    @Deprecated
     public void setCompressed(boolean compressed) {
         this.compressed = compressed;
     }

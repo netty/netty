@@ -25,9 +25,7 @@ public class UnsupportedMessageTypeException extends CodecException {
                 message == null? "null" : message.getClass().getName(), expectedTypes));
     }
 
-    public UnsupportedMessageTypeException() {
-        super();
-    }
+    public UnsupportedMessageTypeException() { }
 
     public UnsupportedMessageTypeException(String message, Throwable cause) {
         super(message, cause);

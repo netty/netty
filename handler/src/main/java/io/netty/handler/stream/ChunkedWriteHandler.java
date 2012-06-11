@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
  * asynchronously neither spending a lot of memory nor getting
- * {@link java.lang.OutOfMemoryError}.  Large data streaming such as file
+ * {@link OutOfMemoryError}.  Large data streaming such as file
  * transfer requires complicated state management in a {@link ChannelHandler}
  * implementation.  {@link ChunkedWriteHandler} manages such complicated states
  * so that you can send a large data stream without difficulties.
@@ -70,7 +70,6 @@ public class ChunkedWriteHandler
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
-
 
     private final MessageBuf<Object> queue = Unpooled.messageBuffer();
     private final int maxPendingWrites;

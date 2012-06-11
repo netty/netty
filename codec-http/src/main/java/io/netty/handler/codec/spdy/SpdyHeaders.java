@@ -62,9 +62,7 @@ public class SpdyHeaders {
          */
         public static final String VERSION = ":version";
 
-        private HttpNames() {
-            super();
-        }
+        private HttpNames() { }
     }
 
     /**
@@ -93,9 +91,7 @@ public class SpdyHeaders {
          */
         public static final String VERSION = "version";
 
-        private Spdy2HttpNames() {
-            super();
-        }
+        private Spdy2HttpNames() { }
     }
 
 

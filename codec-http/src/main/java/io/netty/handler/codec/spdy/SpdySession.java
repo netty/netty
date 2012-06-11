@@ -259,11 +259,6 @@ final class SpdySession {
     }
 
     private final class PriorityComparator implements Comparator<Integer> {
-
-        public PriorityComparator() {
-            super();
-        }
-
         @Override
         public int compare(Integer id1, Integer id2) {
             StreamState state1 = activeStreams.get(id1);

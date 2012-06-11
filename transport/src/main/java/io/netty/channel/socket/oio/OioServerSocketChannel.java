@@ -169,7 +169,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(Queue<Object> buf) throws Exception {
+    protected void doWriteMessages(Queue<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.SingleThreadEventExecutor;
 import io.netty.channel.SingleThreadEventLoop;
 
 import java.net.SocketAddress;
@@ -152,7 +153,7 @@ public class LocalChannel extends AbstractChannel {
             postRegisterTask = null;
         }
 
-        ((SingleThreadEventLoop) eventLoop()).addShutdownHook(shutdownHook);
+        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
 
         return postRegisterTask;
     }
@@ -198,7 +199,7 @@ public class LocalChannel extends AbstractChannel {
         if (isOpen()) {
             unsafe().close(unsafe().voidFuture());
         }
-        ((SingleThreadEventLoop) eventLoop()).removeShutdownHook(shutdownHook);
+        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     @Override

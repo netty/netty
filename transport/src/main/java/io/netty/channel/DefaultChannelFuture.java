@@ -209,7 +209,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } finally {
                     waiters--;
                 }
@@ -237,7 +237,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } catch (InterruptedException e) {
                     interrupted = true;
                 } finally {
@@ -293,7 +293,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
                 try {
                     for (;;) {
                         try {
-                            this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                            wait(waitTime / 1000000, (int) (waitTime % 1000000));
                         } catch (InterruptedException e) {
                             if (interruptable) {
                                 throw e;

@@ -728,18 +728,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return;
         }
 
-        final long writeCounter = AbstractChannel.this.writeCounter;
+        final long writeCounter = this.writeCounter;
         for (;;) {
             FlushCheckpoint cp = flushCheckpoints.peek();
             if (cp == null) {
                 // Reset the counter if there's nothing in the notification list.
-                AbstractChannel.this.writeCounter = 0;
+                this.writeCounter = 0;
                 break;
             }
 
             if (cp.flushCheckpoint() > writeCounter) {
                 if (writeCounter > 0 && flushCheckpoints.size() == 1) {
-                    AbstractChannel.this.writeCounter = 0;
+                    this.writeCounter = 0;
                     cp.flushCheckpoint(cp.flushCheckpoint() - writeCounter);
                 }
                 break;
@@ -750,11 +750,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         // Avoid overflow
-        final long newWriteCounter = AbstractChannel.this.writeCounter;
+        final long newWriteCounter = this.writeCounter;
         if (newWriteCounter >= 0x1000000000000000L) {
             // Reset the counter only when the counter grew pretty large
             // so that we can reduce the cost of updating all entries in the notification list.
-            AbstractChannel.this.writeCounter = 0;
+            this.writeCounter = 0;
             for (FlushCheckpoint cp: flushCheckpoints) {
                 cp.flushCheckpoint(cp.flushCheckpoint() - newWriteCounter);
             }

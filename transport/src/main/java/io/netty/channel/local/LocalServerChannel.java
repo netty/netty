@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.SingleThreadEventExecutor;
 import io.netty.channel.SingleThreadEventLoop;
 
 import java.net.SocketAddress;
@@ -85,7 +86,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        ((SingleThreadEventLoop) eventLoop()).addShutdownHook(shutdownHook);
+        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
         return null;
     }
 
@@ -115,7 +116,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((SingleThreadEventLoop) eventLoop()).removeShutdownHook(shutdownHook);
+        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     LocalChannel serve(final LocalChannel peer) {

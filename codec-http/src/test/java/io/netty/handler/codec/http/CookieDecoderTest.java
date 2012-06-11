@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TimeZone;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class CookieDecoderTest {
     @Test
@@ -350,7 +350,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingLongDates() {
         Calendar cookieDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        cookieDate.set(9999, 11, 31, 23, 59, 59);
+        cookieDate.set(9999, Calendar.DECEMBER, 31, 23, 59, 59);
         long expectedMaxAge = (cookieDate.getTimeInMillis() - System.currentTimeMillis()) / 1000;
 
         String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";

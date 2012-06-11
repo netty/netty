@@ -22,7 +22,7 @@ public class TestUtils {
 
     private final static int START_PORT = 20000;
     private final static int END_PORT = 30000;
-    
+
     /**
      * Return a free port which can be used to bind to
      * 
@@ -42,4 +42,6 @@ public class TestUtils {
         }
         throw new RuntimeException("Unable to find a free port....");
     }
+
+    private TestUtils() { }
 }

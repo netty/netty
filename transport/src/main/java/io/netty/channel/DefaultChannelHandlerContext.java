@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.DefaultChannelPipeline.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
@@ -29,6 +28,8 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static io.netty.channel.DefaultChannelPipeline.*;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
 
@@ -757,9 +758,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     break;
                 }
 
-                for (Object d: data) {
-                    out.add(d);
-                }
+                Collections.addAll(out, data);
             }
         }
     }

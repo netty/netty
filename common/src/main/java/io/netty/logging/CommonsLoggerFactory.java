@@ -16,6 +16,7 @@
 package io.netty.logging;
 
 
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Logger factory which creates an
@@ -26,8 +27,6 @@ public class CommonsLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        final org.apache.commons.logging.Log logger =
-            org.apache.commons.logging.LogFactory.getLog(name);
-        return new CommonsLogger(logger, name);
+        return new CommonsLogger(LogFactory.getLog(name), name);
     }
 }

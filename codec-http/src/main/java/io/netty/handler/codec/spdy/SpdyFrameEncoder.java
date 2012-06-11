@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -25,6 +24,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 
 import java.util.Set;
+
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
@@ -48,7 +49,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
-        super();
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
