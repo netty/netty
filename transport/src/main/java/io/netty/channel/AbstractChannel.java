@@ -498,8 +498,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public final void close(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
+                boolean wasActive = isActive();
                 if (closeFuture.setClosed()) {
-                    boolean wasActive = isActive();
                     try {
                         doClose();
                         future.setSuccess();
