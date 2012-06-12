@@ -577,12 +577,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 }
             } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        fireExceptionCaught(cause);
+                try {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            fireExceptionCaught(cause);
+                        }
+                    });
+                } catch (Throwable t) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Failed to submit an exceptionCaught() event.", t);
+                        logger.warn("The exceptionCaught() event that was failed to submit was:", cause);
                     }
-                });
+                }
             }
         } else {
             logger.warn(
