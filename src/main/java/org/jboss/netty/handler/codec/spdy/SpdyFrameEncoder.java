@@ -265,7 +265,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_GOAWAY_FRAME);
             frame.writeInt(length);
-            frame.writeInt(spdyGoAwayFrame.getLastGoodStreamID());
+            frame.writeInt(spdyGoAwayFrame.getLastGoodStreamId());
             if (version >= 3) {
                 frame.writeInt(spdyGoAwayFrame.getStatus().getCode());
             }
