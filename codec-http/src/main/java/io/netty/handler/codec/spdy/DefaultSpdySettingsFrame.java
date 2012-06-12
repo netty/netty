@@ -89,7 +89,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     public boolean isPersistValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).getPersist();
+            return settingsMap.get(key).isPersist();
         } else {
             return false;
         }
@@ -107,7 +107,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     public boolean isPersisted(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).getPersisted();
+            return settingsMap.get(key).isPersisted();
         } else {
             return false;
         }
@@ -143,9 +143,9 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             buf.append(":");
             buf.append(setting.getValue());
             buf.append(" (persist value: ");
-            buf.append(setting.getPersist());
+            buf.append(setting.isPersist());
             buf.append("; persisted: ");
-            buf.append(setting.getPersisted());
+            buf.append(setting.isPersisted());
             buf.append(')');
             buf.append(StringUtil.NEWLINE);
         }
@@ -181,7 +181,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             this.value = value;
         }
 
-        boolean getPersist() {
+        boolean isPersist() {
             return persist;
         }
 
@@ -189,7 +189,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             this.persist = persist;
         }
 
-        boolean getPersisted() {
+        boolean isPersisted() {
             return persisted;
         }
 
