@@ -90,7 +90,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     public boolean isPersistValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).getPersist();
+            return settingsMap.get(key).isPersist();
         } else {
             return false;
         }
@@ -106,7 +106,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     public boolean isPersisted(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).getPersisted();
+            return settingsMap.get(key).isPersisted();
         } else {
             return false;
         }
@@ -139,9 +139,9 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             buf.append(":");
             buf.append(setting.getValue());
             buf.append(" (persist value: ");
-            buf.append(setting.getPersist());
+            buf.append(setting.isPersist());
             buf.append("; persisted: ");
-            buf.append(setting.getPersisted());
+            buf.append(setting.isPersisted());
             buf.append(')');
             buf.append(StringUtil.NEWLINE);
         }
@@ -163,33 +163,33 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         private boolean persist;
         private boolean persisted;
 
-        public Setting(int value, boolean persist, boolean persisted) {
+        Setting(int value, boolean persist, boolean persisted) {
             this.value = value;
             this.persist = persist;
             this.persisted = persisted;
         }
 
-        public int getValue() {
+        int getValue() {
             return value;
         }
 
-        public void setValue(int value) {
+        void setValue(int value) {
             this.value = value;
         }
 
-        public boolean getPersist() {
+        boolean isPersist() {
             return persist;
         }
 
-        public void setPersist(boolean persist) {
+        void setPersist(boolean persist) {
             this.persist = persist;
         }
 
-        public boolean getPersisted() {
+        boolean isPersisted() {
             return persisted;
         }
 
-        public void setPersisted(boolean persisted) {
+        void setPersisted(boolean persisted) {
             this.persisted = persisted;
         }
     }
