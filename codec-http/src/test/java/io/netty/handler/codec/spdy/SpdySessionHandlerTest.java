@@ -87,7 +87,7 @@ public class SpdySessionHandlerTest {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyGoAwayFrame);
         SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
-        Assert.assertTrue(spdyGoAwayFrame.getLastGoodStreamID() == lastGoodStreamID);
+        Assert.assertTrue(spdyGoAwayFrame.getLastGoodStreamId() == lastGoodStreamID);
     }
 
     private static void assertHeaders(Object msg, int streamID, SpdyHeaderBlock headers) {

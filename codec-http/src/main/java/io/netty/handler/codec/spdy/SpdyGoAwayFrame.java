@@ -23,13 +23,13 @@ public interface SpdyGoAwayFrame {
     /**
      * Returns the Last-good-stream-ID of this frame.
      */
-    int getLastGoodStreamID();
+    int getLastGoodStreamId();
 
     /**
      * Sets the Last-good-stream-ID of this frame.  The Last-good-stream-ID
      * cannot be negative.
      */
-    void setLastGoodStreamID(int lastGoodStreamID);
+    void setLastGoodStreamId(int lastGoodStreamId);
 
     /**
      * Returns the status of this frame.

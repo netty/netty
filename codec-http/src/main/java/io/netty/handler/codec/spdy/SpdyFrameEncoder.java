@@ -239,7 +239,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_GOAWAY_FRAME);
             out.writeInt(length);
-            out.writeInt(spdyGoAwayFrame.getLastGoodStreamID());
+            out.writeInt(spdyGoAwayFrame.getLastGoodStreamId());
             if (version >= 3) {
                 out.writeInt(spdyGoAwayFrame.getStatus().getCode());
             }
