@@ -24,7 +24,7 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyDataFrame implements SpdyDataFrame {
 
-    private int streamID;
+    private int streamId;
     private boolean last;
     private boolean compressed;
     private ByteBuf data = Unpooled.EMPTY_BUFFER;
@@ -32,24 +32,24 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     /**
      * Creates a new instance.
      *
-     * @param streamID the Stream-ID of this frame
+     * @param streamId the Stream-ID of this frame
      */
-    public DefaultSpdyDataFrame(int streamID) {
-        setStreamID(streamID);
+    public DefaultSpdyDataFrame(int streamId) {
+        setStreamId(streamId);
     }
 
     @Override
-    public int getStreamID() {
-        return streamID;
+    public int getStreamId() {
+        return streamId;
     }
 
     @Override
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
     @Override
@@ -102,7 +102,7 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Size = ");
         buf.append(data.readableBytes());

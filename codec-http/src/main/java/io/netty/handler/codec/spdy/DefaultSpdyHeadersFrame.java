@@ -24,30 +24,30 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         implements SpdyHeadersFrame {
 
-    private int streamID;
+    private int streamId;
     private boolean last;
 
     /**
      * Creates a new instance.
      *
-     * @param streamID the Stream-ID of this frame
+     * @param streamId the Stream-ID of this frame
      */
-    public DefaultSpdyHeadersFrame(int streamID) {
-        setStreamID(streamID);
+    public DefaultSpdyHeadersFrame(int streamId) {
+        setStreamId(streamId);
     }
 
     @Override
-    public int getStreamID() {
-        return streamID;
+    public int getStreamId() {
+        return streamId;
     }
 
     @Override
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
     @Override
@@ -69,7 +69,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);

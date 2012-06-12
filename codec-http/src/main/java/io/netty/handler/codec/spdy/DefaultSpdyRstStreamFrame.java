@@ -22,42 +22,42 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
 
-    private int streamID;
+    private int streamId;
     private SpdyStreamStatus status;
 
     /**
      * Creates a new instance.
      *
-     * @param streamID   the Stream-ID of this frame
+     * @param streamId   the Stream-ID of this frame
      * @param statusCode the Status code of this frame
      */
-    public DefaultSpdyRstStreamFrame(int streamID, int statusCode) {
-        this(streamID, SpdyStreamStatus.valueOf(statusCode));
+    public DefaultSpdyRstStreamFrame(int streamId, int statusCode) {
+        this(streamId, SpdyStreamStatus.valueOf(statusCode));
     }
 
     /**
      * Creates a new instance.
      *
-     * @param streamID the Stream-ID of this frame
+     * @param streamId the Stream-ID of this frame
      * @param status   the status of this frame
      */
-    public DefaultSpdyRstStreamFrame(int streamID, SpdyStreamStatus status) {
-        setStreamID(streamID);
+    public DefaultSpdyRstStreamFrame(int streamId, SpdyStreamStatus status) {
+        setStreamId(streamId);
         setStatus(status);
     }
 
     @Override
-    public int getStreamID() {
-        return streamID;
+    public int getStreamId() {
+        return streamId;
     }
 
     @Override
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Status: ");
         buf.append(status.toString());

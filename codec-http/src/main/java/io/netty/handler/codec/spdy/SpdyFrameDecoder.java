@@ -407,17 +407,17 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
                 return null;
             }
 
-            int lastGoodStreamID = getUnsignedInt(buffer, buffer.readerIndex());
+            int lastGoodStreamId = getUnsignedInt(buffer, buffer.readerIndex());
             buffer.skipBytes(4);
 
             if (version < 3) {
-                return new DefaultSpdyGoAwayFrame(lastGoodStreamID);
+                return new DefaultSpdyGoAwayFrame(lastGoodStreamId);
             }
 
             statusCode = getSignedInt(buffer, buffer.readerIndex());
             buffer.skipBytes(4);
 
-            return new DefaultSpdyGoAwayFrame(lastGoodStreamID, statusCode);
+            return new DefaultSpdyGoAwayFrame(lastGoodStreamId, statusCode);
 
         case SPDY_WINDOW_UPDATE_FRAME:
             if (buffer.readableBytes() < 8) {
@@ -447,7 +447,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
 
             int offset = buffer.readerIndex();
             streamID = getUnsignedInt(buffer, offset);
-            int associatedToStreamID = getUnsignedInt(buffer, offset + 4);
+            int associatedToStreamId = getUnsignedInt(buffer, offset + 4);
             byte priority = (byte) (buffer.getByte(offset + 8) >> 5 & 0x07);
             if (version < 3) {
                 priority >>= 1;
@@ -462,7 +462,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
             }
 
             SpdySynStreamFrame spdySynStreamFrame =
-                    new DefaultSpdySynStreamFrame(streamID, associatedToStreamID, priority);
+                    new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
             spdySynStreamFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
             spdySynStreamFrame.setUnidirectional((flags & SPDY_FLAG_UNIDIRECTIONAL) != 0);
 

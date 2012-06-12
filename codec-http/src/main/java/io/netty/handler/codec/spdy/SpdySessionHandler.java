@@ -44,7 +44,7 @@ public class SpdySessionHandler
     }
 
     private final SpdySession spdySession = new SpdySession();
-    private volatile int lastGoodStreamID;
+    private volatile int lastGoodStreamId;
 
     private volatile int remoteConcurrentStreams;
     private volatile int localConcurrentStreams;
@@ -148,11 +148,11 @@ public class SpdySessionHandler
              */
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamID = spdyDataFrame.getStreamID();
+            int streamID = spdyDataFrame.getStreamId();
 
             // Check if we received a data frame for a Stream-ID which is not open
             if (!spdySession.isActiveStream(streamID)) {
-                if (streamID <= lastGoodStreamID) {
+                if (streamID <= lastGoodStreamId) {
                     issueStreamError(ctx, streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                 } else if (!sentGoAwayFrame) {
                     issueStreamError(ctx, streamID, SpdyStreamStatus.INVALID_STREAM);
@@ -247,7 +247,7 @@ public class SpdySessionHandler
             }
 
             // Stream-IDs must be monotonically increasing
-            if (streamID <= lastGoodStreamID) {
+            if (streamID <= lastGoodStreamId) {
                 issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
                 return;
             }
@@ -271,7 +271,7 @@ public class SpdySessionHandler
              */
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             // Check if we received a valid SYN_REPLY frame
             if (spdySynReplyFrame.isInvalid() ||
@@ -306,7 +306,7 @@ public class SpdySessionHandler
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(ctx, spdyRstStreamFrame.getStreamID());
+            removeStream(ctx, spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -365,7 +365,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamID();
+            int streamID = spdyHeadersFrame.getStreamId();
 
             // Check if we received a valid HEADERS frame
             if (spdyHeadersFrame.isInvalid()) {
@@ -397,7 +397,7 @@ public class SpdySessionHandler
 
             if (flowControl) {
                 SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-                int streamID = spdyWindowUpdateFrame.getStreamID();
+                int streamID = spdyWindowUpdateFrame.getStreamId();
                 int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
 
                 // Ignore frames for half-closed streams
@@ -471,7 +471,7 @@ public class SpdySessionHandler
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            final int streamID = spdyDataFrame.getStreamID();
+            final int streamID = spdyDataFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
@@ -582,7 +582,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedID(streamID) || spdySession.isLocalSideClosed(streamID)) {
@@ -598,7 +598,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(ctx, spdyRstStreamFrame.getStreamID());
+            removeStream(ctx, spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -646,7 +646,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamID();
+            int streamID = spdyHeadersFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
@@ -747,8 +747,8 @@ public class SpdySessionHandler
     private synchronized void updateInitialSendWindowSize(int newInitialWindowSize) {
         int deltaWindowSize = newInitialWindowSize - initialSendWindowSize;
         initialSendWindowSize = newInitialWindowSize;
-        for (Integer StreamID: spdySession.getActiveStreams()) {
-            spdySession.updateSendWindowSize(StreamID.intValue(), deltaWindowSize);
+        for (Integer streamId: spdySession.getActiveStreams()) {
+            spdySession.updateSendWindowSize(streamId.intValue(), deltaWindowSize);
         }
     }
 
@@ -759,7 +759,7 @@ public class SpdySessionHandler
         spdySession.updateAllReceiveWindowSizes(deltaWindowSize);
     }
 
-    // need to synchronize accesses to sentGoAwayFrame, lastGoodStreamID, and initial window sizes
+    // need to synchronize accesses to sentGoAwayFrame, lastGoodStreamId, and initial window sizes
     private synchronized boolean acceptStream(
             int streamID, byte priority, boolean remoteSideClosed, boolean localSideClosed) {
         // Cannot initiate any new streams after receiving or sending GOAWAY
@@ -776,7 +776,7 @@ public class SpdySessionHandler
                 streamID, priority, remoteSideClosed, localSideClosed,
                 initialSendWindowSize, initialReceiveWindowSize);
         if (isRemoteInitiatedID(streamID)) {
-            lastGoodStreamID = streamID;
+            lastGoodStreamId = streamID;
         }
         return true;
     }
@@ -896,7 +896,7 @@ public class SpdySessionHandler
             ChannelHandlerContext ctx, SpdySessionStatus status) {
         if (!sentGoAwayFrame) {
             sentGoAwayFrame = true;
-            SpdyGoAwayFrame spdyGoAwayFrame = new DefaultSpdyGoAwayFrame(lastGoodStreamID, status);
+            SpdyGoAwayFrame spdyGoAwayFrame = new DefaultSpdyGoAwayFrame(lastGoodStreamId, status);
             ctx.nextOutboundMessageBuffer().add(spdyGoAwayFrame);
         }
     }

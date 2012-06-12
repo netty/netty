@@ -26,12 +26,12 @@ public interface SpdyDataFrame {
     /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamID();
+    int getStreamId();
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setStreamID(int streamID);
+    void setStreamId(int streamID);
 
     /**
      * Returns {@code true} if this frame is the last frame to be transmitted

@@ -96,7 +96,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             ByteBuf data = spdyDataFrame.getData();
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
             out.ensureWritableBytes(SPDY_HEADER_SIZE + data.readableBytes());
-            out.writeInt(spdyDataFrame.getStreamID() & 0x7FFFFFFF);
+            out.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);
             out.writeByte(flags);
             out.writeMedium(data.readableBytes());
             out.writeBytes(data, data.readerIndex(), data.readableBytes());
@@ -157,7 +157,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(SPDY_SYN_REPLY_FRAME);
             out.writeByte(flags);
             out.writeMedium(length);
-            out.writeInt(spdySynReplyFrame.getStreamID());
+            out.writeInt(spdySynReplyFrame.getStreamId());
             if (version < 3) {
                 if (headerBlockLength == 0) {
                     out.writeInt(0);
@@ -174,7 +174,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_RST_STREAM_FRAME);
             out.writeInt(8);
-            out.writeInt(spdyRstStreamFrame.getStreamID());
+            out.writeInt(spdyRstStreamFrame.getStreamId());
             out.writeInt(spdyRstStreamFrame.getStatus().getCode());
 
         } else if (msg instanceof SpdySettingsFrame) {
@@ -262,7 +262,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(SPDY_HEADERS_FRAME);
             out.writeByte(flags);
             out.writeMedium(length);
-            out.writeInt(spdyHeadersFrame.getStreamID());
+            out.writeInt(spdyHeadersFrame.getStreamId());
             if (version < 3 && headerBlockLength != 0) {
                 out.writeShort(0);
             }
@@ -275,7 +275,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_WINDOW_UPDATE_FRAME);
             out.writeInt(8);
-            out.writeInt(spdyWindowUpdateFrame.getStreamID());
+            out.writeInt(spdyWindowUpdateFrame.getStreamId());
             out.writeInt(spdyWindowUpdateFrame.getDeltaWindowSize());
         } else {
             throw new UnsupportedMessageTypeException(msg);

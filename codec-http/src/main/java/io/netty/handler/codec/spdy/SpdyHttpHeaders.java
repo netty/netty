@@ -60,28 +60,28 @@ public final class SpdyHttpHeaders {
     /**
      * Removes the {@code "X-SPDY-Stream-ID"} header.
      */
-    public static void removeStreamID(HttpMessage message) {
+    public static void removeStreamId(HttpMessage message) {
         message.removeHeader(Names.STREAM_ID);
     }
 
     /**
      * Returns the value of the {@code "X-SPDY-Stream-ID"} header.
      */
-    public static int getStreamID(HttpMessage message) {
+    public static int getStreamId(HttpMessage message) {
         return HttpHeaders.getIntHeader(message, Names.STREAM_ID);
     }
 
     /**
      * Sets the {@code "X-SPDY-Stream-ID"} header.
      */
-    public static void setStreamID(HttpMessage message, int streamID) {
-        HttpHeaders.setIntHeader(message, Names.STREAM_ID, streamID);
+    public static void setStreamId(HttpMessage message, int streamId) {
+        HttpHeaders.setIntHeader(message, Names.STREAM_ID, streamId);
     }
 
     /**
      * Removes the {@code "X-SPDY-Associated-To-Stream-ID"} header.
      */
-    public static void removeAssociatedToStreamID(HttpMessage message) {
+    public static void removeAssociatedToStreamId(HttpMessage message) {
         message.removeHeader(Names.ASSOCIATED_TO_STREAM_ID);
     }
 
@@ -91,15 +91,15 @@ public final class SpdyHttpHeaders {
      * @return the header value or {@code 0} if there is no such header or
      *         if the header value is not a number
      */
-    public static int getAssociatedToStreamID(HttpMessage message) {
+    public static int getAssociatedToStreamId(HttpMessage message) {
         return HttpHeaders.getIntHeader(message, Names.ASSOCIATED_TO_STREAM_ID, 0);
     }
 
     /**
      * Sets the {@code "X-SPDY-Associated-To-Stream-ID"} header.
      */
-    public static void setAssociatedToStreamID(HttpMessage message, int associatedToStreamID) {
-        HttpHeaders.setIntHeader(message, Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamID);
+    public static void setAssociatedToStreamId(HttpMessage message, int associatedToStreamId) {
+        HttpHeaders.setIntHeader(message, Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamId);
     }
 
     /**
