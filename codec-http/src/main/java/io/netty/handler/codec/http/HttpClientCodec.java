@@ -20,8 +20,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.util.internal.QueueFactory;
 
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class HttpClientCodec extends CombinedChannelHandler {
 
     /** A queue that is used for correlating a request and a response. */
-    final Queue<HttpMethod> queue = QueueFactory.createQueue();
+    final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
     volatile boolean done;

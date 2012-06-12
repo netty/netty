@@ -22,8 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 
-import java.util.Queue;
-
 public class MessageLoggingHandler
         extends LoggingHandler
         implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
@@ -62,12 +60,12 @@ public class MessageLoggingHandler
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx)
             throws Exception {
-        Queue<Object> buf = ctx.inboundMessageBuffer();
+        MessageBuf<Object> buf = ctx.inboundMessageBuffer();
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("RECEIVED", buf)));
         }
 
-        Queue<Object> out = ctx.nextInboundMessageBuffer();
+        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
         for (;;) {
             Object o = buf.poll();
             if (o == null) {
@@ -81,12 +79,12 @@ public class MessageLoggingHandler
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future)
             throws Exception {
-        Queue<Object> buf = ctx.outboundMessageBuffer();
+        MessageBuf<Object> buf = ctx.outboundMessageBuffer();
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("WRITE", buf)));
         }
 
-        Queue<Object> out = ctx.nextOutboundMessageBuffer();
+        MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
         for (;;) {
             Object o = buf.poll();
             if (o == null) {
@@ -97,7 +95,7 @@ public class MessageLoggingHandler
         ctx.flush(future);
     }
 
-    protected String formatBuffer(String message, Queue<Object> buf) {
+    protected String formatBuffer(String message, MessageBuf<Object> buf) {
         return message + '(' + buf.size() + "): " + buf;
     }
 }

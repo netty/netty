@@ -15,13 +15,13 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
-import java.util.Queue;
 
 abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
@@ -46,7 +46,7 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = pipeline();
-            final Queue<Object> msgBuf = pipeline.inboundMessageBuffer();
+            final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
             try {
@@ -82,7 +82,7 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         final int writeSpinCount = config().getWriteSpinCount() - 1;
         while (!buf.isEmpty()) {
             boolean wrote = false;
@@ -100,6 +100,6 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
     }
 
-    protected abstract int doReadMessages(Queue<Object> buf) throws Exception;
-    protected abstract int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception;
+    protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
+    protected abstract int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception;
 }

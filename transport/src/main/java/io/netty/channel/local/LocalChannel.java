@@ -15,6 +15,7 @@
  */
 package io.netty.channel.local;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferType;
@@ -31,7 +32,6 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Queue;
 
 /**
  * A {@link Channel} for the local transport.
@@ -203,7 +203,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -214,14 +214,7 @@ public class LocalChannel extends AbstractChannel {
         final LocalChannel peer = this.peer;
         assert peer != null;
 
-        Queue<Object> out = peer.pipeline().inboundMessageBuffer();
-        for (;;) {
-            Object msg = buf.poll();
-            if (msg == null) {
-                break;
-            }
-            out.add(msg);
-        }
+        buf.drainTo(peer.pipeline().inboundMessageBuffer());
 
         peer.eventLoop().execute(new Runnable() {
             @Override

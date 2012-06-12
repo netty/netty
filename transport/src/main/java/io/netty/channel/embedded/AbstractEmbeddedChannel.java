@@ -100,7 +100,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         return state == 1;
     }
 
-    public Queue<Object> lastInboundMessageBuffer() {
+    public MessageBuf<Object> lastInboundMessageBuffer() {
         return lastInboundMessageBuffer;
     }
 

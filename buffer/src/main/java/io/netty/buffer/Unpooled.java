@@ -113,6 +113,9 @@ public final class Unpooled {
     }
 
     public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
+        if (queue instanceof MessageBuf) {
+            return (MessageBuf<T>) queue;
+        }
         return new QueueBackedMessageBuf<T>(queue);
     }
 

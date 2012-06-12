@@ -15,12 +15,12 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
-import java.util.Queue;
 
 abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
@@ -44,7 +44,7 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             assert eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = pipeline();
-            final Queue<Object> msgBuf = pipeline.inboundMessageBuffer();
+            final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
             try {
@@ -75,12 +75,12 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         while (!buf.isEmpty()) {
             doWriteMessages(buf);
         }
     }
 
-    protected abstract int doReadMessages(Queue<Object> buf) throws Exception;
-    protected abstract void doWriteMessages(Queue<Object> buf) throws Exception;
+    protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
+    protected abstract void doWriteMessages(MessageBuf<Object> buf) throws Exception;
 }

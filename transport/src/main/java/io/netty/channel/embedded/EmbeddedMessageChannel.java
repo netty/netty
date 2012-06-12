@@ -15,11 +15,11 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelHandler;
 
 import java.util.ArrayDeque;
-import java.util.Queue;
 
 public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
 
@@ -32,13 +32,13 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
         return ChannelBufferType.MESSAGE;
     }
 
-    public Queue<Object> inboundBuffer() {
+    public MessageBuf<Object> inboundBuffer() {
         return pipeline().inboundMessageBuffer();
     }
 
     @SuppressWarnings("unchecked")
-    public Queue<Object> lastOutboundBuffer() {
-        return (Queue<Object>) lastOutboundBuffer;
+    public MessageBuf<Object> lastOutboundBuffer() {
+        return (MessageBuf<Object>) lastOutboundBuffer;
     }
 
     public Object readOutbound() {
@@ -66,13 +66,7 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
-        for (;;) {
-            Object o = buf.poll();
-            if (o == null) {
-                break;
-            }
-            lastOutboundBuffer().add(o);
-        }
+    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
+        buf.drainTo(lastOutboundBuffer());
     }
 }

@@ -248,7 +248,7 @@ public class ServerBootstrap {
 
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) {
-            Queue<Channel> in = ctx.inboundMessageBuffer();
+            MessageBuf<Channel> in = ctx.inboundMessageBuffer();
             for (;;) {
                 Channel child = in.poll();
                 if (child == null) {

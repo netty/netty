@@ -15,12 +15,14 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.util.internal.QueueFactory;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class SpdySession {
@@ -176,8 +178,7 @@ final class SpdySession {
         private final AtomicInteger sendWindowSize;
         private final AtomicInteger receiveWindowSize;
         private volatile int receiveWindowSizeLowerBound;
-        private final ConcurrentLinkedQueue<Object> pendingWriteQueue =
-                new ConcurrentLinkedQueue<Object>();
+        private final BlockingQueue<Object> pendingWriteQueue = QueueFactory.createQueue();
 
         public StreamState(
                 byte priority, boolean remoteSideClosed, boolean localSideClosed,

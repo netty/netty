@@ -16,6 +16,7 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -35,7 +36,6 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Locale;
-import java.util.Queue;
 
 public class OioDatagramChannel extends AbstractOioMessageChannel
                                 implements DatagramChannel {
@@ -148,7 +148,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(Queue<Object> buf) throws Exception {
+    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         int packetSize = config().getReceivePacketSize();
         byte[] data = new byte[packetSize];
         tmpPacket.setData(data);
@@ -173,7 +173,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(Queue<Object> buf) throws Exception {
+    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
         ByteBuf data = p.data();
         int length = data.readableBytes();

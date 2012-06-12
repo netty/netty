@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -28,7 +29,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.util.Queue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -124,7 +124,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(Queue<Object> buf) throws Exception {
+    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
@@ -169,7 +169,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(Queue<Object> buf) throws Exception {
+    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

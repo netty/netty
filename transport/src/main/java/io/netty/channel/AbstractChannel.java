@@ -26,7 +26,6 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -648,7 +647,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     }
                 } else {
-                    Queue<Object> out = ctx.outboundMessageBuffer();
+                    MessageBuf<Object> out = ctx.outboundMessageBuffer();
                     int oldSize = out.size();
                     try {
                         doFlushMessageBuffer(out);
@@ -717,7 +716,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         throw new UnsupportedOperationException();
     }
-    protected void doFlushMessageBuffer(Queue<Object> buf) throws Exception {
+    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 

@@ -16,6 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -39,7 +40,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
@@ -160,7 +160,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doReadMessages(Queue<Object> buf) throws Exception {
+    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
         ByteBuffer data = ByteBuffer.allocate(config().getReceivePacketSize());
         InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
@@ -174,7 +174,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doWriteMessages(Queue<Object> buf, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         DatagramPacket packet = (DatagramPacket) buf.peek();
         ByteBuf data = packet.data();
         ByteBuffer nioData;

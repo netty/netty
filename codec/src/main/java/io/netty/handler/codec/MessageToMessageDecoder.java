@@ -21,8 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 
-import java.util.Queue;
-
 public abstract class MessageToMessageDecoder<I, O>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
@@ -34,7 +32,7 @@ public abstract class MessageToMessageDecoder<I, O>
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx)
             throws Exception {
-        Queue<I> in = ctx.inboundMessageBuffer();
+        MessageBuf<I> in = ctx.inboundMessageBuffer();
         boolean notify = false;
         for (;;) {
             try {

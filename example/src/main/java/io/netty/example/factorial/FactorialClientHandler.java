@@ -15,13 +15,13 @@
  */
 package io.netty.example.factorial;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 import java.math.BigInteger;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -99,7 +99,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
         boolean finished = false;
-        Queue<Object> out = ctx.nextOutboundMessageBuffer();
+        MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
         while (out.size() < 4096) {
             if (i <= count) {
                 out.add(Integer.valueOf(i));

@@ -245,7 +245,7 @@ public class LocalTransportThreadModelTest {
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Queue<Object> buf = ch.pipeline().inboundMessageBuffer();
+                        MessageBuf<Object> buf = ch.pipeline().inboundMessageBuffer();
                         for (int j = start; j < end; j ++) {
                             buf.add(Integer.valueOf(j));
                         }
@@ -285,7 +285,7 @@ public class LocalTransportThreadModelTest {
                 ch.pipeline().context(h6).executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Queue<Object> buf = ch.pipeline().outboundMessageBuffer();
+                        MessageBuf<Object> buf = ch.pipeline().outboundMessageBuffer();
                         for (int j = start; j < end; j ++) {
                             buf.add(Integer.valueOf(j));
                         }
@@ -407,7 +407,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            Queue<Integer> in = ctx.inboundMessageBuffer();
+            MessageBuf<Integer> in = ctx.inboundMessageBuffer();
             ByteBuf out = ctx.nextInboundByteBuffer();
 
             for (;;) {
@@ -432,7 +432,7 @@ public class LocalTransportThreadModelTest {
             boolean swallow = this == ctx.pipeline().first();
 
             ByteBuf in = ctx.outboundByteBuffer();
-            Queue<Object> out = ctx.nextOutboundMessageBuffer();
+            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
             while (in.readableBytes() >= 4) {
                 int msg = in.readInt();
                 int expected = outCnt ++;
@@ -493,7 +493,7 @@ public class LocalTransportThreadModelTest {
             }
 
             ByteBuf in = ctx.inboundByteBuffer();
-            Queue<Object> out = ctx.nextInboundMessageBuffer();
+            MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
 
             while (in.readableBytes() >= 4) {
                 int msg = in.readInt();
@@ -510,7 +510,7 @@ public class LocalTransportThreadModelTest {
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            Queue<Integer> in = ctx.outboundMessageBuffer();
+            MessageBuf<Integer> in = ctx.outboundMessageBuffer();
             ByteBuf out = ctx.nextOutboundByteBuffer();
 
             for (;;) {
@@ -566,8 +566,8 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            Queue<Object> in = ctx.inboundMessageBuffer();
-            Queue<Object> out = ctx.nextInboundMessageBuffer();
+            MessageBuf<Object> in = ctx.inboundMessageBuffer();
+            MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -586,8 +586,8 @@ public class LocalTransportThreadModelTest {
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            Queue<Object> in = ctx.outboundMessageBuffer();
-            Queue<Object> out = ctx.nextOutboundMessageBuffer();
+            MessageBuf<Object> in = ctx.outboundMessageBuffer();
+            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -642,7 +642,7 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            Queue<Object> in = ctx.inboundMessageBuffer();
+            MessageBuf<Object> in = ctx.inboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -658,8 +658,8 @@ public class LocalTransportThreadModelTest {
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            Queue<Object> in = ctx.outboundMessageBuffer();
-            Queue<Object> out = ctx.nextOutboundMessageBuffer();
+            MessageBuf<Object> in = ctx.outboundMessageBuffer();
+            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {

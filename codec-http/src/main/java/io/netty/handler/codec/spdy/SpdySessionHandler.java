@@ -25,7 +25,6 @@ import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -97,7 +96,7 @@ public class SpdySessionHandler
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        Queue<Object> in = ctx.inboundMessageBuffer();
+        MessageBuf<Object> in = ctx.inboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {
@@ -443,7 +442,7 @@ public class SpdySessionHandler
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        Queue<Object> in = ctx.outboundMessageBuffer();
+        MessageBuf<Object> in = ctx.outboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {

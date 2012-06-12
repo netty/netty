@@ -20,8 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
-import io.netty.util.internal.QueueFactory;
 
+import java.util.ArrayDeque;
 import java.util.Queue;
 
 /**
@@ -48,7 +48,7 @@ import java.util.Queue;
  */
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
-    private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue();
+    private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
     private EmbeddedByteChannel encoder;
 
     /**

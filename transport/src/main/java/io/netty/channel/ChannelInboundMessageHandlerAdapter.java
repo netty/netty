@@ -30,7 +30,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        Queue<I> in = ctx.inboundMessageBuffer();
+        MessageBuf<I> in = ctx.inboundMessageBuffer();
         for (;;) {
             I msg = in.poll();
             if (msg == null) {

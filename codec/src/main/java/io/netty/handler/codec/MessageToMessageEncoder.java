@@ -15,17 +15,16 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
-
-import java.util.Queue;
 
 public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        Queue<I> in = ctx.outboundMessageBuffer();
+        MessageBuf<I> in = ctx.outboundMessageBuffer();
         for (;;) {
             try {
                 Object msg = in.poll();
