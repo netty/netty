@@ -151,7 +151,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
 
             HttpRequest httpRequest = (HttpRequest) msg;
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
             out.add(spdySynStreamFrame);
             addContent(out, streamID, httpRequest);
 
@@ -160,7 +160,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
             HttpResponse httpResponse = (HttpResponse) msg;
             if (httpResponse.containsHeader(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
-                int streamID = spdySynStreamFrame.getStreamID();
+                int streamID = spdySynStreamFrame.getStreamId();
                 out.add(spdySynStreamFrame);
                 addContent(out, streamID, httpResponse);
             } else {

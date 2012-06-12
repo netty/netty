@@ -23,23 +23,23 @@ public interface SpdySynStreamFrame extends SpdyHeaderBlock {
     /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamID();
+    int getStreamId();
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setStreamID(int streamID);
+    void setStreamId(int streamId);
 
     /**
      * Returns the Associated-To-Stream-ID of this frame.
      */
-    int getAssociatedToStreamID();
+    int getAssociatedToStreamId();
 
     /**
      * Sets the Associated-To-Stream-ID of this frame.
      * The Associated-To-Stream-ID cannot be negative.
      */
-    void setAssociatedToStreamID(int associatedToStreamID);
+    void setAssociatedToStreamId(int associatedToStreamId);
 
     /**
      * Returns the priority of the stream.

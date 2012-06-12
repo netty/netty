@@ -156,7 +156,7 @@ public class SpdySessionHandlerTest {
         // Check if session handler closed the streams using the number
         // of concurrent streams and that it returns REFUSED_STREAM
         // if it receives a SYN_STREAM frame it does not wish to accept
-        spdySynStreamFrame.setStreamID(localStreamID);
+        spdySynStreamFrame.setStreamId(localStreamID);
         spdySynStreamFrame.setLast(true);
         spdySynStreamFrame.setUnidirectional(true);
         sessionHandler.writeInbound(spdySynStreamFrame);
@@ -184,11 +184,11 @@ public class SpdySessionHandlerTest {
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // a SYN_STREAM frame with an invalid Stream-ID
-        spdySynStreamFrame.setStreamID(localStreamID - 1);
+        spdySynStreamFrame.setStreamId(localStreamID - 1);
         sessionHandler.writeInbound(spdySynStreamFrame);
         assertRstStream(sessionHandler.readOutbound(), localStreamID - 1, SpdyStreamStatus.PROTOCOL_ERROR);
         Assert.assertNull(sessionHandler.readOutbound());
-        spdySynStreamFrame.setStreamID(localStreamID);
+        spdySynStreamFrame.setStreamId(localStreamID);
 
         // Check if session handler correctly limits the number of
         // concurrent streams in the SETTINGS frame
@@ -241,7 +241,7 @@ public class SpdySessionHandlerTest {
 
         // Check if session handler returns REFUSED_STREAM if it receives
         // SYN_STREAM frames after sending a GOAWAY frame
-        spdySynStreamFrame.setStreamID(localStreamID);
+        spdySynStreamFrame.setStreamId(localStreamID);
         sessionHandler.writeInbound(spdySynStreamFrame);
         assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.REFUSED_STREAM);
         Assert.assertNull(sessionHandler.readOutbound());
@@ -290,11 +290,11 @@ public class SpdySessionHandlerTest {
                 new DefaultSpdySynStreamFrame(streamID, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
             ctx.write(spdySynStreamFrame);
-            spdySynStreamFrame.setStreamID(spdySynStreamFrame.getStreamID() + 2);
+            spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
             ctx.write(spdySynStreamFrame);
-            spdySynStreamFrame.setStreamID(spdySynStreamFrame.getStreamID() + 2);
+            spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
             ctx.write(spdySynStreamFrame);
-            spdySynStreamFrame.setStreamID(spdySynStreamFrame.getStreamID() + 2);
+            spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
             ctx.write(spdySynStreamFrame);
 
             // Limit the number of concurrent streams to 3
@@ -317,7 +317,7 @@ public class SpdySessionHandlerTest {
 
                 SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
                 if (!spdySynStreamFrame.isUnidirectional()) {
-                    int streamID = spdySynStreamFrame.getStreamID();
+                    int streamID = spdySynStreamFrame.getStreamId();
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
                     spdySynReplyFrame.setLast(spdySynStreamFrame.isLast());
                     for (Map.Entry<String, String> entry: spdySynStreamFrame.getHeaders()) {

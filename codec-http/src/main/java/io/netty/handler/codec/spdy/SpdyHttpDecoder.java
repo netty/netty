@@ -70,11 +70,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             if (SpdyCodecUtil.isServerID(streamID)) {
                 // SYN_STREAM frames initiated by the server are pushed resources
-                int associatedToStreamID = spdySynStreamFrame.getAssociatedToStreamID();
+                int associatedToStreamID = spdySynStreamFrame.getAssociatedToStreamId();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
                 // it must reply with a RST_STREAM with error code INVALID_STREAM

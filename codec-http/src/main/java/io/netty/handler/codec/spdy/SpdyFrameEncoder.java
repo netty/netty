@@ -122,8 +122,8 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(SPDY_SYN_STREAM_FRAME);
             out.writeByte(flags);
             out.writeMedium(length);
-            out.writeInt(spdySynStreamFrame.getStreamID());
-            out.writeInt(spdySynStreamFrame.getAssociatedToStreamID());
+            out.writeInt(spdySynStreamFrame.getStreamId());
+            out.writeInt(spdySynStreamFrame.getAssociatedToStreamId());
             if (version < 3) {
                 // Restrict priorities for SPDY/2 to between 0 and 3
                 byte priority = spdySynStreamFrame.getPriority();

@@ -236,7 +236,7 @@ public class SpdySessionHandler
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
@@ -564,7 +564,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             if (isRemoteInitiatedID(streamID)) {
                 ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);

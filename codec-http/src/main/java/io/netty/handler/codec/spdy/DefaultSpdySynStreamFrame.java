@@ -23,8 +23,8 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         implements SpdySynStreamFrame {
 
-    private int streamID;
-    private int associatedToStreamID;
+    private int streamId;
+    private int associatedToStreamId;
     private byte priority;
     private boolean last;
     private boolean unidirectional;
@@ -32,44 +32,44 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     /**
      * Creates a new instance.
      *
-     * @param streamID             the Stream-ID of this frame
-     * @param associatedToStreamID the Associated-To-Stream-ID of this frame
+     * @param streamId             the Stream-ID of this frame
+     * @param associatedToStreamId the Associated-To-Stream-ID of this frame
      * @param priority             the priority of the stream
      */
     public DefaultSpdySynStreamFrame(
-            int streamID, int associatedToStreamID, byte priority) {
-        setStreamID(streamID);
-        setAssociatedToStreamID(associatedToStreamID);
+            int streamId, int associatedToStreamId, byte priority) {
+        setStreamId(streamId);
+        setAssociatedToStreamId(associatedToStreamId);
         setPriority(priority);
     }
 
     @Override
-    public int getStreamID() {
-        return streamID;
+    public int getStreamId() {
+        return streamId;
     }
 
     @Override
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
     @Override
-    public int getAssociatedToStreamID() {
-        return associatedToStreamID;
+    public int getAssociatedToStreamId() {
+        return associatedToStreamId;
     }
 
     @Override
-    public void setAssociatedToStreamID(int associatedToStreamID) {
-        if (associatedToStreamID < 0) {
+    public void setAssociatedToStreamId(int associatedToStreamId) {
+        if (associatedToStreamId < 0) {
             throw new IllegalArgumentException(
                     "Associated-To-Stream-ID cannot be negative: " +
-                    associatedToStreamID);
+                    associatedToStreamId);
         }
-        this.associatedToStreamID = associatedToStreamID;
+        this.associatedToStreamId = associatedToStreamId;
     }
 
     @Override
@@ -117,11 +117,11 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
-        if (associatedToStreamID != 0) {
+        if (associatedToStreamId != 0) {
             buf.append("--> Associated-To-Stream-ID = ");
-            buf.append(associatedToStreamID);
+            buf.append(associatedToStreamId);
             buf.append(StringUtil.NEWLINE);
         }
         buf.append("--> Priority = ");
