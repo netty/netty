@@ -36,7 +36,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     @Override
-    public Set<Integer> getIDs() {
+    public Set<Integer> getIds() {
         return settingsMap.keySet();
     }
 
@@ -86,7 +86,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     @Override
-    public boolean persistValue(int ID) {
+    public boolean isPersistValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).getPersist();
@@ -167,33 +167,33 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         private boolean persist;
         private boolean persisted;
 
-        public Setting(int value, boolean persist, boolean persisted) {
+        Setting(int value, boolean persist, boolean persisted) {
             this.value = value;
             this.persist = persist;
             this.persisted = persisted;
         }
 
-        public int getValue() {
+        int getValue() {
             return value;
         }
 
-        public void setValue(int value) {
+        void setValue(int value) {
             this.value = value;
         }
 
-        public boolean getPersist() {
+        boolean getPersist() {
             return persist;
         }
 
-        public void setPersist(boolean persist) {
+        void setPersist(boolean persist) {
             this.persist = persist;
         }
 
-        public boolean getPersisted() {
+        boolean getPersisted() {
             return persisted;
         }
 
-        public void setPersisted(boolean persisted) {
+        void setPersisted(boolean persisted) {
             this.persisted = persisted;
         }
     }

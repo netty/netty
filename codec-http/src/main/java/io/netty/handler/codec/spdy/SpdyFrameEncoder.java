@@ -182,7 +182,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
             byte flags = spdySettingsFrame.clearPreviouslyPersistedSettings() ?
                 SPDY_SETTINGS_CLEAR : 0;
-            Set<Integer> IDs = spdySettingsFrame.getIDs();
+            Set<Integer> IDs = spdySettingsFrame.getIds();
             int numEntries = IDs.size();
             int length = 4 + numEntries * 8;
             out.ensureWritableBytes(SPDY_HEADER_SIZE + length);
@@ -194,7 +194,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             for (Integer ID: IDs) {
                 int id = ID.intValue();
                 byte ID_flags = (byte) 0;
-                if (spdySettingsFrame.persistValue(id)) {
+                if (spdySettingsFrame.isPersistValue(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSIST_VALUE;
                 }
                 if (spdySettingsFrame.isPersisted(id)) {

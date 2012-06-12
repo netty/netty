@@ -33,26 +33,26 @@ final class SpdySession {
     SpdySession() {
     }
 
-    public int numActiveStreams() {
+    int numActiveStreams() {
         return activeStreams.size();
     }
 
-    public boolean noActiveStreams() {
+    boolean noActiveStreams() {
         return activeStreams.isEmpty();
     }
 
-    public boolean isActiveStream(int streamID) {
+    boolean isActiveStream(int streamID) {
         return activeStreams.containsKey(new Integer(streamID));
     }
 
     // Stream-IDs should be iterated in priority order
-    public Set<Integer> getActiveStreams() {
+    Set<Integer> getActiveStreams() {
         TreeSet<Integer> StreamIDs = new TreeSet<Integer>(new PriorityComparator());
         StreamIDs.addAll(activeStreams.keySet());
         return StreamIDs;
     }
 
-    public void acceptStream(
+    void acceptStream(
             int streamID, byte priority, boolean remoteSideClosed, boolean localSideClosed,
             int sendWindowSize, int receiveWindowSize) {
         if (!remoteSideClosed || !localSideClosed) {
@@ -62,7 +62,7 @@ final class SpdySession {
         }
     }
 
-    public boolean removeStream(int streamID) {
+    boolean removeStream(int streamID) {
         Integer StreamID = new Integer(streamID);
         StreamState state = activeStreams.get(StreamID);
         activeStreams.remove(StreamID);
@@ -73,12 +73,12 @@ final class SpdySession {
         }
     }
 
-    public boolean isRemoteSideClosed(int streamID) {
+    boolean isRemoteSideClosed(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state == null || state.isRemoteSideClosed();
     }
 
-    public void closeRemoteSide(int streamID) {
+    void closeRemoteSide(int streamID) {
         Integer StreamID = new Integer(streamID);
         StreamState state = activeStreams.get(StreamID);
         if (state != null) {
@@ -89,12 +89,12 @@ final class SpdySession {
         }
     }
 
-    public boolean isLocalSideClosed(int streamID) {
+    boolean isLocalSideClosed(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state == null || state.isLocalSideClosed();
     }
 
-    public void closeLocalSide(int streamID) {
+    void closeLocalSide(int streamID) {
         Integer StreamID = new Integer(streamID);
         StreamState state = activeStreams.get(StreamID);
         if (state != null) {
@@ -109,30 +109,29 @@ final class SpdySession {
      * hasReceivedReply and receivedReply are only called from messageReceived
      * no need to synchronize access to the StreamState
      */
-
-    public boolean hasReceivedReply(int streamID) {
+    boolean hasReceivedReply(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null && state.hasReceivedReply();
     }
 
-    public void receivedReply(int streamID) {
+    void receivedReply(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         if (state != null) {
             state.receivedReply();
         }
     }
 
-    public int getSendWindowSize(int streamID) {
+    int getSendWindowSize(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null ? state.getSendWindowSize() : -1;
     }
 
-    public int updateSendWindowSize(int streamID, int deltaWindowSize) {
+    int updateSendWindowSize(int streamID, int deltaWindowSize) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null ? state.updateSendWindowSize(deltaWindowSize) : -1;
     }
 
-    public int updateReceiveWindowSize(int streamID, int deltaWindowSize) {
+    int updateReceiveWindowSize(int streamID, int deltaWindowSize) {
         StreamState state = activeStreams.get(new Integer(streamID));
         if (deltaWindowSize > 0) {
             state.setReceiveWindowSizeLowerBound(0);
@@ -140,12 +139,12 @@ final class SpdySession {
         return state != null ? state.updateReceiveWindowSize(deltaWindowSize) : -1;
     }
 
-    public int getReceiveWindowSizeLowerBound(int streamID) {
+    int getReceiveWindowSizeLowerBound(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null ? state.getReceiveWindowSizeLowerBound() : 0;
     }
 
-    public void updateAllReceiveWindowSizes(int deltaWindowSize) {
+    void updateAllReceiveWindowSizes(int deltaWindowSize) {
         for (StreamState state: activeStreams.values()) {
             state.updateReceiveWindowSize(deltaWindowSize);
             if (deltaWindowSize < 0) {
@@ -154,17 +153,17 @@ final class SpdySession {
         }
     }
 
-    public boolean putPendingWrite(int streamID, Object msg) {
+    boolean putPendingWrite(int streamID, Object msg) {
         StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null && state.putPendingWrite(msg);
     }
 
-    public Object getPendingWrite(int streamID) {
+    Object getPendingWrite(int streamID) {
         StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.getPendingWrite() : null;
     }
 
-    public Object removePendingWrite(int streamID) {
+    Object removePendingWrite(int streamID) {
         StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.removePendingWrite() : null;
     }
@@ -180,7 +179,7 @@ final class SpdySession {
         private volatile int receiveWindowSizeLowerBound;
         private final BlockingQueue<Object> pendingWriteQueue = QueueFactory.createQueue();
 
-        public StreamState(
+        StreamState(
                 byte priority, boolean remoteSideClosed, boolean localSideClosed,
                 int sendWindowSize, int receiveWindowSize) {
             this.priority = priority;
@@ -190,67 +189,67 @@ final class SpdySession {
             this.receiveWindowSize = new AtomicInteger(receiveWindowSize);
         }
 
-        public byte getPriority() {
+        byte getPriority() {
             return priority;
         }
 
-        public boolean isRemoteSideClosed() {
+        boolean isRemoteSideClosed() {
             return remoteSideClosed;
         }
 
-        public void closeRemoteSide() {
+        void closeRemoteSide() {
             remoteSideClosed = true;
         }
 
-        public boolean isLocalSideClosed() {
+        boolean isLocalSideClosed() {
             return localSideClosed;
         }
 
-        public void closeLocalSide() {
+        void closeLocalSide() {
             localSideClosed = true;
         }
 
-        public boolean hasReceivedReply() {
+        boolean hasReceivedReply() {
             return receivedReply;
         }
 
-        public void receivedReply() {
+        void receivedReply() {
             receivedReply = true;
         }
 
-        public int getSendWindowSize() {
+        int getSendWindowSize() {
             return sendWindowSize.get();
         }
 
-        public int updateSendWindowSize(int deltaWindowSize) {
+        int updateSendWindowSize(int deltaWindowSize) {
             return sendWindowSize.addAndGet(deltaWindowSize);
         }
 
-        public int updateReceiveWindowSize(int deltaWindowSize) {
+        int updateReceiveWindowSize(int deltaWindowSize) {
             return receiveWindowSize.addAndGet(deltaWindowSize);
         }
 
-        public int getReceiveWindowSizeLowerBound() {
+        int getReceiveWindowSizeLowerBound() {
             return receiveWindowSizeLowerBound;
         }
 
-        public void setReceiveWindowSizeLowerBound(int receiveWindowSizeLowerBound) {
+        void setReceiveWindowSizeLowerBound(int receiveWindowSizeLowerBound) {
             this.receiveWindowSizeLowerBound = receiveWindowSizeLowerBound;
         }
 
-        public boolean putPendingWrite(Object msg) {
+        boolean putPendingWrite(Object msg) {
             return pendingWriteQueue.offer(msg);
         }
 
-        public Object getPendingWrite() {
+        Object getPendingWrite() {
             return pendingWriteQueue.peek();
         }
 
-        public Object removePendingWrite() {
+        Object removePendingWrite() {
             return pendingWriteQueue.poll();
         }
 
-        public boolean clearPendingWrites() {
+        boolean clearPendingWrites() {
             if (pendingWriteQueue.isEmpty()) {
                 return false;
             }
