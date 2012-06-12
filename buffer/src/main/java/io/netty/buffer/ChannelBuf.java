@@ -16,5 +16,6 @@
 package io.netty.buffer;
 
 public interface ChannelBuf {
+    ChannelBufType type();
     boolean isPooled();
 }

@@ -15,9 +15,9 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -31,8 +31,8 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     @Override
-    public ChannelBufferType bufferType() {
-        return ChannelBufferType.MESSAGE;
+    public ChannelBufType bufferType() {
+        return ChannelBufType.MESSAGE;
     }
 
     @Override

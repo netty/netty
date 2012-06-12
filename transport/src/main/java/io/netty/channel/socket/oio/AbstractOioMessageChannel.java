@@ -15,9 +15,9 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -29,8 +29,8 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     }
 
     @Override
-    public ChannelBufferType bufferType() {
-        return ChannelBufferType.MESSAGE;
+    public ChannelBufType bufferType() {
+        return ChannelBufType.MESSAGE;
     }
 
     @Override

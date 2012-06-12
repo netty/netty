@@ -15,10 +15,10 @@
  */
 package io.netty.channel.local;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -68,8 +68,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelBufferType bufferType() {
-        return ChannelBufferType.MESSAGE;
+    public ChannelBufType bufferType() {
+        return ChannelBufType.MESSAGE;
     }
 
     @Override

@@ -52,6 +52,11 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public ChannelBufType type() {
+        return ChannelBufType.BYTE;
+    }
+
+    @Override
     public int readerIndex() {
         return readerIndex;
     }

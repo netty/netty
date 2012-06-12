@@ -15,8 +15,8 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelBufferType;
 import io.netty.channel.ChannelHandler;
 
 import java.util.ArrayDeque;
@@ -28,8 +28,8 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
     }
 
     @Override
-    public ChannelBufferType bufferType() {
-        return ChannelBufferType.MESSAGE;
+    public ChannelBufType bufferType() {
+        return ChannelBufType.MESSAGE;
     }
 
     public MessageBuf<Object> inboundBuffer() {

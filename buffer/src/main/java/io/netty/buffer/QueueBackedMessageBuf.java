@@ -36,6 +36,11 @@ public class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     }
 
     @Override
+    public ChannelBufType type() {
+        return ChannelBufType.MESSAGE;
+    }
+
+    @Override
     public boolean add(T e) {
         return queue.add(e);
     }

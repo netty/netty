@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 
 import java.net.SocketAddress;
@@ -51,8 +52,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelBufferType bufferType() {
-        return ChannelBufferType.MESSAGE;
+    public ChannelBufType bufferType() {
+        return ChannelBufType.MESSAGE;
     }
 
     @Override

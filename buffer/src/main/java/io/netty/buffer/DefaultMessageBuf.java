@@ -38,6 +38,11 @@ public class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T>
     }
 
     @Override
+    public ChannelBufType type() {
+        return ChannelBufType.MESSAGE;
+    }
+
+    @Override
     public int drainTo(Collection<? super T> c) {
         int cnt = 0;
         for (;;) {

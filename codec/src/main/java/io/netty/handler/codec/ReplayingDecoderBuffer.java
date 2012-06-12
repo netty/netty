@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ByteBufIndexFinder;
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.Signal;
@@ -61,6 +62,11 @@ class ReplayingDecoderBuffer implements ByteBuf {
         } else {
             return Integer.MAX_VALUE;
         }
+    }
+
+    @Override
+    public ChannelBufType type() {
+        return ChannelBufType.BYTE;
     }
 
     @Override

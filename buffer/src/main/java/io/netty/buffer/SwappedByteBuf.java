@@ -68,6 +68,11 @@ public class SwappedByteBuf implements WrappedByteBuf {
     }
 
     @Override
+    public ChannelBufType type() {
+        return ChannelBufType.MESSAGE;
+    }
+
+    @Override
     public ByteBufFactory factory() {
         return buf.factory();
     }

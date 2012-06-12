@@ -18,6 +18,7 @@ package io.netty.channel;
 import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
@@ -886,7 +887,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public MessageBuf<Object> inboundMessageBuffer() {
-        if (channel.bufferType() != ChannelBufferType.MESSAGE) {
+        if (channel.bufferType() != ChannelBufType.MESSAGE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
@@ -895,7 +896,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ByteBuf inboundByteBuffer() {
-        if (channel.bufferType() != ChannelBufferType.BYTE) {
+        if (channel.bufferType() != ChannelBufType.BYTE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }

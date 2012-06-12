@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.buffer;
 
-public enum ChannelBufferType {
+public enum ChannelBufType {
     BYTE,
     MESSAGE
 }
