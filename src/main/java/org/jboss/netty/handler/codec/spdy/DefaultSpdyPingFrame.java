@@ -22,23 +22,31 @@ import org.jboss.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyPingFrame implements SpdyPingFrame {
 
-    private int ID;
+    private int id;
 
     /**
      * Creates a new instance.
      *
-     * @param ID the unique ID of this frame
+     * @param id the unique ID of this frame
      */
-    public DefaultSpdyPingFrame(int ID) {
-        setID(ID);
+    public DefaultSpdyPingFrame(int id) {
+        setId(id);
     }
 
     public int getID() {
-        return ID;
+        return getId();
     }
 
-    public void setID(int ID) {
-        this.ID = ID;
+    public int getId() {
+        return id;
+    }
+
+    public void setID(int id) {
+        setId(id);
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     @Override
@@ -47,7 +55,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> ID = ");
-        buf.append(ID);
+        buf.append(id);
         return buf.toString();
     }
 }
