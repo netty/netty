@@ -17,14 +17,13 @@ package io.netty.channel.embedded;
 
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
-
-import java.util.ArrayDeque;
 
 public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
 
     public EmbeddedMessageChannel(ChannelHandler... handlers) {
-        super(new ArrayDeque<Object>(), handlers);
+        super(Unpooled.messageBuffer(), handlers);
     }
 
     @Override
