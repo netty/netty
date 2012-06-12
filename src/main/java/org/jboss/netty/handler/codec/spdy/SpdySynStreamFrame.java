@@ -57,13 +57,13 @@ public interface SpdySynStreamFrame extends SpdyHeaderBlock {
      * @deprecated Use {@link #setAssociatedToStreamId(int)} instead.
      */
     @Deprecated
-    void setAssociatedToStreamID(int associatedToStreamID);
+    void setAssociatedToStreamID(int associatedToStreamId);
 
     /**
      * Sets the Associated-To-Stream-ID of this frame.
      * The Associated-To-Stream-ID cannot be negative.
      */
-    void setAssociatedToStreamId(int associatedToStreamID);
+    void setAssociatedToStreamId(int associatedToStreamId);
 
     /**
      * Returns the priority of the stream.

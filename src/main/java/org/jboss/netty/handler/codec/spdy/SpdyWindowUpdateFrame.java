@@ -21,14 +21,25 @@ package org.jboss.netty.handler.codec.spdy;
 public interface SpdyWindowUpdateFrame {
 
     /**
+     * @deprecated Use {@link #getStreamId()} instead.
+     */
+    @Deprecated
+    int getStreamID();
+
+    /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamID();
+    int getStreamId();
+
+    /**
+     * Use {@link #setStreamId(int)} instead.
+     */
+    void setStreamID(int streamId);
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setStreamID(int streamID);
+    void setStreamId(int streamId);
 
     /**
      * Returns the Delta-Window-Size of this frame.

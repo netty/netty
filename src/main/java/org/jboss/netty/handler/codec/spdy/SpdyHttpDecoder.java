@@ -117,8 +117,8 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
-                    SpdyHttpHeaders.setStreamID(httpResponse, streamID);
-                    SpdyHttpHeaders.setAssociatedToStreamID(httpResponse, associatedToStreamID);
+                    SpdyHttpHeaders.setStreamId(httpResponse, streamID);
+                    SpdyHttpHeaders.setAssociatedToStreamId(httpResponse, associatedToStreamID);
                     SpdyHttpHeaders.setPriority(httpResponse, spdySynStreamFrame.getPriority());
                     SpdyHttpHeaders.setUrl(httpResponse, URL);
 
@@ -141,7 +141,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     HttpRequest httpRequest = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID as a header
-                    SpdyHttpHeaders.setStreamID(httpRequest, streamID);
+                    SpdyHttpHeaders.setStreamId(httpRequest, streamID);
 
                     if (spdySynStreamFrame.isLast()) {
                         return httpRequest;
@@ -164,13 +164,13 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             try {
                 HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynReplyFrame);
 
                 // Set the Stream-ID as a header
-                SpdyHttpHeaders.setStreamID(httpResponse, streamID);
+                SpdyHttpHeaders.setStreamId(httpResponse, streamID);
 
                 if (spdySynReplyFrame.isLast()) {
                     HttpHeaders.setContentLength(httpResponse, 0);
@@ -190,7 +190,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            Integer streamID = new Integer(spdyHeadersFrame.getStreamID());
+            Integer streamID = new Integer(spdyHeadersFrame.getStreamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard HEADERS frame.
@@ -206,7 +206,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            Integer streamID = new Integer(spdyDataFrame.getStreamID());
+            Integer streamID = new Integer(spdyDataFrame.getStreamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard Data Frame.
@@ -239,7 +239,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            Integer streamID = new Integer(spdyRstStreamFrame.getStreamID());
+            Integer streamID = new Integer(spdyRstStreamFrame.getStreamId());
             messageMap.remove(streamID);
         }
 

@@ -54,7 +54,7 @@ public class SpdySessionHandlerTest {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyDataFrame);
         SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-        Assert.assertTrue(spdyDataFrame.getStreamID() == streamID);
+        Assert.assertTrue(spdyDataFrame.getStreamId() == streamID);
         Assert.assertTrue(spdyDataFrame.isLast() == last);
     }
 
@@ -62,7 +62,7 @@ public class SpdySessionHandlerTest {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdySynReplyFrame);
         SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-        Assert.assertTrue(spdySynReplyFrame.getStreamID() == streamID);
+        Assert.assertTrue(spdySynReplyFrame.getStreamId() == streamID);
         Assert.assertTrue(spdySynReplyFrame.isLast() == last);
         assertHeaderBlock(spdySynReplyFrame, headers);
     }
@@ -71,7 +71,7 @@ public class SpdySessionHandlerTest {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyRstStreamFrame);
         SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-        Assert.assertTrue(spdyRstStreamFrame.getStreamID() == streamID);
+        Assert.assertTrue(spdyRstStreamFrame.getStreamId() == streamID);
         Assert.assertTrue(spdyRstStreamFrame.getStatus().equals(status));
     }
 
@@ -93,7 +93,7 @@ public class SpdySessionHandlerTest {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyHeadersFrame);
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-        Assert.assertTrue(spdyHeadersFrame.getStreamID() == streamID);
+        Assert.assertTrue(spdyHeadersFrame.getStreamId() == streamID);
         assertHeaderBlock(spdyHeadersFrame, headers);
     }
 
@@ -204,18 +204,18 @@ public class SpdySessionHandlerTest {
         Assert.assertNull(sessionHandler.peek());
 
         // Check if session handler rejects HEADERS for closed streams
-        int testStreamID = spdyDataFrame.getStreamID();
+        int testStreamID = spdyDataFrame.getStreamId();
         sessionHandler.offer(spdyDataFrame);
         assertDataFrame(sessionHandler.poll(), testStreamID, spdyDataFrame.isLast());
         Assert.assertNull(sessionHandler.peek());
-        spdyHeadersFrame.setStreamID(testStreamID);
+        spdyHeadersFrame.setStreamId(testStreamID);
         sessionHandler.offer(spdyHeadersFrame);
         assertRstStream(sessionHandler.poll(), testStreamID, SpdyStreamStatus.INVALID_STREAM);
         Assert.assertNull(sessionHandler.peek());
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // an invalid HEADERS frame
-        spdyHeadersFrame.setStreamID(localStreamID);
+        spdyHeadersFrame.setStreamId(localStreamID);
         spdyHeadersFrame.setInvalid();
         sessionHandler.offer(spdyHeadersFrame);
         assertRstStream(sessionHandler.poll(), localStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
@@ -245,7 +245,7 @@ public class SpdySessionHandlerTest {
 
         // Check if session handler ignores Data frames after sending
         // a GOAWAY frame
-        spdyDataFrame.setStreamID(localStreamID);
+        spdyDataFrame.setStreamId(localStreamID);
         sessionHandler.offer(spdyDataFrame);
         Assert.assertNull(sessionHandler.peek());
 

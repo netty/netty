@@ -178,7 +178,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
                 Channels.write(ctx, future, spdySynStreamFrame, e.getRemoteAddress());
             } else {
                 SpdySynReplyFrame spdySynReplyFrame = createSynReplyFrame(httpResponse);
-                int streamID = spdySynReplyFrame.getStreamID();
+                int streamID = spdySynReplyFrame.getStreamId();
                 ChannelFuture future = getContentFuture(ctx, e, streamID, httpResponse);
                 Channels.write(ctx, future, spdySynReplyFrame, e.getRemoteAddress());
             }
@@ -262,13 +262,13 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         boolean chunked = httpMessage.isChunked();
 
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
-        int streamID = SpdyHttpHeaders.getStreamID(httpMessage);
-        int associatedToStreamID = SpdyHttpHeaders.getAssociatedToStreamID(httpMessage);
+        int streamID = SpdyHttpHeaders.getStreamId(httpMessage);
+        int associatedToStreamID = SpdyHttpHeaders.getAssociatedToStreamId(httpMessage);
         byte priority = SpdyHttpHeaders.getPriority(httpMessage);
         String URL = SpdyHttpHeaders.getUrl(httpMessage);
         String scheme = SpdyHttpHeaders.getScheme(httpMessage);
-        SpdyHttpHeaders.removeStreamID(httpMessage);
-        SpdyHttpHeaders.removeAssociatedToStreamID(httpMessage);
+        SpdyHttpHeaders.removeStreamId(httpMessage);
+        SpdyHttpHeaders.removeAssociatedToStreamId(httpMessage);
         SpdyHttpHeaders.removePriority(httpMessage);
         SpdyHttpHeaders.removeUrl(httpMessage);
         SpdyHttpHeaders.removeScheme(httpMessage);
@@ -330,8 +330,8 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         boolean chunked = httpResponse.isChunked();
 
         // Get the Stream-ID from the headers
-        int streamID = SpdyHttpHeaders.getStreamID(httpResponse);
-        SpdyHttpHeaders.removeStreamID(httpResponse);
+        int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
+        SpdyHttpHeaders.removeStreamId(httpResponse);
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-ENcoding
         // headers are not valid and MUST not be sent.

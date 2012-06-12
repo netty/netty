@@ -111,7 +111,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
             ChannelBuffer header = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE);
-            header.writeInt(spdyDataFrame.getStreamID() & 0x7FFFFFFF);
+            header.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);
             header.writeByte(flags);
             header.writeMedium(data.readableBytes());
             return ChannelBuffers.wrappedBuffer(header, data);
@@ -174,7 +174,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(SPDY_SYN_REPLY_FRAME);
             frame.writeByte(flags);
             frame.writeMedium(length);
-            frame.writeInt(spdySynReplyFrame.getStreamID());
+            frame.writeInt(spdySynReplyFrame.getStreamId());
             if (version < 3) {
                 if (data.readableBytes() == 0) {
                     frame.writeInt(0);
@@ -192,7 +192,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_RST_STREAM_FRAME);
             frame.writeInt(8);
-            frame.writeInt(spdyRstStreamFrame.getStreamID());
+            frame.writeInt(spdyRstStreamFrame.getStreamId());
             frame.writeInt(spdyRstStreamFrame.getStatus().getCode());
             return frame;
 
@@ -290,7 +290,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(SPDY_HEADERS_FRAME);
             frame.writeByte(flags);
             frame.writeMedium(length);
-            frame.writeInt(spdyHeadersFrame.getStreamID());
+            frame.writeInt(spdyHeadersFrame.getStreamId());
             if (version < 3 && data.readableBytes() != 0) {
                 frame.writeShort(0);
             }
@@ -304,7 +304,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_WINDOW_UPDATE_FRAME);
             frame.writeInt(8);
-            frame.writeInt(spdyWindowUpdateFrame.getStreamID());
+            frame.writeInt(spdyWindowUpdateFrame.getStreamId());
             frame.writeInt(spdyWindowUpdateFrame.getDeltaWindowSize());
             return frame;
         }

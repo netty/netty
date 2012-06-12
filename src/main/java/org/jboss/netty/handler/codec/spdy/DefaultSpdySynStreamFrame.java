@@ -33,13 +33,13 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
      * Creates a new instance.
      *
      * @param streamID             the Stream-ID of this frame
-     * @param associatedToStreamID the Associated-To-Stream-ID of this frame
+     * @param associatedToStreamId the Associated-To-Stream-ID of this frame
      * @param priority             the priority of the stream
      */
     public DefaultSpdySynStreamFrame(
-            int streamID, int associatedToStreamID, byte priority) {
+            int streamID, int associatedToStreamId, byte priority) {
         setStreamId(streamID);
-        setAssociatedToStreamID(associatedToStreamID);
+        setAssociatedToStreamId(associatedToStreamId);
         setPriority(priority);
     }
 

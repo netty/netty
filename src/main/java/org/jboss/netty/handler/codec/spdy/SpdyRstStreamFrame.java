@@ -21,14 +21,26 @@ package org.jboss.netty.handler.codec.spdy;
 public interface SpdyRstStreamFrame {
 
     /**
+     * @deprecated Use {@link #getStreamId()} instead.
+     */
+    @Deprecated
+    int getStreamID();
+
+    /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamID();
+    int getStreamId();
+
+    /**
+     * @deprecated Use {@link #setStreamId(int)} instead.
+     */
+    @Deprecated
+    void setStreamID(int streamId);
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setStreamID(int streamID);
+    void setStreamId(int streamId);
 
     /**
      * Returns the status of this frame.
