@@ -72,7 +72,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
             int streamID = spdySynStreamFrame.getStreamId();
 
-            if (SpdyCodecUtil.isServerID(streamID)) {
+            if (SpdyCodecUtil.isServerId(streamID)) {
                 // SYN_STREAM frames initiated by the server are pushed resources
                 int associatedToStreamId = spdySynStreamFrame.getAssociatedToStreamId();
 

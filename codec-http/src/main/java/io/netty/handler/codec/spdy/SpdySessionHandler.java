@@ -714,7 +714,7 @@ public class SpdySessionHandler
      */
 
     private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = SpdyCodecUtil.isServerID(ID);
+        boolean serverID = SpdyCodecUtil.isServerId(ID);
         return server && !serverID || !server && serverID;
     }
 
