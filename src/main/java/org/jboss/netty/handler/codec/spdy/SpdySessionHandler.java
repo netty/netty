@@ -215,7 +215,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
@@ -326,7 +326,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
                 Channels.write(ctx, Channels.future(e.getChannel()), spdyPingFrame, e.getRemoteAddress());
                 return;
             }
@@ -530,7 +530,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             if (isRemoteInitiatedID(streamID)) {
                 e.getFuture().setFailure(PROTOCOL_EXCEPTION);
@@ -595,9 +595,9 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
                 e.getFuture().setFailure(new IllegalArgumentException(
-                            "invalid PING ID: " + spdyPingFrame.getID()));
+                            "invalid PING ID: " + spdyPingFrame.getId()));
                 return;
             }
             pings.getAndIncrement();

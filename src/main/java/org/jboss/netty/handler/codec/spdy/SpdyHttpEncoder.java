@@ -164,7 +164,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
 
             HttpRequest httpRequest = (HttpRequest) msg;
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
             ChannelFuture future = getContentFuture(ctx, e, streamID, httpRequest);
             Channels.write(ctx, future, spdySynStreamFrame, e.getRemoteAddress());
 
@@ -173,7 +173,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
             HttpResponse httpResponse = (HttpResponse) msg;
             if (httpResponse.containsHeader(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
-                int streamID = spdySynStreamFrame.getStreamID();
+                int streamID = spdySynStreamFrame.getStreamId();
                 ChannelFuture future = getContentFuture(ctx, e, streamID, httpResponse);
                 Channels.write(ctx, future, spdySynStreamFrame, e.getRemoteAddress());
             } else {

@@ -138,8 +138,8 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(SPDY_SYN_STREAM_FRAME);
             frame.writeByte(flags);
             frame.writeMedium(length);
-            frame.writeInt(spdySynStreamFrame.getStreamID());
-            frame.writeInt(spdySynStreamFrame.getAssociatedToStreamID());
+            frame.writeInt(spdySynStreamFrame.getStreamId());
+            frame.writeInt(spdySynStreamFrame.getAssociatedToStreamId());
             if (version < 3) {
                 // Restrict priorities for SPDY/2 to between 0 and 3
                 byte priority = spdySynStreamFrame.getPriority();
@@ -253,7 +253,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_PING_FRAME);
             frame.writeInt(4);
-            frame.writeInt(spdyPingFrame.getID());
+            frame.writeInt(spdyPingFrame.getId());
             return frame;
 
         } else if (msg instanceof SpdyGoAwayFrame) {
