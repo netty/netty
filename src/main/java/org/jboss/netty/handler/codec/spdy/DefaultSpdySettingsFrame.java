@@ -36,6 +36,10 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     public Set<Integer> getIDs() {
+        return getIds();
+    }
+
+    public Set<Integer> getIds() {
         return settingsMap.keySet();
     }
 
@@ -80,6 +84,10 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     public boolean persistValue(int ID) {
+        return isPersistValue(ID);
+    }
+
+    public boolean isPersistValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).getPersist();
