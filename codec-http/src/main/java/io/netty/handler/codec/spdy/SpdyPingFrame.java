@@ -23,10 +23,10 @@ public interface SpdyPingFrame {
     /**
      * Returns the ID of this frame.
      */
-    int getID();
+    int getId();
 
     /**
      * Sets the ID of this frame.
      */
-    void setID(int ID);
+    void setId(int id);
 }

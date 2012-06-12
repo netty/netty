@@ -80,7 +80,7 @@ public class SpdySessionHandlerTest {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyPingFrame);
         SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-        Assert.assertTrue(spdyPingFrame.getID() == ID);
+        Assert.assertTrue(spdyPingFrame.getId() == ID);
     }
 
     private static void assertGoAway(Object msg, int lastGoodStreamID) {
@@ -226,7 +226,7 @@ public class SpdySessionHandlerTest {
 
         // Check if session handler returns identical local PINGs
         sessionHandler.writeInbound(localPingFrame);
-        assertPing(sessionHandler.readOutbound(), localPingFrame.getID());
+        assertPing(sessionHandler.readOutbound(), localPingFrame.getId());
         Assert.assertNull(sessionHandler.readOutbound());
 
         // Check if session handler ignores un-initiated remote PINGs

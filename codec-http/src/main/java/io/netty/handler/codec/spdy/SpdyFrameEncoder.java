@@ -229,7 +229,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_PING_FRAME);
             out.writeInt(4);
-            out.writeInt(spdyPingFrame.getID());
+            out.writeInt(spdyPingFrame.getId());
 
         } else if (msg instanceof SpdyGoAwayFrame) {
 

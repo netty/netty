@@ -347,7 +347,7 @@ public class SpdySessionHandler
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
                 ctx.write(spdyPingFrame);
                 return;
             }
@@ -629,9 +629,9 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
                 ctx.fireExceptionCaught(new IllegalArgumentException(
-                            "invalid PING ID: " + spdyPingFrame.getID()));
+                            "invalid PING ID: " + spdyPingFrame.getId()));
                 return;
             }
             pings.getAndIncrement();
