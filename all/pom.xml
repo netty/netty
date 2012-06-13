@@ -117,6 +117,7 @@
               <classifier>sources</classifier>
               <includes>io/netty/**</includes>
               <includeGroupIds>${project.groupId}</includeGroupIds>
+              <outputDirectory>${project.build.directory}/src</outputDirectory>
             </configuration>
           </execution>
           <execution>
