@@ -116,10 +116,7 @@
             <configuration>
               <classifier>sources</classifier>
               <includes>io/netty/**</includes>
-              <includeGroupIds>io.netty</includeGroupIds>
-              <outputDirectory>${project.build.directory}/src</outputDirectory>
-              <overWriteReleases>false</overWriteReleases>
-              <overWriteSnapshots>true</overWriteSnapshots>
+              <includeGroupIds>${project.groupId}</includeGroupIds>
             </configuration>
           </execution>
           <execution>
@@ -132,8 +129,6 @@
               <includes>io/netty/**</includes>
               <excludes>io/netty/example/**</excludes>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-              <overWriteReleases>false</overWriteReleases>
-              <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
           </execution>
         </executions>
