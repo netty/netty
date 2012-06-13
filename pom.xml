@@ -75,8 +75,17 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
-    <module>all</module>
   </modules>
+
+  <profiles>
+    <!-- Build all-in-one JAR, xref, Javadoc only on full build -->
+    <profile>
+      <id>fullbuild</id>
+      <modules>
+        <module>all</module>
+      </modules>
+    </profile>
+  </profiles>
 
   <dependencyManagement>
     <dependencies>
@@ -332,6 +341,13 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.3.1</version>
+        <configuration>
+          <releaseProfiles>release,fullbuild</releaseProfiles>
+        </configuration>
       </plugin>
     </plugins>
 
