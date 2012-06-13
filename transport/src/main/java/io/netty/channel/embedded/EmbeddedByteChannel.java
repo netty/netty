@@ -71,11 +71,10 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
     }
 
     @Override
-    protected boolean doFlushByteBuffer(ByteBuf buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!lastOutboundBuffer().readable()) {
             lastOutboundBuffer().discardReadBytes();
         }
         lastOutboundBuffer().writeBytes(buf);
-        return true;
     }
 }

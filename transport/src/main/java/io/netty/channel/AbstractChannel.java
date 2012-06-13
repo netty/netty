@@ -85,7 +85,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private ClosedChannelException closedChannelException;
     private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
     private long writeCounter;
-    protected boolean inFlushNow;
+    private boolean inFlushNow;
     private boolean flushNowPending;
 
     /** Cache for the string representation of this channel */
@@ -623,7 +623,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void flushNow() {
+        public final void flushNow() {
             if (inFlushNow) {
                 return;
             }
@@ -631,13 +631,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             inFlushNow = true;
             ChannelHandlerContext ctx = directOutboundContext();
             Throwable cause = null;
-            boolean handleFlush = true;
             try {
                 if (ctx.hasOutboundByteBuffer()) {
                     ByteBuf out = ctx.outboundByteBuffer();
                     int oldSize = out.readableBytes();
                     try {
-                        handleFlush = doFlushByteBuffer(out);
+                        doFlushByteBuffer(out);
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
@@ -658,15 +657,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         writeCounter += oldSize - out.size();
                     }
                 }
-                if (handleFlush) {
-                    if (cause == null) {
-                        notifyFlushFutures();
-                    } else {
-                        notifyFlushFutures(cause);
-                        pipeline.fireExceptionCaught(cause);
-                        if (cause instanceof IOException) {
-                            close(voidFuture());
-                        }
+
+                if (cause == null) {
+                    notifyFlushFutures();
+                } else {
+                    notifyFlushFutures(cause);
+                    pipeline.fireExceptionCaught(cause);
+                    if (cause instanceof IOException) {
+                        close(voidFuture());
                     }
                 }
             } finally {
@@ -715,7 +713,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract void doClose() throws Exception;
     protected abstract void doDeregister() throws Exception;
-    protected boolean doFlushByteBuffer(ByteBuf buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         throw new UnsupportedOperationException();
     }
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
@@ -724,7 +722,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract boolean isFlushPending();
 
-    protected final void notifyFlushFutures() {
+    private void notifyFlushFutures() {
         if (flushCheckpoints.isEmpty()) {
             return;
         }
@@ -762,7 +760,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    protected final void notifyFlushFutures(Throwable cause) {
+    private void notifyFlushFutures(Throwable cause) {
         notifyFlushFutures();
         for (;;) {
             FlushCheckpoint cp = flushCheckpoints.poll();
