@@ -91,6 +91,32 @@
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>2.5</version>
+        <executions>
+          <execution>
+            <id>clean-all</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <configuration>
+              <filesets>
+                <fileset>
+                  <directory>${project.basedir}/src</directory>
+                  <followSymlinks>false</followSymlinks>
+                  <useDefaultExcludes>false</useDefaultExcludes>
+                </fileset>
+                <fileset>
+                  <directory>${project.basedir}/target</directory>
+                  <followSymlinks>false</followSymlinks>
+                </fileset>
+              </filesets>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>2.4</version>
         <executions>
@@ -200,6 +226,7 @@
           </execution>
         </executions>
       </plugin>
+
       <!-- Disable animal sniffer -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
