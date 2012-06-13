@@ -19,6 +19,7 @@ import java.net.SocketAddress;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -439,26 +440,51 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                         input, replayable,
                         e.getRemoteAddress());
             } finally {
-                if (input.readable()) {
+                int readable = input.readableBytes();
+
+                if (readable > 0) {
+                    int cap = input.capacity();
+                    boolean copy = false;
+                    // check if readableBytes == capacity we can safe the copy as we will not be able to
+                    // optimize memory usage anyway
+                    if (readable != cap && cap > getMaxCumulationBufferCapacity()) {
+                        copy = true;
+                    }
+
                     // seems like there is something readable left in the input buffer
                     // or decoder wants a replay - create the cumulation buffer and
                     // copy the input into it
                     ChannelBuffer cumulation;
                     if (checkpoint > 0) {
                         int bytesToPreserve = inputSize - (checkpoint - oldReaderIndex);
-                        cumulation = this.cumulation =
-                                newCumulationBuffer(ctx, bytesToPreserve);
-                        cumulation.writeBytes(input, checkpoint, bytesToPreserve);
+                        if (copy) {
+                            cumulation = this.cumulation =
+                                    newCumulationBuffer(ctx, bytesToPreserve);
+                            cumulation.writeBytes(input, checkpoint, bytesToPreserve);
+                        } else {
+                            cumulation = this.cumulation =
+                                    input.slice(checkpoint, bytesToPreserve);
+                        }
                     } else if (checkpoint == 0) {
-                        cumulation = this.cumulation =
-                                newCumulationBuffer(ctx, inputSize);
-                        cumulation.writeBytes(input, oldReaderIndex, inputSize);
-                        cumulation.readerIndex(input.readerIndex());
-
+                        if (copy) {
+                            cumulation = this.cumulation =
+                                    newCumulationBuffer(ctx, inputSize);
+                            cumulation.writeBytes(input, oldReaderIndex, inputSize);
+                            cumulation.readerIndex(input.readerIndex());
+                        } else {
+                            cumulation = this.cumulation =
+                                    input.slice(oldReaderIndex, inputSize);
+                            cumulation.readerIndex(input.readerIndex());
+                        }
                     } else {
-                        cumulation = this.cumulation =
-                                newCumulationBuffer(ctx, input.readableBytes());
-                        cumulation.writeBytes(input);
+                        if (copy) {
+                            cumulation = this.cumulation =
+                                    newCumulationBuffer(ctx, input.readableBytes());
+                            cumulation.writeBytes(input);
+                        } else {
+                            cumulation = this.cumulation =
+                                    input;
+                        }
                     }
                     replayable = new ReplayingDecoderBuffer(cumulation);
                 } else {
@@ -469,35 +495,10 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
         } else {
             assert cumulation.readable();
-            boolean fit = false;
-
-            int readable = input.readableBytes();
-            int writable = cumulation.writableBytes();
-            int w = writable - readable;
-            if (w < 0) {
-                int readerIndex = cumulation.readerIndex();
-                if (w + readerIndex >= 0) {
-                    // the input will fit if we discard all read bytes, so do it
-                    cumulation.discardReadBytes();
-                    fit = true;
-                }
-            } else {
-
-                // ok the input fit into the cumulation buffer
-                fit = true;
-            }
-
-            ChannelBuffer buf;
-            if (fit) {
-                // the input fit in the cumulation buffer so copy it over
-                buf = cumulation;
-                buf.writeBytes(input);
-            } else {
-                // wrap the cumulation and input
-                buf = ChannelBuffers.wrappedBuffer(cumulation, input);
-                cumulation = buf;
-                replayable = new ReplayingDecoderBuffer(cumulation);
-            }
+            // wrap the cumulation and input
+            ChannelBuffer buf = ChannelBuffers.wrappedBuffer(cumulation, input);
+            cumulation = buf;
+            replayable = new ReplayingDecoderBuffer(cumulation);
 
             // Wrap in try / finally.
             //
@@ -505,16 +506,35 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             try {
                 callDecode(ctx, e.getChannel(), buf, replayable, e.getRemoteAddress());
             } finally {
-                if (!buf.readable()) {
+                int readable = buf.readableBytes();
+                if (readable == 0) {
                     // nothing readable left so reset the state
                     cumulation = null;
                     replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
                 } else {
-                    // create a new buffer and copy the readable buffer into it
-                    cumulation = newCumulationBuffer(ctx, buf.readableBytes());
-                    cumulation.writeBytes(buf);
-                    replayable = new ReplayingDecoderBuffer(cumulation);
+                    int cap = buf.capacity();
 
+                    if (readable != cap && cap > getMaxCumulationBufferCapacity()) {
+                        // the readable bytes are > as the configured
+                        // copyThreshold, so create a new buffer and copy the
+                        // bytes into it
+                        cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                        cumulation.writeBytes(buf);
+
+                    } else {
+                        if (readable == cap) {
+                            cumulation = buf;
+                        } else {
+                            // create a new cumulation buffer that holds the
+                            // unwrapped parts of the CompositeChannelBuffer
+                            // that are not read yet.
+                            cumulation = ChannelBuffers.wrappedBuffer(((CompositeChannelBuffer) buf)
+                                    .decompose(buf.readerIndex(), buf.readableBytes())
+                                    .toArray(new ChannelBuffer[0]));
+                        }
+
+                    }
+                    replayable = new ReplayingDecoderBuffer(cumulation);
                 }
             }
 
