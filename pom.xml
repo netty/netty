@@ -85,7 +85,7 @@
   <profiles>
     <!-- Build xref, Javadoc, and tarball only on full build -->
     <profile>
-      <id>fullbuild</id>
+      <id>full</id>
       <modules>
         <module>tarball</module>
       </modules>
@@ -347,7 +347,7 @@
         <artifactId>maven-release-plugin</artifactId>
         <version>2.3.1</version>
         <configuration>
-          <releaseProfiles>release,fullbuild</releaseProfiles>
+          <releaseProfiles>release,full</releaseProfiles>
         </configuration>
       </plugin>
     </plugins>

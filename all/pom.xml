@@ -217,7 +217,7 @@
 
   <profiles>
     <profile>
-      <id>fullbuild</id>
+      <id>full</id>
       <build>
         <plugins>
           <plugin>
