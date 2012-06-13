@@ -52,7 +52,7 @@ import io.netty.channel.ChannelHandlerContext;
  * | ABC\nDEF |
  * +----------+
  * </pre>
- * @apiviz.uses io.netty.handler.codec.frame.Delimiters - - useful
+ * @apiviz.uses io.netty.handler.codec.Delimiters - - useful
  */
 public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
 

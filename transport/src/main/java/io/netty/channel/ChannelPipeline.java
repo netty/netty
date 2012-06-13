@@ -202,7 +202,6 @@ import java.util.NoSuchElementException;
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
  * @apiviz.owns       io.netty.channel.ChannelHandler
- * @apiviz.uses       io.netty.channel.ChannelSink - - sends events downstream
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
 

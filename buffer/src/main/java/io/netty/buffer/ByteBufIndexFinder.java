@@ -24,7 +24,7 @@ package io.netty.buffer;
  * refer to {@link ByteBuf#indexOf(int, int, ByteBufIndexFinder)} and
  * {@link ByteBuf#bytesBefore(int, int, ByteBufIndexFinder)}
  * for more explanation.
- * @apiviz.uses io.netty.buffer.ChannelBuffer
+ * @apiviz.uses io.netty.buffer.ByteBuf
  */
 public interface ByteBufIndexFinder {
 

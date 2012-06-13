@@ -35,7 +35,7 @@ import java.io.InputStream;
  * The endianness of the stream is not always big endian but depends on
  * the endianness of the underlying buffer.
  * @see ByteBufOutputStream
- * @apiviz.uses io.netty.buffer.ChannelBuffer
+ * @apiviz.uses io.netty.buffer.ByteBuf
  */
 public class ByteBufInputStream extends InputStream implements DataInput {
 

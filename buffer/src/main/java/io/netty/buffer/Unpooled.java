@@ -77,7 +77,7 @@ import java.util.Queue;
  * of a new buffer type, generation of hex dump and swapping an integer's
  * byte order.
  * @apiviz.landmark
- * @apiviz.has io.netty.buffer.ChannelBuffer oneway - - creates
+ * @apiviz.has io.netty.buffer.ChannelBuf oneway - - creates
  */
 public final class Unpooled {
 
