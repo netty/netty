@@ -86,11 +86,12 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
+    protected boolean doFlushByteBuffer(ByteBuf buf) throws Exception {
         while (buf.readable()) {
             doWriteBytes(buf);
         }
         buf.clear();
+        return true;
     }
 
     protected abstract int available();
