@@ -85,11 +85,11 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
+    protected boolean doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
             // Reset reader/writerIndex to 0 if the buffer is empty.
             buf.clear();
-            return;
+            return true;
         }
 
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
@@ -103,6 +103,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 break;
             }
         }
+        return true;
     }
 
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
