@@ -20,9 +20,14 @@ import java.util.concurrent.Executor;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.util.EstimatableObjectWrapper;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
+
+    /**
+     * An <em>internal use only</em> thread-local variable that tells the
+     * {@link Executor} that this worker acquired a worker thread from.
+     */
+    protected static final ThreadLocal<Executor> PARENT = new ThreadLocal<Executor>();
 
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;
@@ -60,10 +65,10 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
 
     public final void run() {
         try {
-            DeadLockProofWorker.PARENT.set(executor);
+            PARENT.set(executor);
             doRun();
         } finally {
-            DeadLockProofWorker.PARENT.remove();
+            PARENT.remove();
         }
 
     }

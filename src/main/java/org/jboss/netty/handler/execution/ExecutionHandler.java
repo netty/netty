@@ -160,7 +160,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      */
     public void releaseExternalResources() {
         Executor executor = getExecutor();
-        ExecutorUtil.terminate(executor);
+        ExecutorUtil.terminate(ChannelEventRunnable.PARENT, executor);
         if (executor instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) executor).releaseExternalResources();
         }
