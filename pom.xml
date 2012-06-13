@@ -74,8 +74,8 @@
     <module>transport</module>
     <module>handler</module>
     <module>example</module>
-    <module>all</module>
     <module>testsuite</module>
+    <module>all</module>
   </modules>
 
   <dependencyManagement>
@@ -320,6 +320,18 @@
           </excludes>
           <runOrder>random</runOrder>
         </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.1.2</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
 

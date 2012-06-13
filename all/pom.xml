@@ -45,7 +45,23 @@
         <version>2.4</version>
         <executions>
           <execution>
-            <id>unpack-dependencies</id>
+            <id>unpack-sources</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <classifier>sources</classifier>
+              <includes>io/netty/**</includes>
+              <excludes>io/netty/example/**</excludes>
+              <includeGroupIds>io.netty</includeGroupIds>
+              <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-jars</id>
             <phase>generate-resources</phase>
             <goals>
               <goal>unpack-dependencies</goal>
@@ -53,8 +69,7 @@
             <configuration>
               <includes>io/netty/**</includes>
               <excludes>io/netty/example/**</excludes>
-              <outputDirectory>${project.build.directory}/classes
-              </outputDirectory>
+              <outputDirectory>${project.build.directory}/classes</outputDirectory>
               <overWriteReleases>false</overWriteReleases>
               <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
