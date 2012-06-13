@@ -95,44 +95,11 @@
         <version>2.5</version>
         <executions>
           <execution>
-            <id>clean-src</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>clean</goal>
-            </goals>
-            <configuration>
-              <filesets>
-                <fileset>
-                  <directory>${project.basedir}/src</directory>
-                  <followSymlinks>false</followSymlinks>
-                  <useDefaultExcludes>false</useDefaultExcludes>
-                </fileset>
-                <fileset>
-                  <directory>${project.basedir}/target</directory>
-                  <followSymlinks>false</followSymlinks>
-                </fileset>
-              </filesets>
-            </configuration>
-          </execution>
-          <execution>
-            <id>clean-all</id>
+            <id>clean-first</id>
             <phase>generate-resources</phase>
             <goals>
               <goal>clean</goal>
             </goals>
-            <configuration>
-              <filesets>
-                <fileset>
-                  <directory>${project.basedir}/src</directory>
-                  <followSymlinks>false</followSymlinks>
-                  <useDefaultExcludes>false</useDefaultExcludes>
-                </fileset>
-                <fileset>
-                  <directory>${project.basedir}/target</directory>
-                  <followSymlinks>false</followSymlinks>
-                </fileset>
-              </filesets>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -150,7 +117,7 @@
               <classifier>sources</classifier>
               <includes>io/netty/**</includes>
               <includeGroupIds>io.netty</includeGroupIds>
-              <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
+              <outputDirectory>${project.build.directory}/src</outputDirectory>
               <overWriteReleases>false</overWriteReleases>
               <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
@@ -167,6 +134,25 @@
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
               <overWriteReleases>false</overWriteReleases>
               <overWriteSnapshots>true</overWriteSnapshots>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>target/src</source>
+              </sources>
             </configuration>
           </execution>
         </executions>
@@ -289,6 +275,7 @@
                   <overview>${basedir}/src/javadoc/overview.html</overview>
                   <doctitle>Netty API Reference (${project.version})</doctitle>
                   <windowtitle>Netty API Reference (${project.version})</windowtitle>
+                  <detectJavaApiLink>false</detectJavaApiLink>
                   <additionalparam>
                     -link http://docs.oracle.com/javase/7/docs/api/
                     -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
