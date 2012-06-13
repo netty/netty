@@ -66,6 +66,10 @@
     </developer>
   </developers>
 
+  <properties>
+    <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
+  </properties>
+ 
   <modules>
     <module>common</module>
     <module>buffer</module>
@@ -75,15 +79,18 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>all</module>
   </modules>
 
   <profiles>
-    <!-- Build all-in-one JAR, xref, Javadoc only on full build -->
+    <!-- Build xref, Javadoc, and tarball only on full build -->
     <profile>
       <id>fullbuild</id>
+      <!--
       <modules>
-        <module>all</module>
+        <module>tarball</module>
       </modules>
+      -->
     </profile>
   </profiles>
 
@@ -217,10 +224,6 @@
     
   </dependencies>
 
-  <properties>
-    <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
-  </properties>
-  
   <build>
     <plugins>
       <plugin>

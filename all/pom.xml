@@ -171,81 +171,6 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.2</version>
-        <executions>
-          <execution>
-            <id>generate-xref</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jxr</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-          <linkJavadoc>true</linkJavadoc>
-          <destDir>${project.build.directory}/xref</destDir>
-          <javadocDir>${project.build.directory}/api</javadocDir>
-          <docTitle>Netty Source Xref (${project.version})</docTitle>
-          <windowTitle>Netty Source Xref (${project.version})</windowTitle>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.8.1</version>
-        <executions>
-          <execution>
-            <id>javadoc</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-            <configuration>
-              <attach>false</attach>
-              <excludePackageNames>*.internal,*.example</excludePackageNames>
-              <doclet>org.jboss.apiviz.APIviz</doclet>
-              <docletPath>${project.basedir}/lib/apiviz-1.3.1-jdk7.jar</docletPath>
-              <docfilessubdirs>true</docfilessubdirs>
-              <useStandardDocletOptions>true</useStandardDocletOptions>
-              <outputDirectory>${project.build.directory}/api</outputDirectory>
-              <reportOutputDirectory>${project.build.directory}</reportOutputDirectory>
-              <destDir>api</destDir>
-              <charset>UTF-8</charset>
-              <docencoding>UTF-8</docencoding>
-              <breakiterator>true</breakiterator>
-              <version>false</version>
-              <author>false</author>
-              <keywords>true</keywords>
-              <overview>${basedir}/src/javadoc/overview.html</overview>
-              <doctitle>Netty API Reference (${project.version})</doctitle>
-              <windowtitle>Netty API Reference (${project.version})</windowtitle>
-              <additionalparam>
-                -link http://docs.oracle.com/javase/7/docs/api/
-                -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
-                -link http://docs.oracle.com/javaee/6/api/
-                -link http://www.osgi.org/javadoc/r4v43/core/
-                -link http://www.slf4j.org/apidocs/
-                -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
-                -link http://logging.apache.org/log4j/1.2/apidocs/
-
-                -group "Low-level data representation" io.netty.buffer*
-                -group "Central interface for all I/O operations" io.netty.channel*
-                -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
-                -group "Reusable I/O event interceptors" io.netty.handler*
-                -group "Miscellaneous" io.netty.logging*:io.netty.util*
-
-                -sourceclasspath ${project.build.outputDirectory}
-                -nopackagediagram
-              </additionalparam>
-              <encoding>UTF-8</encoding>
-              <locale>en_US</locale>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
 
       <!-- Disable animal sniffer -->
       <plugin>
@@ -307,5 +232,90 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>fullbuild</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-jxr-plugin</artifactId>
+            <version>2.2</version>
+            <executions>
+              <execution>
+                <id>generate-xref</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jxr</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <inputEncoding>UTF-8</inputEncoding>
+              <outputEncoding>UTF-8</outputEncoding>
+              <linkJavadoc>true</linkJavadoc>
+              <destDir>${project.build.directory}/xref</destDir>
+              <javadocDir>${project.build.directory}/api</javadocDir>
+              <docTitle>Netty Source Xref (${project.version})</docTitle>
+              <windowTitle>Netty Source Xref (${project.version})</windowTitle>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.8.1</version>
+            <executions>
+              <execution>
+                <id>javadoc</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <attach>false</attach>
+                  <excludePackageNames>*.internal,*.example</excludePackageNames>
+                  <doclet>org.jboss.apiviz.APIviz</doclet>
+                  <docletPath>${project.basedir}/lib/apiviz-1.3.1-jdk7.jar</docletPath>
+                  <docfilessubdirs>true</docfilessubdirs>
+                  <useStandardDocletOptions>true</useStandardDocletOptions>
+                  <outputDirectory>${project.build.directory}/api</outputDirectory>
+                  <reportOutputDirectory>${project.build.directory}</reportOutputDirectory>
+                  <destDir>api</destDir>
+                  <charset>UTF-8</charset>
+                  <docencoding>UTF-8</docencoding>
+                  <breakiterator>true</breakiterator>
+                  <version>false</version>
+                  <author>false</author>
+                  <keywords>true</keywords>
+                  <overview>${basedir}/src/javadoc/overview.html</overview>
+                  <doctitle>Netty API Reference (${project.version})</doctitle>
+                  <windowtitle>Netty API Reference (${project.version})</windowtitle>
+                  <additionalparam>
+                    -link http://docs.oracle.com/javase/7/docs/api/
+                    -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
+                    -link http://docs.oracle.com/javaee/6/api/
+                    -link http://www.osgi.org/javadoc/r4v43/core/
+                    -link http://www.slf4j.org/apidocs/
+                    -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
+                    -link http://logging.apache.org/log4j/1.2/apidocs/
+
+                    -group "Low-level data representation" io.netty.buffer*
+                    -group "Central interface for all I/O operations" io.netty.channel*
+                    -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
+                    -group "Reusable I/O event interceptors" io.netty.handler*
+                    -group "Miscellaneous" io.netty.logging*:io.netty.util*
+
+                    -sourceclasspath ${project.build.outputDirectory}
+                    -nopackagediagram
+                  </additionalparam>
+                  <encoding>UTF-8</encoding>
+                  <locale>en_US</locale>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
 
