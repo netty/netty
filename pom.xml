@@ -86,11 +86,9 @@
     <!-- Build xref, Javadoc, and tarball only on full build -->
     <profile>
       <id>fullbuild</id>
-      <!--
       <modules>
         <module>tarball</module>
       </modules>
-      -->
     </profile>
   </profiles>
 
