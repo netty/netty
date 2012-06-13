@@ -41,30 +41,52 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2.2</version>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.4</version>
         <executions>
           <execution>
-            <id>all-in-one</id>
-            <phase>package</phase>
+            <id>unpack-dependencies</id>
+            <phase>generate-resources</phase>
             <goals>
-              <goal>single</goal>
+              <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptors>
-                <descriptor>${project.basedir}/assembly.xml</descriptor>
-              </descriptors>
-              <tarLongFileMode>gnu</tarLongFileMode>
+              <includes>io/netty/**</includes>
+              <excludes>io/netty/example/**</excludes>
+              <outputDirectory>${project.build.directory}/classes
+              </outputDirectory>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
             </configuration>
           </execution>
         </executions>
       </plugin>
 
+      <!-- Disable animal sniffer -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Disable checkstyle -->
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-style</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
       <!-- Disable all plugin executions configured by jar packaging -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>2.5</version>
         <executions>
           <execution>
             <id>default-resources</id>
@@ -78,7 +100,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.3.2</version>
         <executions>
           <execution>
             <id>default-compile</id>
@@ -92,20 +113,9 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.7.2</version>
         <executions>
           <execution>
             <id>default-test</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>2.3.2</version>
-        <executions>
-          <execution>
-            <id>default-jar</id>
             <phase>none</phase>
           </execution>
         </executions>
