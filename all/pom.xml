@@ -103,7 +103,6 @@
             <configuration>
               <classifier>sources</classifier>
               <includes>io/netty/**</includes>
-              <excludes>io/netty/example/**</excludes>
               <includeGroupIds>io.netty</includeGroupIds>
               <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
               <overWriteReleases>false</overWriteReleases>
@@ -127,6 +126,28 @@
         </executions>
       </plugin>
       <plugin>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.2</version>
+        <executions>
+          <execution>
+            <id>generate-xref</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jxr</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UTF-8</outputEncoding>
+          <linkJavadoc>true</linkJavadoc>
+          <destDir>${project.build.directory}/xref</destDir>
+          <javadocDir>${project.build.directory}/api</javadocDir>
+          <docTitle>Netty Source Xref (${project.version})</docTitle>
+          <windowTitle>Netty Source Xref (${project.version})</windowTitle>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.8.1</version>
         <executions>
@@ -138,7 +159,7 @@
             </goals>
             <configuration>
               <attach>false</attach>
-              <excludePackageNames>*.internal</excludePackageNames>
+              <excludePackageNames>*.internal,*.example</excludePackageNames>
               <doclet>org.jboss.apiviz.APIviz</doclet>
               <docletPath>${project.basedir}/lib/apiviz-1.3.1-jdk7.jar</docletPath>
               <docfilessubdirs>true</docfilessubdirs>
@@ -153,8 +174,8 @@
               <author>false</author>
               <keywords>true</keywords>
               <overview>${basedir}/src/javadoc/overview.html</overview>
-              <doctitle>${parent.project.name} API Reference (${project.version})</doctitle>
-              <windowtitle>${parent.project.name} API Reference (${project.version})</windowtitle>
+              <doctitle>Netty API Reference (${project.version})</doctitle>
+              <windowtitle>Netty API Reference (${project.version})</windowtitle>
               <additionalparam>
                 -link http://docs.oracle.com/javase/7/docs/api/
                 -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
@@ -179,7 +200,6 @@
           </execution>
         </executions>
       </plugin>
-
       <!-- Disable animal sniffer -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
