@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio2;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 
@@ -65,23 +64,11 @@ public abstract class AbstractAsyncChannel extends AbstractChannel {
         return ch;
     }
 
-    @Override
-    public ChannelConfig config() {
-        // TODO: Fix me
-        return null;
-    }
 
     @Override
     public boolean isOpen() {
         return ch == null || ch.isOpen();
     }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        // TODO: Fix me
-        return true;
-    }
-
 
     @Override
     protected void doDeregister() throws Exception {
@@ -91,6 +78,11 @@ public abstract class AbstractAsyncChannel extends AbstractChannel {
     @Override
     protected AsyncUnsafe newUnsafe() {
         return new AsyncUnsafe();
+    }
+
+    @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof AsyncChildEventLoop;
     }
 
     protected class AsyncUnsafe extends AbstractUnsafe {

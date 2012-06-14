@@ -13,13 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.socket.nio2;
+
+import io.netty.channel.SingleThreadEventLoop;
 
 import java.util.concurrent.ThreadFactory;
 
-class DefaultChildEventExecutor extends SingleThreadEventExecutor {
+final class AsyncChildEventLoop extends SingleThreadEventLoop {
 
-    DefaultChildEventExecutor(ThreadFactory threadFactory) {
+    AsyncChildEventLoop(ThreadFactory threadFactory) {
         super(threadFactory);
     }
 

@@ -34,6 +34,7 @@ public class AsyncServerSocketChannel extends AbstractAsyncChannel implements Se
     private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AsyncServerSocketChannel.class);
+    private volatile AsyncServerSocketChannelConfig config;
 
     public AsyncServerSocketChannel() {
         super(null, null);
@@ -47,7 +48,15 @@ public class AsyncServerSocketChannel extends AbstractAsyncChannel implements Se
 
     @Override
     public boolean isActive() {
-        return localAddress0() != null;
+        AsynchronousServerSocketChannel channel = javaChannel();
+        try {
+            if (channel != null && channel.getLocalAddress() != null) {
+                return true;
+            }
+        } catch (IOException e) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -72,6 +81,8 @@ public class AsyncServerSocketChannel extends AbstractAsyncChannel implements Se
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().bind(localAddress);
+        javaChannel().accept(this, ACCEPT_HANDLER);
+
     }
 
     @Override
@@ -98,7 +109,8 @@ public class AsyncServerSocketChannel extends AbstractAsyncChannel implements Se
     @Override
     protected Runnable doRegister() throws Exception {
         ch = AsynchronousServerSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
-        javaChannel().accept(this, ACCEPT_HANDLER);
+        config = new AsyncServerSocketChannelConfig(javaChannel());
+
         return null;
     }
 
@@ -109,12 +121,20 @@ public class AsyncServerSocketChannel extends AbstractAsyncChannel implements Se
             channel.javaChannel().accept(channel, this);
 
             // create the socket add it to the buffer and fire the event
-            channel.outboundMessageBuffer().add(new AsyncSocketchannel(channel, null));
+            channel.pipeline().inboundMessageBuffer().add(new AsyncSocketchannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
         }
 
         public void failed(Throwable t, AsyncServerSocketChannel channel) {
             logger.warn("Failed to create a new channel from an accepted socket.", t);
         }
+    }
+
+    @Override
+    public AsyncServerSocketChannelConfig config() {
+        if (config == null) {
+            throw new IllegalStateException("Channel not registered yet");
+        }
+        return config;
     }
 }

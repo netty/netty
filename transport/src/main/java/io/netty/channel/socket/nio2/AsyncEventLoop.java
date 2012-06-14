@@ -13,10 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.socket.nio2;
 
-public abstract class ChannelOutboundHandlerAdapter
-        extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler {
+import io.netty.channel.EventExecutor;
+import io.netty.channel.MultithreadEventLoop;
+
+import java.util.concurrent.ThreadFactory;
+
+public class AsyncEventLoop extends MultithreadEventLoop {
+
+    public AsyncEventLoop() {
+        this(0);
+    }
+
+    public AsyncEventLoop(int nThreads) {
+        this(nThreads, null);
+    }
+
+    public AsyncEventLoop(int nThreads, ThreadFactory threadFactory) {
+        super(nThreads, threadFactory);
+    }
+
     @Override
-    public abstract void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
+        return new AsyncChildEventLoop(threadFactory);
+    }
 }

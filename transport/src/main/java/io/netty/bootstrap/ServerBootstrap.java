@@ -167,13 +167,6 @@ public class ServerBootstrap {
             return future;
         }
 
-        try {
-            channel.config().setOptions(parentOptions);
-        } catch (Exception e) {
-            future.setFailure(e);
-            return future;
-        }
-
         ChannelPipeline p = channel.pipeline();
         if (handler != null) {
             p.addLast(handler);
@@ -183,6 +176,12 @@ public class ServerBootstrap {
         ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
             future.setFailure(f.cause());
+            return future;
+        }
+        try {
+            channel.config().setOptions(parentOptions);
+        } catch (Exception e) {
+            future.setFailure(e);
             return future;
         }
 

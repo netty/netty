@@ -18,7 +18,10 @@ package io.netty.channel.socket.nio2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateHandler;
+import io.netty.channel.ChannelStateHandlerAdapter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -33,21 +36,42 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
     private static final CompletionHandler<Void, AsyncSocketchannel> CONNECT_HANDLER  = new ConnectHandler();
     private static final CompletionHandler<Integer, AsyncSocketchannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AsyncSocketchannel> WRITE_HANDLER = new WriteHandler();
+    private static final ChannelStateHandler READ_START_HANDLER = new ChannelStateHandlerAdapter() {
 
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            try {
+                super.channelActive(ctx);
+                AsyncSocketchannel.read((AsyncSocketchannel)ctx.channel());
+
+            } finally {
+                ctx.pipeline().remove(this);
+            }
+
+            
+        }
+        
+    };
     private final AtomicBoolean flushing = new AtomicBoolean(false);
+    private volatile AsyncSocketChannelConfig config;
 
     public AsyncSocketchannel() {
-        this(null, null);
+        this(null, null, null);
     }
 
-    public AsyncSocketchannel(AsyncServerSocketChannel parent, Integer id) {
+    public AsyncSocketchannel(AsyncServerSocketChannel parent, Integer id, AsynchronousSocketChannel channel) {
         super(parent, id);
+        this.ch = channel;
+        if (ch != null) {
+            config = new AsyncSocketChannelConfig(javaChannel());
+            pipeline().addLast(READ_START_HANDLER);
+        }
     }
 
     @Override
     public boolean isActive() {
         AsynchronousSocketChannel ch = javaChannel();
-        return ch.isOpen();
+        return ch.isOpen() && remoteAddress() != null;
     }
 
     @Override
@@ -95,13 +119,18 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        assert ch == null;
-        ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
+        if (ch == null) {
+            ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
+            config = new AsyncSocketChannelConfig(javaChannel());
+            pipeline().addLast(READ_START_HANDLER);
+        }
+
+
         return null;
     }
 
-    private void read() {
-        javaChannel().read(pipeline().inboundByteBuffer().nioBuffer(), this, READ_HANDLER);
+    private static void read(AsyncSocketchannel channel) {
+        channel.javaChannel().read(channel.pipeline().inboundByteBuffer().nioBuffer(), channel, READ_HANDLER);
     }
 
     @Override
@@ -132,14 +161,6 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
         return false;
     }
 
-    private static boolean expandReadBuffer(ByteBuf byteBuf) {
-        if (!byteBuf.writable()) {
-            // FIXME: Magic number
-            byteBuf.ensureWritableBytes(4096);
-            return true;
-        }
-        return false;
-    }
 
     private static final class WriteHandler implements CompletionHandler<Integer, AsyncSocketchannel> {
 
@@ -213,10 +234,20 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
                     channel.close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
-                    channel.read();
+                    AsyncSocketchannel.read(channel);
                 }
             }
         }
+        
+        private static boolean expandReadBuffer(ByteBuf byteBuf) {
+            if (!byteBuf.writable()) {
+                // FIXME: Magic number
+                byteBuf.ensureWritableBytes(4096);
+                return true;
+            }
+            return false;
+        }
+
 
         @Override
         public void failed(Throwable t, AsyncSocketchannel channel) {
@@ -225,7 +256,7 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
                 channel.close(channel.unsafe().voidFuture());
             } else {
                 // start the next read
-                channel.read();
+                AsyncSocketchannel.read(channel);
             }
         }
     }
@@ -235,6 +266,9 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
         @Override
         public void completed(Void result, AsyncSocketchannel channel) {
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
+            
+            // start reading from channel
+            AsyncSocketchannel.read(channel);
         }
 
         @Override
@@ -242,5 +276,14 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
             ((AsyncUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }
+
+    @Override
+    public AsyncSocketChannelConfig config() {
+        if (config == null) {
+            throw new IllegalStateException("Channel not registered yet");
+        }
+        return config;
+    }
+
 
 }

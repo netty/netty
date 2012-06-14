@@ -13,33 +13,35 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket;
+package io.netty.channel.socket.nio2;
 
 import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.socket.SocketChannelConfig;
 
-import java.net.Socket;
-import java.net.SocketException;
+import java.io.IOException;
+import java.net.StandardSocketOptions;
+import java.nio.channels.NetworkChannel;
 import java.util.Map;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
  */
-public class DefaultSocketChannelConfig extends DefaultChannelConfig
+public class AsyncSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    private final Socket socket;
+    private final NetworkChannel channel;
 
     /**
      * Creates a new instance.
      */
-    public DefaultSocketChannelConfig(Socket socket) {
-        if (socket == null) {
-            throw new NullPointerException("socket");
+    public AsyncSocketChannelConfig(NetworkChannel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
         }
-        this.socket = socket;
+        this.channel = channel;
     }
 
     @Override
@@ -104,8 +106,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getReceiveBufferSize() {
         try {
-            return socket.getReceiveBufferSize();
-        } catch (SocketException e) {
+            return (int) channel.getOption(StandardSocketOptions.SO_RCVBUF);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -113,8 +115,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getSendBufferSize() {
         try {
-            return socket.getSendBufferSize();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_SNDBUF);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -122,8 +124,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getSoLinger() {
         try {
-            return socket.getSoLinger();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_LINGER);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -131,8 +133,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getTrafficClass() {
         try {
-            return socket.getTrafficClass();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.IP_TOS);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -140,8 +142,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isKeepAlive() {
         try {
-            return socket.getKeepAlive();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_KEEPALIVE);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -149,8 +151,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isReuseAddress() {
         try {
-            return socket.getReuseAddress();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -158,8 +160,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isTcpNoDelay() {
         try {
-            return socket.getTcpNoDelay();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -167,8 +169,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setKeepAlive(boolean keepAlive) {
         try {
-            socket.setKeepAlive(keepAlive);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -176,14 +178,14 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setPerformancePreferences(
             int connectionTime, int latency, int bandwidth) {
-        socket.setPerformancePreferences(connectionTime, latency, bandwidth);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
-            socket.setReceiveBufferSize(receiveBufferSize);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -191,8 +193,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setReuseAddress(boolean reuseAddress) {
         try {
-            socket.setReuseAddress(reuseAddress);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -200,8 +202,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setSendBufferSize(int sendBufferSize) {
         try {
-            socket.setSendBufferSize(sendBufferSize);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -209,12 +211,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setSoLinger(int soLinger) {
         try {
-            if (soLinger < 0) {
-                socket.setSoLinger(false, 0);
-            } else {
-                socket.setSoLinger(true, soLinger);
-            }
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_LINGER, soLinger);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -222,8 +220,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
         try {
-            socket.setTcpNoDelay(tcpNoDelay);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -231,8 +229,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setTrafficClass(int trafficClass) {
         try {
-            socket.setTrafficClass(trafficClass);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }

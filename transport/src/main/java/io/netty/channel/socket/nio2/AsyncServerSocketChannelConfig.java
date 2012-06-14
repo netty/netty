@@ -13,34 +13,36 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket;
+package io.netty.channel.socket.nio2;
 
 import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
-import java.net.ServerSocket;
-import java.net.SocketException;
+import java.io.IOException;
+import java.net.StandardSocketOptions;
+import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.Map;
 
 /**
- * The default {@link ServerSocketChannelConfig} implementation.
+ * The Async {@link ServerSocketChannelConfig} implementation.
  */
-public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
+public class AsyncServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final ServerSocket socket;
+    private final AsynchronousServerSocketChannel channel;
     private volatile int backlog;
 
     /**
      * Creates a new instance.
      */
-    public DefaultServerSocketChannelConfig(ServerSocket socket) {
-        if (socket == null) {
-            throw new NullPointerException("socket");
+    public AsyncServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
         }
-        this.socket = socket;
+        this.channel = channel;
     }
 
     @Override
@@ -83,8 +85,8 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isReuseAddress() {
         try {
-            return socket.getReuseAddress();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -92,8 +94,8 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setReuseAddress(boolean reuseAddress) {
         try {
-            socket.setReuseAddress(reuseAddress);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -101,8 +103,8 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getReceiveBufferSize() {
         try {
-            return socket.getReceiveBufferSize();
-        } catch (SocketException e) {
+            return channel.getOption(StandardSocketOptions.SO_RCVBUF);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
@@ -110,15 +112,15 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
-            socket.setReceiveBufferSize(receiveBufferSize);
-        } catch (SocketException e) {
+            channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     @Override
     public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        socket.setPerformancePreferences(connectionTime, latency, bandwidth);
+        throw new UnsupportedOperationException();
     }
 
     @Override
