@@ -292,8 +292,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             int chunkSize = 8196;
             long position = 0;
             while (position < size) {
-                if (chunksize < size - position) {
-                    chunksize = size - position;
+                if (chunkSize < size - position) {
+                    chunkSize = (int) (size - position);
                 }
                 position += in.transferTo(position, chunkSize , out);
             }
