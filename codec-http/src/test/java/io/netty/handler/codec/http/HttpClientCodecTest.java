@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,16 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import static org.junit.Assert.*;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.handler.codec.embedder.CodecEmbedderException;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
 import io.netty.util.CharsetUtil;
+
 import org.junit.Test;
 
 public class HttpClientCodecTest {
@@ -39,64 +36,54 @@ public class HttpClientCodecTest {
     @Test
     public void testFailsNotOnRequestResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        decoder.offer(ChannelBuffers.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        encoder.finish();
-        decoder.finish();
-   
+        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.finish();
     }
-    
+
     @Test
     public void testFailsNotOnRequestResponseChunked() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        decoder.offer(ChannelBuffers.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        encoder.finish();
-        decoder.finish();
-   
+        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeInbound(Unpooled.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.finish();
     }
-    
+
     @Test
     public void testFailsOnMissingResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
+
+        assertTrue(ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
+        assertNotNull(ch.readOutbound());
 
         try {
-            encoder.finish();
+            ch.finish();
             fail();
-        } catch (CodecEmbedderException e) {
-            assertTrue(e.getCause() instanceof PrematureChannelClosureException);
+        } catch (CodecException e) {
+            assertTrue(e instanceof PrematureChannelClosureException);
         }
-        
+
     }
-    
+
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
-        DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
-        
-        encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
-        decoder.offer(ChannelBuffers.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
+        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeInbound(Unpooled.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
 
         try {
-            encoder.finish();
-            decoder.finish();
+            ch.finish();
             fail();
-        } catch (CodecEmbedderException e) {
-            assertTrue(e.getCause() instanceof PrematureChannelClosureException);
+        } catch (CodecException e) {
+            assertTrue(e instanceof PrematureChannelClosureException);
         }
-        
+
     }
 }

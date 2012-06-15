@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,14 +22,12 @@ package io.netty.handler.codec.spdy;
  */
 public class SpdyProtocolException extends Exception {
 
-    private static final long serialVersionUID = -1097979786367505658L;
+    private static final long serialVersionUID = 7870000537743847264L;
 
     /**
      * Creates a new instance.
      */
-    public SpdyProtocolException() {
-        super();
-    }
+    public SpdyProtocolException() { }
 
     /**
      * Creates a new instance.

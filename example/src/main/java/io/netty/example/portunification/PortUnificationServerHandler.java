@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,9 @@
  */
 package io.netty.example.portunification;
 
-import javax.net.ssl.SSLEngine;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.example.factorial.BigIntegerDecoder;
 import io.netty.example.factorial.FactorialServerHandler;
@@ -29,17 +27,18 @@ import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.frame.FrameDecoder;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
 
+import javax.net.ssl.SSLEngine;
+
 /**
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
  */
-public class PortUnificationServerHandler extends FrameDecoder {
+public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapter {
 
     private final boolean detectSsl;
     private final boolean detectGzip;
@@ -54,15 +53,14 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Will use the first two bytes to detect a protocol.
-        if (buffer.readableBytes() < 2) {
-            return null;
+        if (in.readableBytes() < 2) {
+            return;
         }
 
-        final int magic1 = buffer.getUnsignedByte(buffer.readerIndex());
-        final int magic2 = buffer.getUnsignedByte(buffer.readerIndex() + 1);
+        final int magic1 = in.getUnsignedByte(in.readerIndex());
+        final int magic2 = in.getUnsignedByte(in.readerIndex() + 1);
 
         if (isSsl(magic1)) {
             enableSsl(ctx);
@@ -74,13 +72,14 @@ public class PortUnificationServerHandler extends FrameDecoder {
             switchToFactorial(ctx);
         } else {
             // Unknown protocol; discard everything and close the connection.
-            buffer.skipBytes(buffer.readableBytes());
-            ctx.getChannel().close();
-            return null;
+            in.clear();
+            ctx.close();
+            return;
         }
 
         // Forward the current read buffer as is to the new handlers.
-        return buffer.readBytes(buffer.readableBytes());
+        ctx.nextInboundByteBuffer().writeBytes(in);
+        ctx.fireInboundBufferUpdated();
     }
 
     private boolean isSsl(int magic1) {
@@ -102,7 +101,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         return false;
     }
 
-    private boolean isHttp(int magic1, int magic2) {
+    private static boolean isHttp(int magic1, int magic2) {
         return
             magic1 == 'G' && magic2 == 'E' || // GET
             magic1 == 'P' && magic2 == 'O' || // POST
@@ -115,12 +114,12 @@ public class PortUnificationServerHandler extends FrameDecoder {
             magic1 == 'C' && magic2 == 'O';   // CONNECT
     }
 
-    private boolean isFactorial(int magic1) {
+    private static boolean isFactorial(int magic1) {
         return magic1 == 'F';
     }
 
     private void enableSsl(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
 
         SSLEngine engine =
             SecureChatSslContextFactory.getServerContext().createSSLEngine();
@@ -132,7 +131,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void enableGzip(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
         p.addLast("gzipdeflater", new ZlibEncoder(ZlibWrapper.GZIP));
         p.addLast("gzipinflater", new ZlibDecoder(ZlibWrapper.GZIP));
         p.addLast("unificationB", new PortUnificationServerHandler(detectSsl, false));
@@ -140,7 +139,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void switchToHttp(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("deflater", new HttpContentCompressor());
@@ -149,7 +148,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
     }
 
     private void switchToFactorial(ChannelHandlerContext ctx) {
-        ChannelPipeline p = ctx.getPipeline();
+        ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new BigIntegerDecoder());
         p.addLast("encoder", new NumberEncoder());
         p.addLast("handler", new FactorialServerHandler());

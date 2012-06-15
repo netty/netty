@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,24 +15,22 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import io.netty.buffer.ByteBuf;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
-import io.netty.buffer.ChannelBuffer;
-
 /**
- * A {@link ChunkedInput} that fetches data from a {@link ReadableByteChannel}
+ * A {@link ChunkedByteInput} that fetches data from a {@link ReadableByteChannel}
  * chunk by chunk.  Please note that the {@link ReadableByteChannel} must
  * operate in blocking mode.  Non-blocking mode channels are not supported.
  */
-public class ChunkedNioStream implements ChunkedInput {
+public class ChunkedNioStream implements ChunkedByteInput {
 
     private final ReadableByteChannel in;
 
     private final int chunkSize;
-    private volatile long offset;
+    private long offset;
 
     /**
      * Associated ByteBuffer
@@ -98,9 +96,9 @@ public class ChunkedNioStream implements ChunkedInput {
     }
 
     @Override
-    public Object nextChunk() throws Exception {
+    public boolean readChunk(ByteBuf buffer) throws Exception {
         if (isEndOfInput()) {
-            return null;
+            return false;
         }
         // buffer cannot be not be empty from there
         int readBytes = byteBuffer.position();
@@ -111,15 +109,14 @@ public class ChunkedNioStream implements ChunkedInput {
             }
             readBytes += localReadBytes;
             offset += localReadBytes;
-
             if (readBytes == chunkSize) {
                 break;
             }
         }
         byteBuffer.flip();
-        // copy since buffer is keeped for next usage
-        ChannelBuffer buffer = copiedBuffer(byteBuffer);
+        buffer.writeBytes(byteBuffer);
         byteBuffer.clear();
-        return buffer;
+
+        return true;
     }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpRequest;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -33,28 +34,13 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
-    private final long maxFramePayloadLength;
+    private final int maxFramePayloadLength;
 
     private String selectedSubprotocol;
 
     /**
-     * Constructor using default values
-     * 
-     * @param version
-     *            the protocol version
-     * @param webSocketUrl
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            CSV of supported protocols. Null if sub protocols not supported.
-     */
-    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
-        this(version, webSocketUrl, subprotocols, Long.MAX_VALUE);
-    }
-
-    /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param version
      *            the protocol version
      * @param webSocketUrl
@@ -65,8 +51,9 @@ public abstract class WebSocketServerHandshaker {
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      */
-    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols,
-            long maxFramePayloadLength) {
+    protected WebSocketServerHandshaker(
+            WebSocketVersion version, String webSocketUrl, String subprotocols,
+            int maxFramePayloadLength) {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
@@ -93,9 +80,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p : this.subprotocols) {
-            ret.add(p);
-        }
+        Collections.addAll(ret, subprotocols);
         return ret;
     }
 
@@ -107,15 +92,19 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
+<<<<<<< HEAD
+     * Returns the max length for any frame's payload.
+=======
      * Returns the max length for any frame's payload
+>>>>>>> abd10d9... Fixed bug where subprotocol not sent by client
      */
-    public long getMaxFramePayloadLength() {
+    public int getMaxFramePayloadLength() {
         return maxFramePayloadLength;
     }
 
     /**
      * Performs the opening handshake
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -125,7 +114,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the closing handshake
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame
@@ -135,7 +124,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Selects the first matching supported sub protocol
-     * 
+     *
      * @param requestedSubprotocols
      *            CSV of protocols to be supported. e.g. "chat, superchat"
      * @return First matching supported sub protocol. Null if not found.
@@ -146,10 +135,10 @@ public abstract class WebSocketServerHandshaker {
         }
 
         String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
-        for (String p : requestedSubprotocolArray) {
+        for (String p: requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
-            for (String supportedSubprotocol : subprotocols) {
+            for (String supportedSubprotocol: subprotocols) {
                 if (requestedSubprotocol.equals(supportedSubprotocol)) {
                     return requestedSubprotocol;
                 }
@@ -159,9 +148,9 @@ public abstract class WebSocketServerHandshaker {
         // No match found
         return null;
     }
-    
+
     /**
-     * Returns the selected subprotocol. Null if no subprotocol has been selected. 
+     * Returns the selected subprotocol. Null if no subprotocol has been selected.
      * <p>
      * This is only available AFTER <tt>handshake()</tt> has been called.
      * </p>
@@ -169,9 +158,9 @@ public abstract class WebSocketServerHandshaker {
     public String getSelectedSubprotocol() {
         return selectedSubprotocol;
     }
-    
+
     protected void setSelectedSubprotocol(String value) {
         selectedSubprotocol = value;
     }
-    
+
 }

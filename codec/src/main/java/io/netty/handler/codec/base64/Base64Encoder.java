@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,17 +15,16 @@
  */
 package io.netty.handler.codec.base64;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
- * Encodes a {@link ChannelBuffer} into a Base64-encoded {@link ChannelBuffer}.
+ * Encodes a {@link ByteBuf} into a Base64-encoded {@link ByteBuf}.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -41,7 +40,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Encoder extends OneToOneEncoder {
+public class Base64Encoder extends MessageToMessageEncoder<ByteBuf, ByteBuf> {
 
     private final boolean breakLines;
     private final Base64Dialect dialect;
@@ -64,15 +63,13 @@ public class Base64Encoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel,
-            Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof ByteBuf;
+    }
 
-        ChannelBuffer src = (ChannelBuffer) msg;
-        return Base64.encode(
-                src, src.readerIndex(), src.readableBytes(),
-                breakLines, dialect);
+    @Override
+    public ByteBuf encode(ChannelHandlerContext ctx,
+            ByteBuf msg) throws Exception {
+        return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
     }
 }

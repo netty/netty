@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * A SPDY Protocol Data Frame
@@ -26,12 +26,12 @@ public interface SpdyDataFrame {
     /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamID();
+    int getStreamId();
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setStreamID(int streamID);
+    void setStreamId(int streamID);
 
     /**
      * Returns {@code true} if this frame is the last frame to be transmitted
@@ -45,15 +45,27 @@ public interface SpdyDataFrame {
     void setLast(boolean last);
 
     /**
-     * Returns the data payload of this frame.  If there is no data payload
-     * {@link ChannelBuffers#EMPTY_BUFFER} is returned.
+     * @deprecated Removed from SPDY specification.
      */
-    ChannelBuffer getData();
+    @Deprecated
+    boolean isCompressed();
+
+    /**
+     * @deprecated Removed from SPDY specification.
+     */
+    @Deprecated
+    void setCompressed(boolean compressed);
+
+    /**
+     * Returns the data payload of this frame.  If there is no data payload
+     * {@link Unpooled#EMPTY_BUFFER} is returned.
+     */
+    ByteBuf getData();
 
     /**
      * Sets the data payload of this frame.  If {@code null} is specified,
-     * the data payload will be set to {@link ChannelBuffers#EMPTY_BUFFER}.
+     * the data payload will be set to {@link Unpooled#EMPTY_BUFFER}.
      * The data payload cannot exceed 16777215 bytes.
      */
-    void setData(ChannelBuffer data);
+    void setData(ByteBuf data);
 }

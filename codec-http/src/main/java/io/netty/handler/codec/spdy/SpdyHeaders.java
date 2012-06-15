@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
@@ -62,9 +62,7 @@ public class SpdyHeaders {
          */
         public static final String VERSION = ":version";
 
-        private HttpNames() {
-            super();
-        }
+        private HttpNames() { }
     }
 
     /**
@@ -93,9 +91,7 @@ public class SpdyHeaders {
          */
         public static final String VERSION = "version";
 
-        private Spdy2HttpNames() {
-            super();
-        }
+        private Spdy2HttpNames() { }
     }
 
 
@@ -173,12 +169,28 @@ public class SpdyHeaders {
     /**
      * Removes the HTTP method header.
      */
+    @Deprecated
+    public static void removeMethod(SpdyHeaderBlock block) {
+        removeMethod(2, block);
+    }
+
+    /**
+     * Removes the HTTP method header.
+     */
     public static void removeMethod(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             block.removeHeader(Spdy2HttpNames.METHOD);
         } else {
             block.removeHeader(HttpNames.METHOD);
         }
+    }
+
+    /**
+     * Returns the {@link HttpMethod} represented by the HTTP method header.
+     */
+    @Deprecated
+    public static HttpMethod getMethod(SpdyHeaderBlock block) {
+        return getMethod(2, block);
     }
 
     /**
@@ -199,12 +211,28 @@ public class SpdyHeaders {
     /**
      * Sets the HTTP method header.
      */
+    @Deprecated
+    public static void setMethod(SpdyHeaderBlock block, HttpMethod method) {
+        setMethod(2, block, method);
+    }
+
+    /**
+     * Sets the HTTP method header.
+     */
     public static void setMethod(int spdyVersion, SpdyHeaderBlock block, HttpMethod method) {
         if (spdyVersion < 3) {
             block.setHeader(Spdy2HttpNames.METHOD, method.getName());
         } else {
             block.setHeader(HttpNames.METHOD, method.getName());
         }
+    }
+
+    /**
+     * Removes the URL scheme header.
+     */
+    @Deprecated
+    public static void removeScheme(SpdyHeaderBlock block) {
+        removeMethod(2, block);
     }
 
     /**
@@ -221,12 +249,28 @@ public class SpdyHeaders {
     /**
      * Returns the value of the URL scheme header.
      */
+    @Deprecated
+    public static String getScheme(SpdyHeaderBlock block) {
+        return getScheme(2, block);
+    }
+
+    /**
+     * Returns the value of the URL scheme header.
+     */
     public static String getScheme(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             return block.getHeader(Spdy2HttpNames.SCHEME);
         } else {
             return block.getHeader(HttpNames.SCHEME);
         }
+    }
+
+    /**
+     * Sets the URL scheme header.
+     */
+    @Deprecated
+    public static void setScheme(SpdyHeaderBlock block, String scheme) {
+        setScheme(2, block, scheme);
     }
 
     /**
@@ -243,12 +287,28 @@ public class SpdyHeaders {
     /**
      * Removes the HTTP response status header.
      */
+    @Deprecated
+    public static void removeStatus(SpdyHeaderBlock block) {
+        removeMethod(2, block);
+    }
+
+    /**
+     * Removes the HTTP response status header.
+     */
     public static void removeStatus(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             block.removeHeader(Spdy2HttpNames.STATUS);
         } else {
             block.removeHeader(HttpNames.STATUS);
         }
+    }
+
+    /**
+     * Returns the {@link HttpResponseStatus} represented by the HTTP response status header.
+     */
+    @Deprecated
+    public static HttpResponseStatus getStatus(SpdyHeaderBlock block) {
+        return getStatus(2, block);
     }
 
     /**
@@ -283,12 +343,28 @@ public class SpdyHeaders {
     /**
      * Sets the HTTP response status header.
      */
+    @Deprecated
+    public static void setStatus(SpdyHeaderBlock block, HttpResponseStatus status) {
+        setStatus(2, block, status);
+    }
+
+    /**
+     * Sets the HTTP response status header.
+     */
     public static void setStatus(int spdyVersion, SpdyHeaderBlock block, HttpResponseStatus status) {
         if (spdyVersion < 3) {
             block.setHeader(Spdy2HttpNames.STATUS, status.toString());
         } else {
             block.setHeader(HttpNames.STATUS, status.toString());
         }
+    }
+
+    /**
+     * Removes the URL path header.
+     */
+    @Deprecated
+    public static void removeUrl(SpdyHeaderBlock block) {
+        removeUrl(2, block);
     }
 
     /**
@@ -305,12 +381,28 @@ public class SpdyHeaders {
     /**
      * Returns the value of the URL path header.
      */
+    @Deprecated
+    public static String getUrl(SpdyHeaderBlock block) {
+        return getUrl(2, block);
+    }
+
+    /**
+     * Returns the value of the URL path header.
+     */
     public static String getUrl(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             return block.getHeader(Spdy2HttpNames.URL);
         } else {
             return block.getHeader(HttpNames.PATH);
         }
+    }
+
+    /**
+     * Sets the URL path header.
+     */
+    @Deprecated
+    public static void setUrl(SpdyHeaderBlock block, String path) {
+        setUrl(2, block, path);
     }
 
     /**
@@ -327,12 +419,28 @@ public class SpdyHeaders {
     /**
      * Removes the HTTP version header.
      */
+    @Deprecated
+    public static void removeVersion(SpdyHeaderBlock block) {
+        removeVersion(2, block);
+    }
+
+    /**
+     * Removes the HTTP version header.
+     */
     public static void removeVersion(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             block.removeHeader(Spdy2HttpNames.VERSION);
         } else {
             block.removeHeader(HttpNames.VERSION);
         }
+    }
+
+    /**
+     * Returns the {@link HttpVersion} represented by the HTTP version header.
+     */
+    @Deprecated
+    public static HttpVersion getVersion(SpdyHeaderBlock block) {
+        return getVersion(2, block);
     }
 
     /**
@@ -348,6 +456,14 @@ public class SpdyHeaders {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Sets the HTTP version header.
+     */
+    @Deprecated
+    public static void setVersion(SpdyHeaderBlock block, HttpVersion httpVersion) {
+        setVersion(2, block, httpVersion);
     }
 
     /**
@@ -621,14 +737,17 @@ public class SpdyHeaders {
             after.before = this;
         }
 
+        @Override
         public String getKey() {
             return key;
         }
 
+        @Override
         public String getValue() {
             return value;
         }
 
+        @Override
         public String setValue(String value) {
             if (value == null) {
                 throw new NullPointerException("value");

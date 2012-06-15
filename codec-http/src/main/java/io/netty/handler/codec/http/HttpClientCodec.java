@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,15 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.CombinedChannelHandler;
+import io.netty.handler.codec.PrematureChannelClosureException;
+
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ChannelUpstreamHandler;
-import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.util.internal.QueueFactory;
 
 /**
  * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
@@ -36,34 +33,30 @@ import io.netty.util.internal.QueueFactory;
  * {@link HttpResponseDecoder} to learn what additional state management needs
  * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
  * {@link HttpResponseDecoder} can not handle it by itself.
- * 
- * If the {@link Channel} gets closed and there are requests missing for a response
+ *
+ * If the {@link Channel} is closed and there are missing responses,
  * a {@link PrematureChannelClosureException} is thrown.
- * 
+ *
  * @see HttpServerCodec
  *
  * @apiviz.has io.netty.handler.codec.http.HttpResponseDecoder
  * @apiviz.has io.netty.handler.codec.http.HttpRequestEncoder
  */
-public class HttpClientCodec implements ChannelUpstreamHandler,
-        ChannelDownstreamHandler {
+public class HttpClientCodec extends CombinedChannelHandler {
 
     /** A queue that is used for correlating a request and a response. */
-    final Queue<HttpMethod> queue = QueueFactory.createQueue(HttpMethod.class);
+    final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
     volatile boolean done;
 
-    private final HttpRequestEncoder encoder = new Encoder();
-    private final HttpResponseDecoder decoder;
-    private final AtomicLong requestResponseCounter = new AtomicLong(0);
+    private final AtomicLong requestResponseCounter = new AtomicLong();
     private final boolean failOnMissingResponse;
-    
+
     /**
      * Creates a new instance with the default decoder options
      * ({@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}).
-     *
      */
     public HttpClientCodec() {
         this(4096, 8192, 8192, false);
@@ -77,41 +70,26 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         this(maxInitialLineLength, maxHeaderSize, maxChunkSize, false);
     }
 
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
     public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
-        decoder = new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean failOnMissingResponse) {
+
+        init(
+                new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize),
+                new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
     }
 
-    @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        decoder.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        encoder.handleDownstream(ctx, e);
-    }
-
     private final class Encoder extends HttpRequestEncoder {
-
-        Encoder() {
-        }
-
         @Override
-        protected Object encode(ChannelHandlerContext ctx, Channel channel,
-                Object msg) throws Exception {
+        public void encode(
+                ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
 
-            Object obj =  super.encode(ctx, channel, msg);
-            
+            super.encode(ctx, msg, out);
+
             if (failOnMissingResponse) {
                 // check if the request is chunked if so do not increment
                 if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
@@ -121,9 +99,6 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                     requestResponseCounter.incrementAndGet();
                 }
             }
-            
-            return obj;
-        
         }
     }
 
@@ -134,12 +109,12 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         }
 
         @Override
-        protected Object decode(ChannelHandlerContext ctx, Channel channel,
-                ChannelBuffer buffer, State state) throws Exception {
+        public Object decode(
+                ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
             if (done) {
                 return buffer.readBytes(actualReadableBytes());
             } else {
-                Object msg = super.decode(ctx, channel, buffer, state);
+                Object msg = super.decode(ctx, buffer);
                 if (failOnMissingResponse) {
                     decrement(msg);
                 }
@@ -151,7 +126,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (msg == null) {
                 return;
             }
-        
+
             // check if its a HttpMessage and its not chunked
             if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
                 requestResponseCounter.decrementAndGet();
@@ -163,6 +138,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 requestResponseCounter.decrementAndGet();
             }
         }
+
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
             final int statusCode = ((HttpResponse) msg).getStatus().getCode();
@@ -216,17 +192,18 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         }
 
         @Override
-        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-            super.channelClosed(ctx, e);
-            
+        public void channelInactive(ChannelHandlerContext ctx)
+                throws Exception {
+            super.channelInactive(ctx);
+
             if (failOnMissingResponse) {
                 long missingResponses = requestResponseCounter.get();
                 if (missingResponses > 0) {
-                    throw new PrematureChannelClosureException("Channel closed but still missing " + missingResponses + " response(s)");
+                    ctx.fireExceptionCaught(new PrematureChannelClosureException(
+                            "channel gone inactive with " + missingResponses +
+                            " missing response(s)"));
                 }
             }
         }
-        
-        
     }
 }

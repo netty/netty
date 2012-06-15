@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,21 +15,16 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.channel.CombinedChannelHandler;
+
 
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
+ *
  * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameDecoder
  * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameEncoder
  */
-public class SpdyFrameCodec implements ChannelUpstreamHandler,
-       ChannelDownstreamHandler {
-
-    private final SpdyFrameDecoder decoder;
-    private final SpdyFrameEncoder encoder;
+public class SpdyFrameCodec extends CombinedChannelHandler {
 
     /**
      * Creates a new instance with the specified {@code version} and
@@ -48,17 +43,8 @@ public class SpdyFrameCodec implements ChannelUpstreamHandler,
     public SpdyFrameCodec(
             int version, int maxChunkSize, int maxHeaderSize,
             int compressionLevel, int windowBits, int memLevel) {
-        decoder = new SpdyFrameDecoder(version, maxChunkSize, maxHeaderSize);
-        encoder = new SpdyFrameEncoder(version, compressionLevel, windowBits, memLevel);
-    }
-
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        decoder.handleUpstream(ctx, e);
-    }
-
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        encoder.handleDownstream(ctx, e);
+        super(
+                new SpdyFrameDecoder(version, maxChunkSize, maxHeaderSize),
+                new SpdyFrameEncoder(version, compressionLevel, windowBits, memLevel));
     }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,13 @@
  */
 package io.netty.channel;
 
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.util.AttributeMap;
+
+import java.nio.channels.Channels;
+import java.util.Set;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
@@ -118,75 +125,34 @@ package io.netty.channel;
  * pipeline,  and how to handle the event in your application.
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
-public interface ChannelHandlerContext {
+public interface ChannelHandlerContext
+         extends AttributeMap, ChannelFutureFactory,
+                 ChannelInboundInvoker, ChannelOutboundInvoker {
+    Channel channel();
+    ChannelPipeline pipeline();
+    EventExecutor executor();
 
-    /**
-     * Returns the {@link Channel} that the {@link ChannelPipeline} belongs to.
-     * This method is a shortcut to <tt>getPipeline().getChannel()</tt>.
-     */
-    Channel getChannel();
+    String name();
+    ChannelHandler handler();
+    Set<ChannelHandlerType> type();
 
-    /**
-     * Returns the {@link ChannelPipeline} that the {@link ChannelHandler}
-     * belongs to.
-     */
-    ChannelPipeline getPipeline();
+    boolean hasInboundByteBuffer();
+    boolean hasInboundMessageBuffer();
+    ByteBuf inboundByteBuffer();
+    <T> MessageBuf<T> inboundMessageBuffer();
 
-    /**
-     * Returns the name of the {@link ChannelHandler} in the
-     * {@link ChannelPipeline}.
-     */
-    String getName();
+    boolean hasOutboundByteBuffer();
+    boolean hasOutboundMessageBuffer();
+    ByteBuf outboundByteBuffer();
+    <T> MessageBuf<T> outboundMessageBuffer();
 
-    /**
-     * Returns the {@link ChannelHandler} that this context object is
-     * serving.
-     */
-    ChannelHandler getHandler();
+    boolean hasNextInboundByteBuffer();
+    boolean hasNextInboundMessageBuffer();
+    ByteBuf nextInboundByteBuffer();
+    MessageBuf<Object> nextInboundMessageBuffer();
 
-    /**
-     * Returns {@code true} if and only if the {@link ChannelHandler} is an
-     * instance of {@link ChannelUpstreamHandler}.
-     */
-    boolean canHandleUpstream();
-
-    /**
-     * Returns {@code true} if and only if the {@link ChannelHandler} is an
-     * instance of {@link ChannelDownstreamHandler}.
-     */
-    boolean canHandleDownstream();
-
-    /**
-     * Sends the specified {@link ChannelEvent} to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with this context.  It is recommended to use
-     * the shortcut methods in {@link Channels} rather than calling this method
-     * directly.
-     */
-    void sendUpstream(ChannelEvent e);
-
-    /**
-     * Sends the specified {@link ChannelEvent} to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with this context.  It is
-     * recommended to use the shortcut methods in {@link Channels} rather than
-     * calling this method directly.
-     */
-    void sendDownstream(ChannelEvent e);
-
-    /**
-     * Retrieves an object which is {@link #setAttachment(Object) attached} to
-     * this context.
-     *
-     * @return {@code null} if no object was attached or
-     *                      {@code null} was attached
-     */
-    Object getAttachment();
-
-    /**
-     * Attaches an object to this context to store a stateful information
-     * specific to the {@link ChannelHandler} which is associated with this
-     * context.
-     */
-    void setAttachment(Object attachment);
+    boolean hasNextOutboundByteBuffer();
+    boolean hasNextOutboundMessageBuffer();
+    ByteBuf nextOutboundByteBuffer();
+    MessageBuf<Object> nextOutboundMessageBuffer();
 }

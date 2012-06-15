@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,10 @@
  */
 package io.netty.example.securechat;
 
+import io.netty.handler.ssl.SslHandler;
+
 import java.security.KeyStore;
+import java.security.SecureRandom;
 import java.security.Security;
 
 import javax.net.ssl.KeyManager;
@@ -23,8 +26,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
-
-import io.netty.handler.ssl.SslHandler;
 
 /**
  * Creates a bogus {@link SSLContext}.  A client-side context created by this
@@ -42,10 +43,10 @@ import io.netty.handler.ssl.SslHandler;
  *     {@link SslHandler}.</li>
  * <li>When initializing an {@link SSLContext} on the client side,
  *     specify the {@link KeyManager} that contains the client certificate as
- *     the first argument of {@link SSLContext#init(KeyManager[], javax.net.ssl.TrustManager[], java.security.SecureRandom)}.</li>
+ *     the first argument of {@link SSLContext#init(KeyManager[], TrustManager[], SecureRandom)}.</li>
  * <li>When initializing an {@link SSLContext} on the server side,
  *     specify the proper {@link TrustManager} as the second argument of
- *     {@link SSLContext#init(KeyManager[], javax.net.ssl.TrustManager[], java.security.SecureRandom)}
+ *     {@link SSLContext#init(KeyManager[], TrustManager[], SecureRandom)}
  *     to validate the client certificate.</li>
  * </ul>
  */
@@ -61,8 +62,8 @@ public final class SecureChatSslContextFactory {
             algorithm = "SunX509";
         }
 
-        SSLContext serverContext = null;
-        SSLContext clientContext = null;
+        SSLContext serverContext;
+        SSLContext clientContext;
         try {
             KeyStore ks = KeyStore.getInstance("JKS");
             ks.load(SecureChatKeyStore.asInputStream(),

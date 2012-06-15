@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * Web Socket frame containing binary data
@@ -28,22 +28,22 @@ public class PingWebSocketFrame extends WebSocketFrame {
      */
     public PingWebSocketFrame() {
         setFinalFragment(true);
-        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(Unpooled.EMPTY_BUFFER);
     }
 
     /**
      * Creates a new ping frame with the specified binary data.
-     * 
+     *
      * @param binaryData
      *            the content of the frame.
      */
-    public PingWebSocketFrame(ChannelBuffer binaryData) {
+    public PingWebSocketFrame(ByteBuf binaryData) {
         setBinaryData(binaryData);
     }
 
     /**
      * Creates a new ping frame with the specified binary data
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -51,7 +51,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame.
      */
-    public PingWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public PingWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);

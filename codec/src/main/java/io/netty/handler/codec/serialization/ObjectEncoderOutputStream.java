@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.serialization;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
-import io.netty.buffer.ChannelBuffers;
 
 /**
  * An {@link ObjectOutput} which is interoperable with {@link ObjectDecoder}
@@ -80,14 +80,14 @@ public class ObjectEncoderOutputStream extends OutputStream implements
 
     @Override
     public void writeObject(Object obj) throws IOException {
-        ChannelBufferOutputStream bout = new ChannelBufferOutputStream(
-                ChannelBuffers.dynamicBuffer(estimatedLength));
+        ByteBufOutputStream bout = new ByteBufOutputStream(
+                Unpooled.dynamicBuffer(estimatedLength));
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(obj);
         oout.flush();
         oout.close();
 
-        ChannelBuffer buffer = bout.buffer();
+        ByteBuf buffer = bout.buffer();
         int objectSize = buffer.readableBytes();
         writeInt(objectSize);
         buffer.getBytes(0, this, objectSize);

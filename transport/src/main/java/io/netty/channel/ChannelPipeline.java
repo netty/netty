@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,15 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-import io.netty.buffer.ChannelBuffer;
 
 
 /**
@@ -77,7 +79,7 @@ import io.netty.buffer.ChannelBuffer;
  *  |            /|\                         .               |
  *  |             .                          .               |
  *  |     [ sendUpstream() ]        [ sendDownstream() ]     |
- *  |     [ + INBOUND data ]        [ + OUTBOUND data  ]     |
+ *  |     [ + VAL_INBOUND data ]        [ + VAL_OUTBOUND data  ]     |
  *  |             .                          .               |
  *  |             .                         \|/              |
  *  |  +----------+-----------+  +-----------+------------+  |
@@ -151,7 +153,7 @@ import io.netty.buffer.ChannelBuffer;
  * the complexity and characteristics of the protocol and business logic:
  *
  * <ol>
- * <li>Protocol Decoder - translates binary data (e.g. {@link ChannelBuffer})
+ * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf})
  *                        into a Java object.</li>
  * <li>Protocol Encoder - translates a Java object into binary data.</li>
  * <li><tt>ExecutionHandler</tt> - applies a thread model.</li>
@@ -200,9 +202,13 @@ import io.netty.buffer.ChannelBuffer;
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
  * @apiviz.owns       io.netty.channel.ChannelHandler
- * @apiviz.uses       io.netty.channel.ChannelSink - - sends events downstream
  */
-public interface ChannelPipeline {
+public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
+
+    MessageBuf<Object> inboundMessageBuffer();
+    ByteBuf inboundByteBuffer();
+    MessageBuf<Object> outboundMessageBuffer();
+    ByteBuf outboundByteBuffer();
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -215,7 +221,20 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    void addFirst(String name, ChannelHandler handler);
+    ChannelPipeline addFirst(String name, ChannelHandler handler);
+
+    /**
+     * Inserts a {@link ChannelHandler} at the first position of this pipeline.
+     *
+     * @param name     the name of the handler to insert first
+     * @param handler  the handler to insert first
+     *
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified name or handler is {@code null}
+     */
+    ChannelPipeline addFirst(EventExecutor executor, String name, ChannelHandler handler);
 
     /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
@@ -228,7 +247,20 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    void addLast(String name, ChannelHandler handler);
+    ChannelPipeline addLast(String name, ChannelHandler handler);
+
+    /**
+     * Appends a {@link ChannelHandler} at the last position of this pipeline.
+     *
+     * @param name     the name of the handler to append
+     * @param handler  the handler to append
+     *
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified name or handler is {@code null}
+     */
+    ChannelPipeline addLast(EventExecutor executor, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -245,7 +277,24 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    void addBefore(String baseName, String name, ChannelHandler handler);
+    ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);
+
+    /**
+     * Inserts a {@link ChannelHandler} before an existing handler of this
+     * pipeline.
+     *
+     * @param baseName  the name of the existing handler
+     * @param name      the name of the handler to insert before
+     * @param handler   the handler to insert before
+     *
+     * @throws NoSuchElementException
+     *         if there's no such entry with the specified {@code baseName}
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified baseName, name, or handler is {@code null}
+     */
+    ChannelPipeline addBefore(EventExecutor executor, String baseName, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} after an existing handler of this
@@ -262,7 +311,32 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    void addAfter(String baseName, String name, ChannelHandler handler);
+    ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
+
+    /**
+     * Inserts a {@link ChannelHandler} after an existing handler of this
+     * pipeline.
+     *
+     * @param baseName  the name of the existing handler
+     * @param name      the name of the handler to insert after
+     * @param handler   the handler to insert after
+     *
+     * @throws NoSuchElementException
+     *         if there's no such entry with the specified {@code baseName}
+     * @throws IllegalArgumentException
+     *         if there's an entry with the same name already in the pipeline
+     * @throws NullPointerException
+     *         if the specified baseName, name, or handler is {@code null}
+     */
+    ChannelPipeline addAfter(EventExecutor executor, String baseName, String name, ChannelHandler handler);
+
+    ChannelPipeline addFirst(ChannelHandler... handlers);
+
+    ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers);
+
+    ChannelPipeline addLast(ChannelHandler... handlers);
+
+    ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.
@@ -378,14 +452,14 @@ public interface ChannelPipeline {
      *
      * @return the first handler.  {@code null} if this pipeline is empty.
      */
-    ChannelHandler getFirst();
+    ChannelHandler first();
 
     /**
      * Returns the last {@link ChannelHandler} in this pipeline.
      *
      * @return the last handler.  {@code null} if this pipeline is empty.
      */
-    ChannelHandler getLast();
+    ChannelHandler last();
 
     /**
      * Returns the {@link ChannelHandler} with the specified name in this
@@ -412,7 +486,7 @@ public interface ChannelPipeline {
      * @return the context object of the specified handler.
      *         {@code null} if there's no such handler in this pipeline.
      */
-    ChannelHandlerContext getContext(ChannelHandler handler);
+    ChannelHandlerContext context(ChannelHandler handler);
 
     /**
      * Returns the context object of the {@link ChannelHandler} with the
@@ -421,7 +495,7 @@ public interface ChannelPipeline {
      * @return the context object of the handler with the specified name.
      *         {@code null} if there's no such handler in this pipeline.
      */
-    ChannelHandlerContext getContext(String name);
+    ChannelHandlerContext context(String name);
 
     /**
      * Returns the context object of the {@link ChannelHandler} of the
@@ -430,65 +504,19 @@ public interface ChannelPipeline {
      * @return the context object of the handler of the specified type.
      *         {@code null} if there's no such handler in this pipeline.
      */
-    ChannelHandlerContext getContext(Class<? extends ChannelHandler> handlerType);
-
-    /**
-     * Sends the specified {@link ChannelEvent} to the first
-     * {@link ChannelUpstreamHandler} in this pipeline.
-     *
-     * @throws NullPointerException
-     *         if the specified event is {@code null}
-     */
-    void sendUpstream(ChannelEvent e);
-
-    /**
-     * Sends the specified {@link ChannelEvent} to the last
-     * {@link ChannelDownstreamHandler} in this pipeline.
-     *
-     * @throws NullPointerException
-     *         if the specified event is {@code null}
-     */
-    void sendDownstream(ChannelEvent e);
-
-    /**
-     * Schedules the specified task to be executed in the I/O thread associated
-     * with this pipeline's {@link Channel}.
-     */
-    ChannelFuture execute(Runnable task);
+    ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType);
 
     /**
      * Returns the {@link Channel} that this pipeline is attached to.
      *
      * @return the channel. {@code null} if this pipeline is not attached yet.
      */
-    Channel getChannel();
-
-    /**
-     * Returns the {@link ChannelSink} that this pipeline is attached to.
-     *
-     * @return the sink. {@code null} if this pipeline is not attached yet.
-     */
-    ChannelSink getSink();
-
-    /**
-     * Attaches this pipeline to the specified {@link Channel} and
-     * {@link ChannelSink}.  Once a pipeline is attached, it can't be detached
-     * nor attached again.
-     *
-     * @throws IllegalStateException if this pipeline is attached already
-     */
-    void attach(Channel channel, ChannelSink sink);
-
-    /**
-     * Returns {@code true} if and only if this pipeline is attached to
-     * a {@link Channel}.
-     */
-    boolean isAttached();
+    Channel channel();
 
     /**
      * Returns the {@link List} of the handler names.
      */
-    List<String> getNames();
+    List<String> names();
 
     /**
      * Converts this pipeline into an ordered {@link Map} whose keys are

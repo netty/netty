@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -40,7 +40,7 @@ import java.util.concurrent.locks.LockSupport;
  * </strong>
  * <br>
  * <br>
- * 
+ *
  * An unbounded {@link BlockingQueue} based on linked nodes.
  * This queue orders elements FIFO (first-in-first-out) with respect
  * to any given producer.  The <em>head</em> of the queue is that
@@ -672,7 +672,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                     continue retry;           // lost race vs opposite mode
                 }
                 if (how != ASYNC) {
-                    return awaitMatch(s, pred, e, (how == TIMED), nanos);
+                    return awaitMatch(s, pred, e, how == TIMED, nanos);
                 }
             }
             return e; // not waiting
@@ -1351,7 +1351,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
         throws java.io.IOException, ClassNotFoundException {
         s.defaultReadObject();
         for (;;) {
-            @SuppressWarnings("unchecked") E item = (E) s.readObject();
+            E item = (E) s.readObject();
             if (item == null) {
                 break;
             } else {

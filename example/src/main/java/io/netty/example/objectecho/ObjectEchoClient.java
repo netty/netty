@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,28 +15,20 @@
  */
 package io.netty.example.objectecho;
 
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.echo.EchoClient;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
  */
 public class ObjectEchoClient {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(ObjectEchoClient.class);
 
     private final String host;
     private final int port;
@@ -48,32 +40,33 @@ public class ObjectEchoClient {
         this.firstMessageSize = firstMessageSize;
     }
 
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        Bootstrap b = new Bootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .handler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast(
+                            new ObjectEncoder(),
+                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                            new ObjectEchoClientHandler(firstMessageSize));
+                }
+             });
 
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new ObjectEncoder(),
-                        new ObjectDecoder(
-                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
-                        new ObjectEchoClientHandler(firstMessageSize));
-            }
-        });
-
-        // Start the connection attempt.
-        bootstrap.connect(new InetSocketAddress(host, port));
+            // Start the connection attempt.
+            b.connect().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
-            logger.error(
+            System.err.println(
                     "Usage: " + ObjectEchoClient.class.getSimpleName() +
                     " <host> <port> [<first message size>]");
             return;

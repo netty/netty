@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,16 +15,16 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMessageEncoder;
 
 /**
  * Encodes an RTSP message represented in {@link HttpMessage} into
- * a {@link ChannelBuffer}.
+ * a {@link ByteBuf}.
 
  *
  * @apiviz.landmark
@@ -39,12 +39,13 @@ public abstract class RtspMessageEncoder extends HttpMessageEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel,
-            Object msg) throws Exception {
+    public void encode(ChannelHandlerContext ctx, Object msg,
+            ByteBuf out) throws Exception {
         // Ignore unrelated message types such as HttpChunk.
         if (!(msg instanceof HttpMessage)) {
-            return msg;
+            throw new UnsupportedMessageTypeException(msg, HttpMessage.class);
         }
-        return super.encode(ctx, channel, msg);
+
+        super.encode(ctx, msg, out);
     }
 }

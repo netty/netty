@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,34 +15,36 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.Channels;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+
+import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Manages streams within a SPDY session.
  */
-public class SpdySessionHandler extends SimpleChannelUpstreamHandler
-        implements ChannelDownstreamHandler {
+public class SpdySessionHandler
+        extends ChannelHandlerAdapter
+        implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
     private static final SpdyProtocolException PROTOCOL_EXCEPTION = new SpdyProtocolException();
+    private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");
+
+    static {
+        StackTraceElement[] emptyTrace = new StackTraceElement[0];
+        PROTOCOL_EXCEPTION.setStackTrace(emptyTrace);
+        STREAM_CLOSED.setStackTrace(emptyTrace);
+    }
 
     private final SpdySession spdySession = new SpdySession();
-    private volatile int lastGoodStreamID;
+    private volatile int lastGoodStreamId;
 
     private volatile int remoteConcurrentStreams;
     private volatile int localConcurrentStreams;
@@ -74,20 +76,52 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(int version, boolean server) {
-        super();
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
         this.server = server;
-        this.flowControl = version >= 3;
+        flowControl = version >= 3;
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
+    }
 
-        Object msg = e.getMessage();
+    @Override
+    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        MessageBuf<Object> in = ctx.inboundMessageBuffer();
+        for (;;) {
+            Object msg = in.poll();
+            if (msg == null) {
+                break;
+            }
+
+            if (msg instanceof SpdyDataFrame ||
+                    msg instanceof SpdySynStreamFrame ||
+                    msg instanceof SpdySynReplyFrame ||
+                    msg instanceof SpdyRstStreamFrame ||
+                    msg instanceof SpdySettingsFrame ||
+                    msg instanceof SpdyPingFrame ||
+                    msg instanceof SpdyGoAwayFrame ||
+                    msg instanceof SpdyHeadersFrame ||
+                    msg instanceof SpdyWindowUpdateFrame) {
+                handleInboundMessage(ctx, msg);
+            } else {
+                ctx.nextInboundMessageBuffer().add(msg);
+            }
+        }
+        ctx.fireInboundBufferUpdated();
+    }
+
+    private void handleInboundMessage(ChannelHandlerContext ctx, Object msg) throws Exception {
+
         if (msg instanceof SpdyDataFrame) {
 
             /*
@@ -114,27 +148,27 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamID = spdyDataFrame.getStreamID();
+            int streamID = spdyDataFrame.getStreamId();
 
             // Check if we received a data frame for a Stream-ID which is not open
             if (!spdySession.isActiveStream(streamID)) {
-                if (streamID <= lastGoodStreamID) {
-                    issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.PROTOCOL_ERROR);
+                if (streamID <= lastGoodStreamId) {
+                    issueStreamError(ctx, streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                 } else if (!sentGoAwayFrame) {
-                    issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.INVALID_STREAM);
+                    issueStreamError(ctx, streamID, SpdyStreamStatus.INVALID_STREAM);
                 }
                 return;
             }
 
             // Check if we received a data frame for a stream which is half-closed
             if (spdySession.isRemoteSideClosed(streamID)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.STREAM_ALREADY_CLOSED);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.STREAM_ALREADY_CLOSED);
                 return;
             }
 
             // Check if we received a data frame before receiving a SYN_REPLY
             if (!isRemoteInitiatedID(streamID) && !spdySession.hasReceivedReply(streamID)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.PROTOCOL_ERROR);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                 return;
             }
 
@@ -155,7 +189,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                 // This difference is stored for the session when writing the SETTINGS frame
                 // and is cleared once we send a WINDOW_UPDATE frame.
                 if (newWindowSize < spdySession.getReceiveWindowSizeLowerBound(streamID)) {
-                    issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.FLOW_CONTROL_ERROR);
+                    issueStreamError(ctx, streamID, SpdyStreamStatus.FLOW_CONTROL_ERROR);
                     return;
                 }
 
@@ -165,7 +199,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                     while (spdyDataFrame.getData().readableBytes() > initialReceiveWindowSize) {
                         SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID);
                         partialDataFrame.setData(spdyDataFrame.getData().readSlice(initialReceiveWindowSize));
-                        Channels.fireMessageReceived(ctx, partialDataFrame, e.getRemoteAddress());
+                        ctx.nextOutboundMessageBuffer().add(partialDataFrame);
+                        ctx.flush();
                     }
                 }
 
@@ -175,8 +210,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                     spdySession.updateReceiveWindowSize(streamID, deltaWindowSize);
                     SpdyWindowUpdateFrame spdyWindowUpdateFrame =
                             new DefaultSpdyWindowUpdateFrame(streamID, deltaWindowSize);
-                    Channels.write(
-                            ctx, Channels.future(e.getChannel()), spdyWindowUpdateFrame, e.getRemoteAddress());
+                    ctx.write(spdyWindowUpdateFrame);
                 }
             }
 
@@ -202,19 +236,19 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
                 !isRemoteInitiatedID(streamID) ||
                 spdySession.isActiveStream(streamID)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.PROTOCOL_ERROR);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                 return;
             }
 
             // Stream-IDs must be monotonically increasing
-            if (streamID <= lastGoodStreamID) {
-                issueSessionError(ctx, e.getChannel(), e.getRemoteAddress(), SpdySessionStatus.PROTOCOL_ERROR);
+            if (streamID <= lastGoodStreamId) {
+                issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
                 return;
             }
 
@@ -223,7 +257,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             boolean remoteSideClosed = spdySynStreamFrame.isLast();
             boolean localSideClosed = spdySynStreamFrame.isUnidirectional();
             if (!acceptStream(streamID, priority, remoteSideClosed, localSideClosed)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.REFUSED_STREAM);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.REFUSED_STREAM);
                 return;
             }
 
@@ -237,19 +271,19 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             // Check if we received a valid SYN_REPLY frame
             if (spdySynReplyFrame.isInvalid() ||
                 isRemoteInitiatedID(streamID) ||
                 spdySession.isRemoteSideClosed(streamID)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.INVALID_STREAM);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.INVALID_STREAM);
                 return;
             }
 
             // Check if we have received multiple frames for the same Stream-ID
             if (spdySession.hasReceivedReply(streamID)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.STREAM_IN_USE);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.STREAM_IN_USE);
                 return;
             }
 
@@ -272,7 +306,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamID());
+            removeStream(ctx, spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -313,8 +347,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
-                Channels.write(ctx, Channels.future(e.getChannel()), spdyPingFrame, e.getRemoteAddress());
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
+                ctx.write(spdyPingFrame);
                 return;
             }
 
@@ -331,16 +365,16 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamID();
+            int streamID = spdyHeadersFrame.getStreamId();
 
             // Check if we received a valid HEADERS frame
             if (spdyHeadersFrame.isInvalid()) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.PROTOCOL_ERROR);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                 return;
             }
 
             if (spdySession.isRemoteSideClosed(streamID)) {
-                issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.INVALID_STREAM);
+                issueStreamError(ctx, streamID, SpdyStreamStatus.INVALID_STREAM);
                 return;
             }
 
@@ -363,7 +397,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             if (flowControl) {
                 SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-                int streamID = spdyWindowUpdateFrame.getStreamID();
+                int streamID = spdyWindowUpdateFrame.getStreamId();
                 int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
 
                 // Ignore frames for half-closed streams
@@ -373,67 +407,75 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
                 // Check for numerical overflow
                 if (spdySession.getSendWindowSize(streamID) > Integer.MAX_VALUE - deltaWindowSize) {
-                    issueStreamError(ctx, e.getRemoteAddress(), streamID, SpdyStreamStatus.FLOW_CONTROL_ERROR);
+                    issueStreamError(ctx, streamID, SpdyStreamStatus.FLOW_CONTROL_ERROR);
                     return;
                 }
 
                 updateSendWindowSize(ctx, streamID, deltaWindowSize);
             }
-            return;
         }
 
-        super.messageReceived(ctx, e);
+        ctx.nextInboundMessageBuffer().add(msg);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
-            throws Exception {
-
-        Throwable cause = e.getCause();
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof SpdyProtocolException) {
-            issueSessionError(ctx, e.getChannel(), null, SpdySessionStatus.PROTOCOL_ERROR);
+            issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
         }
 
-        super.exceptionCaught(ctx, e);
+        super.exceptionCaught(ctx, cause);
     }
 
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
-            throws Exception {
-        if (evt instanceof ChannelStateEvent) {
-            ChannelStateEvent e = (ChannelStateEvent) evt;
-            switch (e.getState()) {
-            case OPEN:
-            case CONNECTED:
-            case BOUND:
 
-                /*
-                 * SPDY connection requirements:
-                 *
-                 * When either endpoint closes the transport-level connection,
-                 * it must first send a GOAWAY frame.
-                 */
-                if (Boolean.FALSE.equals(e.getValue()) || e.getValue() == null) {
-                    sendGoAwayFrame(ctx, e);
-                    return;
-                }
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        sendGoAwayFrame(ctx);
+        super.close(ctx, future);
+    }
+
+    @Override
+    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        sendGoAwayFrame(ctx);
+        super.close(ctx, future);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        MessageBuf<Object> in = ctx.outboundMessageBuffer();
+        for (;;) {
+            Object msg = in.poll();
+            if (msg == null) {
+                break;
+            }
+            if (msg instanceof SpdyDataFrame ||
+                    msg instanceof SpdySynStreamFrame ||
+                    msg instanceof SpdySynReplyFrame ||
+                    msg instanceof SpdyRstStreamFrame ||
+                    msg instanceof SpdySettingsFrame ||
+                    msg instanceof SpdyPingFrame ||
+                    msg instanceof SpdyGoAwayFrame ||
+                    msg instanceof SpdyHeadersFrame ||
+                    msg instanceof SpdyWindowUpdateFrame) {
+                handleOutboundMessage(ctx, msg);
+            } else {
+                ctx.nextOutboundMessageBuffer().add(msg);
             }
         }
-        if (!(evt instanceof MessageEvent)) {
-            ctx.sendDownstream(evt);
-            return;
-        }
+        ctx.flush(future);
+    }
 
-        MessageEvent e = (MessageEvent) evt;
-        Object msg = e.getMessage();
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg)
+            throws Exception {
 
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            final int streamID = spdyDataFrame.getStreamID();
+            final int streamID = spdyDataFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
-                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -461,15 +503,19 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
                         // The transfer window size is pre-decremented when sending a data frame downstream.
                         // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                        final SocketAddress remoteAddress = e.getRemoteAddress();
-                        final ChannelHandlerContext context = ctx;
-                        e.getFuture().addListener(new ChannelFutureListener() {
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                if (!future.isSuccess()) {
-                                    issueStreamError(context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
-                                }
-                            }
-                        });
+                        //
+                        // This is never sent because on write failure the connection will be closed
+                        // immediately.  Commenting out just in case I misunderstood it - T
+                        //
+                        //final ChannelHandlerContext context = ctx;
+                        //e.getFuture().addListener(new ChannelFutureListener() {
+                        //    @Override
+                        //    public void operationComplete(ChannelFuture future) throws Exception {
+                        //        if (!future.isSuccess()) {
+                        //            issueStreamError(context, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                        //        }
+                        //    }
+                        //});
 
                     } else if (sendWindowSize > 0) {
                         // Stream is not stalled but we cannot send the entire frame
@@ -480,28 +526,31 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                         partialDataFrame.setData(spdyDataFrame.getData().readSlice(sendWindowSize));
 
                         // Enqueue the remaining data (will be the first frame queued)
-                        spdySession.putPendingWrite(streamID, e);
-
-                        ChannelFuture writeFuture = Channels.future(e.getChannel());
+                        spdySession.putPendingWrite(streamID, spdyDataFrame);
 
                         // The transfer window size is pre-decremented when sending a data frame downstream.
                         // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                        final SocketAddress remoteAddress = e.getRemoteAddress();
-                        final ChannelHandlerContext context = ctx;
-                        e.getFuture().addListener(new ChannelFutureListener() {
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                if (!future.isSuccess()) {
-                                    issueStreamError(context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
-                                }
-                            }
-                        });
+                        //
+                        // This is never sent because on write failure the connection will be closed
+                        // immediately.  Commenting out just in case I misunderstood it - T
+                        //
+                        //final SocketAddress remoteAddress = e.getRemoteAddress();
+                        //final ChannelHandlerContext context = ctx;
+                        //e.getFuture().addListener(new ChannelFutureListener() {
+                        //    @Override
+                        //    public void operationComplete(ChannelFuture future) throws Exception {
+                        //        if (!future.isSuccess()) {
+                        //            issueStreamError(context, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                        //        }
+                        //    }
+                        //});
 
-                        Channels.write(ctx, writeFuture, partialDataFrame, remoteAddress);
+                        ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         return;
 
                     } else {
                         // Stream is stalled -- enqueue Data frame and return
-                        spdySession.putPendingWrite(streamID, e);
+                        spdySession.putPendingWrite(streamID, spdyDataFrame);
                         return;
                     }
                 }
@@ -515,10 +564,10 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             if (isRemoteInitiatedID(streamID)) {
-                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -526,18 +575,18 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamID, priority, remoteSideClosed, localSideClosed)) {
-                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
                 return;
             }
 
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedID(streamID) || spdySession.isLocalSideClosed(streamID)) {
-                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -549,7 +598,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamID());
+            removeStream(ctx, spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -580,9 +629,9 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
-                e.getFuture().setFailure(new IllegalArgumentException(
-                            "invalid PING ID: " + spdyPingFrame.getID()));
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
+                ctx.fireExceptionCaught(new IllegalArgumentException(
+                            "invalid PING ID: " + spdyPingFrame.getId()));
                 return;
             }
             pings.getAndIncrement();
@@ -591,17 +640,17 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             // Why is this being sent? Intercept it and fail the write.
             // Should have sent a CLOSE ChannelStateEvent
-            e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+            ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
             return;
 
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamID();
+            int streamID = spdyHeadersFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
-                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -613,11 +662,10 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             // Why is this being sent? Intercept it and fail the write.
-            e.getFuture().setFailure(PROTOCOL_EXCEPTION);
-            return;
+            ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
         }
 
-        ctx.sendDownstream(evt);
+        ctx.nextOutboundMessageBuffer().add(msg);
     }
 
     /*
@@ -630,10 +678,10 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      * After sending the GOAWAY frame, the endpoint must close the TCP connection.
      */
     private void issueSessionError(
-            ChannelHandlerContext ctx, Channel channel, SocketAddress remoteAddress, SpdySessionStatus status) {
+            ChannelHandlerContext ctx, SpdySessionStatus status) {
 
-        ChannelFuture future = sendGoAwayFrame(ctx, channel, remoteAddress, status);
-        future.addListener(ChannelFutureListener.CLOSE);
+        sendGoAwayFrame(ctx, status);
+        ctx.flush().addListener(ChannelFutureListener.CLOSE);
     }
 
     /*
@@ -648,15 +696,16 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      * Note: this is only called by the worker thread
      */
     private void issueStreamError(
-            ChannelHandlerContext ctx, SocketAddress remoteAddress, int streamID, SpdyStreamStatus status) {
+            ChannelHandlerContext ctx, int streamID, SpdyStreamStatus status) {
 
         boolean fireMessageReceived = !spdySession.isRemoteSideClosed(streamID);
-        removeStream(streamID);
+        removeStream(ctx, streamID);
 
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamID, status);
-        Channels.write(ctx, Channels.future(ctx.getChannel()), spdyRstStreamFrame, remoteAddress);
+        ctx.write(spdyRstStreamFrame);
         if (fireMessageReceived) {
-            Channels.fireMessageReceived(ctx, spdyRstStreamFrame, remoteAddress);
+            ctx.nextInboundMessageBuffer().add(spdyRstStreamFrame);
+            ctx.fireInboundBufferUpdated();
         }
     }
 
@@ -665,7 +714,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      */
 
     private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = SpdyCodecUtil.isServerID(ID);
+        boolean serverID = SpdyCodecUtil.isServerId(ID);
         return server && !serverID || !server && serverID;
     }
 
@@ -698,8 +747,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
     private synchronized void updateInitialSendWindowSize(int newInitialWindowSize) {
         int deltaWindowSize = newInitialWindowSize - initialSendWindowSize;
         initialSendWindowSize = newInitialWindowSize;
-        for (Integer StreamID: spdySession.getActiveStreams()) {
-            spdySession.updateSendWindowSize(StreamID.intValue(), deltaWindowSize);
+        for (Integer streamId: spdySession.getActiveStreams()) {
+            spdySession.updateSendWindowSize(streamId.intValue(), deltaWindowSize);
         }
     }
 
@@ -710,7 +759,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         spdySession.updateAllReceiveWindowSizes(deltaWindowSize);
     }
 
-    // need to synchronize accesses to sentGoAwayFrame, lastGoodStreamID, and initial window sizes
+    // need to synchronize accesses to sentGoAwayFrame, lastGoodStreamId, and initial window sizes
     private synchronized boolean acceptStream(
             int streamID, byte priority, boolean remoteSideClosed, boolean localSideClosed) {
         // Cannot initiate any new streams after receiving or sending GOAWAY
@@ -724,9 +773,10 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             return false;
         }
         spdySession.acceptStream(
-                streamID, priority, remoteSideClosed, localSideClosed, initialSendWindowSize, initialReceiveWindowSize);
+                streamID, priority, remoteSideClosed, localSideClosed,
+                initialSendWindowSize, initialReceiveWindowSize);
         if (isRemoteInitiatedID(streamID)) {
-            lastGoodStreamID = streamID;
+            lastGoodStreamId = streamID;
         }
         return true;
     }
@@ -742,8 +792,11 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    private void removeStream(int streamID) {
-        spdySession.removeStream(streamID);
+    private void removeStream(ChannelHandlerContext ctx, int streamID) {
+        if (spdySession.removeStream(streamID)) {
+            ctx.fireExceptionCaught(STREAM_CLOSED);
+        }
+
         if (closeSessionFuture != null && spdySession.noActiveStreams()) {
             closeSessionFuture.setSuccess();
         }
@@ -755,12 +808,11 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             while (newWindowSize > 0) {
                 // Check if we have unblocked a stalled stream
-                MessageEvent e = spdySession.getPendingWrite(streamID);
-                if (e == null) {
+                SpdyDataFrame spdyDataFrame = (SpdyDataFrame) spdySession.getPendingWrite(streamID);
+                if (spdyDataFrame == null) {
                     break;
                 }
 
-                SpdyDataFrame spdyDataFrame = (SpdyDataFrame) e.getMessage();
                 int dataFrameSize = spdyDataFrame.getData().readableBytes();
 
                 if (newWindowSize >= dataFrameSize) {
@@ -770,22 +822,26 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
                     // The transfer window size is pre-decremented when sending a data frame downstream.
                     // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                    final SocketAddress remoteAddress = e.getRemoteAddress();
-                    final ChannelHandlerContext context = ctx;
-                    e.getFuture().addListener(new ChannelFutureListener() {
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                issueStreamError(context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
-                            }
-                        }
-                    });
+                    //
+                    // This is never sent because on write failure the connection will be closed
+                    // immediately.  Commenting out just in case I misunderstood it - T
+                    //
+                    //final ChannelHandlerContext context = ctx;
+                    //e.getFuture().addListener(new ChannelFutureListener() {
+                    //    @Override
+                    //    public void operationComplete(ChannelFuture future) throws Exception {
+                    //        if (!future.isSuccess()) {
+                    //            issueStreamError(context, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                    //        }
+                    //    }
+                    //});
 
                     // Close the local side of the stream if this is the last frame
                     if (spdyDataFrame.isLast()) {
                         halfCloseStream(streamID, false);
                     }
 
-                    Channels.write(ctx, e.getFuture(), spdyDataFrame, e.getRemoteAddress());
+                    ctx.nextOutboundMessageBuffer().add(spdyDataFrame);
 
                 } else {
                     // We can send a partial frame
@@ -795,21 +851,24 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                     SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID);
                     partialDataFrame.setData(spdyDataFrame.getData().readSlice(newWindowSize));
 
-                    ChannelFuture writeFuture = Channels.future(e.getChannel());
-
                     // The transfer window size is pre-decremented when sending a data frame downstream.
                     // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                    final SocketAddress remoteAddress = e.getRemoteAddress();
-                    final ChannelHandlerContext context = ctx;
-                    e.getFuture().addListener(new ChannelFutureListener() {
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                issueStreamError(context, remoteAddress, streamID, SpdyStreamStatus.INTERNAL_ERROR);
-                            }
-                        }
-                    });
+                    //
+                    // This is never sent because on write failure the connection will be closed
+                    // immediately.  Commenting out just in case I misunderstood it - T
+                    //
+                    //final SocketAddress remoteAddress = e.getRemoteAddress();
+                    //final ChannelHandlerContext context = ctx;
+                    //e.getFuture().addListener(new ChannelFutureListener() {
+                    //    @Override
+                    //    public void operationComplete(ChannelFuture future) throws Exception {
+                    //        if (!future.isSuccess()) {
+                    //            issueStreamError(context, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                    //        }
+                    //    }
+                    //});
 
-                    Channels.write(ctx, writeFuture, partialDataFrame, remoteAddress);
+                    ctx.nextOutboundMessageBuffer().add(partialDataFrame);
 
                     newWindowSize = 0;
                 }
@@ -817,48 +876,42 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    private void sendGoAwayFrame(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    private void sendGoAwayFrame(ChannelHandlerContext ctx) {
         // Avoid NotYetConnectedException
-        if (!e.getChannel().isConnected()) {
-            ctx.sendDownstream(e);
+        if (!ctx.channel().isActive()) {
             return;
         }
 
-        ChannelFuture future = sendGoAwayFrame(ctx, e.getChannel(), null, SpdySessionStatus.OK);
+        sendGoAwayFrame(ctx, SpdySessionStatus.OK);
+        ChannelFuture f = ctx.flush();
         if (spdySession.noActiveStreams()) {
-            future.addListener(new ClosingChannelFutureListener(ctx, e));
+            f.addListener(new ClosingChannelFutureListener(ctx));
         } else {
-            closeSessionFuture = Channels.future(e.getChannel());
-            closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx, e));
+            closeSessionFuture = ctx.newFuture();
+            closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx));
         }
     }
 
-    private synchronized ChannelFuture sendGoAwayFrame(
-            ChannelHandlerContext ctx, Channel channel, SocketAddress remoteAddress, SpdySessionStatus status) {
+    private synchronized void sendGoAwayFrame(
+            ChannelHandlerContext ctx, SpdySessionStatus status) {
         if (!sentGoAwayFrame) {
             sentGoAwayFrame = true;
-            SpdyGoAwayFrame spdyGoAwayFrame = new DefaultSpdyGoAwayFrame(lastGoodStreamID, status);
-            ChannelFuture future = Channels.future(channel);
-            Channels.write(ctx, future, spdyGoAwayFrame, remoteAddress);
-            return future;
+            SpdyGoAwayFrame spdyGoAwayFrame = new DefaultSpdyGoAwayFrame(lastGoodStreamId, status);
+            ctx.nextOutboundMessageBuffer().add(spdyGoAwayFrame);
         }
-        return Channels.succeededFuture(channel);
     }
 
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
-        private final ChannelStateEvent e;
 
-        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelStateEvent e) {
+        ClosingChannelFutureListener(ChannelHandlerContext ctx) {
             this.ctx = ctx;
-            this.e = e;
         }
 
+        @Override
         public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
-            if (!(sentGoAwayFuture.getCause() instanceof ClosedChannelException)) {
-                Channels.close(ctx, e.getFuture());
-            } else {
-                e.getFuture().setSuccess();
+            if (!(sentGoAwayFuture.cause() instanceof ClosedChannelException)) {
+                ctx.close();
             }
         }
     }

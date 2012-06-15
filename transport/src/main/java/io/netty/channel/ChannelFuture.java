@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,6 @@
 package io.netty.channel;
 
 import java.util.concurrent.TimeUnit;
-
-import io.netty.bootstrap.ClientBootstrap;
 
 /**
  * The result of an asynchronous {@link Channel} I/O operation.
@@ -170,7 +168,7 @@ public interface ChannelFuture {
      * Returns a channel where the I/O operation associated with this
      * future takes place.
      */
-    Channel getChannel();
+    Channel channel();
 
     /**
      * Returns {@code true} if and only if this future is
@@ -199,7 +197,7 @@ public interface ChannelFuture {
      *         {@code null} if succeeded or this future is not
      *         completed yet.
      */
-    Throwable getCause();
+    Throwable cause();
 
     /**
      * Cancels the I/O operation associated with this future
@@ -247,7 +245,7 @@ public interface ChannelFuture {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    void addListener(ChannelFutureListener listener);
+    ChannelFuture addListener(ChannelFutureListener listener);
 
     /**
      * Removes the specified listener from this future.
@@ -256,13 +254,21 @@ public interface ChannelFuture {
      * listener is not associated with this future, this method
      * does nothing and returns silently.
      */
-    void removeListener(ChannelFutureListener listener);
+    ChannelFuture removeListener(ChannelFutureListener listener);
 
     /**
-     * Rethrows the exception that caused this future fail if this future is
-     * complete and failed.
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
+     * {@link ChannelException} before being thrown.
      */
-    ChannelFuture rethrowIfFailed() throws Exception;
+    ChannelFuture sync() throws InterruptedException;
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
+     * {@link ChannelException} before being thrown.
+     */
+    ChannelFuture syncUninterruptibly();
 
     /**
      * Waits for this future to be completed.
@@ -322,4 +328,12 @@ public interface ChannelFuture {
      *         the specified time limit
      */
     boolean awaitUninterruptibly(long timeoutMillis);
+
+    /**
+     * A {@link ChannelFuture} which is not allowed to be sent to {@link ChannelPipeline} due to
+     * implementation details.
+     */
+    interface Unsafe extends ChannelFuture {
+        // Tag interface
+    }
 }

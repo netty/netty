@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,31 +26,29 @@ import java.util.zip.Deflater;
  * Utility that detects various properties specific to the current runtime
  * environment, such as Java version and the availability of the
  * {@code sun.misc.Unsafe} object.
- * 
- * <br>
- * You can disable the use of {@code sun.misc.Unsafe} if you specify 
- * the System property <strong>io.netty.tryUnsafe</strong> with
- * value of <code>false</code>. Default is <code>true</code>.
+ * <p>
+ * You can disable the use of {@code sun.misc.Unsafe} if you specify
+ * the system property <strong>io.netty.noUnsafe</strong>.
  */
 public final class DetectionUtil {
 
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
     private static final boolean IS_WINDOWS;
+
     static {
         String os = System.getProperty("os.name").toLowerCase();
         // windows
-        IS_WINDOWS =  os.indexOf("win") >= 0;
+        IS_WINDOWS = os.contains("win");
     }
-    
+
     /**
      * Return <code>true</code> if the JVM is running on Windows
-     * 
      */
     public static boolean isWindows() {
         return IS_WINDOWS;
     }
-    
+
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;
     }
@@ -60,15 +58,20 @@ public final class DetectionUtil {
     }
 
     private static boolean hasUnsafe(ClassLoader loader) {
-        String value = SystemPropertyUtil.get("io.netty.tryUnsafe");
+        String value = SystemPropertyUtil.get("io.netty.noUnsafe");
+        if (value != null) {
+            return false;
+        }
+
+        // Legacy properties
+        value = SystemPropertyUtil.get("io.netty.tryUnsafe");
         if (value == null) {
             value = SystemPropertyUtil.get("org.jboss.netty.tryUnsafe", "true");
         }
-        boolean useUnsafe = Boolean.valueOf(value);
-        if (!useUnsafe) {
+        if (!"true".equalsIgnoreCase(value)) {
             return false;
         }
-        
+
         try {
             Class<?> unsafeClazz = Class.forName("sun.misc.Unsafe", true, loader);
             return hasUnsafeField(unsafeClazz);
@@ -89,15 +92,14 @@ public final class DetectionUtil {
     }
 
     private static int javaVersion0() {
+        // Android
         try {
-            // Check if its android, if so handle it the same way as java6.
-            //
-            // See https://github.com/netty/netty/issues/282
-            Class.forName("android.app.Application");
+            Class.forName("android.app.Application", false, ClassLoader.getSystemClassLoader());
             return 6;
-        } catch (ClassNotFoundException e) {
-            //Ignore
+        } catch (Exception e) {
+            // Ignore
         }
+
         try {
             Deflater.class.getDeclaredField("SYNC_FLUSH");
             return 7;
@@ -107,7 +109,7 @@ public final class DetectionUtil {
 
         return 6;
     }
-    
+
     private DetectionUtil() {
         // only static method supported
     }

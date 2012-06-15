@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,16 @@
  */
 package io.netty.channel;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.group.ChannelGroup;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.group.ChannelGroup;
+import java.nio.channels.Channels;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a
@@ -142,7 +143,7 @@ import io.netty.channel.group.ChannelGroup;
  * <pre>
  * public final class DataServerState {
  *
- *     <b>public static final {@link ChannelLocal}&lt;Boolean&gt; loggedIn = new {@link ChannelLocal}&lt;Boolean&gt;() {
+ *     <b>public static final {@link ChannelLocal}&lt;Boolean&gt; loggedIn = new {@link ChannelLocal}&lt;&gt;() {
  *         protected Boolean initialValue(Channel channel) {
  *             return false;
  *         }
@@ -206,6 +207,14 @@ import io.netty.channel.group.ChannelGroup;
  * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelHandler {
+
+    void beforeAdd(ChannelHandlerContext ctx) throws Exception;
+    void afterAdd(ChannelHandlerContext ctx) throws Exception;
+    void beforeRemove(ChannelHandlerContext ctx) throws Exception;
+    void afterRemove(ChannelHandlerContext ctx) throws Exception;
+
+    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
+    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 
     /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}

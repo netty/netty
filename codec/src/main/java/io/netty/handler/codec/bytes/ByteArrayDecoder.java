@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,17 +15,15 @@
  */
 package io.netty.handler.codec.bytes;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes a received {@link ChannelBuffer} into an array of bytes.
+ * Decodes a received {@link ByteBuf} into an array of bytes.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -40,7 +38,7 @@ import io.netty.handler.codec.oneone.OneToOneDecoder;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("bytesEncoder", new {@link ByteArrayEncoder}());
  * </pre>
- * and then you can use an array of bytes instead of a {@link ChannelBuffer}
+ * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -49,31 +47,32 @@ import io.netty.handler.codec.oneone.OneToOneDecoder;
  * }
  * </pre>
  */
-public class ByteArrayDecoder extends OneToOneDecoder {
+public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf, byte[]> {
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-        ChannelBuffer buf = (ChannelBuffer) msg;
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof ByteBuf;
+    }
+
+    @Override
+    public byte[] decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         byte[] array;
-        if (buf.hasArray()) {
-            if (buf.arrayOffset() == 0 && buf.readableBytes() == buf.capacity()) {
-                // we have no offset and the length is the same as the capacity. Its safe to reuse the array without copy it first
-                array = buf.array();
+        if (msg.hasArray()) {
+            if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {
+                // we have no offset and the length is the same as the capacity. Its safe to reuse
+                // the array without copy it first
+                array = msg.array();
             } else {
                 // copy the ChannelBuffer to a byte array
-                array = new byte[buf.readableBytes()];
-                buf.getBytes(0, array);
+                array = new byte[msg.readableBytes()];
+                msg.getBytes(0, array);
             }
         } else {
             // copy the ChannelBuffer to a byte array
-
-            array = new byte[buf.readableBytes()];
-            buf.getBytes(0, array);
+            array = new byte[msg.readableBytes()];
+            msg.getBytes(0, array);
         }
+
         return array;
     }
-
 }

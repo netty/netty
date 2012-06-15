@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,8 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.compression.CompressionException;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
@@ -28,7 +27,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
 
     public SpdyHeaderBlockJZlibCompressor(
             int version, int compressionLevel, int windowBits, int memLevel) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
@@ -64,7 +63,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void setInput(ChannelBuffer decompressed) {
+    public void setInput(ByteBuf decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         z.next_in = in;
@@ -73,7 +72,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void encode(ChannelBuffer compressed) {
+    public void encode(ByteBuf compressed) {
         try {
             byte[] out = new byte[(int) Math.ceil(z.next_in.length * 1.001) + 12];
             z.next_out = out;

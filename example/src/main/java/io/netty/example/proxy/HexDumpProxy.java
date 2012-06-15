@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,21 +15,11 @@
  */
 package io.netty.example.proxy;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.ClientSocketChannelFactory;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 public class HexDumpProxy {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(HexDumpProxy.class);
 
     private final int localPort;
     private final String remoteHost;
@@ -41,31 +31,29 @@ public class HexDumpProxy {
         this.remotePort = remotePort;
     }
 
-    public void run() {
-        logger.info(
+    public void run() throws Exception {
+        System.err.println(
                 "Proxying *:" + localPort + " to " +
                 remoteHost + ':' + remotePort + " ...");
 
         // Configure the bootstrap.
-        Executor executor = Executors.newCachedThreadPool();
-        ServerBootstrap sb = new ServerBootstrap(
-                new NioServerSocketChannelFactory(executor));
+        ServerBootstrap b = new ServerBootstrap();
+        try {
+            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+             .channel(new NioServerSocketChannel())
+             .localAddress(localPort)
+             .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort));
 
-        // Set up the event pipeline factory.
-        ClientSocketChannelFactory cf =
-                new NioClientSocketChannelFactory(executor);
-
-        sb.setPipelineFactory(
-                new HexDumpProxyPipelineFactory(cf, remoteHost, remotePort));
-
-        // Start up the server.
-        sb.bind(new InetSocketAddress(localPort));
+            b.bind().sync().channel().closeFuture().sync();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {
         // Validate command line options.
         if (args.length != 3) {
-            logger.error(
+            System.err.println(
                     "Usage: " + HexDumpProxy.class.getSimpleName() +
                     " <local port> <remote host> <remote port>");
             return;

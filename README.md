@@ -1,4 +1,4 @@
-#The Netty Project
+# The Netty Project
 
 Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
 
@@ -35,9 +35,9 @@ Netty is an asynchronous event-driven network application framework for rapid de
 
 - Netty is setup to build using [Maven](http://maven.apache.org/)
 
-- You need JDK 7 to __build__ Netty. Netty will run with JDK 5 (v3.x) and JDK 6 (v4).
+- You need JDK 7 to __build__ Netty. Netty will run with JDK 5 (3.x) and JDK 6 (4).
 
-- __master__ branch contains code for Netty v4
+- __master__ branch contains code for Netty 4.x
 
-- __3.2__ branch contains code for Netty v3.x
+- __3.2__ branch contains code for Netty 3.x
 

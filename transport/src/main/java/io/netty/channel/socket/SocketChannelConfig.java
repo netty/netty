@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,10 @@
  */
 package io.netty.channel.socket;
 
-import java.net.Socket;
-
 import io.netty.channel.ChannelConfig;
+
+import java.net.Socket;
+import java.net.StandardSocketOptions;
 
 /**
  * A {@link ChannelConfig} for a {@link SocketChannel}.
@@ -50,72 +51,72 @@ import io.netty.channel.ChannelConfig;
 public interface SocketChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_TCPNODELAY}</a> option.
+     * Gets the {@link StandardSocketOptions#TCP_NODELAY} option.
      */
     boolean isTcpNoDelay();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_TCPNODELAY}</a> option.
+     * Sets the {@link StandardSocketOptions#TCP_NODELAY} option.
      */
     void setTcpNoDelay(boolean tcpNoDelay);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_LINGER}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_LINGER} option.
      */
     int getSoLinger();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_LINGER}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_LINGER} option.
      */
     void setSoLinger(int soLinger);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
     int getSendBufferSize();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_SNDBUF}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
     void setSendBufferSize(int sendBufferSize);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_KEEPALIVE}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_KEEPALIVE} option.
      */
     boolean isKeepAlive();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_KEEPALIVE}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_KEEPALIVE} option.
      */
     void setKeepAlive(boolean keepAlive);
 
     /**
-     * Gets the traffic class.
+     * Gets the {@link StandardSocketOptions#IP_TOS} option.
      */
     int getTrafficClass();
 
     /**
-     * Sets the traffic class as specified in {@link Socket#setTrafficClass(int)}.
+     * Sets the {@link StandardSocketOptions#IP_TOS} option.
      */
     void setTrafficClass(int trafficClass);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     boolean isReuseAddress();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     void setReuseAddress(boolean reuseAddress);
 
@@ -123,6 +124,5 @@ public interface SocketChannelConfig extends ChannelConfig {
      * Sets the performance preferences as specified in
      * {@link Socket#setPerformancePreferences(int, int, int)}.
      */
-    void setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth);
+    void setPerformancePreferences(int connectionTime, int latency, int bandwidth);
 }

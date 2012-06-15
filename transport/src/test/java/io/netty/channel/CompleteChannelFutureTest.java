@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,29 +39,6 @@ public class CompleteChannelFutureTest {
     }
 
     @Test
-    public void shouldNotifyImmediatelyOnAdd() throws Exception {
-        ChannelFutureListener l = createStrictMock(ChannelFutureListener.class);
-        l.operationComplete(future);
-        replay(l);
-
-        future.addListener(l);
-        verify(l);
-    }
-
-    @Test
-    public void shouldNotRethrowListenerException() {
-        ChannelFutureListener l = new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future)
-                    throws Exception {
-                throw new ExpectedError();
-            }
-        };
-
-        future.addListener(l);
-    }
-
-    @Test
     public void shouldNotDoAnythingOnRemove() throws Exception {
         ChannelFutureListener l = createStrictMock(ChannelFutureListener.class);
         replay(l);
@@ -72,7 +49,7 @@ public class CompleteChannelFutureTest {
 
     @Test
     public void testConstantProperties() throws InterruptedException {
-        assertSame(channel, future.getChannel());
+        assertSame(channel, future.channel());
         assertTrue(future.isDone());
         assertFalse(future.cancel());
         assertFalse(future.isCancelled());
@@ -91,7 +68,7 @@ public class CompleteChannelFutureTest {
         }
 
         @Override
-        public Throwable getCause() {
+        public Throwable cause() {
             throw new Error();
         }
 
@@ -99,17 +76,15 @@ public class CompleteChannelFutureTest {
         public boolean isSuccess() {
             throw new Error();
         }
-        
+
         @Override
-        public ChannelFuture rethrowIfFailed() throws Exception {
+        public ChannelFuture sync() throws InterruptedException {
             throw new Error();
         }
-    }
 
-    private static class ExpectedError extends Error {
-        private static final long serialVersionUID = 7059276744882005047L;
-
-        ExpectedError() {
+        @Override
+        public ChannelFuture syncUninterruptibly() {
+            throw new Error();
         }
     }
 }

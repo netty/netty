@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,31 +15,28 @@
  */
 package io.netty.handler.stream;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import io.netty.buffer.ByteBuf;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import io.netty.channel.FileRegion;
-
 /**
- * A {@link ChunkedInput} that fetches data from a file chunk by chunk using
+ * A {@link ChunkedByteInput} that fetches data from a file chunk by chunk using
  * NIO {@link FileChannel}.
  * <p>
  * If your operating system supports
  * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
-public class ChunkedNioFile implements ChunkedInput {
+public class ChunkedNioFile implements ChunkedByteInput {
 
     private final FileChannel in;
-    private long startOffset;
+    private final long startOffset;
     private final long endOffset;
     private final int chunkSize;
-    private volatile long offset;
+    private long offset;
 
     /**
      * Creates a new instance that fetches data from the specified file.
@@ -143,18 +140,16 @@ public class ChunkedNioFile implements ChunkedInput {
     }
 
     @Override
-    public Object nextChunk() throws Exception {
+    public boolean readChunk(ByteBuf buffer) throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
-            return null;
+            return false;
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        byte[] chunkArray = new byte[chunkSize];
-        ByteBuffer chunk = ByteBuffer.wrap(chunkArray);
         int readBytes = 0;
         for (;;) {
-            int localReadBytes = in.read(chunk);
+            int localReadBytes = buffer.writeBytes(in, chunkSize - readBytes);
             if (localReadBytes < 0) {
                 break;
             }
@@ -163,8 +158,8 @@ public class ChunkedNioFile implements ChunkedInput {
                 break;
             }
         }
-
         this.offset += readBytes;
-        return wrappedBuffer(chunkArray);
+
+        return true;
     }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,9 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
+import io.netty.util.CharsetUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,8 +27,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import io.netty.util.CharsetUtil;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -41,10 +42,10 @@ public abstract class AbstractChannelBufferTest {
 
     private long seed;
     private Random random;
-    private ChannelBuffer buffer;
+    private ByteBuf buffer;
 
-    protected abstract ChannelBuffer newBuffer(int capacity);
-    protected abstract ChannelBuffer[] components();
+    protected abstract ByteBuf newBuffer(int capacity);
+    protected abstract ByteBuf[] components();
 
     protected boolean discardReadBytesDoesNotMoveWritableBytes() {
         return true;
@@ -140,7 +141,7 @@ public abstract class AbstractChannelBufferTest {
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY);
     }
-    
+
     @Test(expected = IndexOutOfBoundsException.class)
     public void getBooleanBoundaryCheck1() {
         buffer.getBoolean(-1);
@@ -762,7 +763,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             buffer.getBytes(i, value);
@@ -782,7 +783,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             int valueOffset = random.nextInt(BLOCK_SIZE);
@@ -796,7 +797,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testRandomHeapBufferTransfer1() {
         byte[] valueContent = new byte[BLOCK_SIZE];
-        ChannelBuffer value = wrappedBuffer(valueContent);
+        ByteBuf value = wrappedBuffer(valueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(valueContent);
             value.setIndex(0, BLOCK_SIZE);
@@ -807,7 +808,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             value.clear();
@@ -823,7 +824,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testRandomHeapBufferTransfer2() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = wrappedBuffer(valueContent);
+        ByteBuf value = wrappedBuffer(valueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(valueContent);
             buffer.setBytes(i, value, random.nextInt(BLOCK_SIZE), BLOCK_SIZE);
@@ -831,7 +832,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             int valueOffset = random.nextInt(BLOCK_SIZE);
@@ -845,7 +846,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testRandomDirectBufferTransfer() {
         byte[] tmp = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = directBuffer(BLOCK_SIZE * 2);
+        ByteBuf value = directBuffer(BLOCK_SIZE * 2);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(tmp);
             value.setBytes(0, tmp, 0, value.capacity());
@@ -853,7 +854,7 @@ public abstract class AbstractChannelBufferTest {
         }
 
         random.setSeed(seed);
-        ChannelBuffer expectedValue = directBuffer(BLOCK_SIZE * 2);
+        ByteBuf expectedValue = directBuffer(BLOCK_SIZE * 2);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(tmp);
             expectedValue.setBytes(0, tmp, 0, expectedValue.capacity());
@@ -942,7 +943,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testSequentialHeapBufferTransfer1() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = wrappedBuffer(valueContent);
+        ByteBuf value = wrappedBuffer(valueContent);
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(valueContent);
@@ -955,7 +956,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             int valueOffset = random.nextInt(BLOCK_SIZE);
@@ -973,7 +974,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testSequentialHeapBufferTransfer2() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = wrappedBuffer(valueContent);
+        ByteBuf value = wrappedBuffer(valueContent);
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(valueContent);
@@ -989,7 +990,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             int valueOffset = random.nextInt(BLOCK_SIZE);
@@ -1009,7 +1010,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testSequentialDirectBufferTransfer1() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = directBuffer(BLOCK_SIZE * 2);
+        ByteBuf value = directBuffer(BLOCK_SIZE * 2);
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(valueContent);
@@ -1023,7 +1024,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             int valueOffset = random.nextInt(BLOCK_SIZE);
@@ -1042,7 +1043,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testSequentialDirectBufferTransfer2() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = directBuffer(BLOCK_SIZE * 2);
+        ByteBuf value = directBuffer(BLOCK_SIZE * 2);
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(valueContent);
@@ -1060,7 +1061,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             value.setBytes(0, valueContent);
@@ -1081,7 +1082,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testSequentialByteBufferBackedHeapBufferTransfer1() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = wrappedBuffer(ByteBuffer.allocate(BLOCK_SIZE * 2));
+        ByteBuf value = wrappedBuffer(ByteBuffer.allocate(BLOCK_SIZE * 2));
         value.writerIndex(0);
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
@@ -1096,7 +1097,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             int valueOffset = random.nextInt(BLOCK_SIZE);
@@ -1115,7 +1116,7 @@ public abstract class AbstractChannelBufferTest {
     @Test
     public void testSequentialByteBufferBackedHeapBufferTransfer2() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer value = wrappedBuffer(ByteBuffer.allocate(BLOCK_SIZE * 2));
+        ByteBuf value = wrappedBuffer(ByteBuffer.allocate(BLOCK_SIZE * 2));
         value.writerIndex(0);
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
@@ -1134,7 +1135,7 @@ public abstract class AbstractChannelBufferTest {
 
         random.setSeed(seed);
         byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
-        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        ByteBuf expectedValue = wrappedBuffer(expectedValueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             random.nextBytes(expectedValueContent);
             value.setBytes(0, valueContent);
@@ -1194,7 +1195,7 @@ public abstract class AbstractChannelBufferTest {
             random.nextBytes(expectedValue);
             assertEquals(i, buffer.readerIndex());
             assertEquals(CAPACITY, buffer.writerIndex());
-            ChannelBuffer actualValue = buffer.readBytes(BLOCK_SIZE);
+            ByteBuf actualValue = buffer.readBytes(BLOCK_SIZE);
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
             // Make sure if it is a copied buffer.
@@ -1220,7 +1221,7 @@ public abstract class AbstractChannelBufferTest {
             random.nextBytes(expectedValue);
             assertEquals(i, buffer.readerIndex());
             assertEquals(CAPACITY, buffer.writerIndex());
-            ChannelBuffer actualValue = buffer.readSlice(BLOCK_SIZE);
+            ByteBuf actualValue = buffer.readSlice(BLOCK_SIZE);
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
             // Make sure if it is a sliced buffer.
@@ -1264,7 +1265,7 @@ public abstract class AbstractChannelBufferTest {
         for (int i = 0; i < buffer.capacity(); i += 4) {
             buffer.writeInt(i);
         }
-        ChannelBuffer copy = copiedBuffer(buffer);
+        ByteBuf copy = copiedBuffer(buffer);
 
         // Make sure there's no effect if called when readerIndex is 0.
         buffer.readerIndex(CAPACITY / 4);
@@ -1316,7 +1317,7 @@ public abstract class AbstractChannelBufferTest {
         for (int i = 0; i < buffer.capacity(); i ++) {
             buffer.writeByte((byte) i);
         }
-        ChannelBuffer copy = copiedBuffer(buffer);
+        ByteBuf copy = copiedBuffer(buffer);
 
         // Discard the first (CAPACITY / 2 - 1) bytes.
         buffer.setIndex(CAPACITY / 2 - 1, CAPACITY - 1);
@@ -1382,7 +1383,7 @@ public abstract class AbstractChannelBufferTest {
         buffer.setIndex(readerIndex, writerIndex);
 
         // Make sure all properties are copied.
-        ChannelBuffer copy = buffer.copy();
+        ByteBuf copy = buffer.copy();
         assertEquals(0, copy.readerIndex());
         assertEquals(buffer.readableBytes(), copy.writerIndex());
         assertEquals(buffer.readableBytes(), copy.capacity());
@@ -1410,7 +1411,7 @@ public abstract class AbstractChannelBufferTest {
         buffer.setIndex(readerIndex, writerIndex);
 
         // Make sure all properties are copied.
-        ChannelBuffer duplicate = buffer.duplicate();
+        ByteBuf duplicate = buffer.duplicate();
         assertEquals(buffer.readerIndex(), duplicate.readerIndex());
         assertEquals(buffer.writerIndex(), duplicate.writerIndex());
         assertEquals(buffer.capacity(), duplicate.capacity());
@@ -1457,12 +1458,12 @@ public abstract class AbstractChannelBufferTest {
         random.nextBytes(value);
         buffer.setBytes(0, value);
 
-        assertEquals(buffer, wrappedBuffer(BIG_ENDIAN, value));
-        assertEquals(buffer, wrappedBuffer(LITTLE_ENDIAN, value));
+        assertEquals(buffer, wrappedBuffer(value));
+        assertEquals(buffer, wrappedBuffer(value).order(LITTLE_ENDIAN));
 
         value[0] ++;
-        assertFalse(buffer.equals(wrappedBuffer(BIG_ENDIAN, value)));
-        assertFalse(buffer.equals(wrappedBuffer(LITTLE_ENDIAN, value)));
+        assertFalse(buffer.equals(wrappedBuffer(value)));
+        assertFalse(buffer.equals(wrappedBuffer(value).order(LITTLE_ENDIAN)));
     }
 
     @Test
@@ -1488,21 +1489,21 @@ public abstract class AbstractChannelBufferTest {
         buffer.setBytes(0, value);
 
 
-        assertEquals(0, buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)));
-        assertEquals(0, buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)));
+        assertEquals(0, buffer.compareTo(wrappedBuffer(value)));
+        assertEquals(0, buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)));
 
         value[0] ++;
-        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
         value[0] -= 2;
-        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) > 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) > 0);
         value[0] ++;
 
-        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value, 0, 31)) > 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value, 0, 31)) > 0);
-        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
-        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31).order(LITTLE_ENDIAN)) > 0);
+        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value)) < 0);
+        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
     }
 
     @Test
@@ -1528,71 +1529,36 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testToByteBuffer1() {
+    public void testNioBuffer1() {
+        Assume.assumeTrue(buffer.hasNioBuffer());
+
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
         buffer.clear();
         buffer.writeBytes(value);
 
-        assertEquals(ByteBuffer.wrap(value), buffer.toByteBuffer());
+        assertEquals(ByteBuffer.wrap(value), buffer.nioBuffer());
     }
 
     @Test
     public void testToByteBuffer2() {
+        Assume.assumeTrue(buffer.hasNioBuffer());
+
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
         buffer.clear();
         buffer.writeBytes(value);
 
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.toByteBuffer(i, BLOCK_SIZE));
+            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.nioBuffer(i, BLOCK_SIZE));
         }
     }
 
     @Test
     public void testToByteBuffer3() {
-        assertEquals(buffer.order(), buffer.toByteBuffer().order());
-    }
+        Assume.assumeTrue(buffer.hasNioBuffer());
 
-    @Test
-    public void testToByteBuffers1() {
-        byte[] value = new byte[buffer.capacity()];
-        random.nextBytes(value);
-        buffer.clear();
-        buffer.writeBytes(value);
-
-        ByteBuffer[] nioBuffers = buffer.toByteBuffers();
-        int length = 0;
-        for (ByteBuffer b: nioBuffers) {
-            length += b.remaining();
-        }
-
-        ByteBuffer nioBuffer = ByteBuffer.allocate(length);
-        for (ByteBuffer b: nioBuffers) {
-            nioBuffer.put(b);
-        }
-        nioBuffer.flip();
-
-        assertEquals(ByteBuffer.wrap(value), nioBuffer);
-    }
-
-    @Test
-    public void testToByteBuffers2() {
-        byte[] value = new byte[buffer.capacity()];
-        random.nextBytes(value);
-        buffer.clear();
-        buffer.writeBytes(value);
-
-        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
-            ByteBuffer[] nioBuffers = buffer.toByteBuffers(i, BLOCK_SIZE);
-            ByteBuffer nioBuffer = ByteBuffer.allocate(BLOCK_SIZE);
-            for (ByteBuffer b: nioBuffers) {
-                nioBuffer.put(b);
-            }
-            nioBuffer.flip();
-
-            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), nioBuffer);
-        }
+        assertEquals(buffer.order(), buffer.nioBuffer().order());
     }
 
     @Test
@@ -1615,12 +1581,12 @@ public abstract class AbstractChannelBufferTest {
 
     @Test
     public void testHashCode() {
-        ChannelBuffer elemA = buffer(15);
-        ChannelBuffer elemB = directBuffer(15);
+        ByteBuf elemA = buffer(15);
+        ByteBuf elemB = directBuffer(15);
         elemA.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5 });
         elemB.writeBytes(new byte[] { 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9 });
 
-        Set<ChannelBuffer> set = new HashSet<ChannelBuffer>();
+        Set<ByteBuf> set = new HashSet<ByteBuf>();
         set.add(elemA);
         set.add(elemB);
 
@@ -1641,7 +1607,7 @@ public abstract class AbstractChannelBufferTest {
         assertFalse(set.contains(elemB));
         assertEquals(0, set.size());
     }
-    
+
     // Test case for https://github.com/netty/netty/issues/325
     @Test
     public void testDiscardAllReadBytes() {

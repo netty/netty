@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,15 @@
  */
 package io.netty.handler.codec.bytes;
 
-import static org.hamcrest.core.Is.is;
-import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
-import static org.junit.Assert.assertThat;
+import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.core.Is.*;
+import static org.hamcrest.core.IsNull.*;
+import static org.junit.Assert.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
 
 import java.util.Random;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,33 +31,32 @@ import org.junit.Test;
  */
 public class ByteArrayEncoderTest {
 
-    private EncoderEmbedder<ChannelBuffer> embedder;
+    private EmbeddedMessageChannel ch;
 
     @Before
     public void setUp() {
-        embedder = new EncoderEmbedder<ChannelBuffer>(new ByteArrayEncoder());
+        ch = new EmbeddedMessageChannel(new ByteArrayEncoder());
     }
 
     @Test
-    public void testDecode() {
+    public void testEncode() {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
-        embedder.offer(b);
-        assertThat(embedder.poll(), is(wrappedBuffer(b)));
+        ch.writeOutbound(b);
+        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(b)));
     }
-    
+
     @Test
-    public void testDecodeEmpty() {
+    public void testEncodeEmpty() {
         byte[] b = new byte[0];
-        embedder.offer(b);
-        assertThat(embedder.poll(), is(wrappedBuffer(b)));
+        ch.writeOutbound(b);
+        assertThat(ch.readOutbound(), nullValue());
     }
 
     @Test
-    public void testDecodeOtherType() {
+    public void testEncodeOtherType() {
         String str = "Meep!";
-        embedder.offer(str);
-        assertThat(embedder.poll(), is((Object) str));
+        ch.writeOutbound(str);
+        assertThat(ch.readOutbound(), is((Object) str));
     }
-
 }

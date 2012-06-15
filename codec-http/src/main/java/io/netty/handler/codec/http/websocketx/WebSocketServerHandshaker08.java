@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -50,36 +49,21 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     private final boolean allowExtensions;
 
     /**
-     * Constructor using defaults
-     * 
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            CSV of supported protocols
-     * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
-     */
-    public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions) {
-        this(webSocketURL, subprotocols, allowExtensions, Long.MAX_VALUE);
-    }
-    
-    /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath".
+     *            Subsequent web socket frames will be sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web socket frame
      * @param maxFramePayloadLength
-     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
-     *            reduce denial of service attacks using long data frames.
+     *            Maximum allowable frame payload length. Setting this value to your application's
+     *            requirement may reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions,
-            long maxFramePayloadLength) {
+    public WebSocketServerHandshaker08(
+            String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
         super(WebSocketVersion.V08, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
@@ -90,11 +74,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi version 8 to 10</a>. Version 8, 9 and
      * 10 share the same wire protocol.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -105,11 +89,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 8
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -117,7 +101,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -127,7 +111,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.getId()));
+            logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.id()));
         }
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
@@ -155,7 +139,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
                 throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                this.setSelectedSubprotocol(selectedSubprotocol);
+                setSelectedSubprotocol(selectedSubprotocol);
             }
         }
 
@@ -163,13 +147,13 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         ChannelFuture future = channel.write(res);
 
         // Upgrade the connection and send the handshake response.
-        ChannelPipeline p = channel.getPipeline();
+        ChannelPipeline p = channel.pipeline();
         if (p.get(HttpChunkAggregator.class) != null) {
             p.remove(HttpChunkAggregator.class);
         }
 
         p.replace(HttpRequestDecoder.class, "wsdecoder",
-                new WebSocket08FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
+                new WebSocket08FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
 
         return future;
@@ -177,7 +161,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame and close the connection
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

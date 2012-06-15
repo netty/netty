@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,19 +16,16 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.handler.codec.frame.FrameDecoder;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.TooLongFrameException;
 
 /**
- * Decodes {@link ChannelBuffer}s into SPDY Data and Control Frames.
+ * Decodes {@link ByteBuf}s into SPDY Data and Control Frames.
  */
-public class SpdyFrameDecoder extends FrameDecoder {
+public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
 
     private final int spdyVersion;
     private final int maxChunkSize;
@@ -50,9 +47,9 @@ public class SpdyFrameDecoder extends FrameDecoder {
     // Header block decoding fields
     private int headerSize;
     private int numHeaders;
-    private ChannelBuffer decompressed;
+    private ByteBuf decompressed;
 
-    private static enum State {
+    private enum State {
         READ_COMMON_HEADER,
         READ_CONTROL_FRAME,
         READ_SETTINGS_FRAME,
@@ -61,6 +58,15 @@ public class SpdyFrameDecoder extends FrameDecoder {
         READ_DATA_FRAME,
         DISCARD_FRAME,
         FRAME_ERROR
+    }
+
+    /**
+     * Creates a new instance with the default {@code version (2)},
+     * {@code maxChunkSize (8192)}, and {@code maxHeaderSize (16384)}.
+     */
+    @Deprecated
+    public SpdyFrameDecoder() {
+        this(2);
     }
 
     /**
@@ -75,8 +81,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameDecoder(int version, int maxChunkSize, int maxHeaderSize) {
-        super(false);
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
@@ -96,21 +101,16 @@ public class SpdyFrameDecoder extends FrameDecoder {
     }
 
     @Override
-    protected Object decodeLast(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
-            throws Exception {
+    public Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
-            Object frame = decode(ctx, channel, buffer);
-            return frame;
+            return decode(ctx, in);
         } finally {
             headerBlockDecompressor.end();
         }
     }
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
-            throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch(state) {
         case READ_COMMON_HEADER:
             state = readCommonHeader(buffer);
@@ -252,7 +252,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 state = State.FRAME_ERROR;
                 spdyHeaderBlock = null;
                 decompressed = null;
-                Channels.fireExceptionCaught(ctx, e);
+                ctx.fireExceptionCaught(e);
                 return null;
             }
 
@@ -317,7 +317,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
     }
 
-    private State readCommonHeader(ChannelBuffer buffer) {
+    private State readCommonHeader(ByteBuf buffer) {
         // Wait until entire header is readable
         if (buffer.readableBytes() < SPDY_HEADER_SIZE) {
             return State.READ_COMMON_HEADER;
@@ -376,7 +376,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
     }
 
-    private Object readControlFrame(ChannelBuffer buffer) {
+    private Object readControlFrame(ByteBuf buffer) {
         int streamID;
         int statusCode;
         switch (type) {
@@ -407,17 +407,17 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 return null;
             }
 
-            int lastGoodStreamID = getUnsignedInt(buffer, buffer.readerIndex());
+            int lastGoodStreamId = getUnsignedInt(buffer, buffer.readerIndex());
             buffer.skipBytes(4);
 
             if (version < 3) {
-                return new DefaultSpdyGoAwayFrame(lastGoodStreamID);
+                return new DefaultSpdyGoAwayFrame(lastGoodStreamId);
             }
 
             statusCode = getSignedInt(buffer, buffer.readerIndex());
             buffer.skipBytes(4);
 
-            return new DefaultSpdyGoAwayFrame(lastGoodStreamID, statusCode);
+            return new DefaultSpdyGoAwayFrame(lastGoodStreamId, statusCode);
 
         case SPDY_WINDOW_UPDATE_FRAME:
             if (buffer.readableBytes() < 8) {
@@ -435,7 +435,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
     }
 
-    private SpdyHeaderBlock readHeaderBlockFrame(ChannelBuffer buffer) {
+    private SpdyHeaderBlock readHeaderBlockFrame(ByteBuf buffer) {
         int minLength;
         int streamID;
         switch (type) {
@@ -447,7 +447,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
 
             int offset = buffer.readerIndex();
             streamID = getUnsignedInt(buffer, offset);
-            int associatedToStreamID = getUnsignedInt(buffer, offset + 4);
+            int associatedToStreamId = getUnsignedInt(buffer, offset + 4);
             byte priority = (byte) (buffer.getByte(offset + 8) >> 5 & 0x07);
             if (version < 3) {
                 priority >>= 1;
@@ -462,7 +462,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             }
 
             SpdySynStreamFrame spdySynStreamFrame =
-                    new DefaultSpdySynStreamFrame(streamID, associatedToStreamID, priority);
+                    new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
             spdySynStreamFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
             spdySynStreamFrame.setUnidirectional((flags & SPDY_FLAG_UNIDIRECTIONAL) != 0);
 
@@ -548,13 +548,13 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
     }
 
-    private void decodeHeaderBlock(ChannelBuffer buffer) throws Exception {
+    private void decodeHeaderBlock(ByteBuf buffer) throws Exception {
         if (decompressed == null) {
             // First time we start to decode a header block
             // Initialize header block decoding fields
             headerSize = 0;
             numHeaders = -1;
-            decompressed = ChannelBuffers.dynamicBuffer(8192);
+            decompressed = Unpooled.dynamicBuffer(8192);
         }
 
         // Accumulate decompressed data
@@ -784,6 +784,6 @@ public class SpdyFrameDecoder extends FrameDecoder {
     }
 
     private static void fireProtocolException(ChannelHandlerContext ctx, String message) {
-        Channels.fireExceptionCaught(ctx, new SpdyProtocolException(message));
+        ctx.fireExceptionCaught(new SpdyProtocolException(message));
     }
 }

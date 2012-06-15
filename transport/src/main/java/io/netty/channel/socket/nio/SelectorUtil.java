@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,25 +15,20 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
-public final class SelectorUtil {
+final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
 
-    public static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
-
-    public static final int DEFAULT_IO_ACCEPTING_THREADS = 1;
-
-    
     // Workaround for JDK NIO bug.
     //
-    // See: 
+    // See:
     // - http://bugs.sun.com/view_bug.do?bug_id=6427854
     // - https://github.com/netty/netty/issues/203
     static {
@@ -49,7 +44,7 @@ public final class SelectorUtil {
             }
         }
     }
-    
+
     static void select(Selector selector) throws IOException {
         try {
             selector.select(10);
@@ -60,7 +55,14 @@ public final class SelectorUtil {
                         " raised by a Selector - JDK bug?", e);
             }
             // Harmless exception - log anyway
+        }
+    }
 
+    static void cleanupKeys(Selector selector) {
+        try {
+            selector.selectNow();
+        } catch (Throwable t) {
+            logger.warn("Failed to update SelectionKeys.", t);
         }
     }
 

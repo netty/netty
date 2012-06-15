@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,17 @@
  */
 package io.netty.channel;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.SelectionKey;
-
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannelConfig;
+import io.netty.util.AttributeMap;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.SelectionKey;
 
 
 /**
@@ -105,41 +107,14 @@ import io.netty.channel.socket.nio.NioSocketChannelConfig;
  *
  * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
-public interface Channel extends Comparable<Channel> {
-
-    /**
-     * The {@link #getInterestOps() interestOps} value which tells that only
-     * read operation has been suspended.
-     */
-    int OP_NONE = 0;
-
-    /**
-     * The {@link #getInterestOps() interestOps} value which tells that neither
-     * read nor write operation has been suspended.
-     */
-    int OP_READ = 1;
-
-    /**
-     * The {@link #getInterestOps() interestOps} value which tells that both
-     * read and write operation has been suspended.
-     */
-    int OP_WRITE = 4;
-
-    /**
-     * The {@link #getInterestOps() interestOps} value which tells that only
-     * write operation has been suspended.
-     */
-    int OP_READ_WRITE = OP_READ | OP_WRITE;
+public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFutureFactory, Comparable<Channel> {
 
     /**
      * Returns the unique integer ID of this channel.
      */
-    Integer getId();
+    Integer id();
 
-    /**
-     * Returns the {@link ChannelFactory} which created this channel.
-     */
-    ChannelFactory getFactory();
+    EventLoop eventLoop();
 
     /**
      * Returns the parent of this channel.
@@ -147,35 +122,27 @@ public interface Channel extends Comparable<Channel> {
      * @return the parent channel.
      *         {@code null} if this channel does not have a parent channel.
      */
-    Channel getParent();
+    Channel parent();
 
     /**
      * Returns the configuration of this channel.
      */
-    ChannelConfig getConfig();
+    ChannelConfig config();
 
     /**
      * Returns the {@link ChannelPipeline} which handles {@link ChannelEvent}s
      * associated with this channel.
      */
-    ChannelPipeline getPipeline();
+    ChannelPipeline pipeline();
 
-    /**
-     * Returns {@code true} if and only if this channel is open.
-     */
     boolean isOpen();
+    boolean isRegistered();
+    boolean isActive();
 
-    /**
-     * Returns {@code true} if and only if this channel is bound to a
-     * {@linkplain #getLocalAddress() local address}.
-     */
-    boolean isBound();
+    ChannelBufType bufferType();
 
-    /**
-     * Returns {@code true} if and only if this channel is connected to a
-     * {@linkplain #getRemoteAddress() remote address}.
-     */
-    boolean isConnected();
+    ByteBuf outboundByteBuffer();
+    <T> MessageBuf<T> outboundMessageBuffer();
 
     /**
      * Returns the local address where this channel is bound to.  The returned
@@ -186,7 +153,7 @@ public interface Channel extends Comparable<Channel> {
      * @return the local address of this channel.
      *         {@code null} if this channel is not bound.
      */
-    SocketAddress getLocalAddress();
+    SocketAddress localAddress();
 
     /**
      * Returns the remote address where this channel is connected to.  The
@@ -202,174 +169,31 @@ public interface Channel extends Comparable<Channel> {
      *         the origination of the received message as this method will
      *         return {@code null}.
      */
-    SocketAddress getRemoteAddress();
-
-    /**
-     * Sends a message to this channel asynchronously.    If this channel was
-     * created by a connectionless transport (e.g. {@link DatagramChannel})
-     * and is not connected yet, you have to call {@link #write(Object, SocketAddress)}
-     * instead.  Otherwise, the write request will fail with
-     * {@link NotYetConnectedException} and an {@code 'exceptionCaught'} event
-     * will be triggered.
-     *
-     * @param message the message to write
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         write request succeeds or fails
-     *
-     * @throws NullPointerException if the specified message is {@code null}
-     */
-    ChannelFuture write(Object message);
-
-    /**
-     * Sends a message to this channel asynchronously.  It has an additional
-     * parameter that allows a user to specify where to send the specified
-     * message instead of this channel's current remote address.  If this
-     * channel was created by a connectionless transport (e.g. {@link DatagramChannel})
-     * and is not connected yet, you must specify non-null address.  Otherwise,
-     * the write request will fail with {@link NotYetConnectedException} and
-     * an {@code 'exceptionCaught'} event will be triggered.
-     *
-     * @param message       the message to write
-     * @param remoteAddress where to send the specified message.
-     *                      This method is identical to {@link #write(Object)}
-     *                      if {@code null} is specified here.
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         write request succeeds or fails
-     *
-     * @throws NullPointerException if the specified message is {@code null}
-     */
-    ChannelFuture write(Object message, SocketAddress remoteAddress);
-
-    /**
-     * Binds this channel to the specified local address asynchronously.
-     *
-     * @param localAddress where to bind
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         bind request succeeds or fails
-     *
-     * @throws NullPointerException if the specified address is {@code null}
-     */
-    ChannelFuture bind(SocketAddress localAddress);
-
-    /**
-     * Connects this channel to the specified remote address asynchronously.
-     *
-     * @param remoteAddress where to connect
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         connection request succeeds or fails
-     *
-     * @throws NullPointerException if the specified address is {@code null}
-     */
-    ChannelFuture connect(SocketAddress remoteAddress);
-
-    /**
-     * Disconnects this channel from the current remote address asynchronously.
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         disconnection request succeeds or fails
-     */
-    ChannelFuture disconnect();
-
-    /**
-     * Unbinds this channel from the current local address asynchronously.
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         unbind request succeeds or fails
-     */
-    ChannelFuture unbind();
-
-    /**
-     * Closes this channel asynchronously.  If this channel is bound or
-     * connected, it will be disconnected and unbound first.  Once a channel
-     * is closed, it can not be open again.  Calling this method on a closed
-     * channel has no effect.  Please note that this method always returns the
-     * same future instance.
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         close request succeeds or fails
-     */
-    ChannelFuture close();
+    SocketAddress remoteAddress();
 
     /**
      * Returns the {@link ChannelFuture} which will be notified when this
      * channel is closed.  This method always returns the same future instance.
      */
-    ChannelFuture getCloseFuture();
+    ChannelFuture closeFuture();
 
-    /**
-     * Returns the current {@code interestOps} of this channel.
-     *
-     * @return {@link #OP_NONE}, {@link #OP_READ}, {@link #OP_WRITE}, or
-     *         {@link #OP_READ_WRITE}
-     */
-    int getInterestOps();
+    Unsafe unsafe();
 
-    /**
-     * Returns {@code true} if and only if the I/O thread will read a message
-     * from this channel.  This method is a shortcut to the following code:
-     * <pre>
-     * return (getInterestOps() & OP_READ) != 0;
-     * </pre>
-     */
-    boolean isReadable();
+    interface Unsafe {
+        ChannelHandlerContext directOutboundContext();
+        ChannelFuture voidFuture();
 
-    /**
-     * Returns {@code true} if and only if the I/O thread will perform the
-     * requested write operation immediately.  Any write requests made when
-     * this method returns {@code false} are queued until the I/O thread is
-     * ready to process the queued write requests.  This method is a shortcut
-     * to the following code:
-     * <pre>
-     * return (getInterestOps() & OP_WRITE) == 0;
-     * </pre>
-     */
-    boolean isWritable();
+        SocketAddress localAddress();
+        SocketAddress remoteAddress();
 
-    /**
-     * Changes the {@code interestOps} of this channel asynchronously.
-     *
-     * @param interestOps the new {@code interestOps}
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         {@code interestOps} change request succeeds or fails
-     */
-    ChannelFuture setInterestOps(int interestOps);
+        void register(EventLoop eventLoop, ChannelFuture future);
+        void bind(SocketAddress localAddress, ChannelFuture future);
+        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
+        void disconnect(ChannelFuture future);
+        void close(ChannelFuture future);
+        void deregister(ChannelFuture future);
 
-    /**
-     * Suspends or resumes the read operation of the I/O thread asynchronously.
-     * This method is a shortcut to the following code:
-     * <pre>
-     * int interestOps = getInterestOps();
-     * if (readable) {
-     *     setInterestOps(interestOps | OP_READ);
-     * } else {
-     *     setInterestOps(interestOps & ~OP_READ);
-     * }
-     * </pre>
-     *
-     * @param readable {@code true} to resume the read operation and
-     *                 {@code false} to suspend the read operation
-     *
-     * @return the {@link ChannelFuture} which will be notified when the
-     *         {@code interestOps} change request succeeds or fails
-     */
-    ChannelFuture setReadable(boolean readable);
-    
-    /**
-     * Retrieves an object which is {@link #setAttachment(Object) attached} to
-     * this {@link Channel}.
-     *
-     * @return {@code null} if no object was attached or
-     *                      {@code null} was attached
-     */
-    Object getAttachment();
-
-    /**
-     * Attaches an object to this {@link Channel} to store a stateful information
- */
-    void setAttachment(Object attachment);
+        void flush(ChannelFuture future);
+        void flushNow();
+    }
 }

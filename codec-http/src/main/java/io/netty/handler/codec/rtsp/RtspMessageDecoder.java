@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,17 +15,16 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMessageDecoder;
 
 /**
- * Decodes {@link ChannelBuffer}s into RTSP messages represented in
+ * Decodes {@link ByteBuf}s into RTSP messages represented in
  * {@link HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
@@ -55,7 +54,7 @@ import io.netty.handler.codec.http.HttpMessageDecoder;
  */
 public abstract class RtspMessageDecoder extends HttpMessageDecoder {
 
-    private final DecoderEmbedder<HttpMessage> aggregator;
+    private final EmbeddedMessageChannel aggregator;
 
     /**
      * Creates a new instance with the default
@@ -71,15 +70,15 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
      */
     protected RtspMessageDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
         super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2);
-        aggregator = new DecoderEmbedder<HttpMessage>(new HttpChunkAggregator(maxContentLength));
+        aggregator = new EmbeddedMessageChannel(new HttpChunkAggregator(maxContentLength));
     }
 
+
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel,
-            ChannelBuffer buffer, State state) throws Exception {
-        Object o = super.decode(ctx, channel, buffer, state);
-        if (o != null && aggregator.offer(o)) {
-            return aggregator.poll();
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        Object o = super.decode(ctx, buffer);
+        if (o != null && aggregator.writeInbound(o)) {
+            return aggregator.readInbound();
         } else {
             return null;
         }

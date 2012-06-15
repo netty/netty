@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,14 +22,12 @@ import org.jboss.marshalling.ByteInput;
 /**
  * {@link ByteInput} implementation which wraps another {@link ByteInput} and throws a {@link TooBigObjectException}
  * if the read limit was reached.
- * 
- *
  */
 class LimitingByteInput implements ByteInput {
-    
+
     // Use a static instance here to remove the overhead of fillStacktrace
     private static final TooBigObjectException EXCEPTION = new TooBigObjectException();
-    
+
     private final ByteInput input;
     private final long limit;
     private long read;
@@ -41,17 +39,18 @@ class LimitingByteInput implements ByteInput {
         this.input = input;
         this.limit = limit;
     }
-    
+
+    @Override
     public void close() throws IOException {
         // Nothing todo
     }
 
+    @Override
     public int available() throws IOException {
-        int available = input.available();
-        int readable = readable(available);
-        return readable;
+        return readable(input.available());
     }
 
+    @Override
     public int read() throws IOException {
         int readable = readable(1);
         if (readable > 0) {
@@ -63,10 +62,12 @@ class LimitingByteInput implements ByteInput {
         }
     }
 
+    @Override
     public int read(byte[] array) throws IOException {
         return read(array, 0, array.length);
     }
 
+    @Override
     public int read(byte[] array, int offset, int length) throws IOException {
         int readable = readable(length);
         if (readable > 0) {
@@ -78,6 +79,7 @@ class LimitingByteInput implements ByteInput {
         }
     }
 
+    @Override
     public long skip(long bytes) throws IOException {
         int readable = readable((int) bytes);
         if (readable > 0) {
@@ -92,17 +94,12 @@ class LimitingByteInput implements ByteInput {
     private int readable(int length) {
         return (int) Math.min(length, limit - read);
     }
-    
+
     /**
      * Exception that will get thrown if the {@link Object} is to big to unmarshall
      *
      */
     static final class TooBigObjectException extends IOException {
-
-        /**
-         * 
-         */
         private static final long serialVersionUID = 1L;
-        
     }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,9 +18,8 @@ package io.netty.handler.codec.http.websocketx;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
@@ -51,21 +50,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker00.class);
 
     /**
-     * Constructor with default values
-     * 
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            CSV of supported protocols
-     */
-    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols) {
-        this(webSocketURL, subprotocols, Long.MAX_VALUE);
-    }
-    
-    /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -75,7 +61,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Maximum allowable frame payload length. Setting this value to your application's requirement may
      *            reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, long maxFramePayloadLength) {
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, int maxFramePayloadLength) {
         super(WebSocketVersion.V00, webSocketURL, subprotocols, maxFramePayloadLength);
     }
 
@@ -86,11 +72,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * is really a rehash of <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76" >hixie-76</a> and
      * <a href="http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75" >hixie-75</a>.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -100,14 +86,14 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, sample
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -115,10 +101,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -128,7 +114,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.getId()));
+            logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
         }
 
         // Serve the WebSocket handshake request.
@@ -158,7 +144,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                     throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
                 } else {
                     res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                    this.setSelectedSubprotocol(selectedSubprotocol);
+                    setSelectedSubprotocol(selectedSubprotocol);
                 }
             }
 
@@ -168,11 +154,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             int a = (int) (Long.parseLong(key1.replaceAll("[^0-9]", "")) / key1.replaceAll("[^ ]", "").length());
             int b = (int) (Long.parseLong(key2.replaceAll("[^0-9]", "")) / key2.replaceAll("[^ ]", "").length());
             long c = req.getContent().readLong();
-            ChannelBuffer input = ChannelBuffers.buffer(16);
+            ByteBuf input = Unpooled.buffer(16);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            ChannelBuffer output = ChannelBuffers.wrappedBuffer(WebSocketUtil.md5(input.array()));
+            ByteBuf output = Unpooled.wrappedBuffer(WebSocketUtil.md5(input.array()));
             res.setContent(output);
         } else {
             // Old Hixie 75 handshake method with no challenge:
@@ -185,12 +171,12 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         }
 
         // Upgrade the connection and send the handshake response.
-        ChannelPipeline p = channel.getPipeline();
+        ChannelPipeline p = channel.pipeline();
         if (p.get(HttpChunkAggregator.class) != null) {
             p.remove(HttpChunkAggregator.class);
         }
         p.replace(HttpRequestDecoder.class, "wsdecoder",
-                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
+                new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
 
         ChannelFuture future = channel.write(res);
 
@@ -201,7 +187,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

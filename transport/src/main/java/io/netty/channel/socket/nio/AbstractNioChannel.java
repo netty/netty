@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,384 +15,204 @@
  */
 package io.netty.channel.socket.nio;
 
-import static io.netty.channel.Channels.fireChannelInterestChanged;
-import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
-import io.netty.util.internal.QueueFactory;
-import io.netty.util.internal.ThreadLocalBoolean;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoop;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
+import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
+import java.net.SocketAddress;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class AbstractNioChannel extends AbstractChannel implements NioChannel {
+public abstract class AbstractNioChannel extends AbstractChannel {
 
-    /**
-     * The {@link AbstractNioWorker}.
-     */
-    private final AbstractNioWorker worker;
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
-    /**
-     * Monitor object to synchronize access to InterestedOps.
-     */
-    protected final Object interestOpsLock = new Object();
+    private final SelectableChannel ch;
+    private final int defaultInterestOps;
+    private volatile SelectionKey selectionKey;
 
     /**
-     * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
      */
-    protected final Object writeLock = new Object();
+    private ChannelFuture connectFuture;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private ConnectException connectTimeoutException;
 
-    /**
-     * WriteTask that performs write operations.
-     */
-    final Runnable writeTask = new WriteTask();
-
-    /**
-     * Indicates if there is a {@link WriteTask} in the task queue.
-     */
-    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
-
-    /**
-     * Queue of write {@link MessageEvent}s.
-     */
-    protected final Queue<MessageEvent> writeBufferQueue = createRequestQueue();
-
-    /**
-     * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
-     * contains.
-     */
-    final AtomicInteger writeBufferSize = new AtomicInteger();
-
-    /**
-     * Keeps track of the highWaterMark.
-     */
-    final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-
-    /**
-     * The current write {@link MessageEvent}
-     */
-    protected MessageEvent currentWriteEvent;
-    protected SendBuffer currentWriteBuffer;
-
-    /**
-     * Boolean that indicates that write operation is in progress.
-     */
-    protected boolean inWriteNowLoop;
-    protected boolean writeSuspended;
-    
-
-    private volatile InetSocketAddress localAddress;
-    volatile InetSocketAddress remoteAddress;
-    
-    private final JdkChannel channel;
-    
-    protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, JdkChannel ch) {
-        super(id, parent, factory, pipeline, sink);
-        this.worker = worker;
-        this.channel = ch;
-    }
-    
     protected AbstractNioChannel(
-            Channel parent, ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, JdkChannel ch)  {
-        super(parent, factory, pipeline, sink);
-        this.worker = worker;
-        this.channel = ch;
-    }
-
-    protected JdkChannel getJdkChannel() {
-        return channel;
-    }
-    
-    /**
-     * Return the {@link AbstractNioWorker} that handle the IO of the {@link AbstractNioChannel}
-     * 
-     * @return worker
-     */
-    public AbstractNioWorker getWorker() {
-        return worker;
-    }
-    
-    
-    @Override
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
+            Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
+        super(parent, id);
+        this.ch = ch;
+        this.defaultInterestOps = defaultInterestOps;
+        try {
+            ch.configureBlocking(false);
+        } catch (IOException e) {
             try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) channel.getLocalSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
-    }
-
-    @Override
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) channel.getRemoteSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
-    }
-    
-    @Override
-    public abstract NioChannelConfig getConfig();
-    
-    int getRawInterestOps() {
-        return super.getInterestOps();
-    }
-
-    void setRawInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
-    }
-
-    @Override
-    public int getInterestOps() {
-        if (!isOpen()) {
-            return Channel.OP_WRITE;
-        }
-
-        int interestOps = getRawInterestOps();
-        int writeBufferSize = this.writeBufferSize.get();
-        if (writeBufferSize != 0) {
-            if (highWaterMarkCounter.get() > 0) {
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-                if (writeBufferSize >= lowWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
+                ch.close();
+            } catch (IOException e2) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Failed to close a partially initialized socket.", e2);
                 }
-            } else {
-                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-                if (writeBufferSize >= highWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
-                }
+
             }
-        } else {
-            interestOps &= ~Channel.OP_WRITE;
-        }
 
-        return interestOps;
+            throw new ChannelException("Failed to enter non-blocking mode.", e);
+        }
     }
-    
+
     @Override
-    protected boolean setClosed() {
-        return super.setClosed();
+    public boolean isOpen() {
+        return ch.isOpen();
     }
-    
-    protected WriteRequestQueue createRequestQueue() {
-        return new WriteRequestQueue();
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
-    
-    public class WriteRequestQueue implements BlockingQueue<MessageEvent> {
-        private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
-        private final BlockingQueue<MessageEvent> queue;
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
+    }
 
-        public WriteRequestQueue() {
-            this.queue = QueueFactory.createQueue(MessageEvent.class);
+    @Override
+    public NioUnsafe unsafe() {
+        return (NioUnsafe) super.unsafe();
+    }
+
+    protected SelectableChannel javaChannel() {
+        return ch;
+    }
+
+    protected SelectionKey selectionKey() {
+        assert selectionKey != null;
+        return selectionKey;
+    }
+
+    public interface NioUnsafe extends Unsafe {
+        java.nio.channels.Channel ch();
+        void finishConnect();
+        void read();
+    }
+
+    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
+        @Override
+        public java.nio.channels.Channel ch() {
+            return javaChannel();
         }
 
         @Override
-        public MessageEvent remove() {
-            return queue.remove();
-        }
+        public void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                if (!ensureOpen(future)) {
+                    return;
+                }
 
-        @Override
-        public MessageEvent element() {
-            return queue.element();
-        }
-
-        @Override
-        public MessageEvent peek() {
-            return queue.peek();
-        }
-
-        @Override
-        public int size() {
-            return queue.size();
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return queue.isEmpty();
-        }
-
-        @Override
-        public Iterator<MessageEvent> iterator() {
-            return queue.iterator();
-        }
-
-        @Override
-        public Object[] toArray() {
-            return queue.toArray();
-        }
-
-        @Override
-        public <T> T[] toArray(T[] a) {
-            return queue.toArray(a);
-        }
-
-        @Override
-        public boolean containsAll(Collection<?> c) {
-            return queue.containsAll(c);
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends MessageEvent> c) {
-            return queue.addAll(c);
-        }
-
-        @Override
-        public boolean removeAll(Collection<?> c) {
-            return queue.removeAll(c);
-        }
-
-        @Override
-        public boolean retainAll(Collection<?> c) {
-            return queue.retainAll(c);
-        }
-
-        @Override
-        public void clear() {
-            queue.clear();        
-        }
-
-        @Override
-        public boolean add(MessageEvent e) {
-            return queue.add(e);
-        }
-
-        @Override
-        public void put(MessageEvent e) throws InterruptedException {
-            queue.put(e);
-        }
-
-        @Override
-        public boolean offer(MessageEvent e, long timeout, TimeUnit unit) throws InterruptedException {
-            return queue.offer(e, timeout, unit);
-        }
-
-        @Override
-        public MessageEvent take() throws InterruptedException {
-            return queue.take();
-        }
-
-        @Override
-        public MessageEvent poll(long timeout, TimeUnit unit) throws InterruptedException {
-            return queue.poll(timeout, unit);
-        }
-
-        @Override
-        public int remainingCapacity() {
-            return queue.remainingCapacity();
-        }
-
-        @Override
-        public boolean remove(Object o) {
-            return queue.remove(o);
-        }
-
-        @Override
-        public boolean contains(Object o) {
-            return queue.contains(o);
-        }
-
-        @Override
-        public int drainTo(Collection<? super MessageEvent> c) {
-            return queue.drainTo(c);
-        }
-
-        @Override
-        public int drainTo(Collection<? super MessageEvent> c, int maxElements) {
-            return queue.drainTo(c, maxElements);
-        }
-
-        @Override
-        public boolean offer(MessageEvent e) {
-            boolean success = queue.offer(e);
-            assert success;
-
-            int messageSize = getMessageSize(e);
-            int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
-            int highWaterMark =  getConfig().getWriteBufferHighWaterMark();
-
-            if (newWriteBufferSize >= highWaterMark) {
-                if (newWriteBufferSize - messageSize < highWaterMark) {
-                    highWaterMarkCounter.incrementAndGet();
-                    if (!notifying.get()) {
-                        notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(AbstractNioChannel.this);
-                        notifying.set(Boolean.FALSE);
+                try {
+                    if (connectFuture != null) {
+                        throw new IllegalStateException("connection attempt already made");
                     }
-                }
-            }
-            return true;
-        }
 
-        @Override
-        public MessageEvent poll() {
-            MessageEvent e = queue.poll();
-            if (e != null) {
-                int messageSize = getMessageSize(e);
-                int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
+                    boolean wasActive = isActive();
+                    if (doConnect(remoteAddress, localAddress)) {
+                        future.setSuccess();
+                        if (!wasActive && isActive()) {
+                            pipeline().fireChannelActive();
+                        }
+                    } else {
+                        connectFuture = future;
 
-                if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-                    if (newWriteBufferSize + messageSize >= lowWaterMark) {
-                        highWaterMarkCounter.decrementAndGet();
-                        if (isConnected() && !notifying.get()) {
-                            notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(AbstractNioChannel.this);
-                            notifying.set(Boolean.FALSE);
+                        // Schedule connect timeout.
+                        int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                        if (connectTimeoutMillis > 0) {
+                            connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (connectTimeoutException == null) {
+                                        connectTimeoutException = new ConnectException("connection timed out");
+                                    }
+                                    ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
+                                    if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
+                                        pipeline().fireExceptionCaught(connectTimeoutException);
+                                        close(voidFuture());
+                                    }
+                                }
+                            }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                         }
                     }
+                } catch (Throwable t) {
+                    future.setFailure(t);
+                    pipeline().fireExceptionCaught(t);
+                    closeIfClosed();
                 }
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        connect(remoteAddress, localAddress, future);
+                    }
+                });
             }
-            return e;
-        }
-
-        protected int getMessageSize(MessageEvent e) {
-            Object m = e.getMessage();
-            if (m instanceof ChannelBuffer) {
-                return ((ChannelBuffer) m).readableBytes();
-            }
-            return 0;
-        }
-    }
-
-    private final class WriteTask implements Runnable {
-
-        WriteTask() {
         }
 
         @Override
-        public void run() {
-            writeTaskInTaskQueue.set(false);
-            worker.writeFromTaskLoop(AbstractNioChannel.this);
+        public void finishConnect() {
+            assert eventLoop().inEventLoop();
+            assert connectFuture != null;
+            try {
+                boolean wasActive = isActive();
+                doFinishConnect();
+                connectFuture.setSuccess();
+                if (!wasActive && isActive()) {
+                    pipeline().fireChannelActive();
+                }
+            } catch (Throwable t) {
+                connectFuture.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+                closeIfClosed();
+            } finally {
+                connectTimeoutFuture.cancel(false);
+                connectFuture = null;
+            }
         }
     }
 
+    @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof NioChildEventLoop;
+    }
+
+    @Override
+    protected boolean isFlushPending() {
+        SelectionKey selectionKey = this.selectionKey;
+        return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+    }
+
+    @Override
+    protected Runnable doRegister() throws Exception {
+        NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
+        selectionKey = javaChannel().register(
+                loop.selector, isActive()? defaultInterestOps : 0, this);
+        return null;
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        ((NioChildEventLoop) eventLoop()).cancel(selectionKey());
+    }
+
+    protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+    protected abstract void doFinishConnect() throws Exception;
 }

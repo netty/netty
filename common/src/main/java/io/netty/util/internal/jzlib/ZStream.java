@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -52,9 +52,9 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.jzlib.JZlib.WrapperType;
 
 public final class ZStream {
-    
+
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(ZStream.class);
+            InternalLoggerFactory.getInstance(ZStream.class);
 
     public byte[] next_in; // next input byte
     public int next_in_index;
@@ -114,7 +114,7 @@ public final class ZStream {
         if (istate == null) {
             return JZlib.Z_STREAM_ERROR;
         }
-        return istate.inflateSetDictionary(this, dictionary, dictLength);
+        return Inflate.inflateSetDictionary(this, dictionary, dictLength);
     }
 
     public int deflateInit(int level) {
@@ -186,10 +186,10 @@ public final class ZStream {
                 next_out.length <= next_out_index ||
                 dstate.pending_buf.length < dstate.pending_out + len ||
                 next_out.length < next_out_index + len) {
-            logger.info(dstate.pending_buf.length + ", " +
+            logger.debug(dstate.pending_buf.length + ", " +
                     dstate.pending_out + ", " + next_out.length + ", " +
                     next_out_index + ", " + len);
-            logger.info("avail_out=" + avail_out);
+            logger.debug("avail_out=" + avail_out);
         }
 
         System.arraycopy(dstate.pending_buf, dstate.pending_out, next_out,

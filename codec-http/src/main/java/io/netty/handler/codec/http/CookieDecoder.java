@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -42,7 +42,11 @@ import java.util.regex.Pattern;
 public class CookieDecoder {
 
     private static final Pattern PATTERN =
-        Pattern.compile("(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))");
+        Pattern.compile(
+                // See: https://github.com/netty/netty/pull/96
+                //"(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))"
+                "(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;]*)))?(\\s*(?:[;,]+\\s*|$))"
+        );
 
     private static final String COMMA = ",";
 
@@ -113,7 +117,6 @@ public class CookieDecoder {
             }
 
             Cookie c = new DefaultCookie(name, value);
-            cookies.add(c);
 
             boolean discard = false;
             boolean secure = false;
@@ -122,7 +125,7 @@ public class CookieDecoder {
             String commentURL = null;
             String domain = null;
             String path = null;
-            int maxAge = -1;
+            long maxAge = -1;
             List<Integer> ports = new ArrayList<Integer>(2);
 
             for (int j = i + 1; j < names.size(); j++, i++) {
@@ -151,8 +154,7 @@ public class CookieDecoder {
                         if (maxAgeMillis <= 0) {
                             maxAge = 0;
                         } else {
-                            maxAge = (int) (maxAgeMillis / 1000) +
-                                     (maxAgeMillis % 1000 != 0? 1 : 0);
+                            maxAge = maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0);
                         }
                     } catch (ParseException e) {
                         // Ignore.
@@ -189,12 +191,14 @@ public class CookieDecoder {
                 c.setPorts(ports);
                 c.setDiscard(discard);
             }
+
+            cookies.add(c);
         }
 
         return cookies;
     }
 
-    private void extractKeyValuePairs(
+    private static void extractKeyValuePairs(
             String header, List<String> names, List<String> values) {
         Matcher m = PATTERN.matcher(header);
         int pos = 0;
@@ -243,7 +247,7 @@ public class CookieDecoder {
         }
     }
 
-    private String decodeValue(String value) {
+    private static String decodeValue(String value) {
         if (value == null) {
             return value;
         }

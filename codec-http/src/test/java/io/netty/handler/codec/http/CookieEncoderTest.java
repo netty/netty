@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -126,7 +124,7 @@ public class CookieEncoderTest {
         String encodedCookie = encoder.encode();
         assertEquals(c1 + c2 + c3, encodedCookie);
     }
-    
+
     @Test
     public void testEncodingWithNoCookies() {
     	CookieEncoder encoderForServer = new CookieEncoder(true);
@@ -134,8 +132,8 @@ public class CookieEncoderTest {
     	CookieEncoder encoderForClient = new CookieEncoder(false);
     	String encodedCookie2 = encoderForClient.encode();
     	assertNotNull(encodedCookie1);
-    	assertNotNull(encodedCookie2);   	
-    	
+    	assertNotNull(encodedCookie2);
+
     }
-    
+
 }

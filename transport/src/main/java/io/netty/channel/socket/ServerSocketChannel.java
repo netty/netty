@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,9 @@
  */
 package io.netty.channel.socket;
 
-import java.net.InetSocketAddress;
-
 import io.netty.channel.ServerChannel;
+
+import java.net.InetSocketAddress;
 
 /**
  * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
@@ -26,9 +26,9 @@ import io.netty.channel.ServerChannel;
  */
 public interface ServerSocketChannel extends ServerChannel {
     @Override
-    ServerSocketChannelConfig getConfig();
+    ServerSocketChannelConfig config();
     @Override
-    InetSocketAddress getLocalAddress();
+    InetSocketAddress localAddress();
     @Override
-    InetSocketAddress getRemoteAddress();
+    InetSocketAddress remoteAddress();
 }

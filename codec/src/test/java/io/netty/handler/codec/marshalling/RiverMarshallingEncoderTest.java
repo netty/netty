@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,24 +15,20 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import org.jboss.marshalling.MarshallerFactory;
-import org.jboss.marshalling.Marshalling;
-import org.jboss.marshalling.MarshallingConfiguration;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 
-public class RiverMarshallingEncoderTest extends AbstractMarshallingEncoderTest {
-
+public class RiverMarshallingEncoderTest extends RiverCompatibleMarshallingEncoderTest {
 
     @Override
-    protected MarshallerFactory createMarshallerFactory() {
-        return Marshalling.getProvidedMarshallerFactory("river");
+    protected ByteBuf truncate(ByteBuf buf) {
+        buf.readInt();
+        return buf;
     }
 
     @Override
-    protected MarshallingConfiguration createMarshallingConfig() {
-        // Create a configuration
-        final MarshallingConfiguration configuration = new MarshallingConfiguration();
-        configuration.setVersion(3);
-        return configuration;
+    protected ChannelHandler createEncoder() {
+        return new MarshallingEncoder(createProvider());
     }
 
 }

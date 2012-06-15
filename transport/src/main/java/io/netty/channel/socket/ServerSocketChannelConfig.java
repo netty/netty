@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,10 @@
  */
 package io.netty.channel.socket;
 
-import java.net.ServerSocket;
-
 import io.netty.channel.ChannelConfig;
+
+import java.net.ServerSocket;
+import java.net.StandardSocketOptions;
 
 /**
  * A {@link ChannelConfig} for a {@link ServerSocketChannel}.
@@ -55,22 +56,22 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
     void setBacklog(int backlog);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     boolean isReuseAddress();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
+     * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
     void setReuseAddress(boolean reuseAddress);
 
     /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
     int getReceiveBufferSize();
 
     /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
+     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
 

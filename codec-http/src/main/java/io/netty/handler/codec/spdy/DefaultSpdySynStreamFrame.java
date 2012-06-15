@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,8 +23,8 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         implements SpdySynStreamFrame {
 
-    private int streamID;
-    private int associatedToStreamID;
+    private int streamId;
+    private int associatedToStreamId;
     private byte priority;
     private boolean last;
     private boolean unidirectional;
@@ -32,47 +32,52 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     /**
      * Creates a new instance.
      *
-     * @param streamID             the Stream-ID of this frame
-     * @param associatedToStreamID the Associated-To-Stream-ID of this frame
+     * @param streamId             the Stream-ID of this frame
+     * @param associatedToStreamId the Associated-To-Stream-ID of this frame
      * @param priority             the priority of the stream
      */
     public DefaultSpdySynStreamFrame(
-            int streamID, int associatedToStreamID, byte priority) {
-        super();
-        setStreamID(streamID);
-        setAssociatedToStreamID(associatedToStreamID);
+            int streamId, int associatedToStreamId, byte priority) {
+        setStreamId(streamId);
+        setAssociatedToStreamId(associatedToStreamId);
         setPriority(priority);
     }
 
-    public int getStreamID() {
-        return streamID;
+    @Override
+    public int getStreamId() {
+        return streamId;
     }
 
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    @Override
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
-    public int getAssociatedToStreamID() {
-        return associatedToStreamID;
+    @Override
+    public int getAssociatedToStreamId() {
+        return associatedToStreamId;
     }
 
-    public void setAssociatedToStreamID(int associatedToStreamID) {
-        if (associatedToStreamID < 0) {
+    @Override
+    public void setAssociatedToStreamId(int associatedToStreamId) {
+        if (associatedToStreamId < 0) {
             throw new IllegalArgumentException(
                     "Associated-To-Stream-ID cannot be negative: " +
-                    associatedToStreamID);
+                    associatedToStreamId);
         }
-        this.associatedToStreamID = associatedToStreamID;
+        this.associatedToStreamId = associatedToStreamId;
     }
 
+    @Override
     public byte getPriority() {
         return priority;
     }
 
+    @Override
     public void setPriority(byte priority) {
         if (priority < 0 || priority > 7) {
             throw new IllegalArgumentException(
@@ -81,18 +86,22 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         this.priority = priority;
     }
 
+    @Override
     public boolean isLast() {
         return last;
     }
 
+    @Override
     public void setLast(boolean last) {
         this.last = last;
     }
 
+    @Override
     public boolean isUnidirectional() {
         return unidirectional;
     }
 
+    @Override
     public void setUnidirectional(boolean unidirectional) {
         this.unidirectional = unidirectional;
     }
@@ -108,11 +117,11 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
-        if (associatedToStreamID != 0) {
+        if (associatedToStreamId != 0) {
             buf.append("--> Associated-To-Stream-ID = ");
-            buf.append(associatedToStreamID);
+            buf.append(associatedToStreamId);
             buf.append(StringUtil.NEWLINE);
         }
         buf.append("--> Priority = ");

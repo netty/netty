@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Map;
-
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -33,6 +28,11 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * <p>
@@ -49,26 +49,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     private byte[] expectedChallengeResponseBytes;
 
     /**
-     * Constructor with default values
-     * 
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
-     * @param subprotocol
-     *            Sub protocol request sent to the server.
-     * @param customHeaders
-     *            Map of custom headers to add to the client request
-     */
-    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders) {
-        this(webSocketURL, version, subprotocol, customHeaders, Long.MAX_VALUE);
-    }
-    
-    /**
      * Constructor specifying the destination web socket location and version to initiate
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -82,15 +64,16 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders, long maxFramePayloadLength) {
+            Map<String, String> customHeaders, int maxFramePayloadLength) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
+
     }
 
     /**
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -99,10 +82,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Origin: http://example.com
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -165,11 +148,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ":" + wsPort;
         }
-        request.addHeader(Names.ORIGIN, originValue);
 
+        request.addHeader(Names.ORIGIN, originValue);
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
-        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
@@ -181,11 +164,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             }
         }
 
-        request.setContent(ChannelBuffers.copiedBuffer(key3));
+        request.setContent(Unpooled.copiedBuffer(key3));
 
         ChannelFuture future = channel.write(request);
 
-        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
+        channel.pipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
 
         return future;
     }
@@ -194,7 +177,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -202,10 +185,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
@@ -221,13 +204,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equals(Values.WEBSOCKET)) {
+        if (upgrade == null || !upgrade.equalsIgnoreCase(Values.WEBSOCKET)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equals(Values.UPGRADE)) {
+        if (connection == null || !connection.equalsIgnoreCase(Values.UPGRADE)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }
@@ -241,12 +224,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         setActualSubprotocol(subprotocol);
 
         setHandshakeComplete();
-        
-        channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
-                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
+
+        channel.pipeline().get(HttpResponseDecoder.class).replace(
+                "ws-decoder", new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
     }
 
-    private String insertRandomCharacters(String key) {
+    private static String insertRandomCharacters(String key) {
         int count = WebSocketUtil.randomNumber(1, 12);
 
         char[] randomChars = new char[count];
@@ -269,7 +252,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         return key;
     }
 
-    private String insertSpaces(String key, int spaces) {
+    private static String insertSpaces(String key, int spaces) {
         for (int i = 0; i < spaces; i++) {
             int split = WebSocketUtil.randomNumber(1, key.length() - 1);
             String part1 = key.substring(0, split);
@@ -279,5 +262,4 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         return key;
     }
-
 }

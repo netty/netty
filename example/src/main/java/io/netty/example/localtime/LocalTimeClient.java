@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,28 +15,21 @@
  */
 package io.netty.example.localtime;
 
-import java.net.InetSocketAddress;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
  * get the local times of the specified cities.
  */
 public class LocalTimeClient {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(LocalTimeClient.class);
 
     private final String host;
     private final int port;
@@ -49,39 +42,35 @@ public class LocalTimeClient {
         this.cities.addAll(cities);
     }
 
-    public void run() {
-        // Set up.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        Bootstrap b = new Bootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .handler(new LocalTimeClientInitializer());
 
-        // Configure the event pipeline factory.
-        bootstrap.setPipelineFactory(new LocalTimeClientPipelineFactory());
+            // Make a new connection.
+            Channel ch = b.connect().sync().channel();
 
-        // Make a new connection.
-        ChannelFuture connectFuture =
-            bootstrap.connect(new InetSocketAddress(host, port));
+            // Get the handler instance to initiate the request.
+            LocalTimeClientHandler handler =
+                ch.pipeline().get(LocalTimeClientHandler.class);
 
-        // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+            // Request and get the response.
+            List<String> response = handler.getLocalTimes(cities);
 
-        // Get the handler instance to initiate the request.
-        LocalTimeClientHandler handler =
-            channel.getPipeline().get(LocalTimeClientHandler.class);
+            // Close the connection.
+            ch.close();
 
-        // Request and get the response.
-        List<String> response = handler.getLocalTimes(cities);
-        // Close the connection.
-        channel.close().awaitUninterruptibly();
-
-        // Shut down all thread pools to exit.
-        bootstrap.releaseExternalResources();
-
-        // Print the response at last but not least.
-        Iterator<String> i1 = cities.iterator();
-        Iterator<String> i2 = response.iterator();
-        while (i1.hasNext()) {
-            logger.info(String.format("%28s: %s%n", i1.next(), i2.next()));
+            // Print the response at last but not least.
+            Iterator<String> i1 = cities.iterator();
+            Iterator<String> i2 = response.iterator();
+            while (i1.hasNext()) {
+                System.out.format("%28s: %s%n", i1.next(), i2.next());
+            }
+        } finally {
+            b.shutdown();
         }
     }
 
@@ -104,10 +93,10 @@ public class LocalTimeClient {
     }
 
     private static void printUsage() {
-        logger.error(
+        System.err.println(
                 "Usage: " + LocalTimeClient.class.getSimpleName() +
                 " <host> <port> <continent/city_name> ...");
-        logger.error(
+        System.err.println(
                 "Example: " + LocalTimeClient.class.getSimpleName() +
                 " localhost 8080 America/New_York Asia/Seoul");
     }
@@ -116,7 +105,7 @@ public class LocalTimeClient {
         List<String> cities = new ArrayList<String>();
         for (int i = offset; i < args.length; i ++) {
             if (!args[i].matches("^[_A-Za-z]+/[_A-Za-z]+$")) {
-                logger.error("Syntax error: '" + args[i] + "'");
+                System.err.println("Syntax error: '" + args[i] + "'");
                 printUsage();
                 return null;
             }

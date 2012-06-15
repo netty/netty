@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,16 +15,15 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.CorruptedFrameException;
-import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.CorruptedFrameException;
 
 import com.google.protobuf.CodedInputStream;
 
 /**
- * A decoder that splits the received {@link ChannelBuffer}s dynamically by the
+ * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the Google Protocol Buffers
  * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
  * 128 Varints</a> integer length field in the message.  For example:
@@ -36,9 +35,9 @@ import com.google.protobuf.CodedInputStream;
  * +--------+---------------+      +---------------+
  * </pre>
  *
- * @see com.google.protobuf.CodedInputStream
+ * @see CodedInputStream
  */
-public class ProtobufVarint32FrameDecoder extends FrameDecoder {
+public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder<Object> {
 
     // TODO maxFrameLength + safe skip + fail-fast option
     //      (just like LengthFieldBasedFrameDecoder)
@@ -50,27 +49,27 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-        buffer.markReaderIndex();
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        in.markReaderIndex();
         final byte[] buf = new byte[5];
         for (int i = 0; i < buf.length; i ++) {
-            if (!buffer.readable()) {
-                buffer.resetReaderIndex();
+            if (!in.readable()) {
+                in.resetReaderIndex();
                 return null;
             }
 
-            buf[i] = buffer.readByte();
+            buf[i] = in.readByte();
             if (buf[i] >= 0) {
                 int length = CodedInputStream.newInstance(buf, 0, i + 1).readRawVarint32();
                 if (length < 0) {
                     throw new CorruptedFrameException("negative length: " + length);
                 }
 
-                if (buffer.readableBytes() < length) {
-                    buffer.resetReaderIndex();
+                if (in.readableBytes() < length) {
+                    in.resetReaderIndex();
                     return null;
                 } else {
-                    return buffer.readBytes(length);
+                    return in.readBytes(length);
                 }
             }
         }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,15 @@
  */
 package io.netty.channel.group;
 
-import java.net.SocketAddress;
-import java.util.Set;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.util.CharsetUtil;
+
+import java.util.Set;
 
 /**
  * A thread-safe {@link Set} that contains open {@link Channel}s and provides
@@ -46,7 +43,7 @@ import io.netty.util.CharsetUtil;
  * recipients.add(channelA);
  * recipients.add(channelB);
  * ..
- * <strong>recipients.write({@link ChannelBuffers}.copiedBuffer(
+ * <strong>recipients.write({@link Unpooled}.copiedBuffer(
  *         "Service will shut down for maintenance in 5 minutes.",
  *         {@link CharsetUtil}.UTF_8));</strong>
  * </pre>
@@ -96,7 +93,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * Returns the name of this group.  A group name is purely for helping
      * you to distinguish one group from others.
      */
-    String getName();
+    String name();
 
     /**
      * Returns the {@link Channel} whose ID matches the specified integer.
@@ -106,30 +103,10 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     Channel find(Integer id);
 
     /**
-     * Calls {@link Channel#setInterestOps(int)} for all {@link Channel}s in
-     * this group with the specified {@code interestOps}. Please note that
-     * this operation is asynchronous as {@link Channel#setInterestOps(int)} is.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture setInterestOps(int interestOps);
-
-    /**
-     * Calls {@link Channel#setReadable(boolean)} for all {@link Channel}s in
-     * this group with the specified boolean flag. Please note that this
-     * operation is asynchronous as {@link Channel#setReadable(boolean)} is.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture setReadable(boolean readable);
-
-    /**
      * Writes the specified {@code message} to all {@link Channel}s in this
      * group. If the specified {@code message} is an instance of
-     * {@link ChannelBuffer}, it is automatically
-     * {@linkplain ChannelBuffer#duplicate() duplicated} to avoid a race
+     * {@link ByteBuf}, it is automatically
+     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
      * condition. Please note that this operation is asynchronous as
      * {@link Channel#write(Object)} is.
      *
@@ -139,33 +116,12 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture write(Object message);
 
     /**
-     * Writes the specified {@code message} with the specified
-     * {@code remoteAddress} to all {@link Channel}s in this group.  If the
-     * specified {@code message} is an instance of {@link ChannelBuffer}, it is
-     * automatically {@linkplain ChannelBuffer#duplicate() duplicated} to avoid
-     * a race condition. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object, SocketAddress)} is.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture write(Object message, SocketAddress remoteAddress);
-
-    /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
     ChannelGroupFuture disconnect();
-
-    /**
-     * Unbinds all {@link Channel}s in this group from their local address.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture unbind();
 
     /**
      * Closes all {@link Channel}s in this group.  If the {@link Channel} is

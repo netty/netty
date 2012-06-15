@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,31 +16,29 @@
 package io.netty.example.qotm;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.CharsetUtil;
 
-public class QuoteOfTheMomentClientHandler extends SimpleChannelUpstreamHandler {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(QuoteOfTheMomentClientHandler.class);
+public class QuoteOfTheMomentClientHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public void messageReceived(
+            ChannelHandlerContext ctx, DatagramPacket msg)
             throws Exception {
-        String msg = (String) e.getMessage();
-        if (msg.startsWith("QOTM: ")) {
-            logger.info("Quote of the Moment: " + msg.substring(6));
-            e.getChannel().close();
+        String response = msg.data().toString(CharsetUtil.UTF_8);
+        if (response.startsWith("QOTM: ")) {
+            System.out.println("Quote of the Moment: " + response.substring(6));
+            ctx.close();
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+    public void exceptionCaught(
+            ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
-        logger.error("Exception caught", e.getCause());
-        e.getChannel().close();
+        cause.printStackTrace();
+        ctx.close();
     }
 }

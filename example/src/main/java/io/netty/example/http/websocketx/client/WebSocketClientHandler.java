@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,24 +39,16 @@ package io.netty.example.http.websocketx.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
-public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(WebSocketClientHandler.class);
+public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private final WebSocketClientHandshaker handshaker;
 
@@ -65,41 +57,40 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        logger.debug("WebSocket Client disconnected!");
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("WebSocket Client disconnected!");
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Channel ch = ctx.getChannel();
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        Channel ch = ctx.channel();
         if (!handshaker.isHandshakeComplete()) {
-            handshaker.finishHandshake(ch, (HttpResponse) e.getMessage());
-            logger.debug("WebSocket Client connected!");
+            handshaker.finishHandshake(ch, (HttpResponse) msg);
+            System.out.println("WebSocket Client connected!");
             return;
         }
 
-        if (e.getMessage() instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) e.getMessage();
+        if (msg instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) msg;
             throw new Exception("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
                     + response.getContent().toString(CharsetUtil.UTF_8) + ")");
         }
 
-        WebSocketFrame frame = (WebSocketFrame) e.getMessage();
+        WebSocketFrame frame = (WebSocketFrame) msg;
         if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-            logger.info("WebSocket Client received message: " + textFrame.getText());
+            System.out.println("WebSocket Client received message: " + textFrame.getText());
         } else if (frame instanceof PongWebSocketFrame) {
-            logger.info("WebSocket Client received pong");
+            System.out.println("WebSocket Client received pong");
         } else if (frame instanceof CloseWebSocketFrame) {
-            logger.info("WebSocket Client received closing");
+            System.out.println("WebSocket Client received closing");
             ch.close();
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        final Throwable t = e.getCause();
-        t.printStackTrace();
-        e.getChannel().close();
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 }

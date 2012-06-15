@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,16 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.TimeZone;
 
 import org.junit.Test;
 
@@ -238,6 +235,7 @@ public class CookieDecoderTest {
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
+        assertTrue(it.hasNext());
         c = it.next();
         assertEquals(1, c.getVersion());
         assertEquals("session_id", c.getName());
@@ -249,6 +247,7 @@ public class CookieDecoderTest {
         assertTrue(c.getPorts().isEmpty());
         assertEquals(-1, c.getMaxAge());
 
+        assertTrue(it.hasNext());
         c = it.next();
         assertEquals(1, c.getVersion());
         assertEquals("session_id", c.getName());
@@ -346,5 +345,30 @@ public class CookieDecoderTest {
         assertEquals("unfinished furniture", c.getValue());
 
         assertFalse(it.hasNext());
+    }
+
+    @Test
+    public void testDecodingLongDates() {
+        Calendar cookieDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        cookieDate.set(9999, Calendar.DECEMBER, 31, 23, 59, 59);
+        long expectedMaxAge = (cookieDate.getTimeInMillis() - System.currentTimeMillis()) / 1000;
+
+        String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+
+        Cookie c = cookies.iterator().next();
+        assertTrue(Math.abs(expectedMaxAge - c.getMaxAge()) < 2);
+    }
+
+    @Test
+    public void testDecodingValueWithComma() {
+        String source = "UserCookie=timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE;" +
+                " expires=Sat, 01-Dec-2012 10:53:31 GMT; path=/";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+
+        Cookie c = cookies.iterator().next();
+        assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.getValue());
     }
 }

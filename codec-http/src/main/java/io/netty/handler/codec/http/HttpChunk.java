@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelPipeline;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelPipeline;
 
 /**
  * An HTTP chunk which is used for HTTP chunked transfer-encoding.
@@ -40,12 +40,12 @@ public interface HttpChunk {
      */
     HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
         @Override
-        public ChannelBuffer getContent() {
-            return ChannelBuffers.EMPTY_BUFFER;
+        public ByteBuf getContent() {
+            return Unpooled.EMPTY_BUFFER;
         }
 
         @Override
-        public void setContent(ChannelBuffer content) {
+        public void setContent(ByteBuf content) {
             throw new IllegalStateException("read-only");
         }
 
@@ -113,13 +113,13 @@ public interface HttpChunk {
 
     /**
      * Returns the content of this chunk.  If this is the 'end of content'
-     * marker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
+     * marker, {@link Unpooled#EMPTY_BUFFER} will be returned.
      */
-    ChannelBuffer getContent();
+    ByteBuf getContent();
 
     /**
      * Sets the content of this chunk.  If an empty buffer is specified,
      * this chunk becomes the 'end of content' marker.
      */
-    void setContent(ChannelBuffer content);
+    void setContent(ByteBuf content);
 }

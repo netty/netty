@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,25 +15,24 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.frame.TooLongFrameException;
-import io.netty.handler.codec.replay.ReplayingDecoder;
-import io.netty.handler.codec.replay.VoidEnum;
+import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.VoidEnum;
 
 /**
- * Decodes {@link ChannelBuffer}s into {@link WebSocketFrame}s.
+ * Decodes {@link ByteBuf}s into {@link WebSocketFrame}s.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
- * 
+ *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
-public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
+public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, VoidEnum> {
 
-    private static final int DEFAULT_MAX_FRAME_SIZE = 16384;
+    static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
     private final long maxFrameSize;
     private boolean receivedClosingHandshake;
@@ -45,36 +44,34 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
     /**
      * Creates a new instance of {@code WebSocketFrameDecoder} with the specified {@code maxFrameSize}. If the client
      * sends a frame size larger than {@code maxFrameSize}, the channel will be closed.
-     * 
+     *
      * @param maxFrameSize
      *            the maximum frame size to decode
      */
-    public WebSocket00FrameDecoder(long maxFrameSize) {
+    public WebSocket00FrameDecoder(int maxFrameSize) {
         this.maxFrameSize = maxFrameSize;
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state)
-            throws Exception {
-
+    public WebSocketFrame decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
-            buffer.skipBytes(actualReadableBytes());
+            in.skipBytes(actualReadableBytes());
             return null;
         }
 
         // Decode a frame otherwise.
-        byte type = buffer.readByte();
+        byte type = in.readByte();
         if ((type & 0x80) == 0x80) {
             // If the MSB on type is set, decode the frame length
-            return decodeBinaryFrame(type, buffer);
+            return decodeBinaryFrame(type, in);
         } else {
             // Decode a 0xff terminated UTF-8 string
-            return decodeTextFrame(buffer);
+            return decodeTextFrame(in);
         }
     }
 
-    private WebSocketFrame decodeBinaryFrame(byte type, ChannelBuffer buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeBinaryFrame(byte type, ByteBuf buffer) throws TooLongFrameException {
         long frameSize = 0;
         int lengthFieldSize = 0;
         byte b;
@@ -100,7 +97,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
         return new BinaryWebSocketFrame(buffer.readBytes((int) frameSize));
     }
 
-    private WebSocketFrame decodeTextFrame(ChannelBuffer buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeTextFrame(ByteBuf buffer) throws TooLongFrameException {
         int ridx = buffer.readerIndex();
         int rbytes = actualReadableBytes();
         int delimPos = buffer.indexOf(ridx, ridx + rbytes, (byte) 0xFF);
@@ -120,7 +117,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
             throw new TooLongFrameException();
         }
 
-        ChannelBuffer binaryData = buffer.readBytes(frameSize);
+        ByteBuf binaryData = buffer.readBytes(frameSize);
         buffer.skipBytes(1);
 
         int ffDelimPos = binaryData.indexOf(binaryData.readerIndex(), binaryData.writerIndex(), (byte) 0xFF);

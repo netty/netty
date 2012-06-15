@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,62 +15,68 @@
  */
 package io.netty.handler.codec.marshalling;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
+import io.netty.buffer.Unpooled;
+
 import java.io.IOException;
 
 import org.jboss.marshalling.ByteOutput;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.ChannelBuffers;
 
 /**
- * {@link ByteOutput} implementation which writes the data to a {@link ChannelBuffer}
- * 
+ * {@link ByteOutput} implementation which writes the data to a {@link ByteBuf}
+ *
  *
  */
 class ChannelBufferByteOutput implements ByteOutput {
-    
-    private final ChannelBuffer buffer;
 
-    
+    private final ByteBuf buffer;
+
+
     /**
-     * Create a new instance which use the given {@link ChannelBuffer}
+     * Create a new instance which use the given {@link ByteBuf}
      */
-    public ChannelBufferByteOutput(ChannelBuffer buffer) {
+    public ChannelBufferByteOutput(ByteBuf buffer) {
         this.buffer = buffer;
     }
-    
+
     /**
-     * Calls {@link #ChannelBufferByteOutput(ChannelBuffer)} with a dynamic {@link ChannelBuffer} 
+     * Calls {@link #ChannelBufferByteOutput(ByteBuf)} with a dynamic {@link ByteBuf}
      */
-    public ChannelBufferByteOutput(ChannelBufferFactory factory, int estimatedLength) {
-        this(ChannelBuffers.dynamicBuffer(estimatedLength, factory));
+    public ChannelBufferByteOutput(ByteBufFactory factory, int estimatedLength) {
+        this(Unpooled.dynamicBuffer(estimatedLength, factory));
     }
-    
+
+    @Override
     public void close() throws IOException {
         // Nothing todo
     }
 
+    @Override
     public void flush() throws IOException {
         // nothing to do
     }
 
+    @Override
     public void write(int b) throws IOException {
         buffer.writeByte(b);
     }
 
+    @Override
     public void write(byte[] bytes) throws IOException {
         buffer.writeBytes(bytes);
     }
 
+    @Override
     public void write(byte[] bytes, int srcIndex, int length) throws IOException {
         buffer.writeBytes(bytes, srcIndex, length);
     }
-    
+
     /**
-     * Return the {@link ChannelBuffer} which contains the written content
-     * 
+     * Return the {@link ByteBuf} which contains the written content
+     *
      */
-    public ChannelBuffer getBuffer() {
+    public ByteBuf getBuffer() {
         return buffer;
     }
 

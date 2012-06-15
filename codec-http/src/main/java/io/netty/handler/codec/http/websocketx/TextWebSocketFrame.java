@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -28,36 +28,36 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Creates a new empty text frame.
      */
     public TextWebSocketFrame() {
-        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(Unpooled.EMPTY_BUFFER);
     }
 
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
-     * 
+     *
      * @param text
      *            String to put in the frame
      */
     public TextWebSocketFrame(String text) {
         if (text == null || text.isEmpty()) {
-            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(Unpooled.EMPTY_BUFFER);
         } else {
-            setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 
     /**
      * Creates a new text frame with the specified binary data. The final fragment flag is set to true.
-     * 
+     *
      * @param binaryData
      *            the content of the frame. Must be UTF-8 encoded
      */
-    public TextWebSocketFrame(ChannelBuffer binaryData) {
+    public TextWebSocketFrame(ByteBuf binaryData) {
         setBinaryData(binaryData);
     }
 
     /**
      * Creates a new text frame with the specified text string. The final fragment flag is set to true.
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -69,15 +69,15 @@ public class TextWebSocketFrame extends WebSocketFrame {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         if (text == null || text.isEmpty()) {
-            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(Unpooled.EMPTY_BUFFER);
         } else {
-            setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 
     /**
      * Creates a new text frame with the specified binary data. The final fragment flag is set to true.
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -85,7 +85,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame. Must be UTF-8 encoded
      */
-    public TextWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public TextWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         setBinaryData(binaryData);
@@ -103,7 +103,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     /**
      * Sets the string for this frame
-     * 
+     *
      * @param text
      *            text to store
      */
@@ -111,7 +111,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
         if (text == null) {
             throw new NullPointerException("text");
         }
-        setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+        setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
     }
 
     @Override

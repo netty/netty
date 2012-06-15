@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,16 +19,18 @@
  */
 package io.netty.handler.codec.base64;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.HeapChannelBufferFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufFactory;
+import io.netty.buffer.HeapByteBufFactory;
 
 /**
- * Utility class for {@link ChannelBuffer} that encodes and decodes to and from
+ * Utility class for {@link ByteBuf} that encodes and decodes to and from
  * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a> notation.
  * <p>
  * The encoding and decoding algorithm in this class has been derived from
- * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain Base64 Encoder/Decoder</a>.
+ * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain
+ * Base64 Encoder/Decoder</a>.
+ *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.base64.Base64Dialect
  */
@@ -68,87 +70,88 @@ public final class Base64 {
         return dialect.breakLinesByDefault;
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src) {
+    public static ByteBuf encode(ByteBuf src) {
         return encode(src, Base64Dialect.STANDARD);
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, Base64Dialect dialect) {
+    public static ByteBuf encode(ByteBuf src, Base64Dialect dialect) {
         return encode(src, breakLines(dialect), dialect);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, ByteBufFactory bufferFactory) {
         return encode(src, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, Base64Dialect dialect, ByteBufFactory bufferFactory) {
         return encode(src, breakLines(dialect), dialect, bufferFactory);
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, boolean breakLines) {
+    public static ByteBuf encode(ByteBuf src, boolean breakLines) {
         return encode(src, breakLines, Base64Dialect.STANDARD);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, boolean breakLines, Base64Dialect dialect) {
-        return encode(src, breakLines, dialect, HeapChannelBufferFactory.getInstance());
+    public static ByteBuf encode(
+            ByteBuf src, boolean breakLines, Base64Dialect dialect) {
+        return encode(src, breakLines, dialect, HeapByteBufFactory.getInstance());
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, boolean breakLines, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, boolean breakLines, ByteBufFactory bufferFactory) {
         return encode(src, breakLines, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, boolean breakLines, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, boolean breakLines, Base64Dialect dialect, ByteBufFactory bufferFactory) {
 
         if (src == null) {
             throw new NullPointerException("src");
         }
 
-        ChannelBuffer dest = encode(
+        ByteBuf dest = encode(
                 src, src.readerIndex(), src.readableBytes(), breakLines, dialect, bufferFactory);
         src.readerIndex(src.writerIndex());
         return dest;
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, int off, int len) {
+    public static ByteBuf encode(ByteBuf src, int off, int len) {
         return encode(src, off, len, Base64Dialect.STANDARD);
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, Base64Dialect dialect) {
+    public static ByteBuf encode(ByteBuf src, int off, int len, Base64Dialect dialect) {
         return encode(src, off, len, breakLines(dialect), dialect);
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(ByteBuf src, int off, int len, ByteBufFactory bufferFactory) {
         return encode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufFactory bufferFactory) {
         return encode(src, off, len, breakLines(dialect), dialect, bufferFactory);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, int off, int len, boolean breakLines) {
+    public static ByteBuf encode(
+            ByteBuf src, int off, int len, boolean breakLines) {
         return encode(src, off, len, breakLines, Base64Dialect.STANDARD);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, int off, int len,
+    public static ByteBuf encode(
+            ByteBuf src, int off, int len,
             boolean breakLines, Base64Dialect dialect) {
-        return encode(src, off, len, breakLines, dialect, HeapChannelBufferFactory.getInstance());
+        return encode(src, off, len, breakLines, dialect, HeapByteBufFactory.getInstance());
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, int off, int len,
-            boolean breakLines, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, int off, int len,
+            boolean breakLines, ByteBufFactory bufferFactory) {
         return encode(src, off, len, breakLines, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer encode(
-            ChannelBuffer src, int off, int len,
-            boolean breakLines, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf encode(
+            ByteBuf src, int off, int len,
+            boolean breakLines, Base64Dialect dialect, ByteBufFactory bufferFactory) {
 
         if (src == null) {
             throw new NullPointerException("src");
@@ -161,7 +164,7 @@ public final class Base64 {
         }
 
         int len43 = len * 4 / 3;
-        ChannelBuffer dest = bufferFactory.getBuffer(
+        ByteBuf dest = bufferFactory.getBuffer(
                 src.order(),
                 len43 +
                 (len % 3 > 0? 4 : 0) + // Account for padding
@@ -190,8 +193,8 @@ public final class Base64 {
     }
 
     private static void encode3to4(
-            ChannelBuffer src, int srcOffset, int numSigBytes,
-            ChannelBuffer dest, int destOffset, Base64Dialect dialect) {
+            ByteBuf src, int srcOffset, int numSigBytes,
+            ByteBuf dest, int destOffset, Base64Dialect dialect) {
 
         byte[] ALPHABET = alphabet(dialect);
 
@@ -233,47 +236,47 @@ public final class Base64 {
         }
     }
 
-    public static ChannelBuffer decode(ChannelBuffer src) {
+    public static ByteBuf decode(ByteBuf src) {
         return decode(src, Base64Dialect.STANDARD);
     }
 
-    public static ChannelBuffer decode(ChannelBuffer src, Base64Dialect dialect) {
-        return decode(src, dialect, HeapChannelBufferFactory.getInstance());
+    public static ByteBuf decode(ByteBuf src, Base64Dialect dialect) {
+        return decode(src, dialect, HeapByteBufFactory.getInstance());
     }
 
-    public static ChannelBuffer decode(ChannelBuffer src, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf decode(ByteBuf src, ByteBufFactory bufferFactory) {
         return decode(src, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer decode(ChannelBuffer src, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf decode(ByteBuf src, Base64Dialect dialect, ByteBufFactory bufferFactory) {
 
         if (src == null) {
             throw new NullPointerException("src");
         }
 
-        ChannelBuffer dest = decode(src, src.readerIndex(), src.readableBytes(), dialect, bufferFactory);
+        ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect, bufferFactory);
         src.readerIndex(src.writerIndex());
         return dest;
     }
 
-    public static ChannelBuffer decode(
-            ChannelBuffer src, int off, int len) {
+    public static ByteBuf decode(
+            ByteBuf src, int off, int len) {
         return decode(src, off, len, Base64Dialect.STANDARD);
     }
 
-    public static ChannelBuffer decode(
-            ChannelBuffer src, int off, int len, Base64Dialect dialect) {
-        return decode(src, off, len, dialect, HeapChannelBufferFactory.getInstance());
+    public static ByteBuf decode(
+            ByteBuf src, int off, int len, Base64Dialect dialect) {
+        return decode(src, off, len, dialect, HeapByteBufFactory.getInstance());
     }
 
-    public static ChannelBuffer decode(
-            ChannelBuffer src, int off, int len, ChannelBufferFactory bufferFactory) {
+    public static ByteBuf decode(
+            ByteBuf src, int off, int len, ByteBufFactory bufferFactory) {
         return decode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
     }
 
-    public static ChannelBuffer decode(
-            ChannelBuffer src, int off, int len, Base64Dialect dialect,
-            ChannelBufferFactory bufferFactory) {
+    public static ByteBuf decode(
+            ByteBuf src, int off, int len, Base64Dialect dialect,
+            ByteBufFactory bufferFactory) {
 
         if (src == null) {
             throw new NullPointerException("src");
@@ -288,14 +291,14 @@ public final class Base64 {
         byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        ChannelBuffer dest = bufferFactory.getBuffer(src.order(), len34); // Upper limit on size of output
+        ByteBuf dest = bufferFactory.getBuffer(src.order(), len34); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];
         int b4Posn = 0;
-        int i = 0;
-        byte sbiCrop = 0;
-        byte sbiDecode = 0;
+        int i;
+        byte sbiCrop;
+        byte sbiDecode;
         for (i = off; i < off + len; i ++) {
             sbiCrop = (byte) (src.getByte(i) & 0x7f); // Only the low seven bits
             sbiDecode = DECODABET[sbiCrop];
@@ -326,7 +329,7 @@ public final class Base64 {
 
     private static int decode4to3(
             byte[] src, int srcOffset,
-            ChannelBuffer dest, int destOffset, Base64Dialect dialect) {
+            ByteBuf dest, int destOffset, Base64Dialect dialect) {
 
         byte[] DECODABET = decodabet(dialect);
 

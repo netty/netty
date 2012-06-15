@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,10 +22,10 @@ public class TestUtils {
 
     private final static int START_PORT = 20000;
     private final static int END_PORT = 30000;
-    
+
     /**
      * Return a free port which can be used to bind to
-     * 
+     *
      * @return port
      */
     public static int getFreePort() {
@@ -36,10 +36,12 @@ public class TestUtils {
                 socket.close();
                 return start;
             } catch (IOException e) {
-                // ignore 
+                // ignore
             }
-            
+
         }
         throw new RuntimeException("Unable to find a free port....");
     }
+
+    private TestUtils() { }
 }

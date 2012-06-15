@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.CharsetUtil;
+
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -23,8 +25,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import io.netty.util.CharsetUtil;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -46,10 +46,10 @@ import io.netty.util.CharsetUtil;
  *
  * <h3>HashDOS vulnerability fix</h3>
  *
- * As a workaround to the <a href="http://events.ccc.de/congress/2011/Fahrplan/attachments/2007_28C3_Effective_DoS_on_web_application_platforms.pdf">HashDOS</a>
- * vulnerability, the decoder limits the maximum number of decoded key-value
- * parameter pairs, up to {@literal 1024} by default, and you can configure it
- * when you construct the decoder by passing an additional integer parameter.
+ * As a workaround to the <a href="http://goo.gl/I4Nky">HashDOS</a> vulnerability, the decoder
+ * limits the maximum number of decoded key-value parameter pairs, up to {@literal 1024} by
+ * default, and you can configure it when you construct the decoder by passing an additional
+ * integer parameter.
  *
  * @see QueryStringEncoder
  *
@@ -73,7 +73,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(String uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -81,7 +81,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, boolean hasPath) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET, hasPath);
+        this(uri, HttpConstants.DEFAULT_CHARSET, hasPath);
     }
 
     /**
@@ -128,7 +128,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(URI uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**
@@ -154,7 +154,7 @@ public class QueryStringDecoder {
             throw new IllegalArgumentException(
                     "maxParams: " + maxParams + " (expected: a positive integer)");
         }
-        
+
         String rawPath = uri.getRawPath();
         if (rawPath != null) {
             hasPath = true;
@@ -162,7 +162,7 @@ public class QueryStringDecoder {
             rawPath = "";
             hasPath = false;
         }
-        // Also take care of cut of things like "http://localhost" 
+        // Also take care of cut of things like "http://localhost"
         String newUri = rawPath + "?" + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
@@ -218,7 +218,7 @@ public class QueryStringDecoder {
         String name = null;
         int pos = 0; // Beginning of the unprocessed region
         int i;       // End of the unprocessed region
-        char c = 0;  // Current character
+        char c;  // Current character
         for (i = 0; i < s.length(); i++) {
             c = s.charAt(i);
             if (c == '=' && name == null) {
@@ -246,18 +246,12 @@ public class QueryStringDecoder {
 
         if (pos != i) {  // Are there characters we haven't dealt with?
             if (name == null) {     // Yes and we haven't seen any `='.
-                if (!addParam(params, decodeComponent(s.substring(pos, i), charset), "")) {
-                    return;
-                }
+                addParam(params, decodeComponent(s.substring(pos, i), charset), "");
             } else {                // Yes and this must be the last value.
-                if (!addParam(params, name, decodeComponent(s.substring(pos, i), charset))) {
-                    return;
-                }
+                addParam(params, name, decodeComponent(s.substring(pos, i), charset));
             }
         } else if (name != null) {  // Have we seen a name without value?
-            if (!addParam(params, name, "")) {
-                return;
-            }
+            addParam(params, name, "");
         }
     }
 
@@ -288,7 +282,7 @@ public class QueryStringDecoder {
      * escape sequence.
      */
     public static String decodeComponent(final String s) {
-        return decodeComponent(s, HttpCodecUtil.DEFAULT_CHARSET);
+        return decodeComponent(s, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**

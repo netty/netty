@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,18 @@
  */
 package io.netty.util;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.ReusableIterator;
+import io.netty.util.internal.SharedResourceMisuseDetector;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -27,13 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.ConcurrentIdentityHashMap;
-import io.netty.util.internal.DetectionUtil;
-import io.netty.util.internal.ReusableIterator;
-import io.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -222,8 +222,8 @@ public class HashedWheelTimer implements Timer {
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
         Set<HashedWheelTimeout>[] wheel = new Set[ticksPerWheel];
         for (int i = 0; i < wheel.length; i ++) {
-            wheel[i] = new MapBackedSet<HashedWheelTimeout>(
-                    new ConcurrentIdentityHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
+            wheel[i] = Collections.newSetFromMap(
+                    new ConcurrentHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
         }
         return wheel;
     }
@@ -444,16 +444,16 @@ public class HashedWheelTimer implements Timer {
             for (;;) {
                 final long currentTime = System.currentTimeMillis();
                 long sleepTime = tickDuration * tick - (currentTime - startTime);
-                
+
                 // Check if we run on windows, as if thats the case we will need
                 // to round the sleepTime as workaround for a bug that only affect
                 // the JVM if it runs on windows.
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (DetectionUtil.isWindows()) {
-                    sleepTime = (sleepTime / 10) * 10;
+                    sleepTime = sleepTime / 10 * 10;
                 }
-                
+
                 if (sleepTime <= 0) {
                     break;
                 }
@@ -506,7 +506,7 @@ public class HashedWheelTimer implements Timer {
                 // TODO return false
                 return;
             }
-            
+
             wheel[stopIndex].remove(this);
         }
 

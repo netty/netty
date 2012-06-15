@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,23 +22,25 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyPingFrame implements SpdyPingFrame {
 
-    private int ID;
+    private int id;
 
     /**
      * Creates a new instance.
      *
-     * @param ID the unique ID of this frame
+     * @param id the unique ID of this frame
      */
-    public DefaultSpdyPingFrame(int ID) {
-        setID(ID);
+    public DefaultSpdyPingFrame(int id) {
+        setId(id);
     }
 
-    public int getID() {
-        return ID;
+    @Override
+    public int getId() {
+        return id;
     }
 
-    public void setID(int ID) {
-        this.ID = ID;
+    @Override
+    public void setId(int id) {
+        this.id = id;
     }
 
     @Override
@@ -47,7 +49,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> ID = ");
-        buf.append(ID);
+        buf.append(id);
         return buf.toString();
     }
 }

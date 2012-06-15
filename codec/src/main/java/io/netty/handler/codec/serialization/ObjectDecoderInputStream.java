@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.serialization;
 
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -98,7 +99,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         } else {
             this.in = new DataInputStream(in);
         }
-        this.classResolver = ClassResolvers.weakCachingResolver(classLoader);
+        classResolver = ClassResolvers.weakCachingResolver(classLoader);
         this.maxObjectSize = maxObjectSize;
     }
 
@@ -192,7 +193,7 @@ public class ObjectDecoderInputStream extends InputStream implements
     }
 
     /**
-     * @deprecated Use {@link java.io.BufferedReader#readLine()} instead.
+     * @deprecated Use {@link BufferedReader#readLine()} instead.
      */
     @Override
     @Deprecated

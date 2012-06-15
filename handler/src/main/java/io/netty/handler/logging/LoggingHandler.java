@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,20 +15,16 @@
  */
 package io.netty.handler.logging;
 
-import static io.netty.buffer.ChannelBuffers.*;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.ChannelDownstreamHandler;
-import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelUpstreamHandler;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.logging.InternalLogLevel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+
+import java.net.SocketAddress;
 
 /**
  * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
@@ -38,20 +34,21 @@ import io.netty.logging.InternalLoggerFactory;
  * @apiviz.landmark
  */
 @Sharable
-public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+public class LoggingHandler extends ChannelHandlerAdapter {
 
-    private static final InternalLogLevel DEFAULT_LEVEL = InternalLogLevel.DEBUG;
+    private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
-    private final InternalLogger logger;
-    private final InternalLogLevel level;
-    private final boolean hexDump;
+    protected final InternalLogger logger;
+    protected final InternalLogLevel internalLevel;
+
+    private final LogLevel level;
 
     /**
      * Creates a new instance whose logger name is the fully qualified class
      * name of the instance with hex dump enabled.
      */
     public LoggingHandler() {
-        this(true);
+        this(DEFAULT_LEVEL);
     }
 
     /**
@@ -60,37 +57,14 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      *
      * @param level   the log level
      */
-    public LoggingHandler(InternalLogLevel level) {
-        this(level, true);
-    }
-
-    /**
-     * Creates a new instance whose logger name is the fully qualified class
-     * name of the instance.
-     *
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
-     */
-    public LoggingHandler(boolean hexDump) {
-        this(DEFAULT_LEVEL, hexDump);
-    }
-
-    /**
-     * Creates a new instance whose logger name is the fully qualified class
-     * name of the instance.
-     *
-     * @param level   the log level
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
-     */
-    public LoggingHandler(InternalLogLevel level, boolean hexDump) {
+    public LoggingHandler(LogLevel level) {
         if (level == null) {
             throw new NullPointerException("level");
         }
 
         logger = InternalLoggerFactory.getInstance(getClass());
         this.level = level;
-        this.hexDump = hexDump;
+        internalLevel = level.toInternalLevel();
     }
 
     /**
@@ -98,17 +72,7 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      * enabled.
      */
     public LoggingHandler(Class<?> clazz) {
-        this(clazz, true);
-    }
-
-    /**
-     * Creates a new instance with the specified logger name.
-     *
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
-     */
-    public LoggingHandler(Class<?> clazz, boolean hexDump) {
-        this(clazz, DEFAULT_LEVEL, hexDump);
+        this(clazz, DEFAULT_LEVEL);
     }
 
     /**
@@ -116,18 +80,7 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      *
      * @param level   the log level
      */
-    public LoggingHandler(Class<?> clazz, InternalLogLevel level) {
-        this(clazz, level, true);
-    }
-
-    /**
-     * Creates a new instance with the specified logger name.
-     *
-     * @param level   the log level
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
-     */
-    public LoggingHandler(Class<?> clazz, InternalLogLevel level, boolean hexDump) {
+    public LoggingHandler(Class<?> clazz, LogLevel level) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
         }
@@ -136,35 +89,22 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         }
         logger = InternalLoggerFactory.getInstance(clazz);
         this.level = level;
-        this.hexDump = hexDump;
-    }
-
-    /**
-     * Creates a new instance with the specified logger name and with hex dump
-     * enabled.
-     */
-    public LoggingHandler(String name) {
-        this(name, true);
+        internalLevel = level.toInternalLevel();
     }
 
     /**
      * Creates a new instance with the specified logger name.
-     *
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
      */
-    public LoggingHandler(String name, boolean hexDump) {
-        this(name, DEFAULT_LEVEL, hexDump);
+    public LoggingHandler(String name) {
+        this(name, DEFAULT_LEVEL);
     }
 
     /**
      * Creates a new instance with the specified logger name.
      *
      * @param level   the log level
-     * @param hexDump {@code true} if and only if the hex dump of the received
-     *                message is logged
      */
-    public LoggingHandler(String name, InternalLogLevel level, boolean hexDump) {
+    public LoggingHandler(String name, LogLevel level) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -173,64 +113,135 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         }
         logger = InternalLoggerFactory.getInstance(name);
         this.level = level;
-        this.hexDump = hexDump;
-    }
-
-    /**
-     * Returns the {@link InternalLogger} that this handler uses to log
-     * a {@link ChannelEvent}.
-     */
-    public InternalLogger getLogger() {
-        return logger;
+        internalLevel = level.toInternalLevel();
     }
 
     /**
      * Returns the {@link InternalLogLevel} that this handler uses to log
      * a {@link ChannelEvent}.
      */
-    public InternalLogLevel getLevel() {
+    public LogLevel level() {
         return level;
     }
 
-    /**
-     * Logs the specified event to the {@link InternalLogger} returned by
-     * {@link #getLogger()}. If hex dump has been enabled for this handler,
-     * the hex dump of the {@link ChannelBuffer} in a {@link MessageEvent} will
-     * be logged together.
-     */
-    public void log(ChannelEvent e) {
-        if (getLogger().isEnabled(level)) {
-            String msg = e.toString();
+    protected String format(ChannelHandlerContext ctx, String message) {
+        String chStr = ctx.channel().toString();
+        StringBuilder buf = new StringBuilder(chStr.length() + message.length() + 1);
+        buf.append(chStr);
+        buf.append(' ');
+        buf.append(message);
+        return buf.toString();
+    }
 
-            // Append hex dump if necessary.
-            if (hexDump && e instanceof MessageEvent) {
-                MessageEvent me = (MessageEvent) e;
-                if (me.getMessage() instanceof ChannelBuffer) {
-                    ChannelBuffer buf = (ChannelBuffer) me.getMessage();
-                    msg = msg + " - (HEXDUMP: " + hexDump(buf) + ')';
-                }
-            }
-
-            // Log the message (and exception if available.)
-            if (e instanceof ExceptionEvent) {
-                getLogger().log(level, msg, ((ExceptionEvent) e).getCause());
-            } else {
-                getLogger().log(level, msg);
-            }
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx)
+            throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "REGISTERED"));
         }
+        super.channelRegistered(ctx);
     }
 
     @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+    public void channelUnregistered(ChannelHandlerContext ctx)
             throws Exception {
-        log(e);
-        ctx.sendUpstream(e);
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "UNREGISTERED"));
+        }
+        super.channelUnregistered(ctx);
     }
 
     @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+    public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
-        log(e);
-        ctx.sendDownstream(e);
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "ACTIVE"));
+        }
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx)
+            throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "INACTIVE"));
+        }
+        super.channelInactive(ctx);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx,
+            Throwable cause) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "EXCEPTION: " + cause), cause);
+        }
+        super.exceptionCaught(ctx, cause);
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx,
+            Object evt) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "USER_EVENT: " + evt));
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    @Override
+    public void bind(ChannelHandlerContext ctx,
+            SocketAddress localAddress, ChannelFuture future) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "BIND(" + localAddress + ')'));
+        }
+        super.bind(ctx, localAddress, future);
+    }
+
+    @Override
+    public void connect(ChannelHandlerContext ctx,
+            SocketAddress remoteAddress, SocketAddress localAddress,
+            ChannelFuture future) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "CONNECT(" + remoteAddress + ", " + localAddress + ')'));
+        }
+        super.connect(ctx, remoteAddress, localAddress, future);
+    }
+
+    @Override
+    public void disconnect(ChannelHandlerContext ctx,
+            ChannelFuture future) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "DISCONNECT()"));
+        }
+        super.disconnect(ctx, future);
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx,
+            ChannelFuture future) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "CLOSE()"));
+        }
+        super.close(ctx, future);
+    }
+
+    @Override
+    public void deregister(ChannelHandlerContext ctx,
+            ChannelFuture future) throws Exception {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, "DEREGISTER()"));
+        }
+        super.deregister(ctx, future);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+            throws Exception {
+        ctx.flush(future);
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx)
+            throws Exception {
+        ctx.fireInboundBufferUpdated();
     }
 }

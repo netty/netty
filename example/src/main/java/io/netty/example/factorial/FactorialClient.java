@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,24 +15,16 @@
  */
 package io.netty.example.factorial;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.Channel;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
  * Sends a sequence of integers to a {@link FactorialServer} to calculate
  * the factorial of the specified integer.
  */
 public class FactorialClient {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(FactorialClient.class);
 
     private final String host;
     private final int port;
@@ -44,37 +36,34 @@ public class FactorialClient {
         this.count = count;
     }
 
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    public void run() throws Exception {
+        Bootstrap b = new Bootstrap();
+        try {
+            b.eventLoop(new NioEventLoop())
+             .channel(new NioSocketChannel())
+             .remoteAddress(host, port)
+             .handler(new FactorialClientInitializer(count));
 
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new FactorialClientPipelineFactory(count));
+            // Make a new connection.
+            ChannelFuture f = b.connect().sync();
 
-        // Make a new connection.
-        ChannelFuture connectFuture =
-            bootstrap.connect(new InetSocketAddress(host, port));
+            // Get the handler instance to retrieve the answer.
+            FactorialClientHandler handler =
+                (FactorialClientHandler) f.channel().pipeline().last();
 
-        // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+            // Print out the answer.
+            System.err.format(
+                    "Factorial of %,d is: %,d", count, handler.getFactorial());
 
-        // Get the handler instance to retrieve the answer.
-        FactorialClientHandler handler =
-            (FactorialClientHandler) channel.getPipeline().getLast();
-
-        // Print out the answer.
-        logger.info(String.format("Factorial of %,d is: %,d", count, handler.getFactorial()));
-
-        // Shut down all thread pools to exit.
-        bootstrap.releaseExternalResources();
+        } finally {
+            b.shutdown();
+        }
     }
 
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 3) {
-            logger.error(
+            System.err.println(
                     "Usage: " + FactorialClient.class.getSimpleName() +
                     " <host> <port> <count>");
             return;

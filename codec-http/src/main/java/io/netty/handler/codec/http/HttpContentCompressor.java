@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
@@ -99,7 +98,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
             return null;
         }
-                
+
         ZlibWrapper wrapper = determineWrapper(acceptEncoding);
         if (wrapper == null) {
             return null;
@@ -119,7 +118,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         return new Result(
                 targetContentEncoding,
-                new EncoderEmbedder<ChannelBuffer>(
+                new EmbeddedByteChannel(
                         new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel)));
     }
 
@@ -138,11 +137,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
                     q = 0.0f;
                 }
             }
-            if (encoding.indexOf("*") >= 0) {
+            if (encoding.contains("*")) {
                 starQ = q;
-            } else if (encoding.indexOf("gzip") >= 0 && q > gzipQ) {
+            } else if (encoding.contains("gzip") && q > gzipQ) {
                 gzipQ = q;
-            } else if (encoding.indexOf("deflate") >= 0 && q > deflateQ) {
+            } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
         }

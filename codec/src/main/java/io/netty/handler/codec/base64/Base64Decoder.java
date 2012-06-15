@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,22 +15,19 @@
  */
 package io.netty.handler.codec.base64;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
-import io.netty.handler.codec.frame.FrameDecoder;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
-import io.netty.util.CharsetUtil;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes a Base64-encoded {@link ChannelBuffer} or US-ASCII {@link String}
- * into a {@link ChannelBuffer}.  Please note that this decoder must be used
- * with a proper {@link FrameDecoder} such as {@link DelimiterBasedFrameDecoder}
+ * Decodes a Base64-encoded {@link ByteBuf} or US-ASCII {@link String}
+ * into a {@link ByteBuf}.  Please note that this decoder must be used
+ * with a proper {@link ByteToMessageDecoder} such as {@link DelimiterBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP.  A typical decoder
  * setup for TCP/IP would be:
  * <pre>
@@ -47,7 +44,7 @@ import io.netty.util.CharsetUtil;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Decoder extends OneToOneDecoder {
+public class Base64Decoder extends MessageToMessageDecoder<ByteBuf, ByteBuf> {
 
     private final Base64Dialect dialect;
 
@@ -63,17 +60,12 @@ public class Base64Decoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg)
-            throws Exception {
-        if (msg instanceof String) {
-            msg = ChannelBuffers.copiedBuffer((String) msg, CharsetUtil.US_ASCII);
-        } else if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-
-        ChannelBuffer src = (ChannelBuffer) msg;
-        return Base64.decode(
-                src, src.readerIndex(), src.readableBytes(), dialect);
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof ByteBuf;
     }
 
+    @Override
+    public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        return Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect);
+    }
 }

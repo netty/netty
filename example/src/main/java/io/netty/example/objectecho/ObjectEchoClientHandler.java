@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,32 +15,25 @@
  */
 package io.netty.example.objectecho;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.netty.channel.ChannelEvent;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelState;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handler implementation for the object echo client.  It initiates the
  * ping-pong traffic between the object echo client and server by sending the
  * first message to the server.
  */
-public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
+public class ObjectEchoClientHandler extends ChannelInboundMessageHandlerAdapter<List<Integer>> {
 
     private static final Logger logger = Logger.getLogger(
             ObjectEchoClientHandler.class.getName());
 
     private final List<Integer> firstMessage;
-    private final AtomicLong transferredMessages = new AtomicLong();
 
     /**
      * Creates a client-side handler.
@@ -56,42 +49,24 @@ public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    public long getTransferredMessages() {
-        return transferredMessages.get();
-    }
-
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent &&
-            ((ChannelStateEvent) e).getState() != ChannelState.INTEREST_OPS) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // Send the first message if this handler is a client-side handler.
-        e.getChannel().write(firstMessage);
+        ctx.write(firstMessage);
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, List<Integer> msg) throws Exception {
         // Echo back the received object to the client.
-        transferredMessages.incrementAndGet();
-        e.getChannel().write(e.getMessage());
+        ctx.write(msg);
     }
 
     @Override
     public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+            ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

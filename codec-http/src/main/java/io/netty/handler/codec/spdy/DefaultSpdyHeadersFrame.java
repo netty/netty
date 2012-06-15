@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -23,35 +24,38 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         implements SpdyHeadersFrame {
 
-    private int streamID;
+    private int streamId;
     private boolean last;
 
     /**
      * Creates a new instance.
      *
-     * @param streamID the Stream-ID of this frame
+     * @param streamId the Stream-ID of this frame
      */
-    public DefaultSpdyHeadersFrame(int streamID) {
-        super();
-        setStreamID(streamID);
+    public DefaultSpdyHeadersFrame(int streamId) {
+        setStreamId(streamId);
     }
 
-    public int getStreamID() {
-        return streamID;
+    @Override
+    public int getStreamId() {
+        return streamId;
     }
 
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    @Override
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
+    @Override
     public boolean isLast() {
         return last;
     }
 
+    @Override
     public void setLast(boolean last) {
         this.last = last;
     }
@@ -65,7 +69,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);

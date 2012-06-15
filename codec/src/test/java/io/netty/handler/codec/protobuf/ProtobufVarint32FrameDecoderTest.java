@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,35 +15,35 @@
  */
 package io.netty.handler.codec.protobuf;
 
+import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
-import static io.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Before;
 import org.junit.Test;
 
 public class ProtobufVarint32FrameDecoderTest {
 
-    private DecoderEmbedder<ChannelBuffer> embedder;
+    private EmbeddedByteChannel ch;
 
     @Before
     public void setUp() {
-        embedder = new DecoderEmbedder<ChannelBuffer>(
-                new ProtobufVarint32FrameDecoder());
+        ch = new EmbeddedByteChannel(new ProtobufVarint32FrameDecoder());
     }
 
     @Test
     public void testTinyDecode() {
         byte[] b = { 4, 1, 1, 1, 1 };
-        embedder.offer(wrappedBuffer(b, 0, 1));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 1, 2));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 3, b.length - 3));
-        assertThat(embedder.poll(),
+        ch.writeInbound(wrappedBuffer(b, 0, 1));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 1, 2));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 3, b.length - 3));
+        assertThat(
+                (ByteBuf) ch.readInbound(),
                 is(wrappedBuffer(new byte[] { 1, 1, 1, 1 })));
     }
 
@@ -55,12 +55,11 @@ public class ProtobufVarint32FrameDecoderTest {
         }
         b[0] = -2;
         b[1] = 15;
-        embedder.offer(wrappedBuffer(b, 0, 127));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 127, 600));
-        assertThat(embedder.poll(), is(nullValue()));
-        embedder.offer(wrappedBuffer(b, 727, b.length - 727));
-        assertThat(embedder.poll(), is(wrappedBuffer(b, 2, b.length - 2)));
+        ch.writeInbound(wrappedBuffer(b, 0, 127));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 127, 600));
+        assertThat(ch.readInbound(), is(nullValue()));
+        ch.writeInbound(wrappedBuffer(b, 727, b.length - 727));
+        assertThat((ByteBuf) ch.readInbound(), is(wrappedBuffer(b, 2, b.length - 2)));
     }
-
 }

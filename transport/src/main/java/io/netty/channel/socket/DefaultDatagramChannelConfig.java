@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,32 +15,28 @@
  */
 package io.netty.channel.socket;
 
+import static io.netty.channel.ChannelOption.*;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultChannelConfig;
+
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-
-import io.netty.channel.ChannelException;
-import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.FixedReceiveBufferSizePredictorFactory;
-import io.netty.channel.ReceiveBufferSizePredictor;
-import io.netty.channel.ReceiveBufferSizePredictorFactory;
-import io.netty.util.internal.ConversionUtil;
+import java.util.Map;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
  */
-public class DefaultDatagramChannelConfig extends DefaultChannelConfig
-                                        implements DatagramChannelConfig {
+public class DefaultDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
 
-    private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
-        new FixedReceiveBufferSizePredictorFactory(768);
+    private static final int DEFAULT_RECEIVE_PACKET_SIZE = 2048;
 
     private final DatagramSocket socket;
-    private volatile ReceiveBufferSizePredictor predictor;
-    private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
+    private volatile int receivePacketSize = DEFAULT_RECEIVE_PACKET_SIZE;
 
     /**
      * Creates a new instance.
@@ -53,36 +49,79 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(
+                super.getOptions(),
+                SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED,
+                IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, UDP_RECEIVE_PACKET_SIZE);
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == SO_BROADCAST) {
+            return (T) Boolean.valueOf(isBroadcast());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == UDP_RECEIVE_PACKET_SIZE) {
+            return (T) Integer.valueOf(getReceivePacketSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == IP_MULTICAST_LOOP_DISABLED) {
+            return (T) Boolean.valueOf(isLoopbackModeDisabled());
+        }
+        if (option == IP_MULTICAST_ADDR) {
+            @SuppressWarnings("unchecked")
+            T i = (T) getInterface();
+            return i;
+        }
+        if (option == IP_MULTICAST_IF) {
+            @SuppressWarnings("unchecked")
+            T i = (T) getNetworkInterface();
+            return i;
+        }
+        if (option == IP_MULTICAST_TTL) {
+            return (T) Integer.valueOf(getTimeToLive());
+        }
+        if (option == IP_TOS) {
+            return (T) Integer.valueOf(getTrafficClass());
         }
 
-        if (key.equals("broadcast")) {
-            setBroadcast(ConversionUtil.toBoolean(value));
-        } else if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sendBufferSize")) {
-            setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("receiveBufferSizePredictorFactory")) {
-            setReceiveBufferSizePredictorFactory((ReceiveBufferSizePredictorFactory) value);
-        } else if (key.equals("receiveBufferSizePredictor")) {
-            setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
-        } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("loopbackModeDisabled")) {
-            setLoopbackModeDisabled(ConversionUtil.toBoolean(value));
-        } else if (key.equals("interface")) {
+        return super.getOption(option);
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == SO_BROADCAST) {
+            setBroadcast((Boolean) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == IP_MULTICAST_LOOP_DISABLED) {
+            setLoopbackModeDisabled((Boolean) value);
+        } else if (option == IP_MULTICAST_ADDR) {
             setInterface((InetAddress) value);
-        } else if (key.equals("networkInterface")) {
+        } else if (option == IP_MULTICAST_IF) {
             setNetworkInterface((NetworkInterface) value);
-        } else if (key.equals("timeToLive")) {
-            setTimeToLive(ConversionUtil.toInt(value));
-        } else if (key.equals("trafficClass")) {
-            setTrafficClass(ConversionUtil.toInt(value));
+        } else if (option == IP_MULTICAST_TTL) {
+            setTimeToLive((Integer) value);
+        } else if (option == IP_TOS) {
+            setTrafficClass((Integer) value);
         } else {
-            return false;
+            return super.setOption(option, value);
         }
+
         return true;
     }
 
@@ -237,6 +276,20 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
     }
 
     @Override
+    public int getReceivePacketSize() {
+        return receivePacketSize;
+    }
+
+    @Override
+    public void setReceivePacketSize(int receivePacketSize) {
+        if (receivePacketSize <= 0) {
+            throw new IllegalArgumentException(
+                    String.format("receivePacketSize: %d (expected: > 0)", receivePacketSize));
+        }
+        this.receivePacketSize = receivePacketSize;
+    }
+
+    @Override
     public int getTimeToLive() {
         if (socket instanceof MulticastSocket) {
             try {
@@ -278,43 +331,5 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
-    }
-
-    @Override
-    public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
-        ReceiveBufferSizePredictor predictor = this.predictor;
-        if (predictor == null) {
-            try {
-                this.predictor = predictor = getReceiveBufferSizePredictorFactory().getPredictor();
-            } catch (Exception e) {
-                throw new ChannelException(
-                        "Failed to create a new " +
-                        ReceiveBufferSizePredictor.class.getSimpleName() + '.',
-                        e);
-            }
-        }
-        return predictor;
-    }
-
-    @Override
-    public void setReceiveBufferSizePredictor(
-            ReceiveBufferSizePredictor predictor) {
-        if (predictor == null) {
-            throw new NullPointerException("predictor");
-        }
-        this.predictor = predictor;
-    }
-
-    @Override
-    public ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory() {
-        return predictorFactory;
-    }
-
-    @Override
-    public void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory) {
-        if (predictorFactory == null) {
-            throw new NullPointerException("predictorFactory");
-        }
-        this.predictorFactory = predictorFactory;
     }
 }

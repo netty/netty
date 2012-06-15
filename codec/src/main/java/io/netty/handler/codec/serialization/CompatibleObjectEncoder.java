@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,32 +15,31 @@
  */
 package io.netty.handler.codec.serialization;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicReference;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.ChannelBufferOutputStream;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import java.io.Serializable;
 
 /**
- * An encoder which serializes a Java object into a {@link ChannelBuffer}
+ * An encoder which serializes a Java object into a {@link ByteBuf}
  * (interoperability version).
  * <p>
  * This encoder is interoperable with the standard Java object streams such as
  * {@link ObjectInputStream} and {@link ObjectOutputStream}.
  */
-public class CompatibleObjectEncoder extends OneToOneEncoder {
+public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
 
-    private final AtomicReference<ChannelBuffer> buffer =
-        new AtomicReference<ChannelBuffer>();
+    private static final AttributeKey<ObjectOutputStream> OOS =
+            new AttributeKey<ObjectOutputStream>(CompatibleObjectEncoder.class.getName() + ".oos");
+
     private final int resetInterval;
-    private volatile ObjectOutputStream oout;
     private int writtenObjects;
 
     /**
@@ -77,44 +76,36 @@ public class CompatibleObjectEncoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext context, Channel channel, Object msg) throws Exception {
-        ChannelBuffer buffer = buffer(context);
-        ObjectOutputStream oout = this.oout;
-        if (resetInterval != 0) {
-            // Resetting will prevent OOM on the receiving side.
-            writtenObjects ++;
-            if (writtenObjects % resetInterval == 0) {
-                oout.reset();
-
-                // Also discard the byproduct to avoid OOM on the sending side.
-                buffer.discardReadBytes();
-            }
-        }
-        oout.writeObject(msg);
-        oout.flush();
-
-        return buffer.readBytes(buffer.readableBytes());
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof Serializable;
     }
 
-    private ChannelBuffer buffer(ChannelHandlerContext ctx) throws Exception {
-        ChannelBuffer buf = buffer.get();
-        if (buf == null) {
-            ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-            buf = ChannelBuffers.dynamicBuffer(factory);
-            if (buffer.compareAndSet(null, buf)) {
-                boolean success = false;
-                try {
-                    oout = newObjectOutputStream(new ChannelBufferOutputStream(buf));
-                    success = true;
-                } finally {
-                    if (!success) {
-                        oout = null;
-                    }
-                }
-            } else {
-                buf = buffer.get();
+    @Override
+    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+        Attribute<ObjectOutputStream> oosAttr = ctx.attr(OOS);
+        ObjectOutputStream oos = oosAttr.get();
+        if (oos == null) {
+            oos = newObjectOutputStream(new ByteBufOutputStream(out));
+            ObjectOutputStream newOos = oosAttr.setIfAbsent(oos);
+            if (newOos != null) {
+                oos = newOos;
             }
         }
-        return buf;
+
+        synchronized (oos) {
+            if (resetInterval != 0) {
+                // Resetting will prevent OOM on the receiving side.
+                writtenObjects ++;
+                if (writtenObjects % resetInterval == 0) {
+                    oos.reset();
+
+                    // Also discard the byproduct to avoid OOM on the sending side.
+                    out.discardReadBytes();
+                }
+            }
+
+            oos.writeObject(msg);
+            oos.flush();
+        }
     }
 }

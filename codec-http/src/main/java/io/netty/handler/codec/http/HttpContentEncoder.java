@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,16 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.Queue;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelHandler;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
-import io.netty.util.internal.QueueFactory;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.handler.codec.MessageToMessageCodec;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
@@ -46,12 +44,12 @@ import io.netty.util.internal.QueueFactory;
  * <p>
  * This handler must be placed after {@link HttpMessageEncoder} in the pipeline
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
- * converts them into {@link ChannelBuffer}s.
+ * converts them into {@link ByteBuf}s.
  */
-public abstract class HttpContentEncoder extends SimpleChannelHandler {
+public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
 
-    private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue(String.class);
-    private volatile EncoderEmbedder<ChannelBuffer> encoder;
+    private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
+    private EmbeddedByteChannel encoder;
 
     /**
      * Creates a new instance.
@@ -60,33 +58,33 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
-        Object msg = e.getMessage();
-        if (!(msg instanceof HttpMessage)) {
-            ctx.sendUpstream(e);
-            return;
-        }
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage;
+    }
 
-        HttpMessage m = (HttpMessage) msg;
-        String acceptedEncoding = m.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
+    @Override
+    public HttpMessage decode(ChannelHandlerContext ctx, HttpMessage msg)
+            throws Exception {
+        String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
         assert offered;
-
-        ctx.sendUpstream(e);
+        return msg;
     }
 
     @Override
-    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
 
-        Object msg = e.getMessage();
+    @Override
+    public Object encode(ChannelHandlerContext ctx, Object msg)
+            throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
-            ctx.sendDownstream(e);
+            return msg;
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
@@ -100,14 +98,12 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
 
             boolean hasContent = m.isChunked() || m.getContent().readable();
             if (!hasContent) {
-                ctx.sendDownstream(e);
-                return;
+                return m;
             }
 
             Result result = beginEncode(m, acceptEncoding);
             if (result == null) {
-                ctx.sendDownstream(e);
-                return;
+                return m;
             }
 
             encoder = result.getContentEncoder();
@@ -119,53 +115,49 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                     result.getTargetContentEncoding());
 
             if (!m.isChunked()) {
-                ChannelBuffer content = m.getContent();
+                ByteBuf content = m.getContent();
                 // Encode the content.
-                content = ChannelBuffers.wrappedBuffer(
-                        encode(content), finishEncode());
+                ByteBuf newContent = Unpooled.dynamicBuffer();
+                encode(content, newContent);
+                finishEncode(newContent);
 
                 // Replace the content.
-                m.setContent(content);
+                m.setContent(newContent);
                 if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
                     m.setHeader(
                             HttpHeaders.Names.CONTENT_LENGTH,
-                            Integer.toString(content.readableBytes()));
+                            Integer.toString(newContent.readableBytes()));
                 }
             }
-
-            // Because HttpMessage is a mutable object, we can simply forward the write request.
-            ctx.sendDownstream(e);
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
-            ChannelBuffer content = c.getContent();
+            ByteBuf content = c.getContent();
 
             // Encode the chunk if necessary.
             if (encoder != null) {
                 if (!c.isLast()) {
-                    content = encode(content);
+                    ByteBuf newContent = Unpooled.dynamicBuffer();
+                    encode(content, newContent);
                     if (content.readable()) {
-                        c.setContent(content);
-                        ctx.sendDownstream(e);
+                        c.setContent(newContent);
+                    } else {
+                        return null;
                     }
                 } else {
-                    ChannelBuffer lastProduct = finishEncode();
+                    ByteBuf lastProduct = Unpooled.dynamicBuffer();
+                    finishEncode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
                     if (lastProduct.readable()) {
-                        Channels.write(
-                                ctx, Channels.succeededFuture(e.getChannel()), new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
+                        return new Object[] { new DefaultHttpChunk(lastProduct), c };
                     }
-
-                    // Emit the last chunk.
-                    ctx.sendDownstream(e);
                 }
-            } else {
-                ctx.sendDownstream(e);
             }
-        } else {
-            ctx.sendDownstream(e);
         }
+
+        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
+        return msg;
     }
 
     /**
@@ -184,27 +176,33 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
      */
     protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
 
-    private ChannelBuffer encode(ChannelBuffer buf) {
-        encoder.offer(buf);
-        return ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));
+    private void encode(ByteBuf in, ByteBuf out) {
+        encoder.writeOutbound(in);
+        fetchEncoderOutput(out);
     }
 
-    private ChannelBuffer finishEncode() {
-        ChannelBuffer result;
+    private void finishEncode(ByteBuf out) {
         if (encoder.finish()) {
-            result = ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));
-        } else {
-            result = ChannelBuffers.EMPTY_BUFFER;
+            fetchEncoderOutput(out);
         }
         encoder = null;
-        return result;
+    }
+
+    private void fetchEncoderOutput(ByteBuf out) {
+        for (;;) {
+            ByteBuf buf = encoder.readOutbound();
+            if (buf == null) {
+                break;
+            }
+            out.writeBytes(buf);
+        }
     }
 
     public static final class Result {
         private final String targetContentEncoding;
-        private final EncoderEmbedder<ChannelBuffer> contentEncoder;
+        private final EmbeddedByteChannel contentEncoder;
 
-        public Result(String targetContentEncoding, EncoderEmbedder<ChannelBuffer> contentEncoder) {
+        public Result(String targetContentEncoding, EmbeddedByteChannel contentEncoder) {
             if (targetContentEncoding == null) {
                 throw new NullPointerException("targetContentEncoding");
             }
@@ -220,7 +218,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
             return targetContentEncoding;
         }
 
-        public EncoderEmbedder<ChannelBuffer> getContentEncoder() {
+        public EmbeddedByteChannel getContentEncoder() {
             return contentEncoder;
         }
     }

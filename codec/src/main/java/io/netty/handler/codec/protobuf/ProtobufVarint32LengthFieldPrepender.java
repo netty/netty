@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.ChannelBuffers.*;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferOutputStream;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import com.google.protobuf.CodedOutputStream;
 
@@ -38,10 +35,10 @@ import com.google.protobuf.CodedOutputStream;
  * +---------------+               +--------+---------------+
  * </pre> *
  *
- * @see com.google.protobuf.CodedOutputStream
+ * @see CodedOutputStream
  */
 @Sharable
-public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
+public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Creates a new instance.
@@ -50,23 +47,22 @@ public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel,
-            Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
-
-        ChannelBuffer body = (ChannelBuffer) msg;
-        int length = body.readableBytes();
-        ChannelBuffer header =
-            channel.getConfig().getBufferFactory().getBuffer(
-                    body.order(),
-                    CodedOutputStream.computeRawVarint32Size(length));
-        CodedOutputStream codedOutputStream = CodedOutputStream
-                .newInstance(new ChannelBufferOutputStream(header));
-        codedOutputStream.writeRawVarint32(length);
-        codedOutputStream.flush();
-        return wrappedBuffer(header, body);
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof ByteBuf;
     }
 
+    @Override
+    public void encode(
+            ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
+        int bodyLen = msg.readableBytes();
+        int headerLen = CodedOutputStream.computeRawVarint32Size(bodyLen);
+        out.ensureWritableBytes(headerLen + bodyLen);
+
+        CodedOutputStream headerOut =
+                CodedOutputStream.newInstance(new ByteBufOutputStream(out));
+        headerOut.writeRawVarint32(bodyLen);
+        headerOut.flush();
+
+        out.writeBytes(msg, msg.readerIndex(), bodyLen);
+    }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,31 +15,31 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 /**
  * The default {@link HttpChunk} implementation.
  */
 public class DefaultHttpChunk implements HttpChunk {
 
-    private ChannelBuffer content;
+    private ByteBuf content;
     private boolean last;
 
     /**
      * Creates a new instance with the specified chunk content. If an empty
      * buffer is specified, this chunk becomes the 'end of content' marker.
      */
-    public DefaultHttpChunk(ChannelBuffer content) {
+    public DefaultHttpChunk(ByteBuf content) {
         setContent(content);
     }
 
     @Override
-    public ChannelBuffer getContent() {
+    public ByteBuf getContent() {
         return content;
     }
 
     @Override
-    public void setContent(ChannelBuffer content) {
+    public void setContent(ByteBuf content) {
         if (content == null) {
             throw new NullPointerException("content");
         }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,15 +15,15 @@
  */
 package io.netty.example.http.websocketx.sslserver;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.Security;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Creates a {@link SSLContext} for just server certificates.
@@ -44,11 +44,10 @@ public final class WebSocketSslServerSslContext {
     /**
      * SingletonHolder is loaded on the first execution of Singleton.getInstance() or the first access to
      * SingletonHolder.INSTANCE, not before.
-     * 
+     *
      * See http://en.wikipedia.org/wiki/Singleton_pattern
      */
     private static class SingletonHolder {
-
         public static final WebSocketSslServerSslContext INSTANCE = new WebSocketSslServerSslContext();
     }
 
@@ -63,7 +62,7 @@ public final class WebSocketSslServerSslContext {
                 algorithm = "SunX509";
             }
 
-            SSLContext serverContext = null;
+            SSLContext serverContext;
             try {
                 String keyStoreFilePath = System.getProperty("keystore.file.path");
                 String keyStoreFilePassword = System.getProperty("keystore.file.password");

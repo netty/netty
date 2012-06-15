@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,41 +15,90 @@
  */
 package io.netty.channel;
 
+import static io.netty.channel.ChannelOption.*;
+import io.netty.channel.socket.SocketChannelConfig;
+
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.HeapChannelBufferFactory;
-import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
-    private volatile int connectTimeoutMillis = 10000; // 10 seconds
+    private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
+
+    private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
+    private volatile int writeSpinCount = 16;
 
     @Override
-    public void setOptions(Map<String, Object> options) {
-        for (Entry<String, Object> e: options.entrySet()) {
-            setOption(e.getKey(), e.getValue());
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT);
+    }
+
+    protected Map<ChannelOption<?>, Object> getOptions(
+            Map<ChannelOption<?>, Object> result, ChannelOption<?>... options) {
+        if (result == null) {
+            result = new IdentityHashMap<ChannelOption<?>, Object>();
         }
+        for (ChannelOption<?> o: options) {
+            result.put(o, getOption(o));
+        }
+        return result;
     }
 
     @Override
-    public boolean setOption(String key, Object value) {
-        if (key.equals("pipelineFactory")) {
-            setPipelineFactory((ChannelPipelineFactory) value);
-        } else if (key.equals("connectTimeoutMillis")) {
-            setConnectTimeoutMillis(ConversionUtil.toInt(value));
-        } else if (key.equals("bufferFactory")) {
-            setBufferFactory((ChannelBufferFactory) value);
+    public boolean setOptions(Map<ChannelOption<?>, ?> options) {
+        if (options == null) {
+            throw new NullPointerException("options");
+        }
+
+        boolean setAllOptions = true;
+        for (Entry<ChannelOption<?>, ?> e: options.entrySet()) {
+            if (!setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                setAllOptions = false;
+            }
+        }
+
+        return setAllOptions;
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == null) {
+            throw new NullPointerException("option");
+        }
+
+        if (option == CONNECT_TIMEOUT_MILLIS) {
+            return (T) Integer.valueOf(getConnectTimeoutMillis());
+        } else if (option == WRITE_SPIN_COUNT) {
+            return (T) Integer.valueOf(getWriteSpinCount());
+        }
+
+        return null;
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+
+        if (option == CONNECT_TIMEOUT_MILLIS) {
+            setConnectTimeoutMillis((Integer) value);
+        } else if (option == WRITE_SPIN_COUNT) {
+            setWriteSpinCount((Integer) value);
         } else {
             return false;
         }
+
         return true;
+    }
+
+    protected <T> void validate(ChannelOption<T> option, T value) {
+        if (option == null) {
+            throw new NullPointerException("option");
+        }
+        option.validate(value);
     }
 
     @Override
@@ -58,33 +107,25 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
-    }
-
-    @Override
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
-        this.bufferFactory = bufferFactory;
-    }
-
-    @Override
-    public ChannelPipelineFactory getPipelineFactory() {
-        return null;
-    }
-
-    @Override
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
+            throw new IllegalArgumentException(String.format(
+                    "connectTimeoutMillis: %d (expected: >= 0)", connectTimeoutMillis));
         }
         this.connectTimeoutMillis = connectTimeoutMillis;
     }
 
     @Override
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        // Unused
+    public int getWriteSpinCount() {
+        return writeSpinCount;
+    }
+
+    @Override
+    public void setWriteSpinCount(int writeSpinCount) {
+        if (writeSpinCount <= 0) {
+            throw new IllegalArgumentException(
+                    "writeSpinCount must be a positive integer.");
+        }
+        this.writeSpinCount = writeSpinCount;
     }
 }

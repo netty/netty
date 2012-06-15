@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,14 +19,11 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -47,14 +44,13 @@ import io.netty.util.CharsetUtil;
 /**
  * Handles handshakes and messages
  */
-public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
+public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AutobahnServerHandler.class);
 
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Object msg = e.getMessage();
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             handleHttpRequest(ctx, (HttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -71,35 +67,35 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
 
         // Handshake
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                this.getWebSocketLocation(req), null, false);
-        this.handshaker = wsFactory.newHandshaker(req);
-        if (this.handshaker == null) {
-            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
+                getWebSocketLocation(req), null, false);
+        handshaker = wsFactory.newHandshaker(req);
+        if (handshaker == null) {
+            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
-            this.handshaker.handshake(ctx.getChannel(), req);
+            handshaker.handshake(ctx.channel(), req);
         }
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass()
+            logger.debug(String.format("Channel %s received %s", ctx.channel().id(), frame.getClass()
                     .getSimpleName()));
         }
 
         if (frame instanceof CloseWebSocketFrame) {
-            this.handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof TextWebSocketFrame) {
             // String text = ((TextWebSocketFrame) frame).getText();
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof PongWebSocketFrame) {
             // Ignore
@@ -109,27 +105,27 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.getStatus().getCode() != 200) {
-            res.setContent(ChannelBuffers.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            res.setContent(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
             setContentLength(res, res.getContent().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.getChannel().write(res);
+        ChannelFuture f = ctx.channel().write(res);
         if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        e.getCause().printStackTrace();
-        e.getChannel().close();
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 
-    private String getWebSocketLocation(HttpRequest req) {
+    private static String getWebSocketLocation(HttpRequest req) {
         return "ws://" + req.getHeader(HttpHeaders.Names.HOST);
     }
 }

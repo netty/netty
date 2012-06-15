@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -30,7 +30,7 @@ public class DefaultHttpMessage implements HttpMessage {
 
     private final HttpHeaders headers = new HttpHeaders();
     private HttpVersion version;
-    private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
+    private ByteBuf content = Unpooled.EMPTY_BUFFER;
     private boolean chunked;
 
     /**
@@ -73,7 +73,7 @@ public class DefaultHttpMessage implements HttpMessage {
     public void setChunked(boolean chunked) {
         this.chunked = chunked;
         if (chunked) {
-            setContent(ChannelBuffers.EMPTY_BUFFER);
+            setContent(Unpooled.EMPTY_BUFFER);
         }
     }
 
@@ -83,9 +83,9 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     @Override
-    public void setContent(ChannelBuffer content) {
+    public void setContent(ByteBuf content) {
         if (content == null) {
-            content = ChannelBuffers.EMPTY_BUFFER;
+            content = Unpooled.EMPTY_BUFFER;
         }
         if (content.readable() && isChunked()) {
             throw new IllegalArgumentException(
@@ -133,7 +133,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     @Override
-    public ChannelBuffer getContent() {
+    public ByteBuf getContent() {
         return content;
     }
 

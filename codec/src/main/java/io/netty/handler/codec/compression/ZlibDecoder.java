@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,21 +15,19 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.handler.codec.ByteToByteDecoder;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
 
 /**
- * Decompresses a {@link ChannelBuffer} using the deflate algorithm.
+ * Decompresses a {@link ByteBuf} using the deflate algorithm.
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
-public class ZlibDecoder extends OneToOneDecoder {
+public class ZlibDecoder extends ByteToByteDecoder {
 
     private final ZStream z = new ZStream();
     private byte[] dictionary;
@@ -54,11 +52,9 @@ public class ZlibDecoder extends OneToOneDecoder {
             throw new NullPointerException("wrapper");
         }
 
-        synchronized (z) {
-            int resultCode = z.inflateInit(ZlibUtil.convertWrapperType(wrapper));
-            if (resultCode != JZlib.Z_OK) {
-                ZlibUtil.fail(z, "initialization failure", resultCode);
-            }
+        int resultCode = z.inflateInit(ZlibUtil.convertWrapperType(wrapper));
+        if (resultCode != JZlib.Z_OK) {
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         }
     }
 
@@ -75,12 +71,10 @@ public class ZlibDecoder extends OneToOneDecoder {
         }
         this.dictionary = dictionary;
 
-        synchronized (z) {
-            int resultCode;
-            resultCode = z.inflateInit(JZlib.W_ZLIB);
-            if (resultCode != JZlib.Z_OK) {
-                ZlibUtil.fail(z, "initialization failure", resultCode);
-            }
+        int resultCode;
+        resultCode = z.inflateInit(JZlib.W_ZLIB);
+        if (resultCode != JZlib.Z_OK) {
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         }
     }
 
@@ -93,39 +87,59 @@ public class ZlibDecoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer) || finished) {
-            return msg;
+    public void decode(
+            ChannelHandlerContext ctx,
+            ByteBuf in, ByteBuf out) throws Exception {
+
+        if (!in.readable()) {
+            return;
         }
 
-        synchronized (z) {
-            try {
-                // Configure input.
-                ChannelBuffer compressed = (ChannelBuffer) msg;
-                byte[] in = new byte[compressed.readableBytes()];
-                compressed.readBytes(in);
-                z.next_in = in;
+        try {
+            // Configure input.
+            int inputLength = in.readableBytes();
+            boolean inHasArray = in.hasArray();
+            z.avail_in = inputLength;
+            if (inHasArray) {
+                z.next_in = in.array();
+                z.next_in_index = in.arrayOffset() + in.readerIndex();
+            } else {
+                byte[] array = new byte[inputLength];
+                in.readBytes(array);
+                z.next_in = array;
                 z.next_in_index = 0;
-                z.avail_in = in.length;
+            }
+            int oldNextInIndex = z.next_in_index;
 
-                // Configure output.
-                byte[] out = new byte[in.length << 1];
-                ChannelBuffer decompressed = ChannelBuffers.dynamicBuffer(
-                        compressed.order(), out.length,
-                        ctx.getChannel().getConfig().getBufferFactory());
-                z.next_out = out;
-                z.next_out_index = 0;
-                z.avail_out = out.length;
+            // Configure output.
+            int maxOutputLength = inputLength << 1;
+            boolean outHasArray = out.hasArray();
+            if (!outHasArray) {
+                z.next_out = new byte[maxOutputLength];
+            }
 
-
+            try {
                 loop: for (;;) {
+                    z.avail_out = maxOutputLength;
+                    if (outHasArray) {
+                        out.ensureWritableBytes(maxOutputLength);
+                        z.next_out = out.array();
+                        z.next_out_index = out.arrayOffset() + out.writerIndex();
+                    } else {
+                        z.next_out_index = 0;
+                    }
+                    int oldNextOutIndex = z.next_out_index;
+
                     // Decompress 'in' into 'out'
                     int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
-                    if (z.next_out_index > 0) {
-                        decompressed.writeBytes(out, 0, z.next_out_index);
-                        z.avail_out = out.length;
+                    int outputLength = z.next_out_index - oldNextOutIndex;
+                    if (outputLength > 0) {
+                        if (outHasArray) {
+                            out.writerIndex(out.writerIndex() + outputLength);
+                        } else {
+                            out.writeBytes(z.next_out, 0, outputLength);
+                        }
                     }
-                    z.next_out_index = 0;
 
                     switch (resultCode) {
                     case JZlib.Z_NEED_DICT:
@@ -153,20 +167,18 @@ public class ZlibDecoder extends OneToOneDecoder {
                         ZlibUtil.fail(z, "decompression failure", resultCode);
                     }
                 }
-
-                if (decompressed.writerIndex() != 0) { // readerIndex is always 0
-                    return decompressed;
-                } else {
-                    return null;
-                }
             } finally {
-                // Deference the external references explicitly to tell the VM that
-                // the allocated byte arrays are temporary so that the call stack
-                // can be utilized.
-                // I'm not sure if the modern VMs do this optimization though.
-                z.next_in = null;
-                z.next_out = null;
+                if (inHasArray) {
+                    in.skipBytes(z.next_in_index - oldNextInIndex);
+                }
             }
+        } finally {
+            // Deference the external references explicitly to tell the VM that
+            // the allocated byte arrays are temporary so that the call stack
+            // can be utilized.
+            // I'm not sure if the modern VMs do this optimization though.
+            z.next_in = null;
+            z.next_out = null;
         }
     }
 }

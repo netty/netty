@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,90 +15,95 @@
  */
 package io.netty.example.uptime;
 
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.timeout.ReadTimeoutException;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.Timeout;
-import io.netty.util.Timer;
-import io.netty.util.TimerTask;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.EventLoop;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
+
+import java.net.ConnectException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Keep reconnecting to the server while printing out the current uptime and
  * connection attempt status.
  */
-public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(UptimeClientHandler.class);
+@Sharable
+public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
 
-    final ClientBootstrap bootstrap;
-    private final Timer timer;
+    private final UptimeClient client;
     private long startTime = -1;
 
-    public UptimeClientHandler(ClientBootstrap bootstrap, Timer timer) {
-        this.bootstrap = bootstrap;
-        this.timer = timer;
-    }
-
-    InetSocketAddress getRemoteAddress() {
-        return (InetSocketAddress) bootstrap.getOption("remoteAddress");
+    public UptimeClientHandler(UptimeClient client) {
+        this.client = client;
     }
 
     @Override
-    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        println("Disconnected from: " + getRemoteAddress());
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        if (startTime < 0) {
+            startTime = System.currentTimeMillis();
+        }
+        println("Connected to: " + ctx.channel().remoteAddress());
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        // Discard received data
+        in.clear();
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (!(evt instanceof IdleStateEvent)) {
+            return;
+        }
+
+        IdleStateEvent e = (IdleStateEvent) evt;
+        if (e.state() == IdleState.READER_IDLE) {
+            // The connection was OK but there was no traffic for last period.
+            println("Disconnecting due to no inbound traffic");
+            ctx.close();
+        }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        println("Disconnected from: " + ctx.channel().remoteAddress());
+    }
+
+    @Override
+    public void channelUnregistered(final ChannelHandlerContext ctx)
+            throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
-        timer.newTimeout(new TimerTask() {
-            public void run(Timeout timeout) throws Exception {
-                println("Reconnecting to: " + getRemoteAddress());
-                bootstrap.connect();
+
+        final EventLoop loop = ctx.channel().eventLoop();
+        loop.schedule(new Runnable() {
+            @Override
+            public void run() {
+                println("Reconnecting to: " + ctx.channel().remoteAddress());
+                client.configureBootstrap(new Bootstrap(), loop).connect();
             }
         }, UptimeClient.RECONNECT_DELAY, TimeUnit.SECONDS);
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        if (startTime < 0) {
-            startTime = System.currentTimeMillis();
-        }
-
-        println("Connected to: " + getRemoteAddress());
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        Throwable cause = e.getCause();
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ConnectException) {
             startTime = -1;
             println("Failed to connect: " + cause.getMessage());
         }
-        if (cause instanceof ReadTimeoutException) {
-            // The connection was OK but there was no traffic for last period.
-            println("Disconnecting due to no inbound traffic");
-        } else {
-            cause.printStackTrace();
-        }
-        ctx.getChannel().close();
+        cause.printStackTrace();
+        ctx.close();
     }
 
     void println(String msg) {
         if (startTime < 0) {
-            logger.error(String.format("[SERVER IS DOWN] %s%n", msg));
+            System.err.format("[SERVER IS DOWN] %s%n", msg);
         } else {
-            logger.error(String.format("[UPTIME: %5ds] %s%n", (System.currentTimeMillis() - startTime) / 1000, msg));
+            System.err.format("[UPTIME: %5ds] %s%n", (System.currentTimeMillis() - startTime) / 1000, msg);
         }
     }
 }

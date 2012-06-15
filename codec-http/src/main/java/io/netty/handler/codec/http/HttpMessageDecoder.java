@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.List;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.frame.TooLongFrameException;
-import io.netty.handler.codec.replay.ReplayingDecoder;
+import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.TooLongFrameException;
+
+import java.util.List;
 
 /**
- * Decodes {@link ChannelBuffer}s into {@link HttpMessage}s and
+ * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
  * {@link HttpChunk}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
@@ -98,15 +97,16 @@ import io.netty.handler.codec.replay.ReplayingDecoder;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
+public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMessageDecoder.State> {
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
     private final int maxChunkSize;
     private HttpMessage message;
-    private ChannelBuffer content;
+    private ByteBuf content;
     private long chunkSize;
     private int headerSize;
+    private int contentRead;
 
     /**
      * The internal state of {@link HttpMessageDecoder}.
@@ -143,7 +143,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected HttpMessageDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
 
-        super(State.SKIP_CONTROL_CHARS, true);
+        super(State.SKIP_CONTROL_CHARS);
 
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -166,8 +166,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
-        switch (state) {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {
                 skipControlCharacters(buffer);
@@ -204,7 +204,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             } else {
                 long contentLength = HttpHeaders.getContentLength(message, -1);
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                    content = ChannelBuffers.EMPTY_BUFFER;
+                    content = Unpooled.EMPTY_BUFFER;
                     return reset();
                 }
 
@@ -236,17 +236,24 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return null;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
-            if (content == null) {
-                content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
+            int toRead = actualReadableBytes();
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
             }
-            //this will cause a replay error until the channel is closed where this will read what's left in the buffer
-            content.writeBytes(buffer.readBytes(buffer.readableBytes()));
-            return reset();
+            if (!message.isChunked()) {
+                message.setChunked(true);
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
+            } else {
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
+            }
         }
         case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
             // Keep reading data as a chunk until the end of connection is reached.
-            int chunkSize = Math.min(maxChunkSize, buffer.readableBytes());
-            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(chunkSize));
+            int toRead = actualReadableBytes();
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
+            }
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
 
             if (!buffer.readable()) {
                 // Reached to the end of the connection.
@@ -259,19 +266,23 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return chunk;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            //we have a content-length so we just read the correct number of bytes
-            readFixedLengthContent(buffer);
-            return reset();
+            return readFixedLengthContent(buffer);
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            long chunkSize = this.chunkSize;
-            HttpChunk chunk;
-            if (chunkSize > maxChunkSize) {
-                chunk = new DefaultHttpChunk(buffer.readBytes(maxChunkSize));
-                chunkSize -= maxChunkSize;
+            assert chunkSize <= Integer.MAX_VALUE;
+            int chunkSize = (int) this.chunkSize;
+            int readLimit = actualReadableBytes();
+            int toRead = chunkSize;
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
+            }
+            if (toRead > readLimit) {
+                toRead = readLimit;
+            }
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
+            if (chunkSize > toRead) {
+                chunkSize -= toRead;
             } else {
-                assert chunkSize <= Integer.MAX_VALUE;
-                chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
                 chunkSize = 0;
             }
             this.chunkSize = chunkSize;
@@ -311,14 +322,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return chunk;
         }
         case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            long chunkSize = this.chunkSize;
-            HttpChunk chunk;
-            if (chunkSize > maxChunkSize) {
-                chunk = new DefaultHttpChunk(buffer.readBytes(maxChunkSize));
-                chunkSize -= maxChunkSize;
+            assert chunkSize <= Integer.MAX_VALUE;
+            int chunkSize = (int) this.chunkSize;
+            int readLimit = actualReadableBytes();
+            int toRead = chunkSize;
+            if (toRead > maxChunkSize) {
+                toRead = maxChunkSize;
+            }
+            if (toRead > readLimit) {
+                toRead = readLimit;
+            }
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
+            if (chunkSize > toRead) {
+                chunkSize -= toRead;
             } else {
-                assert chunkSize <= Integer.MAX_VALUE;
-                chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
                 chunkSize = 0;
             }
             this.chunkSize = chunkSize;
@@ -335,12 +352,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         case READ_CHUNK_DELIMITER: {
             for (;;) {
                 byte next = buffer.readByte();
-                if (next == HttpCodecUtil.CR) {
-                    if (buffer.readByte() == HttpCodecUtil.LF) {
+                if (next == HttpConstants.CR) {
+                    if (buffer.readByte() == HttpConstants.LF) {
                         checkpoint(State.READ_CHUNK_SIZE);
                         return null;
                     }
-                } else if (next == HttpCodecUtil.LF) {
+                } else if (next == HttpConstants.LF) {
                     checkpoint(State.READ_CHUNK_SIZE);
                     return null;
                 }
@@ -368,17 +385,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             int code = res.getStatus().getCode();
-            
+
             // Correctly handle return codes of 1xx.
-            // 
-            // See: 
+            //
+            // See:
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
                 if (code == 101 && !res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
                     // It's Hixie 76 websocket handshake response
                     return false;
-                 }
+                }
                 return true;
             }
 
@@ -392,7 +409,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
     private Object reset() {
         HttpMessage message = this.message;
-        ChannelBuffer content = this.content;
+        ByteBuf content = this.content;
 
         if (content != null) {
             message.setContent(content);
@@ -404,7 +421,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return message;
     }
 
-    private void skipControlCharacters(ChannelBuffer buffer) {
+    private static void skipControlCharacters(ByteBuf buffer) {
         for (;;) {
             char c = (char) buffer.readUnsignedByte();
             if (!Character.isISOControl(c) &&
@@ -415,18 +432,32 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    private void readFixedLengthContent(ChannelBuffer buffer) {
+    private Object readFixedLengthContent(ByteBuf buffer) {
+        //we have a content-length so we just read the correct number of bytes
         long length = HttpHeaders.getContentLength(message, -1);
         assert length <= Integer.MAX_VALUE;
-
+        int toRead = (int) length - contentRead;
+        if (toRead > actualReadableBytes()) {
+            toRead = actualReadableBytes();
+        }
+        contentRead += toRead;
+        if (length < contentRead) {
+            if (!message.isChunked()) {
+                message.setChunked(true);
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
+            } else {
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
+            }
+        }
         if (content == null) {
             content = buffer.readBytes((int) length);
         } else {
             content.writeBytes(buffer.readBytes((int) length));
         }
+        return reset();
     }
 
-    private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+    private State readHeaders(ByteBuf buffer) throws TooLongFrameException {
         headerSize = 0;
         final HttpMessage message = this.message;
         String line = readHeader(buffer);
@@ -476,7 +507,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return nextState;
     }
 
-    private HttpChunkTrailer readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+    private HttpChunkTrailer readTrailingHeaders(ByteBuf buffer) throws TooLongFrameException {
         headerSize = 0;
         String line = readHeader(buffer);
         String lastHeader = null;
@@ -513,7 +544,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return HttpChunk.LAST_CHUNK;
     }
 
-    private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
+    private String readHeader(ByteBuf buffer) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int headerSize = this.headerSize;
 
@@ -523,14 +554,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             headerSize ++;
 
             switch (nextByte) {
-            case HttpCodecUtil.CR:
+            case HttpConstants.CR:
                 nextByte = (char) buffer.readByte();
                 headerSize ++;
-                if (nextByte == HttpCodecUtil.LF) {
+                if (nextByte == HttpConstants.LF) {
                     break loop;
                 }
                 break;
-            case HttpCodecUtil.LF:
+            case HttpConstants.LF:
                 break loop;
             }
 
@@ -556,7 +587,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected abstract boolean isDecodingRequest();
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
 
-    private int getChunkSize(String hex) {
+    private static int getChunkSize(String hex) {
         hex = hex.trim();
         for (int i = 0; i < hex.length(); i ++) {
             char c = hex.charAt(i);
@@ -569,17 +600,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return Integer.parseInt(hex, 16);
     }
 
-    private String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
+    private static String readLine(ByteBuf buffer, int maxLineLength) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
-            if (nextByte == HttpCodecUtil.CR) {
+            if (nextByte == HttpConstants.CR) {
                 nextByte = buffer.readByte();
-                if (nextByte == HttpCodecUtil.LF) {
+                if (nextByte == HttpConstants.LF) {
                     return sb.toString();
                 }
-            } else if (nextByte == HttpCodecUtil.LF) {
+            } else if (nextByte == HttpConstants.LF) {
                 return sb.toString();
             } else {
                 if (lineLength >= maxLineLength) {
@@ -597,7 +628,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    private String[] splitInitialLine(String sb) {
+    private static String[] splitInitialLine(String sb) {
         int aStart;
         int aEnd;
         int bStart;
@@ -620,7 +651,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
-    private String[] splitHeader(String sb) {
+    private static String[] splitHeader(String sb) {
         final int length = sb.length();
         int nameStart;
         int nameEnd;
@@ -658,7 +689,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         };
     }
 
-    private int findNonWhitespace(String sb, int offset) {
+    private static int findNonWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (!Character.isWhitespace(sb.charAt(result))) {
@@ -668,7 +699,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return result;
     }
 
-    private int findWhitespace(String sb, int offset) {
+    private static int findWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (Character.isWhitespace(sb.charAt(result))) {
@@ -678,7 +709,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return result;
     }
 
-    private int findEndOfString(String sb) {
+    private static int findEndOfString(String sb) {
         int result;
         for (result = sb.length(); result > 0; result --) {
             if (!Character.isWhitespace(sb.charAt(result - 1))) {

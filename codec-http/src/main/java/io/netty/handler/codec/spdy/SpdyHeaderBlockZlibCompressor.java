@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,10 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.zip.Deflater;
-
-import io.netty.buffer.ChannelBuffer;
-
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import io.netty.buffer.ByteBuf;
+
+import java.util.zip.Deflater;
 
 class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
 
@@ -27,7 +26,7 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
     private final Deflater compressor;
 
     public SpdyHeaderBlockZlibCompressor(int version, int compressionLevel) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
@@ -44,14 +43,14 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void setInput(ChannelBuffer decompressed) {
+    public void setInput(ByteBuf decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         compressor.setInput(in);
     }
 
     @Override
-    public void encode(ChannelBuffer compressed) {
+    public void encode(ByteBuf compressed) {
         while (!compressor.needsInput()) {
             int numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
             compressed.writeBytes(out, 0, numBytes);

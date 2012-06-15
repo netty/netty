@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,10 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
 
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpChunk} compressed in
@@ -27,12 +26,12 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  */
 public class HttpContentDecompressor extends HttpContentDecoder {
     @Override
-    protected DecoderEmbedder<ChannelBuffer> newContentDecoder(String contentEncoding) throws Exception {
+    protected EmbeddedByteChannel newContentDecoder(String contentEncoding) throws Exception {
         if ("gzip".equalsIgnoreCase(contentEncoding) || "x-gzip".equalsIgnoreCase(contentEncoding)) {
-            return new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(ZlibWrapper.GZIP));
+            return new EmbeddedByteChannel(new ZlibDecoder(ZlibWrapper.GZIP));
         } else if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
+            return new EmbeddedByteChannel(new ZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
         }
 
         // 'identity' or unsupported

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.CharsetUtil;
+
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -97,7 +98,7 @@ public class QueryStringDecoderTest {
         assertQueryString("/foo?a=b&c=d", "/foo?a=b&c=d");
         assertQueryString("/foo?a=1&a=&a=", "/foo?a=1&a&a=");
     }
-    
+
     @Test
     public void testHashDos() throws Exception {
         StringBuilder buf = new StringBuilder();
@@ -178,26 +179,26 @@ public class QueryStringDecoderTest {
         Map<String, List<String>> params =  decoder.getParameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
-        
+
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-        
+
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value2", entry.getValue().get(0));
-        
+
         entry = entries.next();
         Assert.assertEquals("param3", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value3", entry.getValue().get(0));
-        
+
         Assert.assertFalse(entries.hasNext());
     }
-    
+
     // See #189
     @Test
     public void testURISlashPath() {
@@ -207,26 +208,26 @@ public class QueryStringDecoderTest {
         Map<String, List<String>> params =  decoder.getParameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
-        
+
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-        
+
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value2", entry.getValue().get(0));
-        
+
         entry = entries.next();
         Assert.assertEquals("param3", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value3", entry.getValue().get(0));
-        
+
         Assert.assertFalse(entries.hasNext());
     }
-    
+
     // See #189
     @Test
     public void testURINoPath() {
@@ -236,23 +237,23 @@ public class QueryStringDecoderTest {
         Map<String, List<String>> params =  decoder.getParameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
-        
+
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-        
+
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value2", entry.getValue().get(0));
-        
+
         entry = entries.next();
         Assert.assertEquals("param3", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value3", entry.getValue().get(0));
-        
+
         Assert.assertFalse(entries.hasNext());
     }
 }

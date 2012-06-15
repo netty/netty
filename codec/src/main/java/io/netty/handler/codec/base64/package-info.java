@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,8 +17,8 @@
 /**
  * Encoder and decoder which transform a
  * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a>-encoded
- * {@link java.lang.String} or {@link io.netty.buffer.ChannelBuffer}
- * into a decoded {@link io.netty.buffer.ChannelBuffer} and vice versa.
+ * {@link java.lang.String} or {@link io.netty.buffer.ByteBuf}
+ * into a decoded {@link io.netty.buffer.ByteBuf} and vice versa.
  *
  * @apiviz.exclude OneToOne(Encoder|Decoder)$
  */

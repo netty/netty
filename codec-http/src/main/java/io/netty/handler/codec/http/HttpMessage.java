@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 
 /**
  * An HTTP message which provides common properties for {@link HttpRequest} and
@@ -83,15 +83,15 @@ public interface HttpMessage {
     /**
      * Returns the content of this message.  If there is no content or
      * {@link #isChunked()} returns {@code true}, an
-     * {@link ChannelBuffers#EMPTY_BUFFER} is returned.
+     * {@link Unpooled#EMPTY_BUFFER} is returned.
      */
-    ChannelBuffer getContent();
+    ByteBuf getContent();
 
     /**
      * Sets the content of this message.  If {@code null} is specified,
-     * the content of this message will be set to {@link ChannelBuffers#EMPTY_BUFFER}.
+     * the content of this message will be set to {@link Unpooled#EMPTY_BUFFER}.
      */
-    void setContent(ChannelBuffer content);
+    void setContent(ByteBuf content);
 
     /**
      * Adds a new header with the specified name and value.
@@ -156,7 +156,7 @@ public interface HttpMessage {
      * consecutively, contain the actual content.
      * <p>
      * If this method is called with {@code true}, the content of this message
-     * becomes {@link ChannelBuffers#EMPTY_BUFFER}.
+     * becomes {@link Unpooled#EMPTY_BUFFER}.
      * <p>
      * Even if this method is called with {@code false}, {@link #isChunked()}
      * will keep returning {@code true} if the {@code "Transfer-Encoding"} of

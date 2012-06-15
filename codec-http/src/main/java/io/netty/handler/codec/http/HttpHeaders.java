@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.http;
+
+import io.netty.util.internal.CaseIgnoringComparator;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -324,7 +326,7 @@ public class HttpHeaders {
         /**
          * {@code "boundary"}
          */
-        static final String BOUNDARY = "boundary";
+        public static final String BOUNDARY = "boundary";
         /**
          * {@code "bytes"}
          */
@@ -380,7 +382,7 @@ public class HttpHeaders {
         /**
          * {@code "multipart/form-data"}
          */
-        static final String MULTIPART_FORM_DATA = "multipart/form-data";
+        public static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
          * {@code "must-revalidate"}
          */
@@ -705,7 +707,8 @@ public class HttpHeaders {
 
     /**
      * Adds a new date header with the specified name and value.  The specified
-     * value is formatted as defined in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
+     * value is formatted as defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
     public static void addDateHeader(HttpMessage message, String name, Date value) {
         message.addHeader(name, value);

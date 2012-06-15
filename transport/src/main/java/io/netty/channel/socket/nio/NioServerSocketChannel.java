@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,107 +15,108 @@
  */
 package io.netty.channel.socket.nio;
 
-import static io.netty.channel.Channels.*;
+import io.netty.buffer.MessageBuf;
+import io.netty.channel.ChannelException;
+import io.netty.channel.socket.DefaultServerSocketChannelConfig;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.nio.channels.SocketChannel;
 
-import io.netty.channel.AbstractServerChannel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
-import io.netty.channel.socket.DefaultServerSocketChannelConfig;
-import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+public class NioServerSocketChannel extends AbstractNioMessageChannel
+                             implements io.netty.channel.socket.ServerSocketChannel {
 
-final class NioServerSocketChannel extends AbstractServerChannel
-                             implements io.netty.channel.socket.ServerSocketChannel, NioChannel {
-
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
-
-    final ServerSocketChannel socket;
-    final Lock shutdownLock = new ReentrantLock();
-    final NioWorker worker;
-    final WorkerPool<NioWorker> workers;
-    
-    
-    private final ServerSocketChannelConfig config;
-
-    static NioServerSocketChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
-        NioServerSocketChannel instance =
-                new NioServerSocketChannel(factory, pipeline, sink, worker, workers);
-        fireChannelOpen(instance);
-        return instance;
-    }
-
-    private NioServerSocketChannel(
-            ChannelFactory factory,
-            ChannelPipeline pipeline,
-            ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
-
-        super(factory, pipeline, sink);
-        this.worker = worker;
-        this.workers = workers;
+    private static ServerSocketChannel newSocket() {
         try {
-            socket = ServerSocketChannel.open();
+            return ServerSocketChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
                     "Failed to open a server socket.", e);
         }
+    }
 
-        try {
-            socket.configureBlocking(false);
-        } catch (IOException e) {
-            try {
-                socket.close();
-            } catch (IOException e2) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(
-                            "Failed to close a partially initialized socket.", e2);
-                }
+    private final ServerSocketChannelConfig config;
 
-            }
-
-            throw new ChannelException("Failed to enter non-blocking mode.", e);
-        }
-
-        config = new DefaultServerSocketChannelConfig(socket.socket());
+    public NioServerSocketChannel() {
+        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 
     @Override
-    public ServerSocketChannelConfig getConfig() {
+    public ServerSocketChannelConfig config() {
         return config;
     }
 
     @Override
-    public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.socket().getLocalSocketAddress();
+    public boolean isActive() {
+        return javaChannel().socket().isBound();
     }
 
     @Override
-    public InetSocketAddress getRemoteAddress() {
+    public InetSocketAddress remoteAddress() {
         return null;
     }
 
     @Override
-    public boolean isBound() {
-        return isOpen() && socket.socket().isBound();
+    protected ServerSocketChannel javaChannel() {
+        return (ServerSocketChannel) super.javaChannel();
     }
 
     @Override
-    protected boolean setClosed() {
-        return super.setClosed();
+    protected SocketAddress localAddress0() {
+        return javaChannel().socket().getLocalSocketAddress();
     }
 
     @Override
-    public NioWorker getWorker() {
-        return worker;
+    protected void doBind(SocketAddress localAddress) throws Exception {
+        javaChannel().socket().bind(localAddress);
+        SelectionKey selectionKey = selectionKey();
+        selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        javaChannel().close();
+    }
+
+    @Override
+    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+        SocketChannel ch = javaChannel().accept();
+        if (ch == null) {
+            return 0;
+        }
+        buf.add(new NioSocketChannel(this, null, ch));
+        return 1;
+    }
+
+    // Unnecessary stuff
+    @Override
+    protected boolean doConnect(
+            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void doFinishConnect() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return null;
+    }
+
+    @Override
+    protected void doDisconnect() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
+        throw new UnsupportedOperationException();
     }
 }

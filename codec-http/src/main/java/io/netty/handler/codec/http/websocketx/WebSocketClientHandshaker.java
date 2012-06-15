@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.net.URI;
-import java.util.Map;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpResponse;
+
+import java.net.URI;
+import java.util.Map;
 
 /**
  * Base class for web socket client handshake implementations
@@ -39,26 +39,8 @@ public abstract class WebSocketClientHandshaker {
 
     protected final Map<String, String> customHeaders;
 
-    private final long maxFramePayloadLength;
-    
-    /**
-     * Base constructor with default values
-     *
-     * @param webSocketUrl
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
-     * @param subprotocol
-     *            CSV of requested subprotocol(s) sent to the server.
-     * @param customHeaders
-     *            Map of custom headers to add to the client request
-     */
-    public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders) {
-        this(webSocketUrl, version, subprotocol, customHeaders, Long.MAX_VALUE);
-    }
-    
+    private final int maxFramePayloadLength;
+
     /**
      * Base constructor
      *
@@ -75,10 +57,10 @@ public abstract class WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders, long maxFramePayloadLength) {
+            Map<String, String> customHeaders, int maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
-        this.expectedSubprotocol = subprotocol;
+        expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
@@ -98,12 +80,12 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Returns the max length for any frame's payload 
+     * Returns the max length for any frame's payload
      */
-    public long getMaxFramePayloadLength() {
+    public int getMaxFramePayloadLength() {
         return maxFramePayloadLength;
     }
-    
+
     /**
      * Flag to indicate if the opening handshake is complete
      */

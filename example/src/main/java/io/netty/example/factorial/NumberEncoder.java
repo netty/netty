@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,29 +15,22 @@
  */
 package io.netty.example.factorial;
 
-import java.math.BigInteger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
+
+import java.math.BigInteger;
 
 /**
  * Encodes a {@link Number} into the binary representation prepended with
  * a magic number ('F' or 0x46) and a 32-bit length prefix.  For example, 42
  * will be encoded to { 'F', 0, 0, 0, 1, 42 }.
  */
-public class NumberEncoder extends OneToOneEncoder {
+public class NumberEncoder extends MessageToByteEncoder<Number> {
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof Number)) {
-            // Ignore what this encoder can't encode.
-            return msg;
-        }
-
+    public void encode(
+            ChannelHandlerContext ctx, Number msg, ByteBuf out) throws Exception {
         // Convert to a BigInteger first for easier implementation.
         BigInteger v;
         if (msg instanceof BigInteger) {
@@ -50,13 +43,9 @@ public class NumberEncoder extends OneToOneEncoder {
         byte[] data = v.toByteArray();
         int dataLength = data.length;
 
-        // Construct a message.
-        ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
-        buf.writeByte((byte) 'F'); // magic number
-        buf.writeInt(dataLength);  // data length
-        buf.writeBytes(data);      // data
-
-        // Return the constructed message.
-        return buf;
+        // Write a message.
+        out.writeByte((byte) 'F'); // magic number
+        out.writeInt(dataLength);  // data length
+        out.writeBytes(data);      // data
     }
 }

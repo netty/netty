@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,9 +14,6 @@
  * under the License.
  */
 package io.netty.handler.codec.http.websocketx;
-
-import java.net.URI;
-import java.util.Map;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -33,6 +30,9 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import java.net.URI;
+import java.util.Map;
 
 /**
  * <p>
@@ -52,28 +52,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     private final boolean allowExtensions;
 
     /**
-     * Constructor with default values
-     * 
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param version
-     *            Version of web socket specification to use to connect to the server
-     * @param subprotocol
-     *            Sub protocol request sent to the server.
-     * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
-     * @param customHeaders
-     *            Map of custom headers to add to the client request
-     */
-    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders) {
-        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
-    }
-    
-    /**
-     * Constructor
-     * 
+     * Creates a new instance.
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
@@ -89,17 +69,17 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength) {
+            boolean allowExtensions, Map<String, String> customHeaders, int maxFramePayloadLength) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
-    
+
     /**
      * /**
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -110,7 +90,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel into which we can write our request
      */
@@ -142,17 +122,17 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
         request.addHeader(Names.HOST, wsURL.getHost());
-        
+
         int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
         if (wsPort != 80 && wsPort != 443) {
-            // if the port is not standard (80/443) its needed to add the port to the header. 
+            // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ":" + wsPort;
         }
-        request.addHeader(Names.ORIGIN, originValue);
-        
-        String expectedSubprotocol = this.getExpectedSubprotocol(); 
+        request.addHeader(Names.SEC_WEBSOCKET_ORIGIN, originValue);
+
+        String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
@@ -164,10 +144,10 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
                 request.addHeader(header, customHeaders.get(header));
             }
         }
-        
+
         ChannelFuture future = channel.write(request);
 
-        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
+        channel.pipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
 
         return future;
     }
@@ -176,7 +156,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -184,7 +164,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
@@ -200,17 +180,13 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        // Upgrade header should be matched case-insensitive.
-        // See https://github.com/netty/netty/issues/278
-        if (upgrade == null || !upgrade.toLowerCase().equals(Values.WEBSOCKET.toLowerCase())) {
+        if (upgrade == null || !upgrade.equalsIgnoreCase(Values.WEBSOCKET)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
-        // Connection header should be matched case-insensitive.
-        // See https://github.com/netty/netty/issues/278
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.toLowerCase().equals(Values.UPGRADE.toLowerCase())) {
+        if (connection == null || !connection.equalsIgnoreCase(Values.UPGRADE)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }
@@ -226,8 +202,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         setHandshakeComplete();
 
-        channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
-                new WebSocket13FrameDecoder(false, allowExtensions, this.getMaxFramePayloadLength()));
-
+        channel.pipeline().get(HttpResponseDecoder.class).replace(
+                "ws-decoder",
+                new WebSocket13FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
     }
 }

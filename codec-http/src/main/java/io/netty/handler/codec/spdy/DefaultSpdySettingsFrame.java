@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.util.internal.StringUtil;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
-import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link SpdySettingsFrame} implementation.
@@ -35,15 +35,18 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     public DefaultSpdySettingsFrame() {
     }
 
-    public Set<Integer> getIDs() {
+    @Override
+    public Set<Integer> getIds() {
         return settingsMap.keySet();
     }
 
+    @Override
     public boolean isSet(int ID) {
         Integer key = new Integer(ID);
         return settingsMap.containsKey(key);
     }
 
+    @Override
     public int getValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
@@ -53,10 +56,12 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
+    @Override
     public void setValue(int ID, int value) {
         setValue(ID, value, false, false);
     }
 
+    @Override
     public void setValue(int ID, int value, boolean persistValue, boolean persisted) {
         if (ID <= 0 || ID > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
             throw new IllegalArgumentException("Setting ID is not valid: " + ID);
@@ -72,6 +77,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
+    @Override
     public void removeValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
@@ -79,15 +85,17 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
-    public boolean persistValue(int ID) {
+    @Override
+    public boolean isPersistValue(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).getPersist();
+            return settingsMap.get(key).isPersist();
         } else {
             return false;
         }
     }
 
+    @Override
     public void setPersistValue(int ID, boolean persistValue) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
@@ -95,15 +103,17 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
+    @Override
     public boolean isPersisted(int ID) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
-            return settingsMap.get(key).getPersisted();
+            return settingsMap.get(key).isPersisted();
         } else {
             return false;
         }
     }
 
+    @Override
     public void setPersisted(int ID, boolean persisted) {
         Integer key = new Integer(ID);
         if (settingsMap.containsKey(key)) {
@@ -111,10 +121,12 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
+    @Override
     public boolean clearPreviouslyPersistedSettings() {
         return clear;
     }
 
+    @Override
     public void setClearPreviouslyPersistedSettings(boolean clear) {
         this.clear = clear;
     }
@@ -131,9 +143,9 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             buf.append(":");
             buf.append(setting.getValue());
             buf.append(" (persist value: ");
-            buf.append(setting.getPersist());
+            buf.append(setting.isPersist());
             buf.append("; persisted: ");
-            buf.append(setting.getPersisted());
+            buf.append(setting.isPersisted());
             buf.append(')');
             buf.append(StringUtil.NEWLINE);
         }
@@ -155,33 +167,33 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         private boolean persist;
         private boolean persisted;
 
-        public Setting(int value, boolean persist, boolean persisted) {
+        Setting(int value, boolean persist, boolean persisted) {
             this.value = value;
             this.persist = persist;
             this.persisted = persisted;
         }
 
-        public int getValue() {
+        int getValue() {
             return value;
         }
 
-        public void setValue(int value) {
+        void setValue(int value) {
             this.value = value;
         }
 
-        public boolean getPersist() {
+        boolean isPersist() {
             return persist;
         }
 
-        public void setPersist(boolean persist) {
+        void setPersist(boolean persist) {
             this.persist = persist;
         }
 
-        public boolean getPersisted() {
+        boolean isPersisted() {
             return persisted;
         }
 
-        public void setPersisted(boolean persisted) {
+        void setPersisted(boolean persisted) {
             this.persisted = persisted;
         }
     }

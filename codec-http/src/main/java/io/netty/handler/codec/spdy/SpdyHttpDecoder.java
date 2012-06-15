@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,18 +15,11 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -36,13 +29,15 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Decodes {@link SpdySynStreamFrame}s, {@link SpdySynReplyFrame}s,
  * and {@link SpdyDataFrame}s into {@link HttpRequest}s and {@link HttpResponse}s.
  */
-public class SpdyHttpDecoder extends OneToOneDecoder {
+public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage> {
 
     private final int spdyVersion;
     private final int maxContentLength;
@@ -57,8 +52,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
      *        a {@link TooLongFrameException} will be raised.
      */
     public SpdyHttpDecoder(int version, int maxContentLength) {
-        super();
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
+        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
@@ -71,25 +65,23 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg)
-            throws Exception {
-
+    public HttpMessage decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
-            if (SpdyCodecUtil.isServerID(streamID)) {
+            if (SpdyCodecUtil.isServerId(streamID)) {
                 // SYN_STREAM frames initiated by the server are pushed resources
-                int associatedToStreamID = spdySynStreamFrame.getAssociatedToStreamID();
+                int associatedToStreamId = spdySynStreamFrame.getAssociatedToStreamId();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
                 // it must reply with a RST_STREAM with error code INVALID_STREAM
-                if (associatedToStreamID == 0) {
+                if (associatedToStreamId == 0) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.INVALID_STREAM);
-                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    ctx.write(spdyRstStreamFrame);
                 }
 
                 String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
@@ -99,15 +91,15 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 if (URL == null) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
-                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    ctx.write(spdyRstStreamFrame);
                 }
 
                 try {
                     HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
-                    SpdyHttpHeaders.setStreamID(httpResponse, streamID);
-                    SpdyHttpHeaders.setAssociatedToStreamID(httpResponse, associatedToStreamID);
+                    SpdyHttpHeaders.setStreamId(httpResponse, streamID);
+                    SpdyHttpHeaders.setAssociatedToStreamId(httpResponse, associatedToStreamId);
                     SpdyHttpHeaders.setPriority(httpResponse, spdySynStreamFrame.getPriority());
                     SpdyHttpHeaders.setUrl(httpResponse, URL);
 
@@ -121,7 +113,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 } catch (Exception e) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
-                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                    ctx.write(spdyRstStreamFrame);
                 }
 
             } else {
@@ -130,7 +122,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     HttpRequest httpRequest = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID as a header
-                    SpdyHttpHeaders.setStreamID(httpRequest, streamID);
+                    SpdyHttpHeaders.setStreamId(httpRequest, streamID);
 
                     if (spdySynStreamFrame.isLast()) {
                         return httpRequest;
@@ -146,20 +138,20 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     spdySynReplyFrame.setLast(true);
                     SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, HttpResponseStatus.BAD_REQUEST);
                     SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
-                    Channels.write(ctx, Channels.future(channel), spdySynReplyFrame);
+                    ctx.write(spdySynReplyFrame);
                 }
             }
 
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             try {
                 HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynReplyFrame);
 
                 // Set the Stream-ID as a header
-                SpdyHttpHeaders.setStreamID(httpResponse, streamID);
+                SpdyHttpHeaders.setStreamId(httpResponse, streamID);
 
                 if (spdySynReplyFrame.isLast()) {
                     HttpHeaders.setContentLength(httpResponse, 0);
@@ -173,13 +165,13 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 // the client must reply with a RST_STREAM frame indicating a PROTOCOL_ERROR
                 SpdyRstStreamFrame spdyRstStreamFrame =
                     new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
-                Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                ctx.write(spdyRstStreamFrame);
             }
 
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            Integer streamID = new Integer(spdyHeadersFrame.getStreamID());
+            Integer streamID = new Integer(spdyHeadersFrame.getStreamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard HEADERS frame.
@@ -195,7 +187,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            Integer streamID = new Integer(spdyDataFrame.getStreamID());
+            Integer streamID = new Integer(spdyDataFrame.getStreamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard Data Frame.
@@ -204,19 +196,21 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 return null;
             }
 
-            ChannelBuffer content = httpMessage.getContent();
+            ByteBuf content = httpMessage.getContent();
             if (content.readableBytes() > maxContentLength - spdyDataFrame.getData().readableBytes()) {
                 messageMap.remove(streamID);
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength + " bytes.");
             }
 
-            if (content == ChannelBuffers.EMPTY_BUFFER) {
-                content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
-                content.writeBytes(spdyDataFrame.getData());
+            ByteBuf spdyDataFrameData = spdyDataFrame.getData();
+            int spdyDataFrameDataLen = spdyDataFrameData.readableBytes();
+            if (content == Unpooled.EMPTY_BUFFER) {
+                content = Unpooled.dynamicBuffer(spdyDataFrameDataLen);
+                content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
                 httpMessage.setContent(content);
             } else {
-                content.writeBytes(spdyDataFrame.getData());
+                content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
             }
 
             if (spdyDataFrame.isLast()) {
@@ -228,7 +222,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            Integer streamID = new Integer(spdyRstStreamFrame.getStreamID());
+            Integer streamID = new Integer(spdyRstStreamFrame.getStreamId());
             messageMap.remove(streamID);
         }
 

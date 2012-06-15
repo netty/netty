@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,19 +15,17 @@
  */
 package io.netty.handler.codec.bytes;
 
-import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
- * Encodes the requested array of bytes into a {@link ChannelBuffer}.
+ * Encodes the requested array of bytes into a {@link ByteBuf}.
  * A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -42,7 +40,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("bytesEncoder", new {@link ByteArrayEncoder}());
  * </pre>
- * and then you can use an array of bytes instead of a {@link ChannelBuffer}
+ * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -51,14 +49,23 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * }
  * </pre>
  */
-public class ByteArrayEncoder extends OneToOneEncoder {
+public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ByteBuf> {
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof byte[])) {
-            return msg;
-        }
-        return wrappedBuffer((byte[]) msg);
+    public MessageBuf<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
     }
 
+    @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof byte[];
+    }
+
+    @Override
+    public ByteBuf encode(ChannelHandlerContext ctx, byte[] msg) throws Exception {
+        if (msg.length == 0) {
+            return null;
+        }
+        return Unpooled.wrappedBuffer(msg);
+    }
 }

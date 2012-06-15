@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpCodecUtil.*;
-
-import io.netty.buffer.ChannelBuffer;
+import static io.netty.handler.codec.http.HttpConstants.*;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Encodes an {@link HttpResponse} or an {@link HttpChunk} into
- * a {@link ChannelBuffer}.
+ * a {@link ByteBuf}.
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {
 
@@ -32,7 +31,7 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
     }
 
     @Override
-    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
+    protected void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception {
         HttpResponse response = (HttpResponse) message;
         buf.writeBytes(response.getProtocolVersion().toString().getBytes("ASCII"));
         buf.writeByte(SP);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,34 +15,40 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.channel.Channel;
+
 /**
- * Exception which should get thrown if a Channel got closed before it is expected 
+ * A {@link CodecException} which is thrown when a {@link Channel} is closed unexpectedly before
+ * the codec finishes handling the current message, such as missing response while waiting for a
+ * request.
  */
-public class PrematureChannelClosureException extends Exception {
-    
+public class PrematureChannelClosureException extends CodecException {
+
+    private static final long serialVersionUID = 4907642202594703094L;
+
     /**
-     * 
+     * Creates a new instance.
      */
-    private static final long serialVersionUID = 233460005724966593L;
+    public PrematureChannelClosureException() { }
 
-    public PrematureChannelClosureException() {
-        super();
+    /**
+     * Creates a new instance.
+     */
+    public PrematureChannelClosureException(String message, Throwable cause) {
+        super(message, cause);
     }
-    
-    public PrematureChannelClosureException(String msg) {
-        super(msg);
-    }
-    
-    
-    public PrematureChannelClosureException(String msg, Throwable t) {
-        super(msg, t);
-    }
-    
-    
-    public PrematureChannelClosureException(Throwable t) {
-        super(t);
-    }
-    
 
+    /**
+     * Creates a new instance.
+     */
+    public PrematureChannelClosureException(String message) {
+        super(message);
+    }
 
+    /**
+     * Creates a new instance.
+     */
+    public PrematureChannelClosureException(Throwable cause) {
+        super(cause);
+    }
 }

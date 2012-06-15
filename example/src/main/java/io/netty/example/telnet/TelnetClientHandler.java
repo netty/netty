@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,46 +15,33 @@
  */
 package io.netty.example.telnet;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateEvent;
-import io.netty.channel.ExceptionEvent;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Handles a client-side channel.
  */
-public class TelnetClientHandler extends SimpleChannelUpstreamHandler {
+@Sharable
+public class TelnetClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(TelnetClientHandler.class);
-
-    @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-        super.handleUpstream(ctx, e);
-    }
+    private static final Logger logger = Logger.getLogger(
+            TelnetClientHandler.class.getName());
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         // Print out the line received from the server.
-        logger.info((String) e.getMessage());
+        System.err.println(msg);
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.warn(
-                "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.log(
+                Level.WARNING,
+                "Unexpected exception from downstream.", cause);
+        ctx.close();
     }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -82,8 +82,9 @@ public class CookieEncoder {
      * Encodes the {@link Cookie}s which were added by {@link #addCookie(Cookie)}
      * so far into an HTTP header value.  If no {@link Cookie}s were added,
      * an empty string is returned.
-     * 
-     * <strong>Be aware that calling this method will clear the content of the {@link CookieEncoder}</strong>
+     *
+     * <strong>Be aware that calling this method will clear the {@link Cookie}s you added to
+     * this encoder.</strong>
      */
     public String encode() {
         String answer;
@@ -130,11 +131,11 @@ public class CookieEncoder {
             }
             if (cookie.isSecure()) {
                 sb.append(CookieHeaderNames.SECURE);
-                sb.append((char) HttpCodecUtil.SEMICOLON);
+                sb.append((char) HttpConstants.SEMICOLON);
             }
             if (cookie.isHttpOnly()) {
                 sb.append(CookieHeaderNames.HTTPONLY);
-                sb.append((char) HttpCodecUtil.SEMICOLON);
+                sb.append((char) HttpConstants.SEMICOLON);
             }
             if (cookie.getVersion() >= 1) {
                 if (cookie.getComment() != null) {
@@ -149,18 +150,18 @@ public class CookieEncoder {
 
                 if (!cookie.getPorts().isEmpty()) {
                     sb.append(CookieHeaderNames.PORT);
-                    sb.append((char) HttpCodecUtil.EQUALS);
-                    sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.EQUALS);
+                    sb.append((char) HttpConstants.DOUBLE_QUOTE);
                     for (int port: cookie.getPorts()) {
                         sb.append(port);
-                        sb.append((char) HttpCodecUtil.COMMA);
+                        sb.append((char) HttpConstants.COMMA);
                     }
-                    sb.setCharAt(sb.length() - 1, (char) HttpCodecUtil.DOUBLE_QUOTE);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                    sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.SEMICOLON);
                 }
                 if (cookie.isDiscard()) {
                     sb.append(CookieHeaderNames.DISCARD);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                    sb.append((char) HttpConstants.SEMICOLON);
                 }
             }
         }
@@ -194,14 +195,14 @@ public class CookieEncoder {
                 if (!cookie.getPorts().isEmpty()) {
                     sb.append('$');
                     sb.append(CookieHeaderNames.PORT);
-                    sb.append((char) HttpCodecUtil.EQUALS);
-                    sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.EQUALS);
+                    sb.append((char) HttpConstants.DOUBLE_QUOTE);
                     for (int port: cookie.getPorts()) {
                         sb.append(port);
-                        sb.append((char) HttpCodecUtil.COMMA);
+                        sb.append((char) HttpConstants.COMMA);
                     }
-                    sb.setCharAt(sb.length() - 1, (char) HttpCodecUtil.DOUBLE_QUOTE);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                    sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
+                    sb.append((char) HttpConstants.SEMICOLON);
                 }
             }
         }
@@ -236,9 +237,9 @@ public class CookieEncoder {
 
     private static void addUnquoted(StringBuilder sb, String name, String val) {
         sb.append(name);
-        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
-        sb.append((char) HttpCodecUtil.SEMICOLON);
+        sb.append((char) HttpConstants.SEMICOLON);
     }
 
     private static void addQuoted(StringBuilder sb, String name, String val) {
@@ -247,17 +248,17 @@ public class CookieEncoder {
         }
 
         sb.append(name);
-        sb.append((char) HttpCodecUtil.EQUALS);
-        sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+        sb.append((char) HttpConstants.EQUALS);
+        sb.append((char) HttpConstants.DOUBLE_QUOTE);
         sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
-        sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
-        sb.append((char) HttpCodecUtil.SEMICOLON);
+        sb.append((char) HttpConstants.DOUBLE_QUOTE);
+        sb.append((char) HttpConstants.SEMICOLON);
     }
 
-    private static void add(StringBuilder sb, String name, int val) {
+    private static void add(StringBuilder sb, String name, long val) {
         sb.append(name);
-        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
-        sb.append((char) HttpCodecUtil.SEMICOLON);
+        sb.append((char) HttpConstants.SEMICOLON);
     }
 }

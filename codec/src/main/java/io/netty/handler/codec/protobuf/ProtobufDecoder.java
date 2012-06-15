@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,24 +15,21 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferInputStream;
-import io.netty.channel.Channel;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.handler.codec.frame.FrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 
 /**
- * Decodes a received {@link ChannelBuffer} into a
+ * Decodes a received {@link ByteBuf} into a
  * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
  * {@link Message} and {@link MessageLite}.  Please note that this decoder must
  * be used with a proper {@link FrameDecoder} such as {@link ProtobufVarint32FrameDecoder}
@@ -51,7 +48,7 @@ import com.google.protobuf.MessageLite;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
  * </pre>
- * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
+ * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -64,7 +61,7 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufDecoder extends OneToOneDecoder {
+public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLite> {
 
     private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
@@ -85,29 +82,28 @@ public class ProtobufDecoder extends OneToOneDecoder {
     }
 
     @Override
-    protected Object decode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
-            return msg;
-        }
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof ByteBuf;
+    }
 
-        ChannelBuffer buf = (ChannelBuffer) msg;
-        if (buf.hasArray()) {
-            final int offset = buf.readerIndex();
+    @Override
+    public MessageLite decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        if (msg.hasArray()) {
+            final int offset = msg.readerIndex();
             if (extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes()).build();
+                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes()).build();
             } else {
                 return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes(), extensionRegistry).build();
+                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes(), extensionRegistry).build();
             }
         } else {
             if (extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream((ChannelBuffer) msg)).build();
+                        new ByteBufInputStream(msg)).build();
             } else {
                 return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream((ChannelBuffer) msg), extensionRegistry).build();
+                        new ByteBufInputStream(msg), extensionRegistry).build();
             }
         }
     }

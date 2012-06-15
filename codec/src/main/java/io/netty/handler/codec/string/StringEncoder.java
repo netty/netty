@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,22 +15,19 @@
  */
 package io.netty.handler.codec.string;
 
-import static io.netty.buffer.ChannelBuffers.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.nio.charset.Charset;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.frame.Delimiters;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
-
 /**
- * Encodes the requested {@link String} into a {@link ChannelBuffer}.
+ * Encodes the requested {@link String} into a {@link ByteBuf}.
  * A typical setup for a text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -42,7 +39,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
- * and then you can use a {@link String} instead of a {@link ChannelBuffer}
+ * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -53,7 +50,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends OneToOneEncoder {
+public class StringEncoder extends MessageToMessageEncoder<String, ByteBuf> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -76,11 +73,12 @@ public class StringEncoder extends OneToOneEncoder {
     }
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof String)) {
-            return msg;
-        }
-        return copiedBuffer((String) msg, charset);
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof String;
+    }
+
+    @Override
+    public ByteBuf encode(ChannelHandlerContext ctx, String msg) throws Exception {
+        return Unpooled.copiedBuffer(msg, charset);
     }
 }

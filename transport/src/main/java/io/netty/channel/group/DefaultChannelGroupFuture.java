@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,6 +16,12 @@
 package io.netty.channel.group;
 
 import static java.util.concurrent.TimeUnit.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,13 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
@@ -54,7 +53,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             boolean success = future.isSuccess();
-            boolean callSetDone = false;
+            boolean callSetDone;
             synchronized (DefaultChannelGroupFuture.this) {
                 if (success) {
                     successCount ++;
@@ -87,7 +86,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         Map<Integer, ChannelFuture> futureMap = new LinkedHashMap<Integer, ChannelFuture>();
         for (ChannelFuture f: futures) {
-            futureMap.put(f.getChannel().getId(), f);
+            futureMap.put(f.channel().id(), f);
         }
 
         this.futures = Collections.unmodifiableMap(futureMap);
@@ -127,7 +126,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
     @Override
     public ChannelFuture find(Channel channel) {
-        return futures.get(channel.getId());
+        return futures.get(channel.id());
     }
 
     @Override
@@ -220,7 +219,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } finally {
                     waiters--;
                 }
@@ -248,7 +247,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } catch (InterruptedException e) {
                     interrupted = true;
                 } finally {
@@ -304,7 +303,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 try {
                     for (;;) {
                         try {
-                            this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                            wait(waitTime / 1000000, (int) (waitTime % 1000000));
                         } catch (InterruptedException e) {
                             if (interruptable) {
                                 throw e;
@@ -333,7 +332,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
-    private void checkDeadLock() {
+    private static void checkDeadLock() {
         if (DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +
@@ -342,11 +341,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
-    boolean setDone() {
+    void setDone() {
         synchronized (this) {
             // Allow only once.
             if (done) {
-                return false;
+                return;
             }
 
             done = true;
@@ -356,7 +355,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
 
         notifyListeners();
-        return true;
     }
 
     private void notifyListeners() {

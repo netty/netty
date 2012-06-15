@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import io.netty.handler.codec.http.HttpMethod;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import io.netty.handler.codec.http.HttpMethod;
 
 /**
  * The request method of RTSP.
@@ -27,10 +27,11 @@ import io.netty.handler.codec.http.HttpMethod;
 public final class RtspMethods {
 
     /**
-     * The OPTIONS method represents a request for information about the communication options available on the request/response
-     * chain identified by the Request-URI. This method allows the client to determine the options and/or requirements
-     * associated with a resource, or the capabilities of a server, without implying a resource action or initiating a
-     * resource retrieval.
+     * The OPTIONS method represents a request for information about the communication options
+     * available on the request/response chain identified by the Request-URI. This method allows
+     * the client to determine the options and/or requirements associated with a resource, or the
+     * capabilities of a server, without implying a resource action or initiating a resource
+     * retrieval.
      */
     public static final HttpMethod OPTIONS = HttpMethod.OPTIONS;
 

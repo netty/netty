@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -456,7 +456,7 @@ final class InfCodes {
     // at least ten.  The ten bytes are six bytes for the longest length/
     // distance pair plus four bytes for overloading the bit buffer.
 
-    int inflate_fast(int bl, int bd, int[] tl, int tl_index, int[] td,
+    static int inflate_fast(int bl, int bd, int[] tl, int tl_index, int[] td,
             int td_index, InfBlocks s, ZStream z) {
         int t; // temporary pointer
         int[] tp; // temporary pointer

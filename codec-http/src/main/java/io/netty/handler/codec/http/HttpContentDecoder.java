@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpChunk}.
@@ -40,11 +38,11 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  * <p>
  * This handler must be placed after {@link HttpMessageDecoder} in the pipeline
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
- * converts {@link ChannelBuffer}s into HTTP requests.
+ * converts {@link ByteBuf}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
 
-    private DecoderEmbedder<ChannelBuffer> decoder;
+    private EmbeddedByteChannel decoder;
 
     /**
      * Creates a new instance.
@@ -53,11 +51,15 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Object msg = e.getMessage();
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
+
+    @Override
+    public Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
-            ctx.sendUpstream(e);
+            return msg;
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
@@ -80,54 +82,50 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                         getTargetContentEncoding(contentEncoding));
 
                 if (!m.isChunked()) {
-                    ChannelBuffer content = m.getContent();
+                    ByteBuf content = m.getContent();
                     // Decode the content
-                    content = ChannelBuffers.wrappedBuffer(
-                            decode(content), finishDecode());
+                    ByteBuf newContent = Unpooled.dynamicBuffer();
+                    decode(content, newContent);
+                    finishDecode(newContent);
 
                     // Replace the content.
-                    m.setContent(content);
+                    m.setContent(newContent);
                     if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
                         m.setHeader(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(content.readableBytes()));
+                                Integer.toString(newContent.readableBytes()));
                     }
                 }
             }
-
-            // Because HttpMessage is a mutable object, we can simply forward the received event.
-            ctx.sendUpstream(e);
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
-            ChannelBuffer content = c.getContent();
+            ByteBuf content = c.getContent();
 
             // Decode the chunk if necessary.
             if (decoder != null) {
                 if (!c.isLast()) {
-                    content = decode(content);
-                    if (content.readable()) {
-                        c.setContent(content);
-                        ctx.sendUpstream(e);
+                    ByteBuf newContent = Unpooled.dynamicBuffer();
+                    decode(content, newContent);
+                    if (newContent.readable()) {
+                        c.setContent(newContent);
+                    } else {
+                        return null;
                     }
                 } else {
-                    ChannelBuffer lastProduct = finishDecode();
+                    ByteBuf lastProduct = Unpooled.dynamicBuffer();
+                    finishDecode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
                     if (lastProduct.readable()) {
-                        Channels.fireMessageReceived(
-                                ctx, new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
+                        return new Object[] { new DefaultHttpChunk(lastProduct), c };
                     }
-
-                    // Emit the last chunk.
-                    ctx.sendUpstream(e);
                 }
-            } else {
-                ctx.sendUpstream(e);
             }
-        } else {
-            ctx.sendUpstream(e);
         }
+
+        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
+        return msg;
     }
 
     /**
@@ -139,7 +137,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract DecoderEmbedder<ChannelBuffer> newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract EmbeddedByteChannel newContentDecoder(String contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.
@@ -153,19 +151,25 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
         return HttpHeaders.Values.IDENTITY;
     }
 
-    private ChannelBuffer decode(ChannelBuffer buf) {
-        decoder.offer(buf);
-        return ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
+    private void decode(ByteBuf in, ByteBuf out) {
+        decoder.writeInbound(in);
+        fetchDecoderOutput(out);
     }
 
-    private ChannelBuffer finishDecode() {
-        ChannelBuffer result;
+    private void finishDecode(ByteBuf out) {
         if (decoder.finish()) {
-            result = ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
-        } else {
-            result = ChannelBuffers.EMPTY_BUFFER;
+            fetchDecoderOutput(out);
         }
         decoder = null;
-        return result;
+    }
+
+    private void fetchDecoderOutput(ByteBuf out) {
+        for (;;) {
+            ByteBuf buf = (ByteBuf) decoder.readInbound();
+            if (buf == null) {
+                break;
+            }
+            out.writeBytes(buf);
+        }
     }
 }

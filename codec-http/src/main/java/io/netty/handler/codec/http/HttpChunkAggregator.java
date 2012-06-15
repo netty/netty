@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,22 +15,18 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.channel.Channels.*;
 import static io.netty.handler.codec.http.HttpHeaders.*;
-
-import java.util.List;
-import java.util.Map.Entry;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.Channels;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -50,9 +46,9 @@ import io.netty.util.CharsetUtil;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
+public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
 
-    private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
+    private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
@@ -76,10 +72,12 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public boolean isDecodable(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+    }
 
-        Object msg = e.getMessage();
+    @Override
+    public HttpMessage decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
@@ -91,7 +89,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                write(ctx, succeededFuture(ctx.getChannel()), CONTINUE.duplicate());
+                ctx.write(CONTINUE.duplicate());
             }
 
             if (m.isChunked()) {
@@ -103,12 +101,13 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory()));
+                m.setContent(Unpooled.dynamicBuffer());
                 this.currentMessage = m;
+                return null;
             } else {
                 // Not a chunked message - pass through.
                 this.currentMessage = null;
-                ctx.sendUpstream(e);
+                return m;
             }
         } else if (msg instanceof HttpChunk) {
             // Sanity check
@@ -120,7 +119,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
 
             // Merge the received chunk into the content of the current message.
             HttpChunk chunk = (HttpChunk) msg;
-            ChannelBuffer content = currentMessage.getContent();
+            ByteBuf content = currentMessage.getContent();
 
             if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
                 // TODO: Respond with 413 Request Entity Too Large
@@ -149,12 +148,15 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                         HttpHeaders.Names.CONTENT_LENGTH,
                         String.valueOf(content.readableBytes()));
 
-                // All done - generate the event.
-                Channels.fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
+                // All done
+                return currentMessage;
+            } else {
+                return null;
             }
         } else {
-            // Neither HttpMessage or HttpChunk
-            ctx.sendUpstream(e);
+            throw new IllegalStateException(
+                    "Only " + HttpMessage.class.getSimpleName() + " and " +
+                    HttpChunk.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
         }
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
 
 final class SpdyCodecUtil {
-
-    static final int SPDY_MIN_VERSION = 2;
-    static final int SPDY_MAX_VERSION = 3;
 
     static final int SPDY_HEADER_TYPE_OFFSET   = 2;
     static final int SPDY_HEADER_FLAGS_OFFSET  = 4;
@@ -251,7 +248,7 @@ final class SpdyCodecUtil {
         ".1statusversionurl ";
     static final byte[] SPDY2_DICT;
     static {
-        byte[] SPDY2_DICT_ = null;
+        byte[] SPDY2_DICT_;
 
         try {
             SPDY2_DICT_ = SPDY2_DICT_S.getBytes("US-ASCII");
@@ -272,7 +269,7 @@ final class SpdyCodecUtil {
     /**
      * Reads a big-endian unsigned short integer from the buffer.
      */
-    static int getUnsignedShort(ChannelBuffer buf, int offset) {
+    static int getUnsignedShort(ByteBuf buf, int offset) {
         return (buf.getByte(offset)     & 0xFF) << 8 |
                 buf.getByte(offset + 1) & 0xFF;
     }
@@ -280,7 +277,7 @@ final class SpdyCodecUtil {
     /**
      * Reads a big-endian unsigned medium integer from the buffer.
      */
-    static int getUnsignedMedium(ChannelBuffer buf, int offset) {
+    static int getUnsignedMedium(ByteBuf buf, int offset) {
         return (buf.getByte(offset)     & 0xFF) << 16 |
                (buf.getByte(offset + 1) & 0xFF) <<  8 |
                 buf.getByte(offset + 2) & 0xFF;
@@ -289,7 +286,7 @@ final class SpdyCodecUtil {
     /**
      * Reads a big-endian (31-bit) integer from the buffer.
      */
-    static int getUnsignedInt(ChannelBuffer buf, int offset) {
+    static int getUnsignedInt(ByteBuf buf, int offset) {
         return (buf.getByte(offset)     & 0x7F) << 24 |
                (buf.getByte(offset + 1) & 0xFF) << 16 |
                (buf.getByte(offset + 2) & 0xFF) <<  8 |
@@ -299,7 +296,7 @@ final class SpdyCodecUtil {
     /**
      * Reads a big-endian signed integer from the buffer.
      */
-    static int getSignedInt(ChannelBuffer buf, int offset) {
+    static int getSignedInt(ByteBuf buf, int offset) {
         return (buf.getByte(offset)     & 0xFF) << 24 |
                (buf.getByte(offset + 1) & 0xFF) << 16 |
                (buf.getByte(offset + 2) & 0xFF) <<  8 |
@@ -309,7 +306,7 @@ final class SpdyCodecUtil {
     /**
      * Returns {@code true} if ID is for a server initiated stream or ping.
      */
-    static boolean isServerID(int ID) {
+    static boolean isServerId(int ID) {
         // Server initiated streams and pings have even IDs
         return ID % 2 == 0;
     }

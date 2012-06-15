@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,15 +16,15 @@
 package io.netty.channel;
 
 import static java.util.concurrent.TimeUnit.*;
+import io.netty.channel.AbstractChannel.FlushCheckpoint;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
+import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelFuture} implementation.  It is recommended to
@@ -32,39 +32,20 @@ import io.netty.util.internal.DeadLockProofWorker;
  * to create a new {@link ChannelFuture} rather than calling the constructor
  * explicitly.
  */
-public class DefaultChannelFuture implements ChannelFuture {
+public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFuture {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
 
-    private static final Throwable CANCELLED = new Throwable();
-
-    private static volatile boolean useDeadLockChecker = true;
-    private static boolean disabledDeadLockCheckerOnce;
-
-    /**
-     * Returns {@code true} if and only if the dead lock checker is enabled.
-     */
-    public static boolean isUseDeadLockChecker() {
-        return useDeadLockChecker;
-    }
-
-    /**
-     * Enables or disables the dead lock checker.  It is not recommended to
-     * disable the dead lock checker.  Disable it at your own risk!
-     */
-    public static void setUseDeadLockChecker(boolean useDeadLockChecker) {
-        if (!useDeadLockChecker && !disabledDeadLockCheckerOnce) {
-            disabledDeadLockCheckerOnce = true;
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "The dead lock checker in " +
-                        DefaultChannelFuture.class.getSimpleName() +
-                        " has been disabled as requested at your own risk.");
-            }
+    private static final int MAX_LISTENER_STACK_DEPTH = 8;
+    private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return 0;
         }
-        DefaultChannelFuture.useDeadLockChecker = useDeadLockChecker;
-    }
+    };
+
+    private static final Throwable CANCELLED = new Throwable();
 
     private final Channel channel;
     private final boolean cancellable;
@@ -75,6 +56,11 @@ public class DefaultChannelFuture implements ChannelFuture {
     private boolean done;
     private Throwable cause;
     private int waiters;
+
+    /**
+     * Opportunistically extending FlushCheckpoint to reduce GC.
+     * Only used for flush() operation. See AbstractChannel.DefaultUnsafe.flush() */
+    private long flushCheckpoint;
 
     /**
      * Creates a new instance.
@@ -90,7 +76,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public Channel getChannel() {
+    public Channel channel() {
         return channel;
     }
 
@@ -105,7 +91,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public synchronized Throwable getCause() {
+    public synchronized Throwable cause() {
         if (cause != CANCELLED) {
             return cause;
         } else {
@@ -119,7 +105,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public void addListener(ChannelFutureListener listener) {
+    public ChannelFuture addListener(final ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -148,12 +134,14 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
 
         if (notifyNow) {
-            notifyListener(listener);
+            notifyListener(this, listener);
         }
+
+        return this;
     }
 
     @Override
-    public void removeListener(ChannelFutureListener listener) {
+    public ChannelFuture removeListener(ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -175,28 +163,39 @@ public class DefaultChannelFuture implements ChannelFuture {
                 }
             }
         }
+
+        return this;
     }
 
     @Override
-    public ChannelFuture rethrowIfFailed() throws Exception {
-        if (!isDone()) {
-            return this;
-        }
-        
-        Throwable cause = getCause();
+    public ChannelFuture sync() throws InterruptedException {
+        await();
+        rethrowIfFailed();
+        return this;
+    }
+
+    @Override
+    public ChannelFuture syncUninterruptibly() {
+        awaitUninterruptibly();
+        rethrowIfFailed();
+        return this;
+    }
+
+    private void rethrowIfFailed() {
+        Throwable cause = cause();
         if (cause == null) {
-            return this;
+            return;
         }
 
-        if (cause instanceof Exception) {
-            throw (Exception) cause;
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
         }
 
         if (cause instanceof Error) {
             throw (Error) cause;
         }
 
-        throw new RuntimeException(cause);
+        throw new ChannelException(cause);
     }
 
     @Override
@@ -210,7 +209,7 @@ public class DefaultChannelFuture implements ChannelFuture {
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } finally {
                     waiters--;
                 }
@@ -238,7 +237,7 @@ public class DefaultChannelFuture implements ChannelFuture {
                 checkDeadLock();
                 waiters++;
                 try {
-                    this.wait();
+                    wait();
                 } catch (InterruptedException e) {
                     interrupted = true;
                 } finally {
@@ -294,7 +293,7 @@ public class DefaultChannelFuture implements ChannelFuture {
                 try {
                     for (;;) {
                         try {
-                            this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                            wait(waitTime / 1000000, (int) (waitTime % 1000000));
                         } catch (InterruptedException e) {
                             if (interruptable) {
                                 throw e;
@@ -324,11 +323,8 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     private void checkDeadLock() {
-        if (isUseDeadLockChecker() && DeadLockProofWorker.PARENT.get() != null) {
-            throw new IllegalStateException(
-                    "await*() in I/O thread causes a dead lock or " +
-                    "sudden performance drop. Use addListener() instead or " +
-                    "call await*() from a different thread.");
+        if (channel().isRegistered() && channel().eventLoop().inEventLoop()) {
+            throw new BlockingOperationException();
         }
     }
 
@@ -398,22 +394,67 @@ public class DefaultChannelFuture implements ChannelFuture {
         //    Hence any listener list modification happens-before this method.
         // 2) This method is called only when 'done' is true.  Once 'done'
         //    becomes true, the listener list is never modified - see add/removeListener()
-        if (firstListener != null) {
-            notifyListener(firstListener);
+
+        if (firstListener == null) {
+            return;
+        }
+
+        if (channel().eventLoop().inEventLoop()) {
+            notifyListener0(this, firstListener);
             firstListener = null;
 
             if (otherListeners != null) {
                 for (ChannelFutureListener l: otherListeners) {
-                    notifyListener(l);
+                    notifyListener0(this, l);
                 }
                 otherListeners = null;
             }
+        } else {
+            final ChannelFutureListener firstListener = this.firstListener;
+            final List<ChannelFutureListener> otherListeners = this.otherListeners;
+            this.firstListener = null;
+            this.otherListeners = null;
+            channel().eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    notifyListener0(DefaultChannelFuture.this, firstListener);
+                    if (otherListeners != null) {
+                        for (ChannelFutureListener l: otherListeners) {
+                            notifyListener0(DefaultChannelFuture.this, l);
+                        }
+                    }
+                }
+            });
         }
     }
 
-    private void notifyListener(ChannelFutureListener l) {
+    static void notifyListener(final ChannelFuture f, final ChannelFutureListener l) {
+        EventLoop loop = f.channel().eventLoop();
+        if (loop.inEventLoop()) {
+            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                try {
+                    notifyListener0(f, l);
+                } finally {
+                    LISTENER_STACK_DEPTH.set(stackDepth);
+                }
+                return;
+            }
+        }
+
+        loop.execute(new Runnable() {
+            @Override
+            public void run() {
+                notifyListener(f, l);
+            }
+
+        });
+    }
+
+    private static void notifyListener0(ChannelFuture f, ChannelFutureListener l) {
         try {
-            l.operationComplete(this);
+            l.operationComplete(f);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn(
@@ -463,5 +504,20 @@ public class DefaultChannelFuture implements ChannelFuture {
                         ChannelFutureProgressListener.class.getSimpleName() + ".", t);
             }
         }
+    }
+
+    @Override
+    long flushCheckpoint() {
+        return flushCheckpoint;
+    }
+
+    @Override
+    void flushCheckpoint(long checkpoint) {
+        flushCheckpoint = checkpoint;
+    }
+
+    @Override
+    ChannelFuture future() {
+        return this;
     }
 }

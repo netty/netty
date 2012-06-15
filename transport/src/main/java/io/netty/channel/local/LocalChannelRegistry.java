@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,32 +15,46 @@
  */
 package io.netty.channel.local;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+
+import java.net.SocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import io.netty.channel.Channel;
-import io.netty.util.internal.ConcurrentHashMap;
-
-/**
- */
 final class LocalChannelRegistry {
 
-    private static final ConcurrentMap<LocalAddress, Channel> map =
-        new ConcurrentHashMap<LocalAddress, Channel>();
+    private static final ConcurrentMap<LocalAddress, Channel> boundChannels =
+            new ConcurrentHashMap<LocalAddress, Channel>();
 
-    static boolean isRegistered(LocalAddress address) {
-        return map.containsKey(address);
+    static LocalAddress register(
+            Channel channel, LocalAddress oldLocalAddress, SocketAddress localAddress) {
+        if (oldLocalAddress != null) {
+            throw new ChannelException("already bound");
+        }
+        if (!(localAddress instanceof LocalAddress)) {
+            throw new ChannelException(
+                    "unsupported address type: " + localAddress.getClass().getSimpleName());
+        }
+
+        LocalAddress addr = (LocalAddress) localAddress;
+        if (LocalAddress.ANY.equals(addr)) {
+            addr = new LocalAddress(channel);
+        }
+
+        Channel boundChannel = boundChannels.putIfAbsent(addr, channel);
+        if (boundChannel != null) {
+            throw new ChannelException("address already in use by: " + boundChannel);
+        }
+        return addr;
     }
 
-    static Channel getChannel(LocalAddress address) {
-        return map.get(address);
+    static Channel get(SocketAddress localAddress) {
+        return boundChannels.get(localAddress);
     }
 
-    static boolean register(LocalAddress address, Channel channel) {
-        return map.putIfAbsent(address, channel) == null;
-    }
-
-    static boolean unregister(LocalAddress address) {
-        return map.remove(address) != null;
+    static void unregister(LocalAddress localAddress) {
+        boundChannels.remove(localAddress);
     }
 
     private LocalChannelRegistry() {

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -28,12 +28,12 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame.
      */
     public CloseWebSocketFrame() {
-        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(Unpooled.EMPTY_BUFFER);
     }
 
     /**
      * Creates a new empty close frame with closing status code and reason text
-     * 
+     *
      * @param statusCode
      *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
@@ -46,7 +46,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new close frame with no losing status code and no reason text
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -58,7 +58,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new close frame with closing status code and reason text
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -78,7 +78,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
         }
 
-        ChannelBuffer binaryData = ChannelBuffers.buffer(2 + reasonBytes.length);
+        ByteBuf binaryData = Unpooled.buffer(2 + reasonBytes.length);
         binaryData.writeShort(statusCode);
         if (reasonBytes.length > 0) {
             binaryData.writeBytes(reasonBytes);
@@ -90,7 +90,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Creates a new close frame
-     * 
+     *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
@@ -98,11 +98,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * @param binaryData
      *            the content of the frame. Must be 2 byte integer followed by optional UTF-8 encoded string.
      */
-    public CloseWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+    public CloseWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
         if (binaryData == null) {
-            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(Unpooled.EMPTY_BUFFER);
         } else {
             setBinaryData(binaryData);
         }
@@ -113,7 +113,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * a status code is set, -1 is returned.
      */
     public int getStatusCode() {
-        ChannelBuffer binaryData = this.getBinaryData();
+        ByteBuf binaryData = getBinaryData();
         if (binaryData == null || binaryData.capacity() == 0) {
             return -1;
         }
@@ -130,7 +130,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * text is not supplied, an empty string is returned.
      */
     public String getReasonText() {
-        ChannelBuffer binaryData = this.getBinaryData();
+        ByteBuf binaryData = getBinaryData();
         if (binaryData == null || binaryData.capacity() <= 2) {
             return "";
         }

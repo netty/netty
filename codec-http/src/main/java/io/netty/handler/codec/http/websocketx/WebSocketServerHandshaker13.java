@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,31 +15,28 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>
- * (originally web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
- * 17</a>).
+ * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>
+ * (originally web socket specification <a href="http://goo.gl/zVBkL">draft-ietf-hybi-thewebsocketprotocol-17</a>).
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
@@ -51,36 +48,21 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     private final boolean allowExtensions;
 
     /**
-     * Constructor using defaults
-     * 
-     * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            CSV of supported protocols
-     * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
-     */
-    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions) {
-        this(webSocketURL, subprotocols, allowExtensions, Long.MAX_VALUE);
-    }
-    
-    /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
+     *        URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web
+     *        socket frames will be sent to this URL.
      * @param subprotocols
-     *            CSV of supported protocols
+     *        CSV of supported protocols
      * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
+     *        Allow extensions to be used in the reserved bits of the web socket frame
      * @param maxFramePayloadLength
-     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
-     *            reduce denial of service attacks using long data frames.
+     *        Maximum allowable frame payload length. Setting this value to your application's
+     *        requirement may reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions,
-            long maxFramePayloadLength) {
+    public WebSocketServerHandshaker13(
+            String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength) {
         super(WebSocketVersion.V13, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
@@ -91,11 +73,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
      * share the same wire protocol.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -106,11 +88,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -118,7 +100,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
+     *
      * @param channel
      *            Channel
      * @param req
@@ -128,7 +110,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 13 server handshake", channel.getId()));
+            logger.debug(String.format("Channel %s WS Version 13 server handshake", channel.id()));
         }
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
@@ -153,10 +135,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
-                throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
+                throw new WebSocketHandshakeException(
+                        "Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                this.setSelectedSubprotocol(selectedSubprotocol);
+                setSelectedSubprotocol(selectedSubprotocol);
             }
         }
 
@@ -164,13 +147,13 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         ChannelFuture future = channel.write(res);
 
         // Upgrade the connection and send the handshake response.
-        ChannelPipeline p = channel.getPipeline();
+        ChannelPipeline p = channel.pipeline();
         if (p.get(HttpChunkAggregator.class) != null) {
             p.remove(HttpChunkAggregator.class);
         }
 
         p.replace(HttpRequestDecoder.class, "wsdecoder",
-                new WebSocket13FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
+                new WebSocket13FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
 
         return future;
@@ -178,7 +161,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     /**
      * Echo back the closing frame and close the connection
-     * 
+     *
      * @param channel
      *            Channel
      * @param frame

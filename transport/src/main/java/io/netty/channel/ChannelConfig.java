@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,14 +15,11 @@
  */
 package io.netty.channel;
 
-import java.nio.ByteOrder;
-import java.util.Map;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.HeapChannelBufferFactory;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.socket.nio.NioSocketChannelConfig;
+
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
+import java.util.Map;
 
 /**
  * A set of configuration properties of a {@link Channel}.
@@ -48,17 +45,14 @@ import io.netty.channel.socket.nio.NioSocketChannelConfig;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "bufferFactory"}</td><td>{@link #setBufferFactory(ChannelBufferFactory)}</td>
- * </tr><tr>
  * <td>{@code "connectTimeoutMillis"}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
- * </tr><tr>
- * <td>{@code "pipelineFactory"}</td><td>{@link #setPipelineFactory(ChannelPipelineFactory)}</td>
  * </tr>
  * </table>
  * <p>
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
- * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
+ * socket as explained in {@link SocketChannelConfig}.
+ *
  * @apiviz.has io.netty.channel.ChannelPipelineFactory
  * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
  *
@@ -66,10 +60,14 @@ import io.netty.channel.socket.nio.NioSocketChannelConfig;
  */
 public interface ChannelConfig {
 
+    Map<ChannelOption<?>, Object> getOptions();
+
     /**
      * Sets the configuration properties from the specified {@link Map}.
      */
-    void setOptions(Map<String, Object> options);
+    boolean setOptions(Map<ChannelOption<?>, ?> options);
+
+    <T> T getOption(ChannelOption<T> option);
 
     /**
      * Sets a configuration property with the specified name and value.
@@ -91,39 +89,7 @@ public interface ChannelConfig {
      *
      * @return {@code true} if and only if the property has been set
      */
-    boolean setOption(String name, Object value);
-
-    /**
-     * Returns the default {@link ChannelBufferFactory} used to create a new
-     * {@link ChannelBuffer}.  The default is {@link HeapChannelBufferFactory}.
-     * You can specify a different factory to change the default
-     * {@link ByteOrder} for example.
-     */
-    ChannelBufferFactory getBufferFactory();
-
-    /**
-     * Sets the default {@link ChannelBufferFactory} used to create a new
-     * {@link ChannelBuffer}.  The default is {@link HeapChannelBufferFactory}.
-     * You can specify a different factory to change the default
-     * {@link ByteOrder} for example.
-     */
-    void setBufferFactory(ChannelBufferFactory bufferFactory);
-
-    /**
-     * Returns the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.  If the {@link Channel} does not create
-     * a child channel, this property is not used at all, and therefore will
-     * be ignored.
-     */
-    ChannelPipelineFactory getPipelineFactory();
-
-    /**
-     * Sets the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.  If the {@link Channel} does not create
-     * a child channel, this property is not used at all, and therefore will
-     * be ignored.
-     */
-    void setPipelineFactory(ChannelPipelineFactory pipelineFactory);
+    <T> boolean setOption(ChannelOption<T> option, T value);
 
     /**
      * Returns the connect timeout of the channel in milliseconds.  If the
@@ -143,4 +109,25 @@ public interface ChannelConfig {
      *                             {@code 0} to disable.
      */
     void setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    /**
+     * Returns the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is used for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     */
+    int getWriteSpinCount();
+
+    /**
+     * Sets the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is used for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified value is {@code 0} or less than {@code 0}
+     */
+    void setWriteSpinCount(int writeSpinCount);
 }

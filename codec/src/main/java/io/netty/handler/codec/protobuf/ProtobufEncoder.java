@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,17 +15,14 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.ChannelBuffers.*;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
+import static io.netty.buffer.Unpooled.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.frame.LengthFieldPrepender;
-import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
@@ -33,7 +30,7 @@ import com.google.protobuf.MessageLite;
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
  * Protocol Buffers</a> {@link Message} and {@link MessageLite} into a
- * {@link ChannelBuffer}. A typical setup for TCP/IP would be:
+ * {@link ByteBuf}. A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
@@ -47,7 +44,7 @@ import com.google.protobuf.MessageLite;
  * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
  * </pre>
- * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
+ * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
  * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
@@ -60,17 +57,21 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufEncoder extends OneToOneEncoder {
+public class ProtobufEncoder extends MessageToMessageEncoder<Object, ByteBuf> {
 
     @Override
-    protected Object encode(
-            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof MessageLite || msg instanceof MessageLite.Builder;
+    }
+
+    @Override
+    public ByteBuf encode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());
         }
         if (msg instanceof MessageLite.Builder) {
             return wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
         }
-        return msg;
+        return null;
     }
 }

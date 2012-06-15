@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.http;
+
+import io.netty.util.internal.CaseIgnoringComparator;
 
 import java.util.Collections;
 import java.util.Set;
@@ -51,7 +53,7 @@ public class DefaultCookie implements Cookie {
     private boolean discard;
     private Set<Integer> ports = Collections.emptySet();
     private Set<Integer> unmodifiablePorts = ports;
-    private int maxAge = -1;
+    private long maxAge = -1;
     private int version;
     private boolean secure;
     private boolean httpOnly;
@@ -209,12 +211,12 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
-    public int getMaxAge() {
+    public long getMaxAge() {
         return maxAge;
     }
 
     @Override
-    public void setMaxAge(int maxAge) {
+    public void setMaxAge(long maxAge) {
         if (maxAge < -1) {
             throw new IllegalArgumentException(
                     "maxAge must be either -1, 0, or a positive integer: " +
@@ -269,21 +271,27 @@ public class DefaultCookie implements Cookie {
             return false;
         }
 
-        if (getPath() == null && that.getPath() != null) {
-            return false;
+        if (getPath() == null) {
+            if (that.getPath() != null) {
+                return false;
+            }
         } else if (that.getPath() == null) {
             return false;
-        }
-        if (!getPath().equals(that.getPath())) {
+        } else if (!getPath().equals(that.getPath())) {
             return false;
         }
 
-        if (getDomain() == null && that.getDomain() != null) {
-            return false;
+        if (getDomain() == null) {
+            if (that.getDomain() != null) {
+                return false;
+            }
         } else if (that.getDomain() == null) {
             return false;
+        } else {
+            return getDomain().equalsIgnoreCase(that.getDomain());
         }
-        return getDomain().equalsIgnoreCase(that.getDomain());
+
+        return true;
     }
 
     @Override
@@ -294,23 +302,31 @@ public class DefaultCookie implements Cookie {
             return v;
         }
 
-        if (getPath() == null && c.getPath() != null) {
-            return -1;
+        if (getPath() == null) {
+            if (c.getPath() != null) {
+                return -1;
+            }
         } else if (c.getPath() == null) {
             return 1;
+        } else {
+            v = getPath().compareTo(c.getPath());
+            if (v != 0) {
+                return v;
+            }
         }
-        v = getPath().compareTo(c.getPath());
-        if (v != 0) {
+
+        if (getDomain() == null) {
+            if (c.getDomain() != null) {
+                return -1;
+            }
+        } else if (c.getDomain() == null) {
+            return 1;
+        } else {
+            v = getDomain().compareToIgnoreCase(c.getDomain());
             return v;
         }
 
-        if (getDomain() == null && c.getDomain() != null) {
-            return -1;
-        } else if (c.getDomain() == null) {
-            return 1;
-        }
-        v = getDomain().compareToIgnoreCase(c.getDomain());
-        return v;
+        return 0;
     }
 
     @Override

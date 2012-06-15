@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel;
+
+import java.nio.channels.Channels;
 
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
@@ -32,7 +34,7 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public Throwable getCause() {
+    public Throwable cause() {
         return null;
     }
 
@@ -42,7 +44,12 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture rethrowIfFailed() throws Exception {
+    public ChannelFuture sync() throws InterruptedException {
+        return this;
+    }
+
+    @Override
+    public ChannelFuture syncUninterruptibly() {
         return this;
     }
 }

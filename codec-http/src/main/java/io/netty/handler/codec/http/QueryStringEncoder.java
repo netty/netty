@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -49,7 +49,7 @@ public class QueryStringEncoder {
      * path string.  The encoder will encode the URI in UTF-8.
      */
     public QueryStringEncoder(String uri) {
-        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
+        this(uri, HttpConstants.DEFAULT_CHARSET);
     }
 
     /**

@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,20 +15,13 @@
  */
 package io.netty.example.uptime;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
-import io.netty.bootstrap.ClientBootstrap;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPipelineFactory;
-import io.netty.channel.Channels;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoop;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 
 
 /**
@@ -37,9 +30,6 @@ import io.netty.util.Timer;
  * mechanism in Netty.
  */
 public class UptimeClient {
-    
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(UptimeClient.class);
 
     // Sleep 5 seconds before a reconnection attempt.
     static final int RECONNECT_DELAY = 5;
@@ -50,46 +40,41 @@ public class UptimeClient {
     private final String host;
     private final int port;
 
+    // A single handler will be reused across multiple connection attempts to keep when the last
+    // successful connection attempt was.
+    private final UptimeClientHandler handler = new UptimeClientHandler(this);
+
     public UptimeClient(String host, int port) {
         this.host = host;
         this.port = port;
     }
 
     public void run() {
-        // Initialize the timer that schedules subsequent reconnection attempts.
-        final Timer timer = new HashedWheelTimer();
+        configureBootstrap(new Bootstrap()).connect();
+    }
 
-        // Configure the client.
-        final ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool()));
+    private Bootstrap configureBootstrap(Bootstrap b) {
+        return configureBootstrap(b, new NioEventLoop());
+    }
 
-        // Configure the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-
-            private final ChannelHandler timeoutHandler =
-                new ReadTimeoutHandler(timer, READ_TIMEOUT);
-            private final ChannelHandler uptimeHandler =
-                new UptimeClientHandler(bootstrap, timer);
-
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        timeoutHandler, uptimeHandler);
+    Bootstrap configureBootstrap(Bootstrap b, EventLoop l) {
+        b.eventLoop(l)
+         .channel(new NioSocketChannel())
+         .remoteAddress(host, port)
+         .handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new IdleStateHandler(READ_TIMEOUT, 0, 0), handler);
             }
-        });
+         });
 
-        bootstrap.setOption(
-                "remoteAddress", new InetSocketAddress(host, port));
-
-        // Initiate the first connection attempt - the rest is handled by
-        // UptimeClientHandler.
-        bootstrap.connect();
+        return b;
     }
 
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 2) {
-            logger.error(
+            System.err.println(
                     "Usage: " + UptimeClient.class.getSimpleName() +
                     " <host> <port>");
             return;

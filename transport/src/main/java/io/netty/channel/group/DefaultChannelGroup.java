@@ -1,11 +1,11 @@
 /*
- * Copyright 2011 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,22 +15,21 @@
  */
 package io.netty.channel.group;
 
-import java.net.SocketAddress;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ServerChannel;
+
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ServerChannel;
-import io.netty.util.internal.ConcurrentHashMap;
 
 /**
  * The default {@link ChannelGroup} implementation.
@@ -46,7 +45,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
-            remove(future.getChannel());
+            remove(future.channel());
         }
     };
 
@@ -70,7 +69,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -101,9 +100,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         } else if (o instanceof Channel) {
             Channel c = (Channel) o;
             if (o instanceof ServerChannel) {
-                return serverChannels.containsKey(c.getId());
+                return serverChannels.containsKey(c.id());
             } else {
-                return nonServerChannels.containsKey(c.getId());
+                return nonServerChannels.containsKey(c.id());
             }
         } else {
             return false;
@@ -115,9 +114,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         ConcurrentMap<Integer, Channel> map =
             channel instanceof ServerChannel? serverChannels : nonServerChannels;
 
-        boolean added = map.putIfAbsent(channel.getId(), channel) == null;
+        boolean added = map.putIfAbsent(channel.id(), channel) == null;
         if (added) {
-            channel.getCloseFuture().addListener(remover);
+            channel.closeFuture().addListener(remover);
         }
         return added;
     }
@@ -133,9 +132,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         } else if (o instanceof Channel) {
             c = (Channel) o;
             if (c instanceof ServerChannel) {
-                c = serverChannels.remove(c.getId());
+                c = serverChannels.remove(c.id());
             } else {
-                c = nonServerChannels.remove(c.getId());
+                c = nonServerChannels.remove(c.id());
             }
         }
 
@@ -143,7 +142,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             return false;
         }
 
-        c.getCloseFuture().removeListener(remover);
+        c.closeFuture().removeListener(remover);
         return true;
     }
 
@@ -182,10 +181,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.close().awaitUninterruptibly());
+            futures.put(c.id(), c.close().awaitUninterruptibly());
         }
         for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.close());
+            futures.put(c.id(), c.close());
         }
 
         return new DefaultChannelGroupFuture(this, futures);
@@ -197,55 +196,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.disconnect().awaitUninterruptibly());
+            futures.put(c.id(), c.disconnect());
         }
         for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.disconnect());
-        }
-
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture setInterestOps(int interestOps) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-
-        for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.setInterestOps(interestOps).awaitUninterruptibly());
-        }
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.setInterestOps(interestOps));
-        }
-
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture setReadable(boolean readable) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-
-        for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.setReadable(readable).awaitUninterruptibly());
-        }
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.setReadable(readable));
-        }
-
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture unbind() {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-
-        for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.unbind().awaitUninterruptibly());
-        }
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.unbind());
+            futures.put(c.id(), c.disconnect());
         }
 
         return new DefaultChannelGroupFuture(this, futures);
@@ -255,31 +209,14 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public ChannelGroupFuture write(Object message) {
         Map<Integer, ChannelFuture> futures =
             new LinkedHashMap<Integer, ChannelFuture>(size());
-        if (message instanceof ChannelBuffer) {
-            ChannelBuffer buf = (ChannelBuffer) message;
+        if (message instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) message;
             for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(buf.duplicate()));
+                futures.put(c.id(), c.write(buf.duplicate()));
             }
         } else {
             for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(message));
-            }
-        }
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture write(Object message, SocketAddress remoteAddress) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-        if (message instanceof ChannelBuffer) {
-            ChannelBuffer buf = (ChannelBuffer) message;
-            for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(buf.duplicate(), remoteAddress));
-            }
-        } else {
-            for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(message, remoteAddress));
+                futures.put(c.id(), c.write(message));
             }
         }
         return new DefaultChannelGroupFuture(this, futures);
@@ -297,7 +234,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public int compareTo(ChannelGroup o) {
-        int v = getName().compareTo(o.getName());
+        int v = name().compareTo(o.name());
         if (v != 0) {
             return v;
         }
@@ -308,6 +245,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     @Override
     public String toString() {
         return getClass().getSimpleName() +
-               "(name: " + getName() + ", size: " + size() + ')';
+               "(name: " + name() + ", size: " + size() + ')';
     }
 }

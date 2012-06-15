@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,55 +22,59 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
 
-    private int lastGoodStreamID;
+    private int lastGoodStreamId;
     private SpdySessionStatus status;
 
     /**
      * Creates a new instance.
      *
-     * @param lastGoodStreamID the Last-good-stream-ID of this frame
+     * @param lastGoodStreamId the Last-good-stream-ID of this frame
      */
-    public DefaultSpdyGoAwayFrame(int lastGoodStreamID) {
-        this(lastGoodStreamID, 0);
+    public DefaultSpdyGoAwayFrame(int lastGoodStreamId) {
+        this(lastGoodStreamId, 0);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param lastGoodStreamID the Last-good-stream-ID of this frame
+     * @param lastGoodStreamId the Last-good-stream-ID of this frame
      * @param statusCode       the Status code of this frame
      */
-    public DefaultSpdyGoAwayFrame(int lastGoodStreamID, int statusCode) {
-        this(lastGoodStreamID, SpdySessionStatus.valueOf(statusCode));
+    public DefaultSpdyGoAwayFrame(int lastGoodStreamId, int statusCode) {
+        this(lastGoodStreamId, SpdySessionStatus.valueOf(statusCode));
     }
 
     /**
      * Creates a new instance.
      *
-     * @param lastGoodStreamID the Last-good-stream-ID of this frame
+     * @param lastGoodStreamId the Last-good-stream-ID of this frame
      * @param status           the status of this frame
      */
-    public DefaultSpdyGoAwayFrame(int lastGoodStreamID, SpdySessionStatus status) {
-        setLastGoodStreamID(lastGoodStreamID);
+    public DefaultSpdyGoAwayFrame(int lastGoodStreamId, SpdySessionStatus status) {
+        setLastGoodStreamId(lastGoodStreamId);
         setStatus(status);
     }
 
-    public int getLastGoodStreamID() {
-        return lastGoodStreamID;
+    @Override
+    public int getLastGoodStreamId() {
+        return lastGoodStreamId;
     }
 
-    public void setLastGoodStreamID(int lastGoodStreamID) {
-        if (lastGoodStreamID < 0) {
+    @Override
+    public void setLastGoodStreamId(int lastGoodStreamId) {
+        if (lastGoodStreamId < 0) {
             throw new IllegalArgumentException("Last-good-stream-ID"
-                    + " cannot be negative: " + lastGoodStreamID);
+                    + " cannot be negative: " + lastGoodStreamId);
         }
-        this.lastGoodStreamID = lastGoodStreamID;
+        this.lastGoodStreamId = lastGoodStreamId;
     }
 
+    @Override
     public SpdySessionStatus getStatus() {
         return status;
     }
 
+    @Override
     public void setStatus(SpdySessionStatus status) {
         this.status = status;
     }
@@ -81,7 +85,7 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Last-good-stream-ID = ");
-        buf.append(lastGoodStreamID);
+        buf.append(lastGoodStreamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Status: ");
         buf.append(status.toString());

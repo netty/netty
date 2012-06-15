@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,19 +15,17 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.util.internal.QueueFactory;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.MessageEvent;
-
 final class SpdySession {
-
-    private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");
 
     private final Map<Integer, StreamState> activeStreams =
         new ConcurrentHashMap<Integer, StreamState>();
@@ -35,26 +33,26 @@ final class SpdySession {
     SpdySession() {
     }
 
-    public int numActiveStreams() {
+    int numActiveStreams() {
         return activeStreams.size();
     }
 
-    public boolean noActiveStreams() {
+    boolean noActiveStreams() {
         return activeStreams.isEmpty();
     }
 
-    public boolean isActiveStream(int streamID) {
+    boolean isActiveStream(int streamID) {
         return activeStreams.containsKey(new Integer(streamID));
     }
 
     // Stream-IDs should be iterated in priority order
-    public Set<Integer> getActiveStreams() {
+    Set<Integer> getActiveStreams() {
         TreeSet<Integer> StreamIDs = new TreeSet<Integer>(new PriorityComparator());
         StreamIDs.addAll(activeStreams.keySet());
         return StreamIDs;
     }
 
-    public void acceptStream(
+    void acceptStream(
             int streamID, byte priority, boolean remoteSideClosed, boolean localSideClosed,
             int sendWindowSize, int receiveWindowSize) {
         if (!remoteSideClosed || !localSideClosed) {
@@ -62,28 +60,25 @@ final class SpdySession {
                     new Integer(streamID),
                     new StreamState(priority, remoteSideClosed, localSideClosed, sendWindowSize, receiveWindowSize));
         }
-        return;
     }
 
-    public void removeStream(int streamID) {
+    boolean removeStream(int streamID) {
         Integer StreamID = new Integer(streamID);
         StreamState state = activeStreams.get(StreamID);
         activeStreams.remove(StreamID);
         if (state != null) {
-            MessageEvent e = state.removePendingWrite();
-            while (e != null) {
-                e.getFuture().setFailure(STREAM_CLOSED);
-                e = state.removePendingWrite();
-            }
+            return state.clearPendingWrites();
+        } else {
+            return false;
         }
     }
 
-    public boolean isRemoteSideClosed(int streamID) {
+    boolean isRemoteSideClosed(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state == null) || state.isRemoteSideClosed();
+        return state == null || state.isRemoteSideClosed();
     }
 
-    public void closeRemoteSide(int streamID) {
+    void closeRemoteSide(int streamID) {
         Integer StreamID = new Integer(streamID);
         StreamState state = activeStreams.get(StreamID);
         if (state != null) {
@@ -94,12 +89,12 @@ final class SpdySession {
         }
     }
 
-    public boolean isLocalSideClosed(int streamID) {
+    boolean isLocalSideClosed(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state == null) || state.isLocalSideClosed();
+        return state == null || state.isLocalSideClosed();
     }
 
-    public void closeLocalSide(int streamID) {
+    void closeLocalSide(int streamID) {
         Integer StreamID = new Integer(streamID);
         StreamState state = activeStreams.get(StreamID);
         if (state != null) {
@@ -114,30 +109,29 @@ final class SpdySession {
      * hasReceivedReply and receivedReply are only called from messageReceived
      * no need to synchronize access to the StreamState
      */
-
-    public boolean hasReceivedReply(int streamID) {
+    boolean hasReceivedReply(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) && state.hasReceivedReply();
+        return state != null && state.hasReceivedReply();
     }
 
-    public void receivedReply(int streamID) {
+    void receivedReply(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         if (state != null) {
             state.receivedReply();
         }
     }
 
-    public int getSendWindowSize(int streamID) {
+    int getSendWindowSize(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null ? state.getSendWindowSize() : -1;
     }
 
-    public int updateSendWindowSize(int streamID, int deltaWindowSize) {
+    int updateSendWindowSize(int streamID, int deltaWindowSize) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null ? state.updateSendWindowSize(deltaWindowSize) : -1;
     }
 
-    public int updateReceiveWindowSize(int streamID, int deltaWindowSize) {
+    int updateReceiveWindowSize(int streamID, int deltaWindowSize) {
         StreamState state = activeStreams.get(new Integer(streamID));
         if (deltaWindowSize > 0) {
             state.setReceiveWindowSizeLowerBound(0);
@@ -145,12 +139,12 @@ final class SpdySession {
         return state != null ? state.updateReceiveWindowSize(deltaWindowSize) : -1;
     }
 
-    public int getReceiveWindowSizeLowerBound(int streamID) {
+    int getReceiveWindowSizeLowerBound(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
         return state != null ? state.getReceiveWindowSizeLowerBound() : 0;
     }
 
-    public void updateAllReceiveWindowSizes(int deltaWindowSize) {
+    void updateAllReceiveWindowSizes(int deltaWindowSize) {
         for (StreamState state: activeStreams.values()) {
             state.updateReceiveWindowSize(deltaWindowSize);
             if (deltaWindowSize < 0) {
@@ -159,18 +153,18 @@ final class SpdySession {
         }
     }
 
-    public boolean putPendingWrite(int streamID, MessageEvent evt) {
-        StreamState state = activeStreams.get(new Integer(streamID));
-        return state != null && state.putPendingWrite(evt);
+    boolean putPendingWrite(int streamID, Object msg) {
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
+        return state != null && state.putPendingWrite(msg);
     }
 
-    public MessageEvent getPendingWrite(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+    Object getPendingWrite(int streamID) {
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.getPendingWrite() : null;
     }
 
-    public MessageEvent removePendingWrite(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+    Object removePendingWrite(int streamID) {
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.removePendingWrite() : null;
     }
 
@@ -180,13 +174,12 @@ final class SpdySession {
         private volatile boolean remoteSideClosed;
         private volatile boolean localSideClosed;
         private boolean receivedReply;
-        private AtomicInteger sendWindowSize;
-        private AtomicInteger receiveWindowSize;
+        private final AtomicInteger sendWindowSize;
+        private final AtomicInteger receiveWindowSize;
         private volatile int receiveWindowSizeLowerBound;
-        private ConcurrentLinkedQueue<MessageEvent> pendingWriteQueue =
-                new ConcurrentLinkedQueue<MessageEvent>();
+        private final BlockingQueue<Object> pendingWriteQueue = QueueFactory.createQueue();
 
-        public StreamState(
+        StreamState(
                 byte priority, boolean remoteSideClosed, boolean localSideClosed,
                 int sendWindowSize, int receiveWindowSize) {
             this.priority = priority;
@@ -196,73 +189,77 @@ final class SpdySession {
             this.receiveWindowSize = new AtomicInteger(receiveWindowSize);
         }
 
-        public byte getPriority() {
+        byte getPriority() {
             return priority;
         }
 
-        public boolean isRemoteSideClosed() {
+        boolean isRemoteSideClosed() {
             return remoteSideClosed;
         }
 
-        public void closeRemoteSide() {
+        void closeRemoteSide() {
             remoteSideClosed = true;
         }
 
-        public boolean isLocalSideClosed() {
+        boolean isLocalSideClosed() {
             return localSideClosed;
         }
 
-        public void closeLocalSide() {
+        void closeLocalSide() {
             localSideClosed = true;
         }
 
-        public boolean hasReceivedReply() {
+        boolean hasReceivedReply() {
             return receivedReply;
         }
 
-        public void receivedReply() {
+        void receivedReply() {
             receivedReply = true;
         }
 
-        public int getSendWindowSize() {
+        int getSendWindowSize() {
             return sendWindowSize.get();
         }
 
-        public int updateSendWindowSize(int deltaWindowSize) {
+        int updateSendWindowSize(int deltaWindowSize) {
             return sendWindowSize.addAndGet(deltaWindowSize);
         }
 
-        public int updateReceiveWindowSize(int deltaWindowSize) {
+        int updateReceiveWindowSize(int deltaWindowSize) {
             return receiveWindowSize.addAndGet(deltaWindowSize);
         }
 
-        public int getReceiveWindowSizeLowerBound() {
+        int getReceiveWindowSizeLowerBound() {
             return receiveWindowSizeLowerBound;
         }
 
-        public void setReceiveWindowSizeLowerBound(int receiveWindowSizeLowerBound) {
+        void setReceiveWindowSizeLowerBound(int receiveWindowSizeLowerBound) {
             this.receiveWindowSizeLowerBound = receiveWindowSizeLowerBound;
         }
 
-        public boolean putPendingWrite(MessageEvent evt) {
-            return pendingWriteQueue.offer(evt);
+        boolean putPendingWrite(Object msg) {
+            return pendingWriteQueue.offer(msg);
         }
 
-        public MessageEvent getPendingWrite() {
+        Object getPendingWrite() {
             return pendingWriteQueue.peek();
         }
 
-        public MessageEvent removePendingWrite() {
+        Object removePendingWrite() {
             return pendingWriteQueue.poll();
+        }
+
+        boolean clearPendingWrites() {
+            if (pendingWriteQueue.isEmpty()) {
+                return false;
+            }
+            pendingWriteQueue.clear();
+            return true;
         }
     }
 
     private final class PriorityComparator implements Comparator<Integer> {
-
-        public PriorityComparator() {
-            super();
-        }
-
+        @Override
         public int compare(Integer id1, Integer id2) {
             StreamState state1 = activeStreams.get(id1);
             StreamState state2 = activeStreams.get(id2);
