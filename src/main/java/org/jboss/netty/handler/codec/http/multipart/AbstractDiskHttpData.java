@@ -289,10 +289,17 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             FileOutputStream outputStream = new FileOutputStream(dest);
             FileChannel in = inputStream.getChannel();
             FileChannel out = outputStream.getChannel();
-            long destsize = in.transferTo(0, size, out);
+            int chunkSize = 8196;
+            long position = 0;
+            while (position < size) {
+                if (chunksize < size - position) {
+                    chunksize = size - position;
+                }
+                position += in.transferTo(position, chunkSize , out);
+            }
             in.close();
             out.close();
-            if (destsize == size) {
+            if (position == size) {
                 file.delete();
                 file = dest;
                 isRenamed = true;
