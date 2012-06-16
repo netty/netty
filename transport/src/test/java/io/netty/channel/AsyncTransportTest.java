@@ -8,9 +8,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.nio2.AsyncEventLoop;
-import io.netty.channel.socket.nio2.AsyncServerSocketChannel;
-import io.netty.channel.socket.nio2.AsyncSocketChannel;
+import io.netty.channel.socket.aio.AsyncEventLoop;
+import io.netty.channel.socket.aio.AsyncServerSocketChannel;
+import io.netty.channel.socket.aio.AsyncSocketChannel;
 
 public class AsyncTransportTest {
 
