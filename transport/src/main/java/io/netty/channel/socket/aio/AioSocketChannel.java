@@ -45,7 +45,7 @@ public class AioSocketChannel extends AbstractAioChannel {
                 super.channelActive(ctx);
                 
                 // once the channel is active, the first read is scheduled
-                AioSocketChannel.read((AioSocketChannel)ctx.channel());
+                ((AioSocketChannel)ctx.channel()).read();
                 
             } finally {
                 ctx.pipeline().remove(this);
@@ -136,14 +136,14 @@ public class AioSocketChannel extends AbstractAioChannel {
      * Trigger a read from the {@link AioSocketChannel}
      * 
      */
-    private static void read(AioSocketChannel channel) {
-        ByteBuf byteBuf = channel.pipeline().inboundByteBuffer();
+     void read() {
+        ByteBuf byteBuf = pipeline().inboundByteBuffer();
         expandReadBuffer(byteBuf);
         
         // Get a ByteBuffer view on the ByteBuf and clear it before try to read
         ByteBuffer buffer = byteBuf.nioBuffer();
         buffer.clear();
-        channel.javaChannel().read(buffer, channel, READ_HANDLER);
+        javaChannel().read(buffer, this, READ_HANDLER);
     }
 
     
@@ -178,6 +178,12 @@ public class AioSocketChannel extends AbstractAioChannel {
 
     @Override
     protected boolean doFlushByteBuffer(ByteBuf buf) throws Exception {
+        if (!buf.readable()) {
+            // Reset reader/writerIndex to 0 if the buffer is empty.
+            buf.clear();
+            return true;
+        }
+        
         // Only one pending write can be scheduled at one time. Otherwise
         // a PendingWriteException will be thrown. So use CAS to not run
         // into this
@@ -200,9 +206,15 @@ public class AioSocketChannel extends AbstractAioChannel {
                     // Update the readerIndex with the amount of read bytes
                     buf.readerIndex(buf.readerIndex() + result);
                 } else {
-                    // not enough space in the buffer anymore so discard everything that
-                    // was read already
-                    buf.discardReadBytes();
+                    if (!buf.readable()) {
+                        // Reset reader/writerIndex to 0 if the buffer is empty.
+                        buf.clear();
+                    } else {
+                        // not enough space in the buffer anymore so discard everything that
+                        // was read already
+                        buf.discardReadBytes();
+                    }
+
                     
                 }
                 channel.notifyFlushFutures();
@@ -273,7 +285,7 @@ public class AioSocketChannel extends AbstractAioChannel {
                     channel.close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
-                    AioSocketChannel.read(channel);
+                    channel.read();
                 }
             }
         }
@@ -285,7 +297,7 @@ public class AioSocketChannel extends AbstractAioChannel {
                 channel.close(channel.unsafe().voidFuture());
             } else {
                 // start the next read
-                AioSocketChannel.read(channel);
+                channel.read();
             }
         }
     }
@@ -297,7 +309,7 @@ public class AioSocketChannel extends AbstractAioChannel {
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
             
             // start reading from channel
-            AioSocketChannel.read(channel);
+            channel.read();
         }
 
         @Override
