@@ -32,11 +32,11 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AsyncSocketchannel extends AbstractAsyncChannel {
+public class AsyncSocketChannel extends AbstractAsyncChannel {
 
-    private static final CompletionHandler<Void, AsyncSocketchannel> CONNECT_HANDLER  = new ConnectHandler();
-    private static final CompletionHandler<Integer, AsyncSocketchannel> READ_HANDLER = new ReadHandler();
-    private static final CompletionHandler<Integer, AsyncSocketchannel> WRITE_HANDLER = new WriteHandler();
+    private static final CompletionHandler<Void, AsyncSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
+    private static final CompletionHandler<Integer, AsyncSocketChannel> READ_HANDLER = new ReadHandler();
+    private static final CompletionHandler<Integer, AsyncSocketChannel> WRITE_HANDLER = new WriteHandler();
     private static final ChannelStateHandler READ_START_HANDLER = new ChannelStateHandlerAdapter() {
 
         @Override
@@ -45,7 +45,7 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
                 super.channelActive(ctx);
                 
                 // once the channel is active, the first read is scheduled
-                AsyncSocketchannel.read((AsyncSocketchannel)ctx.channel());
+                AsyncSocketChannel.read((AsyncSocketChannel)ctx.channel());
                 
             } finally {
                 ctx.pipeline().remove(this);
@@ -58,11 +58,11 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
     private final AtomicBoolean flushing = new AtomicBoolean(false);
     private volatile AsyncSocketChannelConfig config;
 
-    public AsyncSocketchannel() {
+    public AsyncSocketChannel() {
         this(null, null, null);
     }
 
-    public AsyncSocketchannel(AsyncServerSocketChannel parent, Integer id, AsynchronousSocketChannel channel) {
+    public AsyncSocketChannel(AsyncServerSocketChannel parent, Integer id, AsynchronousSocketChannel channel) {
         super(parent, id);
         this.ch = channel;
         if (ch != null) {
@@ -133,10 +133,10 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
     }
 
     /**
-     * Trigger a read from the {@link AsyncSocketchannel}
+     * Trigger a read from the {@link AsyncSocketChannel}
      * 
      */
-    private static void read(AsyncSocketchannel channel) {
+    private static void read(AsyncSocketChannel channel) {
         ByteBuf byteBuf = channel.pipeline().inboundByteBuffer();
         expandReadBuffer(byteBuf);
         
@@ -189,10 +189,10 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
     }
 
 
-    private static final class WriteHandler implements CompletionHandler<Integer, AsyncSocketchannel> {
+    private static final class WriteHandler implements CompletionHandler<Integer, AsyncSocketChannel> {
 
         @Override
-        public void completed(Integer result, AsyncSocketchannel channel) {
+        public void completed(Integer result, AsyncSocketChannel channel) {
             ByteBuf buf = channel.pipeline().outboundByteBuffer();
 
             if (result > 0) {
@@ -213,7 +213,7 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
         }
 
         @Override
-        public void failed(Throwable cause, AsyncSocketchannel channel) {
+        public void failed(Throwable cause, AsyncSocketChannel channel) {
             ByteBuf buf = channel.pipeline().outboundByteBuffer();
             if (!buf.readable()) {
                 buf.discardReadBytes();
@@ -229,10 +229,10 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
         }
     }
 
-    private static final class ReadHandler implements CompletionHandler<Integer, AsyncSocketchannel> {
+    private static final class ReadHandler implements CompletionHandler<Integer, AsyncSocketChannel> {
 
         @Override
-        public void completed(Integer result, AsyncSocketchannel channel) {
+        public void completed(Integer result, AsyncSocketChannel channel) {
             assert channel.eventLoop().inEventLoop();
 
             final ChannelPipeline pipeline = channel.pipeline();
@@ -273,35 +273,35 @@ public class AsyncSocketchannel extends AbstractAsyncChannel {
                     channel.close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
-                    AsyncSocketchannel.read(channel);
+                    AsyncSocketChannel.read(channel);
                 }
             }
         }
 
         @Override
-        public void failed(Throwable t, AsyncSocketchannel channel) {
+        public void failed(Throwable t, AsyncSocketChannel channel) {
             channel.pipeline().fireExceptionCaught(t);
             if (t instanceof IOException) {
                 channel.close(channel.unsafe().voidFuture());
             } else {
                 // start the next read
-                AsyncSocketchannel.read(channel);
+                AsyncSocketChannel.read(channel);
             }
         }
     }
 
-    private static final class ConnectHandler implements CompletionHandler<Void, AsyncSocketchannel> {
+    private static final class ConnectHandler implements CompletionHandler<Void, AsyncSocketChannel> {
 
         @Override
-        public void completed(Void result, AsyncSocketchannel channel) {
+        public void completed(Void result, AsyncSocketChannel channel) {
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
             
             // start reading from channel
-            AsyncSocketchannel.read(channel);
+            AsyncSocketChannel.read(channel);
         }
 
         @Override
-        public void failed(Throwable exc, AsyncSocketchannel channel) {
+        public void failed(Throwable exc, AsyncSocketChannel channel) {
             ((AsyncUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }

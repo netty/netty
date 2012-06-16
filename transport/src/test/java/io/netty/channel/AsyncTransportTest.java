@@ -10,25 +10,25 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio2.AsyncEventLoop;
 import io.netty.channel.socket.nio2.AsyncServerSocketChannel;
-import io.netty.channel.socket.nio2.AsyncSocketchannel;
-import io.netty.util.CharsetUtil;
+import io.netty.channel.socket.nio2.AsyncSocketChannel;
 
 public class AsyncTransportTest {
 
     public static void main(String args[]) {
+        AsyncEventLoop loop = new AsyncEventLoop();
      // Configure a test server
         ServerBootstrap sb = new ServerBootstrap();
-        sb.eventLoop(new AsyncEventLoop(), new AsyncEventLoop())
+        sb.eventLoop(loop, loop)
           .channel(new AsyncServerSocketChannel())
-          .localAddress(new InetSocketAddress(9999))
-          .childHandler(new ChannelInitializer<AsyncSocketchannel>() {
+          .localAddress(new InetSocketAddress(9191))
+          .childHandler(new ChannelInitializer<AsyncSocketChannel>() {
               @Override
-              public void initChannel(AsyncSocketchannel ch) throws Exception {
+              public void initChannel(AsyncSocketChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundByteHandlerAdapter() {
                     
                     @Override
                     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                        System.out.print(in.toString(CharsetUtil.US_ASCII));
+                        ctx.write(in.slice());
                     }
                 });
               }

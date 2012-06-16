@@ -121,7 +121,7 @@ public class AsyncServerSocketChannel extends AbstractAsyncChannel implements Se
             channel.javaChannel().accept(channel, this);
 
             // create the socket add it to the buffer and fire the event
-            channel.pipeline().inboundMessageBuffer().add(new AsyncSocketchannel(channel, null, ch));
+            channel.pipeline().inboundMessageBuffer().add(new AsyncSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
         }
 
