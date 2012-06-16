@@ -72,7 +72,7 @@ public abstract class AbstractAsyncChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        throw new UnsupportedOperationException("Deregistration is not supported by AbstractAsyncChannel");
+        // NOOP
     }
 
     @Override
