@@ -8,22 +8,22 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.aio.AsyncEventLoop;
-import io.netty.channel.socket.aio.AsyncServerSocketChannel;
-import io.netty.channel.socket.aio.AsyncSocketChannel;
+import io.netty.channel.socket.aio.AioEventLoop;
+import io.netty.channel.socket.aio.AioServerSocketChannel;
+import io.netty.channel.socket.aio.AioSocketChannel;
 
 public class AsyncTransportTest {
 
     public static void main(String args[]) {
-        AsyncEventLoop loop = new AsyncEventLoop();
+        AioEventLoop loop = new AioEventLoop();
      // Configure a test server
         ServerBootstrap sb = new ServerBootstrap();
         sb.eventLoop(loop, loop)
-          .channel(new AsyncServerSocketChannel())
+          .channel(new AioServerSocketChannel())
           .localAddress(new InetSocketAddress(9191))
-          .childHandler(new ChannelInitializer<AsyncSocketChannel>() {
+          .childHandler(new ChannelInitializer<AioSocketChannel>() {
               @Override
-              public void initChannel(AsyncSocketChannel ch) throws Exception {
+              public void initChannel(AioSocketChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundByteHandlerAdapter() {
                     
                     @Override
