@@ -143,9 +143,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
      void read() {
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
         expandReadBuffer(byteBuf);
-        
-        // Get a ByteBuffer view on the ByteBuf and clear it before try to read
-        ByteBuffer buffer = (ByteBuffer) byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes()).clear();
+        // Get a ByteBuffer view on the ByteBuf
+        ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
         javaChannel().read(buffer, this, READ_HANDLER);
     }
 
@@ -255,8 +254,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // This is needed as the ByteBuffer and the ByteBuf does not share
                     // each others index
                     final ByteBuf byteBuf = pipeline.inboundByteBuffer();
-                    byteBuf.writerIndex(byteBuf.writerIndex() + result);
-                    
+                    byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+
                     read = true;
 
                 } else if (localReadAmount < 0) {
