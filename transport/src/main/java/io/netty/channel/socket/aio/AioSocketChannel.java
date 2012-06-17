@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -32,7 +33,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AioSocketChannel extends AbstractAioChannel {
+public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
 
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
@@ -73,6 +74,9 @@ public class AioSocketChannel extends AbstractAioChannel {
 
     @Override
     public boolean isActive() {
+        if (ch == null) {
+            return false;
+        }
         AsynchronousSocketChannel ch = javaChannel();
         return ch.isOpen() && remoteAddress() != null;
     }

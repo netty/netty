@@ -18,7 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -29,7 +29,7 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
-public class AioServerSocketChannel extends AbstractAioChannel implements ServerChannel {
+public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
     private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
     private static final InternalLogger logger =
