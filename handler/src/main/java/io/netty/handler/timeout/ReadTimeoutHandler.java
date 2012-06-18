@@ -74,7 +74,7 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     private volatile ScheduledFuture<?> timeout;
     private volatile long lastReadTime;
 
-    private volatile boolean destroyed;
+    private volatile int state; // 0 - none, 1 - Initialized, 2 - Destroyed;
 
     private boolean closed;
 
@@ -110,12 +110,12 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.channel().isActive()) {
+        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
             initialize(ctx);
         } else {
-            // channelActive() event has not been fired yet.  this.channelOpen() will be invoked
+            // channelActive() event has not been fired yet.  this.channelActive() will be invoked
             // and initialization will occur there.
         }
     }
@@ -126,8 +126,16 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx)
-            throws Exception {
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        // Initialize early if channel is active already.
+        if (ctx.channel().isActive()) {
+            initialize(ctx);
+        }
+        super.channelRegistered(ctx);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // This method will be invoked only if this handler was added
         // before channelActive() event is fired.  If a user adds this handler
         // after the channelActive() event, initialize() will be called by beforeAdd().
@@ -150,9 +158,13 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     private void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        if (destroyed) {
+        switch (state) {
+        case 1:
+        case 2:
             return;
         }
+
+        state = 1;
 
         lastReadTime = System.currentTimeMillis();
         if (timeoutMillis > 0) {
@@ -163,7 +175,7 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     private void destroy() {
-        destroyed = true;
+        state = 2;
 
         if (timeout != null) {
             timeout.cancel(false);
