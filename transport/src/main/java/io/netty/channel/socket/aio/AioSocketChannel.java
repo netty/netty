@@ -18,10 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateHandler;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
@@ -38,24 +35,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
-    private static final ChannelStateHandler READ_START_HANDLER = new ChannelStateHandlerAdapter() {
 
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            try {
-                super.channelActive(ctx);
-                
-                // once the channel is active, the first read is scheduled
-                ((AioSocketChannel)ctx.channel()).read();
-                
-            } finally {
-                ctx.pipeline().remove(this);
-            }
-
-            
-        }
-        
-    };
     private final AtomicBoolean flushing = new AtomicBoolean(false);
     private volatile AioSocketChannelConfig config;
 
@@ -65,10 +45,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     public AioSocketChannel(AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel channel) {
         super(parent, id);
-        this.ch = channel;
+        ch = channel;
         if (ch != null) {
             config = new AioSocketChannelConfig(javaChannel());
-            pipeline().addLast(READ_START_HANDLER);
         }
     }
 
@@ -129,18 +108,17 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         if (ch == null) {
             ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
             config = new AioSocketChannelConfig(javaChannel());
-            pipeline().addLast(READ_START_HANDLER);
+        } else if (remoteAddress() != null) {
+            read();
         }
-
-
         return null;
     }
 
     /**
      * Trigger a read from the {@link AioSocketChannel}
-     * 
+     *
      */
-     void read() {
+    void read() {
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
         expandReadBuffer(byteBuf);
         // Get a ByteBuffer view on the ByteBuf
@@ -148,7 +126,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         javaChannel().read(buffer, this, READ_HANDLER);
     }
 
-    
+
     private static boolean expandReadBuffer(ByteBuf byteBuf) {
         if (!byteBuf.writable()) {
             // FIXME: Magic number
@@ -157,7 +135,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
         return false;
     }
-    
+
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().bind(localAddress);
@@ -185,12 +163,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             buf.clear();
             return true;
         }
-        
+
         // Only one pending write can be scheduled at one time. Otherwise
         // a PendingWriteException will be thrown. So use CAS to not run
         // into this
         if (flushing.compareAndSet(false, true)) {
-            ByteBuffer buffer = (ByteBuffer) buf.nioBuffer();
+            ByteBuffer buffer = buf.nioBuffer();
+            System.err.println("WRITE: " + buffer);
             javaChannel().write(buffer, this, WRITE_HANDLER);
         }
         return false;
@@ -206,13 +185,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             if (result > 0) {
                 // Update the readerIndex with the amount of read bytes
                 buf.readerIndex(buf.readerIndex() + result);
-                
+
                 channel.notifyFlushFutures();
                 if (!buf.readable()) {
                     buf.discardReadBytes();
                 }
             }
-            
+
             // Allow to have the next write pending
             channel.flushing.set(false);
         }
@@ -245,10 +224,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             boolean closed = false;
             boolean read = false;
             try {
-                
                 int localReadAmount = result.intValue();
                 if (localReadAmount > 0) {
-                    //Set the writerIndex of the buffer correctly to the 
+                    // Set the writerIndex of the buffer correctly to the
                     // current writerIndex + read amount of bytes.
                     //
                     // This is needed as the ByteBuffer and the ByteBuf does not share
@@ -261,7 +239,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 } else if (localReadAmount < 0) {
                     closed = true;
                 }
-                
+
             } catch (Throwable t) {
                 if (read) {
                     read = false;
@@ -301,7 +279,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         public void completed(Void result, AioSocketChannel channel) {
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
-            
+            channel.pipeline().fireChannelActive();
+
             // start reading from channel
             channel.read();
         }
