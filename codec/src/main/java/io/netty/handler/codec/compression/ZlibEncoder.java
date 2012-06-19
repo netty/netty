@@ -20,10 +20,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.ByteToByteEncoder;
 
 /**
- * Decompresses a {@link ByteBuf} using the deflate algorithm.
+ * Compresses a {@link ByteBuf} using the deflate algorithm.
  *
  * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
 public abstract class ZlibEncoder extends ByteToByteEncoder {
 
