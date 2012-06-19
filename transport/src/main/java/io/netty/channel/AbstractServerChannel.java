@@ -20,7 +20,6 @@ import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 
 import java.net.SocketAddress;
-import java.util.Queue;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
@@ -33,6 +32,8 @@ import java.util.Queue;
  * </ul>
  */
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
 
     /**
      * Creates a new instance.
@@ -52,8 +53,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.MESSAGE;
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override

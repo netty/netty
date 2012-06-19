@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
@@ -29,11 +28,6 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected AbstractNioByteChannel(
             Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id, ch, SelectionKey.OP_READ);
-    }
-
-    @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.BYTE;
     }
 
     @Override

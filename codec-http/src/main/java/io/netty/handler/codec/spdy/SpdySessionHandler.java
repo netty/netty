@@ -435,12 +435,6 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        sendGoAwayFrame(ctx);
-        super.close(ctx, future);
-    }
-
-    @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
         for (;;) {

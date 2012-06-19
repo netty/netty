@@ -209,27 +209,6 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void disconnect(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newFuture());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.disconnect(future);
-            }
-        });
-
-        if (!f.isDone()) {
-            // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.disconnect(future);
-                }
-            }, 10, TimeUnit.SECONDS); // FIXME: Magic number
-        }
-    }
-
-    @Override
     public void close(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newFuture());
         f.addListener(new ChannelFutureListener() {
