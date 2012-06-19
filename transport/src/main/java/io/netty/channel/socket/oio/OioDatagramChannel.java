@@ -16,10 +16,12 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -41,6 +43,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                                 implements DatagramChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, true);
 
     private static final byte[] EMPTY_DATA = new byte[0];
 
@@ -83,6 +87,11 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
         this.socket = socket;
         config = new DefaultDatagramChannelConfig(socket);
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override

@@ -16,7 +16,6 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
@@ -26,11 +25,6 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     protected AbstractOioByteChannel(Channel parent, Integer id) {
         super(parent, id);
-    }
-
-    @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.BYTE;
     }
 
     @Override

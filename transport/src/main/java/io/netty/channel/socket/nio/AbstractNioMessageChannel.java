@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -28,11 +27,6 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     protected AbstractNioMessageChannel(
             Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
         super(parent, id, ch, defaultInterestOps);
-    }
-
-    @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.MESSAGE;
     }
 
     @Override

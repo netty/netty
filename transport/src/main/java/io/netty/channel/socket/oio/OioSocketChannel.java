@@ -16,8 +16,10 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -37,6 +39,8 @@ public class OioSocketChannel extends AbstractOioByteChannel
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSocketChannel.class);
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
 
     private final Socket socket;
     private final SocketChannelConfig config;
@@ -75,6 +79,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
                 }
             }
         }
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override

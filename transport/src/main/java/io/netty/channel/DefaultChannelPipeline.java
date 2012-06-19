@@ -887,7 +887,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public MessageBuf<Object> inboundMessageBuffer() {
-        if (channel.bufferType() != ChannelBufType.MESSAGE) {
+        if (channel.metadata().bufferType() != ChannelBufType.MESSAGE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
@@ -896,7 +896,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ByteBuf inboundByteBuffer() {
-        if (channel.bufferType() != ChannelBufType.BYTE) {
+        if (channel.metadata().bufferType() != ChannelBufType.BYTE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
@@ -1150,6 +1150,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
+        // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+        // So far, UDP/IP is the only transport that has such behavior.
+        if (!ctx.channel().metadata().hasDisconnect()) {
+            return close(ctx, future);
+        }
+
         validateFuture(future);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -1435,7 +1441,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final class HeadHandler implements ChannelOutboundHandler {
         @Override
         public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            switch (channel.bufferType()) {
+            switch (channel.metadata().bufferType()) {
             case BYTE:
                 return Unpooled.dynamicBuffer();
             case MESSAGE:

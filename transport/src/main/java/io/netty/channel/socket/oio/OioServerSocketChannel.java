@@ -15,8 +15,10 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -37,6 +39,8 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketChannel.class);
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
 
     private static ServerSocket newServerSocket() {
         try {
@@ -86,6 +90,11 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
         this.socket = socket;
         config = new DefaultServerSocketChannelConfig(socket);
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
