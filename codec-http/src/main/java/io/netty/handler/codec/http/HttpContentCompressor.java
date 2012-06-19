@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
@@ -118,8 +118,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         return new Result(
                 targetContentEncoding,
-                new EmbeddedByteChannel(
-                        new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel)));
+                new EmbeddedByteChannel(ZlibCodecFactory.newZlibEncoder(
+                        wrapper, compressionLevel, windowBits, memLevel)));
     }
 
     protected ZlibWrapper determineWrapper(String acceptEncoding) {
