@@ -21,12 +21,24 @@ package org.jboss.netty.handler.codec.spdy;
 public interface SpdyPingFrame {
 
     /**
+     * @deprecated Use {@link #getId()} instead.
+     */
+    @Deprecated
+    int getID();
+
+    /**
      * Returns the ID of this frame.
      */
-    int getID();
+    int getId();
+
+    /**
+     * @deprecated Use {@link #setId(int)} instead.
+     */
+    @Deprecated
+    void setID(int id);
 
     /**
      * Sets the ID of this frame.
      */
-    void setID(int ID);
+    void setId(int id);
 }

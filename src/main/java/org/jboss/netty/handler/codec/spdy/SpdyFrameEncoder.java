@@ -111,7 +111,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
             ChannelBuffer header = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE);
-            header.writeInt(spdyDataFrame.getStreamID() & 0x7FFFFFFF);
+            header.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);
             header.writeByte(flags);
             header.writeMedium(data.readableBytes());
             return ChannelBuffers.wrappedBuffer(header, data);
@@ -138,8 +138,8 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(SPDY_SYN_STREAM_FRAME);
             frame.writeByte(flags);
             frame.writeMedium(length);
-            frame.writeInt(spdySynStreamFrame.getStreamID());
-            frame.writeInt(spdySynStreamFrame.getAssociatedToStreamID());
+            frame.writeInt(spdySynStreamFrame.getStreamId());
+            frame.writeInt(spdySynStreamFrame.getAssociatedToStreamId());
             if (version < 3) {
                 // Restrict priorities for SPDY/2 to between 0 and 3
                 byte priority = spdySynStreamFrame.getPriority();
@@ -174,7 +174,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(SPDY_SYN_REPLY_FRAME);
             frame.writeByte(flags);
             frame.writeMedium(length);
-            frame.writeInt(spdySynReplyFrame.getStreamID());
+            frame.writeInt(spdySynReplyFrame.getStreamId());
             if (version < 3) {
                 if (data.readableBytes() == 0) {
                     frame.writeInt(0);
@@ -192,7 +192,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_RST_STREAM_FRAME);
             frame.writeInt(8);
-            frame.writeInt(spdyRstStreamFrame.getStreamID());
+            frame.writeInt(spdyRstStreamFrame.getStreamId());
             frame.writeInt(spdyRstStreamFrame.getStatus().getCode());
             return frame;
 
@@ -201,7 +201,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
             byte flags = spdySettingsFrame.clearPreviouslyPersistedSettings() ?
                 SPDY_SETTINGS_CLEAR : 0;
-            Set<Integer> IDs = spdySettingsFrame.getIDs();
+            Set<Integer> IDs = spdySettingsFrame.getIds();
             int numEntries = IDs.size();
             int length = 4 + numEntries * 8;
             ChannelBuffer frame = ChannelBuffers.buffer(
@@ -214,7 +214,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             for (Integer ID: IDs) {
                 int id = ID.intValue();
                 byte ID_flags = (byte) 0;
-                if (spdySettingsFrame.persistValue(id)) {
+                if (spdySettingsFrame.isPersistValue(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSIST_VALUE;
                 }
                 if (spdySettingsFrame.isPersisted(id)) {
@@ -253,7 +253,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_PING_FRAME);
             frame.writeInt(4);
-            frame.writeInt(spdyPingFrame.getID());
+            frame.writeInt(spdyPingFrame.getId());
             return frame;
 
         } else if (msg instanceof SpdyGoAwayFrame) {
@@ -265,7 +265,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_GOAWAY_FRAME);
             frame.writeInt(length);
-            frame.writeInt(spdyGoAwayFrame.getLastGoodStreamID());
+            frame.writeInt(spdyGoAwayFrame.getLastGoodStreamId());
             if (version >= 3) {
                 frame.writeInt(spdyGoAwayFrame.getStatus().getCode());
             }
@@ -290,7 +290,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(SPDY_HEADERS_FRAME);
             frame.writeByte(flags);
             frame.writeMedium(length);
-            frame.writeInt(spdyHeadersFrame.getStreamID());
+            frame.writeInt(spdyHeadersFrame.getStreamId());
             if (version < 3 && data.readableBytes() != 0) {
                 frame.writeShort(0);
             }
@@ -304,7 +304,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
             frame.writeShort(version | 0x8000);
             frame.writeShort(SPDY_WINDOW_UPDATE_FRAME);
             frame.writeInt(8);
-            frame.writeInt(spdyWindowUpdateFrame.getStreamID());
+            frame.writeInt(spdyWindowUpdateFrame.getStreamId());
             frame.writeInt(spdyWindowUpdateFrame.getDeltaWindowSize());
             return frame;
         }

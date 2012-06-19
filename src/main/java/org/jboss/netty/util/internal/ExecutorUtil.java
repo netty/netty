@@ -46,6 +46,12 @@ public final class ExecutorUtil {
      * Shuts down the specified executors.
      */
     public static void terminate(Executor... executors) {
+        terminate(DeadLockProofWorker.PARENT, executors);
+    }
+    /**
+     * Shuts down the specified executors using the given {@link ThreadLocal} to check if there is a deadlock
+     */
+    public static void terminate(ThreadLocal<Executor> deadLockChecker, Executor... executors) {
         // Check nulls.
         if (executors == null) {
             throw new NullPointerException("executors");
@@ -60,7 +66,7 @@ public final class ExecutorUtil {
         }
 
         // Check dead lock.
-        final Executor currentParent = DeadLockProofWorker.PARENT.get();
+        final Executor currentParent = deadLockChecker.get();
         if (currentParent != null) {
             for (Executor e: executorsCopy) {
                 if (e == currentParent) {

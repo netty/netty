@@ -22,30 +22,38 @@ import org.jboss.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
 
-    private int streamID;
+    private int streamId;
     private int deltaWindowSize;
 
     /**
      * Creates a new instance.
      *
-     * @param streamID        the Stream-ID of this frame
+     * @param streamId        the Stream-ID of this frame
      * @param deltaWindowSize the Delta-Window-Size of this frame
      */
-    public DefaultSpdyWindowUpdateFrame(int streamID, int deltaWindowSize) {
-        setStreamID(streamID);
+    public DefaultSpdyWindowUpdateFrame(int streamId, int deltaWindowSize) {
+        setStreamId(streamId);
         setDeltaWindowSize(deltaWindowSize);
     }
 
     public int getStreamID() {
-        return streamID;
+        return getStreamId();
     }
 
-    public void setStreamID(int streamID) {
-        if (streamID <= 0) {
+    public int getStreamId() {
+        return streamId;
+    }
+
+    public void setStreamID(int streamId) {
+        setStreamId(streamId);
+    }
+
+    public void setStreamId(int streamId) {
+        if (streamId <= 0) {
             throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamID);
+                    "Stream-ID must be positive: " + streamId);
         }
-        this.streamID = streamID;
+        this.streamId = streamId;
     }
 
     public int getDeltaWindowSize() {
@@ -67,7 +75,7 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamID);
+        buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Delta-Window-Size = ");
         buf.append(deltaWindowSize);

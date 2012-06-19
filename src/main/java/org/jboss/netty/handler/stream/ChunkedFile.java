@@ -36,7 +36,7 @@ public class ChunkedFile implements ChunkedInput {
     private final long startOffset;
     private final long endOffset;
     private final int chunkSize;
-    private volatile long offset;
+    private long offset;
 
     /**
      * Creates a new instance that fetches data from the specified file.

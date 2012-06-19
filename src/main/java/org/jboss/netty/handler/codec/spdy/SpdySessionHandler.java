@@ -127,7 +127,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamID = spdyDataFrame.getStreamID();
+            int streamID = spdyDataFrame.getStreamId();
 
             // Check if we received a data frame for a Stream-ID which is not open
             if (!spdySession.isActiveStream(streamID)) {
@@ -215,7 +215,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
@@ -250,7 +250,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             // Check if we received a valid SYN_REPLY frame
             if (spdySynReplyFrame.isInvalid() ||
@@ -285,7 +285,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamID());
+            removeStream(spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -326,7 +326,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
                 Channels.write(ctx, Channels.future(e.getChannel()), spdyPingFrame, e.getRemoteAddress());
                 return;
             }
@@ -344,7 +344,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamID();
+            int streamID = spdyHeadersFrame.getStreamId();
 
             // Check if we received a valid HEADERS frame
             if (spdyHeadersFrame.isInvalid()) {
@@ -376,7 +376,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             if (flowControl) {
                 SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-                int streamID = spdyWindowUpdateFrame.getStreamID();
+                int streamID = spdyWindowUpdateFrame.getStreamId();
                 int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
 
                 // Ignore frames for half-closed streams
@@ -442,7 +442,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            final int streamID = spdyDataFrame.getStreamID();
+            final int streamID = spdyDataFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
@@ -530,7 +530,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamID();
+            int streamID = spdySynStreamFrame.getStreamId();
 
             if (isRemoteInitiatedID(streamID)) {
                 e.getFuture().setFailure(PROTOCOL_EXCEPTION);
@@ -548,7 +548,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamID();
+            int streamID = spdySynReplyFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedID(streamID) || spdySession.isLocalSideClosed(streamID)) {
@@ -564,7 +564,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamID());
+            removeStream(spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -595,9 +595,9 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedID(spdyPingFrame.getID())) {
+            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
                 e.getFuture().setFailure(new IllegalArgumentException(
-                            "invalid PING ID: " + spdyPingFrame.getID()));
+                            "invalid PING ID: " + spdyPingFrame.getId()));
                 return;
             }
             pings.getAndIncrement();
@@ -612,7 +612,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamID();
+            int streamID = spdyHeadersFrame.getStreamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
@@ -680,7 +680,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      */
 
     private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = SpdyCodecUtil.isServerID(ID);
+        boolean serverID = SpdyCodecUtil.isServerId(ID);
         return server && !serverID || !server && serverID;
     }
 

@@ -24,14 +24,26 @@ import org.jboss.netty.buffer.ChannelBuffers;
 public interface SpdyDataFrame {
 
     /**
+     * @deprecated Use {@link #getStreamId()} instead.
+     */
+    @Deprecated
+    int getStreamID();
+
+    /**
      * Returns the Stream-ID of this frame.
      */
-    int getStreamID();
+    int getStreamId();
+
+    /**
+     * @deprecated Use {@link #setStreamId(int)} instead.
+     */
+    @Deprecated
+    void setStreamID(int streamID);
 
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    void setStreamID(int streamID);
+    void setStreamId(int streamID);
 
     /**
      * Returns {@code true} if this frame is the last frame to be transmitted

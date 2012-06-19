@@ -21,15 +21,27 @@ package org.jboss.netty.handler.codec.spdy;
 public interface SpdyGoAwayFrame {
 
     /**
+     * @deprecated Use {@link #getLastGoodStreamId()} instead.
+     */
+    @Deprecated
+    int getLastGoodStreamID();
+
+    /**
      * Returns the Last-good-stream-ID of this frame.
      */
-    int getLastGoodStreamID();
+    int getLastGoodStreamId();
+
+    /**
+     * @deprecated Use {@link #setLastGoodStreamId(int)} instead.
+     */
+    @Deprecated
+    void setLastGoodStreamID(int lastGoodStreamId);
 
     /**
      * Sets the Last-good-stream-ID of this frame.  The Last-good-stream-ID
      * cannot be negative.
      */
-    void setLastGoodStreamID(int lastGoodStreamID);
+    void setLastGoodStreamId(int lastGoodStreamId);
 
     /**
      * Returns the status of this frame.

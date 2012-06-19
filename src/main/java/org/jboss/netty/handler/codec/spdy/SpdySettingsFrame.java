@@ -32,10 +32,16 @@ public interface SpdySettingsFrame {
     int SETTINGS_CLIENT_CERTIFICATE_VECTOR_SIZE = 8;
 
     /**
+     * @deprecated Use {@link #getIds()} instead.
+     */
+    @Deprecated
+    Set<Integer> getIDs();
+
+    /**
      * Returns a {@code Set} of the setting IDs.
      * The set's iterator will return the IDs in ascending order.
      */
-    Set<Integer> getIDs();
+    Set<Integer> getIds();
 
     /**
      * Returns {@code true} if the setting ID has a value.
@@ -69,11 +75,17 @@ public interface SpdySettingsFrame {
     void removeValue(int ID);
 
     /**
+     * @deprecated Use {@link #isPersistValue(int)} instead.
+     */
+    @Deprecated
+    boolean persistValue(int ID);
+
+    /**
      * Returns {@code true} if this setting should be persisted.
      * Returns {@code false} if this setting should not be persisted
      *         or if the setting ID has no value.
      */
-    boolean persistValue(int ID);
+    boolean isPersistValue(int ID);
 
     /**
      * Sets if this setting should be persisted.
