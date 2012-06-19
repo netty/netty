@@ -185,6 +185,7 @@ public abstract class ZeroCopyFrameDecoder
     private final boolean unfold;
     protected List<ChannelBuffer> cumulation;
     private volatile ChannelHandlerContext ctx;
+    private int copyThreshold;
 
     protected ZeroCopyFrameDecoder() {
         this(false);
@@ -192,6 +193,61 @@ public abstract class ZeroCopyFrameDecoder
 
     protected ZeroCopyFrameDecoder(boolean unfold) {
         this.unfold = unfold;
+    }
+
+    /**
+     * Set the maximal unused capacity of the internal cumulation ChannelBuffer
+     * before the {@link ZeroCopyFrameDecoder} tries to minimize the memory usage by
+     * "byte copy".
+     *
+     *
+     * What you use here really depends on your application and need. Using
+     * {@link Integer#MAX_VALUE} will disable all byte copies but give you the
+     * cost of a higher memory usage if big {@link ChannelBuffer}'s will be
+     * received.
+     *
+     * By default a threshold of <code>0</code> is used, which means it will
+     * always copy to try to reduce memory usage
+     *
+     *
+     * @param copyThreshold
+     *            the threshold (in bytes) or {@link Integer#MAX_VALUE} to
+     *            disable it. The value must be at least 0
+     * @throws IllegalStateException
+     *             get thrown if someone tries to change this setting after the
+     *             Decoder was added to the {@link ChannelPipeline}
+     */
+    public final void setMaxUnusedBufferCapacity(int copyThreshold) {
+        if (copyThreshold < 0) {
+            throw new IllegalArgumentException("MaxUnusedBufferCapacity must be >= 0");
+        }
+        if (ctx == null) {
+            this.copyThreshold = copyThreshold;
+        } else {
+            throw new IllegalStateException("MaxWastedBufferCapacity " +
+                    "can only be changed before the Decoder was added to the ChannelPipeline");
+        }
+    }
+
+    /**
+     * Returns a compact slice of this buffer's readable bytes.
+     *
+     * The returned buffer may or may not share the content area with the buffer
+     * given as an argument while they maintain separate indexes and marks.
+     * If more than the maximal unused buffer capacity is unused then the
+     * content is copied to a new buffer to conserve memory.
+     *
+     * @param buffer ChannelBuffer to compact
+     * @return a compact slice of buffer
+     */
+    private ChannelBuffer compactBuffer(ChannelBuffer buffer) {
+        if (buffer.capacity() - buffer.readableBytes() > copyThreshold) {
+            ChannelBuffer copy = newCumulationBuffer(ctx, buffer.readableBytes());
+            copy.writeBytes(buffer);
+            return copy;
+        } else {
+            return buffer.slice();
+        }
     }
 
     @Override
@@ -218,23 +274,16 @@ public abstract class ZeroCopyFrameDecoder
                 callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             } finally {
                 if (input.readable()) {
-                    // seems like there is something readable left in the input buffer. So create
-                    // the cumulation buffer and copy the input into it
-                    cumulation = new ArrayList<ChannelBuffer>(2);
-                    cumulation.add(input);
+                    // unread data is left so create a cumulation buffer
+                    cumulation = new ArrayList<ChannelBuffer>();
+                    cumulation.add(compactBuffer(input));
                 }
             }
-
         } else {
-            if (!cumulation.get(0).order().equals(input.order())) {
-                throw new IllegalArgumentException(
-                        "inconsistent byte order");
-            }
-
-            cumulation.add(input);
+            cumulation.add(compactBuffer(input));
 
             CompositeChannelBuffer buf =
-                    new CompositeChannelBuffer(input.order(), cumulation, false);
+                    new CompositeChannelBuffer(cumulation.get(0).order(), cumulation, false);
 
             // Wrap in try / finally.
             //
@@ -245,11 +294,26 @@ public abstract class ZeroCopyFrameDecoder
                 if (!buf.readable()) {
                     // nothing readable left so reset the state
                     cumulation = null;
-                } else {
-                    cumulation = buf.decompose(buf.readerIndex(), buf.readableBytes());
+                } else if (buf.readableBytes() != buf.capacity()) {
+                    // part of the buffer was read, but not all
+                    int read = buf.capacity() - buf.readableBytes();
+
+                    // get rid of fully read leading buffers
+                    int i = 0;
+                    while (read >= cumulation.get(i).readableBytes()) {
+                        read -= cumulation.get(i).readableBytes();
+                        i++;
+                    }
+                    cumulation.subList(0, i).clear();
+
+                    // compact partially read leading buffer
+                    if (read > 0) {
+                        ChannelBuffer first = cumulation.get(0);
+                        first.readerIndex(read);
+                        cumulation.set(0, compactBuffer(first));
+                    }
                 }
             }
-
         }
     }
 
@@ -391,10 +455,10 @@ public abstract class ZeroCopyFrameDecoder
      * @param ctx {@link ChannelHandlerContext} for this handler
      * @return buffer the {@link ChannelBuffer} which is used for cumulation
      */
-    @Deprecated
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
-        return null;
+        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        return factory.getBuffer(minimumCapacity);
     }
 
     /**
