@@ -15,7 +15,12 @@
  */
 package org.jboss.netty.handler.codec.frame;
 
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.Channel;
@@ -23,18 +28,16 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-
-import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.List;
+import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
- * Decodes the received {@link org.jboss.netty.buffer.ChannelBuffer}s into a meaningful frame object.
+ * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
  * <p>
  * In a stream-based transport such as TCP/IP, packets can be fragmented and
  * reassembled during transmission even in a LAN environment.  For example,
@@ -52,9 +55,9 @@ import java.util.List;
  * +----+-------+---+---+
  * </pre>
  * <p>
- * {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder} helps you defrag the received packets into one or more
+ * {@link ZeroCopyFrameDecoder} helps you defrag the received packets into one or more
  * meaningful <strong>frames</strong> that could be easily understood by the
- * application logic.  In case of the example above, your {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder}
+ * application logic.  In case of the example above, your {@link ZeroCopyFrameDecoder}
  * implementation could defrag the received packets like the following:
  * <pre>
  * +-----+-----+-----+
@@ -77,12 +80,12 @@ import java.util.List;
  * DECODER IMPLEMENTATION
  * ======================
  *
- * public class IntegerHeaderFrameDecoder extends {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder} {
+ * public class IntegerHeaderFrameDecoder extends {@link ZeroCopyFrameDecoder} {
  *
  *   {@code @Override}
- *   protected Object decode({@link org.jboss.netty.channel.ChannelHandlerContext} ctx,
- *                           {@link org.jboss.netty.channel.Channel channel},
- *                           {@link org.jboss.netty.buffer.ChannelBuffer} buf) throws Exception {
+ *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *                           {@link Channel} channel,
+ *                           {@link ChannelBuffer} buf) throws Exception {
  *
  *     // Make sure if the length field was received.
  *     if (buf.readableBytes() &lt; 4) {
@@ -117,7 +120,7 @@ import java.util.List;
  *     }
  *
  *     // There's enough bytes in the buffer. Read it.
- *     {@link org.jboss.netty.buffer.ChannelBuffer} frame = buf.readBytes(length);
+ *     {@link ChannelBuffer} frame = buf.readBytes(length);
  *
  *     // Successfully decoded a frame.  Return the decoded frame.
  *     return <strong>frame</strong>;
@@ -125,34 +128,34 @@ import java.util.List;
  * }
  * </pre>
  *
- * <h3>Returning a POJO rather than a {@link org.jboss.netty.buffer.ChannelBuffer}</h3>
+ * <h3>Returning a POJO rather than a {@link ChannelBuffer}</h3>
  * <p>
  * Please note that you can return an object of a different type than
- * {@link org.jboss.netty.buffer.ChannelBuffer} in your {@code decode()} and {@code decodeLast()}
+ * {@link ChannelBuffer} in your {@code decode()} and {@code decodeLast()}
  * implementation.  For example, you could return a
  * <a href="http://en.wikipedia.org/wiki/POJO">POJO</a> so that the next
- * {@link org.jboss.netty.channel.ChannelUpstreamHandler} receives a {@link org.jboss.netty.channel.MessageEvent} which
- * contains a POJO rather than a {@link org.jboss.netty.buffer.ChannelBuffer}.
+ * {@link ChannelUpstreamHandler} receives a {@link MessageEvent} which
+ * contains a POJO rather than a {@link ChannelBuffer}.
  *
  * <h3>Replacing a decoder with another decoder in a pipeline</h3>
  * <p>
  * If you are going to write a protocol multiplexer, you will probably want to
- * replace a {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder} (protocol detector) with another
- * {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder} or {@link org.jboss.netty.handler.codec.replay.ReplayingDecoder} (actual protocol decoder).
+ * replace a {@link ZeroCopyFrameDecoder} (protocol detector) with another
+ * {@link ZeroCopyFrameDecoder} or {@link ReplayingDecoder} (actual protocol decoder).
  * It is not possible to achieve this simply by calling
- * {@link org.jboss.netty.channel.ChannelPipeline#replace(org.jboss.netty.channel.ChannelHandler, String, org.jboss.netty.channel.ChannelHandler)}, but
+ * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
  * some additional steps are required:
  * <pre>
- * public class FirstDecoder extends {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder} {
+ * public class FirstDecoder extends {@link ZeroCopyFrameDecoder} {
  *
  *     public FirstDecoder() {
  *         super(true); // Enable unfold
  *     }
  *
  *     {@code @Override}
- *     protected Object decode({@link org.jboss.netty.channel.ChannelHandlerContext} ctx,
- *                             {@link org.jboss.netty.channel.Channel} channel,
- *                             {@link org.jboss.netty.buffer.ChannelBuffer} buf) {
+ *     protected Object decode({@link ChannelHandlerContext} ctx,
+ *                             {@link Channel} channel,
+ *                             {@link ChannelBuffer} buf) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;
@@ -176,7 +179,8 @@ import java.util.List;
  *
  * @apiviz.landmark
  */
-public abstract class ZeroCopyFrameDecoder extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
+public abstract class ZeroCopyFrameDecoder
+        extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
     private final boolean unfold;
     protected List<ChannelBuffer> cumulation;
@@ -349,8 +353,8 @@ public abstract class ZeroCopyFrameDecoder extends SimpleChannelUpstreamHandler 
     }
 
     /**
-     * Gets called on {@link #channelDisconnected(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelStateEvent)} and
-     * {@link #channelClosed(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelStateEvent)}
+     * Gets called on {@link #channelDisconnected(ChannelHandlerContext, ChannelStateEvent)} and
+     * {@link #channelClosed(ChannelHandlerContext, ChannelStateEvent)}
      */
     protected void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
@@ -381,11 +385,11 @@ public abstract class ZeroCopyFrameDecoder extends SimpleChannelUpstreamHandler 
     }
 
     /**
-     * Create a new {@link org.jboss.netty.buffer.ChannelBuffer} which is used for the cumulation.
+     * Create a new {@link ChannelBuffer} which is used for the cumulation.
      * Sub-classes may override this.
      *
-     * @param ctx {@link org.jboss.netty.channel.ChannelHandlerContext} for this handler
-     * @return buffer the {@link org.jboss.netty.buffer.ChannelBuffer} which is used for cumulation
+     * @param ctx {@link ChannelHandlerContext} for this handler
+     * @return buffer the {@link ChannelBuffer} which is used for cumulation
      */
     @Deprecated
     protected ChannelBuffer newCumulationBuffer(
@@ -394,8 +398,8 @@ public abstract class ZeroCopyFrameDecoder extends SimpleChannelUpstreamHandler 
     }
 
     /**
-     * Replace this {@link org.jboss.netty.handler.codec.frame.ZeroCopyFrameDecoder} in the {@link org.jboss.netty.channel.ChannelPipeline} with the given {@link org.jboss.netty.channel.ChannelHandler}. All
-     * remaining bytes in the {@link org.jboss.netty.buffer.ChannelBuffer} will get send to the new {@link org.jboss.netty.channel.ChannelHandler} that was used
+     * Replace this {@link ZeroCopyFrameDecoder} in the {@link ChannelPipeline} with the given {@link ChannelHandler}.
+     * All remaining bytes in the {@link ChannelBuffer} will get send to the new {@link ChannelHandler} that was used
      * as replacement
      *
      */
