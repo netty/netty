@@ -24,8 +24,7 @@ import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
 import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.example.securechat.SecureChatSslContextFactory;
-import io.netty.handler.codec.compression.ZlibDecoder;
-import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -132,8 +131,8 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
 
     private void enableGzip(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
-        p.addLast("gzipdeflater", new ZlibEncoder(ZlibWrapper.GZIP));
-        p.addLast("gzipinflater", new ZlibDecoder(ZlibWrapper.GZIP));
+        p.addLast("gzipdeflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
+        p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         p.addLast("unificationB", new PortUnificationServerHandler(detectSsl, false));
         p.remove(this);
     }

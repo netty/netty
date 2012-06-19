@@ -19,7 +19,7 @@ import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
 /**
- * Utility methods used by {@link ZlibEncoder} and {@link ZlibDecoder}.
+ * Utility methods used by {@link JZlibEncoder} and {@link JZlibDecoder}.
  */
 final class ZlibUtil {
 
