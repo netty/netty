@@ -113,6 +113,11 @@ public final class NioDatagramChannel
     }
 
     @Override
+    public boolean isConnected() {
+        return javaChannel().isConnected();
+    }
+
+    @Override
     protected DatagramChannel javaChannel() {
         return (DatagramChannel) super.javaChannel();
     }

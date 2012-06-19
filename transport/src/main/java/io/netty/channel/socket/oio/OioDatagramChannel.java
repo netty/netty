@@ -110,6 +110,11 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
+    public boolean isConnected() {
+        return socket.isConnected();
+    }
+
+    @Override
     protected SocketAddress localAddress0() {
         return socket.getLocalSocketAddress();
     }
