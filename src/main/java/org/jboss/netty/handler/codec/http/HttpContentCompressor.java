@@ -16,7 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.compression.NativeZlibEncoder;
+import org.jboss.netty.handler.codec.compression.JdkZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
@@ -102,7 +102,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         if (DetectionUtil.javaVersion() >= 7) {
             return new EncoderEmbedder<ChannelBuffer>(
-                    new NativeZlibEncoder(wrapper, compressionLevel));
+                    new JdkZlibEncoder(wrapper, compressionLevel));
         } else {
             return new EncoderEmbedder<ChannelBuffer>(
                     new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel));

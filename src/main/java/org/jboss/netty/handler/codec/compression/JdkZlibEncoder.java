@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
  */
-public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
+public class JdkZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
 
     private final byte[] out = new byte[8192];
     private final Deflater deflater;
@@ -58,7 +58,7 @@ public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAware
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public NativeZlibEncoder() {
+    public JdkZlibEncoder() {
         this(6);
     }
 
@@ -73,7 +73,7 @@ public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAware
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public NativeZlibEncoder(int compressionLevel) {
+    public JdkZlibEncoder(int compressionLevel) {
         this(ZlibWrapper.ZLIB, compressionLevel);
     }
 
@@ -83,7 +83,7 @@ public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAware
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public NativeZlibEncoder(ZlibWrapper wrapper) {
+    public JdkZlibEncoder(ZlibWrapper wrapper) {
         this(wrapper, 6);
     }
 
@@ -98,7 +98,7 @@ public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAware
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public NativeZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
+    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -126,7 +126,7 @@ public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAware
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public NativeZlibEncoder(byte[] dictionary) {
+    public JdkZlibEncoder(byte[] dictionary) {
         this(6, dictionary);
     }
 
@@ -144,7 +144,7 @@ public class NativeZlibEncoder extends OneToOneEncoder implements LifeCycleAware
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public NativeZlibEncoder(int compressionLevel, byte[] dictionary) {
+    public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
