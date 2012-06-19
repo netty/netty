@@ -22,7 +22,6 @@ import io.netty.handler.codec.ByteToByteDecoder;
  * Decompresses a {@link ByteBuf} using the deflate algorithm.
  *
  * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
 public abstract class ZlibDecoder extends ByteToByteDecoder {
 
