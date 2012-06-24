@@ -30,14 +30,14 @@ public interface NioChannelConfig extends ChannelConfig {
     /**
      * Returns the high water mark of the write buffer.  If the number of bytes
      * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code true}.
+     * will start to return {@code false}.
      */
     int getWriteBufferHighWaterMark();
 
     /**
      * Sets the high water mark of the write buffer.  If the number of bytes
      * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code true}.
+     * will start to return {@code false}.
      */
     void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
@@ -45,8 +45,8 @@ public interface NioChannelConfig extends ChannelConfig {
      * Returns the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will return
-     * {@code false} again.
+     * dropped down below this value, {@link Channel#isWritable()} will start to return
+     * {@code true} again.
      */
     int getWriteBufferLowWaterMark();
 
@@ -54,8 +54,8 @@ public interface NioChannelConfig extends ChannelConfig {
      * Sets the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will return
-     * {@code false} again.
+     * dropped down below this value, {@link Channel#isWritable()} will start toreturn
+     * {@code true} again.
      */
     void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
