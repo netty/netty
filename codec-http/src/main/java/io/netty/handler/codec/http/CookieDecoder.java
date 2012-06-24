@@ -41,12 +41,11 @@ import java.util.regex.Pattern;
  */
 public class CookieDecoder {
 
-    private static final Pattern PATTERN =
-        Pattern.compile(
-                // See: https://github.com/netty/netty/pull/96
-                //"(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))"
-                "(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;]*)))?(\\s*(?:[;,]+\\s*|$))"
-        );
+    private static final Pattern PATTERN = Pattern.compile(
+            // See: https://github.com/netty/netty/pull/96
+            //"(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))"
+            "(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;]*)))?(\\s*(?:[;,]+\\s*|$))"
+    );
 
     private static final String COMMA = ",";
 

@@ -144,9 +144,16 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 CookieEncoder cookieEncoder = new CookieEncoder(true);
                 for (Cookie cookie : cookies) {
                     cookieEncoder.addCookie(cookie);
+                    response.addHeader(SET_COOKIE, cookieEncoder.encode());
                 }
-                response.addHeader(SET_COOKIE, cookieEncoder.encode());
             }
+        } else {
+            // Browser sent no cookie.  Add some.
+            CookieEncoder cookieEncoder = new CookieEncoder(true);
+            cookieEncoder.addCookie("key1", "value1");
+            response.addHeader(SET_COOKIE, cookieEncoder.encode());
+            cookieEncoder.addCookie("key2", "value2");
+            response.addHeader(SET_COOKIE, cookieEncoder.encode());
         }
 
         // Write the response.
