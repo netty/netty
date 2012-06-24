@@ -165,6 +165,10 @@ public class CompositeByteBuf extends AbstractByteBuf {
         return indices[components.length];
     }
 
+    public int numComponents() {
+        return components.length;
+    }
+
     @Override
     public byte getByte(int index) {
         int componentId = componentId(index);
