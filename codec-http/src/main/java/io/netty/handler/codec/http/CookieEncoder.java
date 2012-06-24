@@ -68,7 +68,7 @@ public class CookieEncoder {
      * this encoder.
      */
     public void addCookie(String name, String value) {
-        cookies.add(new DefaultCookie(name, value));
+        addCookie(new DefaultCookie(name, value));
     }
 
     /**
@@ -98,6 +98,11 @@ public class CookieEncoder {
     }
 
     private String encodeServerSide() {
+        if (cookies.size() > 1) {
+            throw new IllegalStateException(
+                    "encode() can encode only one cookie on server mode: " + cookies.size() + " cookies added");
+        }
+
         StringBuilder sb = new StringBuilder();
 
         for (Cookie cookie: cookies) {
