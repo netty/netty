@@ -49,22 +49,19 @@ public class CookieDecoder {
 
     private static final String COMMA = ",";
 
-    private final boolean lenient;
-
     /**
-     * Creates a new decoder with strict parsing.
+     * Creates a new decoder.
      */
     public CookieDecoder() {
-        this(false);
+        super();
     }
 
     /**
-     * Creates a new decoder.
-     *
-     * @param lenient ignores cookies with the name 'HTTPOnly' instead of throwing an exception
+     * @deprecated Use {@link #CookieDecoder()} instead.
      */
-    public CookieDecoder(boolean lenient) {
-        this.lenient = lenient;
+    @Deprecated
+    public CookieDecoder(@SuppressWarnings("unused") boolean lenient) {
+        super();
     }
 
     /**
@@ -105,11 +102,6 @@ public class CookieDecoder {
         Set<Cookie> cookies = new TreeSet<Cookie>();
         for (; i < names.size(); i ++) {
             String name = names.get(i);
-            // Not all user agents understand the HttpOnly attribute
-            if (lenient && CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
-                continue;
-            }
-
             String value = values.get(i);
             if (value == null) {
                 value = "";
