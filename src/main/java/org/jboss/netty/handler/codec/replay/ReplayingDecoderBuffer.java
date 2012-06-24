@@ -27,23 +27,20 @@ import java.nio.charset.Charset;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
-import org.jboss.netty.buffer.ChannelBuffers;
 
 class ReplayingDecoderBuffer implements ChannelBuffer {
 
     private static final Error REPLAY = new ReplayError();
 
-    private final ChannelBuffer buffer;
+    private final ReplayingDecoder<?> parent;
     private boolean terminated;
 
-    public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(ChannelBuffers.EMPTY_BUFFER);
-
-    static {
-        EMPTY_BUFFER.terminate();
+    ReplayingDecoderBuffer(ReplayingDecoder<?> parent) {
+        this.parent = parent;
     }
 
-    ReplayingDecoderBuffer(ChannelBuffer buffer) {
-        this.buffer = buffer;
+    private ChannelBuffer buf() {
+        return parent.internalBuffer();
     }
 
     void terminate() {
@@ -52,14 +49,14 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int capacity() {
         if (terminated) {
-            return buffer.capacity();
+            return buf().capacity();
         } else {
             return Integer.MAX_VALUE;
         }
     }
 
     public boolean isDirect() {
-        return buffer.isDirect();
+        return buf().isDirect();
     }
 
     public boolean hasArray() {
@@ -93,7 +90,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public ChannelBuffer copy(int index, int length) {
         checkIndex(index, length);
-        return buffer.copy(index, length);
+        return buf().copy(index, length);
     }
 
     public void discardReadBytes() {
@@ -110,22 +107,22 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public byte getByte(int index) {
         checkIndex(index);
-        return buffer.getByte(index);
+        return buf().getByte(index);
     }
 
     public short getUnsignedByte(int index) {
         checkIndex(index);
-        return buffer.getUnsignedByte(index);
+        return buf().getUnsignedByte(index);
     }
 
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
-        buffer.getBytes(index, dst, dstIndex, length);
+        buf().getBytes(index, dst, dstIndex, length);
     }
 
     public void getBytes(int index, byte[] dst) {
         checkIndex(index, dst.length);
-        buffer.getBytes(index, dst);
+        buf().getBytes(index, dst);
     }
 
     public void getBytes(int index, ByteBuffer dst) {
@@ -134,7 +131,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         checkIndex(index, length);
-        buffer.getBytes(index, dst, dstIndex, length);
+        buf().getBytes(index, dst, dstIndex, length);
     }
 
     public void getBytes(int index, ChannelBuffer dst, int length) {
@@ -157,52 +154,52 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int getInt(int index) {
         checkIndex(index, 4);
-        return buffer.getInt(index);
+        return buf().getInt(index);
     }
 
     public long getUnsignedInt(int index) {
         checkIndex(index, 4);
-        return buffer.getUnsignedInt(index);
+        return buf().getUnsignedInt(index);
     }
 
     public long getLong(int index) {
         checkIndex(index, 8);
-        return buffer.getLong(index);
+        return buf().getLong(index);
     }
 
     public int getMedium(int index) {
         checkIndex(index, 3);
-        return buffer.getMedium(index);
+        return buf().getMedium(index);
     }
 
     public int getUnsignedMedium(int index) {
         checkIndex(index, 3);
-        return buffer.getUnsignedMedium(index);
+        return buf().getUnsignedMedium(index);
     }
 
     public short getShort(int index) {
         checkIndex(index, 2);
-        return buffer.getShort(index);
+        return buf().getShort(index);
     }
 
     public int getUnsignedShort(int index) {
         checkIndex(index, 2);
-        return buffer.getUnsignedShort(index);
+        return buf().getUnsignedShort(index);
     }
 
     public char getChar(int index) {
         checkIndex(index, 2);
-        return buffer.getChar(index);
+        return buf().getChar(index);
     }
 
     public float getFloat(int index) {
         checkIndex(index, 4);
-        return buffer.getFloat(index);
+        return buf().getFloat(index);
     }
 
     public double getDouble(int index) {
         checkIndex(index, 8);
-        return buffer.getDouble(index);
+        return buf().getDouble(index);
     }
 
     @Override
@@ -211,7 +208,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        int endIndex = buffer.indexOf(fromIndex, toIndex, value);
+        int endIndex = buf().indexOf(fromIndex, toIndex, value);
         if (endIndex < 0) {
             throw REPLAY;
         }
@@ -220,7 +217,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int indexOf(int fromIndex, int toIndex,
             ChannelBufferIndexFinder indexFinder) {
-        int endIndex = buffer.indexOf(fromIndex, toIndex, indexFinder);
+        int endIndex = buf().indexOf(fromIndex, toIndex, indexFinder);
         if (endIndex < 0) {
             throw REPLAY;
         }
@@ -228,7 +225,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int bytesBefore(byte value) {
-        int bytes = buffer.bytesBefore(value);
+        int bytes = buf().bytesBefore(value);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -236,7 +233,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int bytesBefore(ChannelBufferIndexFinder indexFinder) {
-        int bytes = buffer.bytesBefore(indexFinder);
+        int bytes = buf().bytesBefore(indexFinder);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -245,7 +242,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int bytesBefore(int length, byte value) {
         checkReadableBytes(length);
-        int bytes = buffer.bytesBefore(length, value);
+        int bytes = buf().bytesBefore(length, value);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -254,7 +251,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int bytesBefore(int length, ChannelBufferIndexFinder indexFinder) {
         checkReadableBytes(length);
-        int bytes = buffer.bytesBefore(length, indexFinder);
+        int bytes = buf().bytesBefore(length, indexFinder);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -262,7 +259,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int bytesBefore(int index, int length, byte value) {
-        int bytes = buffer.bytesBefore(index, length, value);
+        int bytes = buf().bytesBefore(index, length, value);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -271,7 +268,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int bytesBefore(int index, int length,
             ChannelBufferIndexFinder indexFinder) {
-        int bytes = buffer.bytesBefore(index, length, indexFinder);
+        int bytes = buf().bytesBefore(index, length, indexFinder);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -279,7 +276,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void markReaderIndex() {
-        buffer.markReaderIndex();
+        buf().markReaderIndex();
     }
 
     public void markWriterIndex() {
@@ -287,43 +284,43 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public ChannelBufferFactory factory() {
-        return buffer.factory();
+        return buf().factory();
     }
 
     public ByteOrder order() {
-        return buffer.order();
+        return buf().order();
     }
 
     public boolean readable() {
-        return terminated? buffer.readable() : true;
+        return terminated? buf().readable() : true;
     }
 
     public int readableBytes() {
         if (terminated) {
-            return buffer.readableBytes();
+            return buf().readableBytes();
         } else {
-            return Integer.MAX_VALUE - buffer.readerIndex();
+            return Integer.MAX_VALUE - buf().readerIndex();
         }
     }
 
     public byte readByte() {
         checkReadableBytes(1);
-        return buffer.readByte();
+        return buf().readByte();
     }
 
     public short readUnsignedByte() {
         checkReadableBytes(1);
-        return buffer.readUnsignedByte();
+        return buf().readUnsignedByte();
     }
 
     public void readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);
-        buffer.readBytes(dst, dstIndex, length);
+        buf().readBytes(dst, dstIndex, length);
     }
 
     public void readBytes(byte[] dst) {
         checkReadableBytes(dst.length);
-        buffer.readBytes(dst);
+        buf().readBytes(dst);
     }
 
     public void readBytes(ByteBuffer dst) {
@@ -332,7 +329,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public void readBytes(ChannelBuffer dst, int dstIndex, int length) {
         checkReadableBytes(length);
-        buffer.readBytes(dst, dstIndex, length);
+        buf().readBytes(dst, dstIndex, length);
     }
 
     public void readBytes(ChannelBuffer dst, int length) {
@@ -345,11 +342,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Deprecated
     public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
-        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
+        int endIndex = buf().indexOf(buf().readerIndex(), buf().writerIndex(), endIndexFinder);
         if (endIndex < 0) {
             throw REPLAY;
         }
-        return buffer.readBytes(endIndex - buffer.readerIndex());
+        return buf().readBytes(endIndex - buf().readerIndex());
     }
 
     public int readBytes(GatheringByteChannel out, int length)
@@ -359,22 +356,22 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public ChannelBuffer readBytes(int length) {
         checkReadableBytes(length);
-        return buffer.readBytes(length);
+        return buf().readBytes(length);
     }
 
     @Deprecated
     public ChannelBuffer readSlice(
             ChannelBufferIndexFinder endIndexFinder) {
-        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
+        int endIndex = buf().indexOf(buf().readerIndex(), buf().writerIndex(), endIndexFinder);
         if (endIndex < 0) {
             throw REPLAY;
         }
-        return buffer.readSlice(endIndex - buffer.readerIndex());
+        return buf().readSlice(endIndex - buf().readerIndex());
     }
 
     public ChannelBuffer readSlice(int length) {
         checkReadableBytes(length);
-        return buffer.readSlice(length);
+        return buf().readSlice(length);
     }
 
     public void readBytes(OutputStream out, int length) throws IOException {
@@ -382,65 +379,65 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int readerIndex() {
-        return buffer.readerIndex();
+        return buf().readerIndex();
     }
 
     public void readerIndex(int readerIndex) {
-        buffer.readerIndex(readerIndex);
+        buf().readerIndex(readerIndex);
     }
 
     public int readInt() {
         checkReadableBytes(4);
-        return buffer.readInt();
+        return buf().readInt();
     }
 
     public long readUnsignedInt() {
         checkReadableBytes(4);
-        return buffer.readUnsignedInt();
+        return buf().readUnsignedInt();
     }
 
     public long readLong() {
         checkReadableBytes(8);
-        return buffer.readLong();
+        return buf().readLong();
     }
 
     public int readMedium() {
         checkReadableBytes(3);
-        return buffer.readMedium();
+        return buf().readMedium();
     }
 
     public int readUnsignedMedium() {
         checkReadableBytes(3);
-        return buffer.readUnsignedMedium();
+        return buf().readUnsignedMedium();
     }
 
     public short readShort() {
         checkReadableBytes(2);
-        return buffer.readShort();
+        return buf().readShort();
     }
 
     public int readUnsignedShort() {
         checkReadableBytes(2);
-        return buffer.readUnsignedShort();
+        return buf().readUnsignedShort();
     }
 
     public char readChar() {
         checkReadableBytes(2);
-        return buffer.readChar();
+        return buf().readChar();
     }
 
     public float readFloat() {
         checkReadableBytes(4);
-        return buffer.readFloat();
+        return buf().readFloat();
     }
 
     public double readDouble() {
         checkReadableBytes(8);
-        return buffer.readDouble();
+        return buf().readDouble();
     }
 
     public void resetReaderIndex() {
-        buffer.resetReaderIndex();
+        buf().resetReaderIndex();
     }
 
     public void resetWriterIndex() {
@@ -523,18 +520,18 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Deprecated
     public int skipBytes(ChannelBufferIndexFinder firstIndexFinder) {
-        int oldReaderIndex = buffer.readerIndex();
-        int newReaderIndex = buffer.indexOf(oldReaderIndex, buffer.writerIndex(), firstIndexFinder);
+        int oldReaderIndex = buf().readerIndex();
+        int newReaderIndex = buf().indexOf(oldReaderIndex, buf().writerIndex(), firstIndexFinder);
         if (newReaderIndex < 0) {
             throw REPLAY;
         }
-        buffer.readerIndex(newReaderIndex);
+        buf().readerIndex(newReaderIndex);
         return newReaderIndex - oldReaderIndex;
     }
 
     public void skipBytes(int length) {
         checkReadableBytes(length);
-        buffer.skipBytes(length);
+        buf().skipBytes(length);
     }
 
     public ChannelBuffer slice() {
@@ -543,7 +540,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public ChannelBuffer slice(int index, int length) {
         checkIndex(index, length);
-        return buffer.slice(index, length);
+        return buf().slice(index, length);
     }
 
     public ByteBuffer toByteBuffer() {
@@ -552,7 +549,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public ByteBuffer toByteBuffer(int index, int length) {
         checkIndex(index, length);
-        return buffer.toByteBuffer(index, length);
+        return buf().toByteBuffer(index, length);
     }
 
     public ByteBuffer[] toByteBuffers() {
@@ -561,12 +558,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public ByteBuffer[] toByteBuffers(int index, int length) {
         checkIndex(index, length);
-        return buffer.toByteBuffers(index, length);
+        return buf().toByteBuffers(index, length);
     }
 
     public String toString(int index, int length, Charset charset) {
         checkIndex(index, length);
-        return buffer.toString(index, length, charset);
+        return buf().toString(index, length, charset);
     }
 
     public String toString(Charset charsetName) {
@@ -576,7 +573,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     @Deprecated
     public String toString(int index, int length, String charsetName) {
         checkIndex(index, length);
-        return buffer.toString(index, length, charsetName);
+        return buf().toString(index, length, charsetName);
     }
 
     @Deprecated
@@ -584,7 +581,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
             int index, int length, String charsetName,
             ChannelBufferIndexFinder terminatorFinder) {
         checkIndex(index, length);
-        return buffer.toString(index, length, charsetName, terminatorFinder);
+        return buf().toString(index, length, charsetName, terminatorFinder);
     }
 
     @Deprecated
@@ -671,7 +668,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int writerIndex() {
-        return buffer.writerIndex();
+        return buf().writerIndex();
     }
 
     public void writerIndex(int writerIndex) {
@@ -695,19 +692,19 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     private void checkIndex(int index) {
-        if (index > buffer.writerIndex()) {
+        if (index > buf().writerIndex()) {
             throw REPLAY;
         }
     }
 
     private void checkIndex(int index, int length) {
-        if (index + length > buffer.writerIndex()) {
+        if (index + length > buf().writerIndex()) {
             throw REPLAY;
         }
     }
 
     private void checkReadableBytes(int readableBytes) {
-        if (buffer.readableBytes() < readableBytes) {
+        if (buf().readableBytes() < readableBytes) {
             throw REPLAY;
         }
     }

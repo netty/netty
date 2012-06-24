@@ -18,8 +18,6 @@ package org.jboss.netty.handler.codec.replay;
 import java.net.SocketAddress;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -286,7 +284,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         extends FrameDecoder {
 
 
-    private ReplayingDecoderBuffer replayable;
+    private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(this);
     private T state;
     private int checkpoint;
     private boolean needsCleanup;
@@ -313,6 +311,11 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     protected ReplayingDecoder(T initialState, boolean unfold) {
         super(unfold);
         this.state = initialState;
+    }
+
+    @Override
+    protected ChannelBuffer internalBuffer() {
+        return super.internalBuffer();
     }
 
     /**
@@ -426,30 +429,24 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             // the cumulation buffer is not created yet so just pass the input
             // to callDecode(...) method
             cumulation = input;
-            replayable = new ReplayingDecoderBuffer(input);
 
             int oldReaderIndex = input.readerIndex();
             int inputSize = input.readableBytes();
 
-            // Wrap in try / finally.
-            //
-            // See https://github.com/netty/netty/issues/364
             try {
                 callDecode(
                         ctx, e.getChannel(),
                         input, replayable,
                         e.getRemoteAddress());
             } finally {
-                int readable = input.readableBytes();
-
-                if (readable > 0) {
-                    int cap = input.capacity();
-                    boolean copy = false;
+                int readableBytes = input.readableBytes();
+                if (readableBytes > 0) {
+                    int inputCapacity = input.capacity();
                     // check if readableBytes == capacity we can safe the copy as we will not be able to
                     // optimize memory usage anyway
-                    if (readable != cap && cap > getMaxCumulationBufferCapacity()) {
-                        copy = true;
-                    }
+                    boolean copy =
+                            readableBytes != inputCapacity &&
+                            inputCapacity > getMaxCumulationBufferCapacity();
 
                     // seems like there is something readable left in the input buffer
                     // or decoder wants a replay - create the cumulation buffer and
@@ -458,86 +455,39 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                     if (checkpoint > 0) {
                         int bytesToPreserve = inputSize - (checkpoint - oldReaderIndex);
                         if (copy) {
-                            cumulation = this.cumulation =
-                                    newCumulationBuffer(ctx, bytesToPreserve);
+                            this.cumulation = cumulation = newCumulationBuffer(ctx, bytesToPreserve);
                             cumulation.writeBytes(input, checkpoint, bytesToPreserve);
                         } else {
-                            cumulation = this.cumulation =
-                                    input.slice(checkpoint, bytesToPreserve);
+                            this.cumulation = cumulation = input.slice(checkpoint, bytesToPreserve);
                         }
                     } else if (checkpoint == 0) {
                         if (copy) {
-                            cumulation = this.cumulation =
-                                    newCumulationBuffer(ctx, inputSize);
+                            this.cumulation = cumulation = newCumulationBuffer(ctx, inputSize);
                             cumulation.writeBytes(input, oldReaderIndex, inputSize);
                             cumulation.readerIndex(input.readerIndex());
                         } else {
-                            cumulation = this.cumulation =
-                                    input.slice(oldReaderIndex, inputSize);
+                            this.cumulation = cumulation = input.slice(oldReaderIndex, inputSize);
                             cumulation.readerIndex(input.readerIndex());
                         }
                     } else {
                         if (copy) {
-                            cumulation = this.cumulation =
-                                    newCumulationBuffer(ctx, input.readableBytes());
+                            this.cumulation = cumulation = newCumulationBuffer(ctx, input.readableBytes());
                             cumulation.writeBytes(input);
                         } else {
-                            cumulation = this.cumulation =
-                                    input;
+                            this.cumulation = cumulation = input;
                         }
                     }
-                    replayable = new ReplayingDecoderBuffer(cumulation);
                 } else {
                     cumulation = null;
-                    replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
                 }
             }
-
         } else {
-            assert cumulation.readable();
-            // wrap the cumulation and input
-            ChannelBuffer buf = ChannelBuffers.wrappedBuffer(cumulation, input);
-            cumulation = buf;
-            replayable = new ReplayingDecoderBuffer(cumulation);
-
-            // Wrap in try / finally.
-            //
-            // See https://github.com/netty/netty/issues/364
+            input = appendToCumulation(input);
             try {
-                callDecode(ctx, e.getChannel(), buf, replayable, e.getRemoteAddress());
+                callDecode(ctx, e.getChannel(), input, replayable, e.getRemoteAddress());
             } finally {
-                int readable = buf.readableBytes();
-                if (readable == 0) {
-                    // nothing readable left so reset the state
-                    cumulation = null;
-                    replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
-                } else {
-                    int cap = buf.capacity();
-
-                    if (readable != cap && cap > getMaxCumulationBufferCapacity()) {
-                        // the readable bytes are > as the configured
-                        // copyThreshold, so create a new buffer and copy the
-                        // bytes into it
-                        cumulation = newCumulationBuffer(ctx, buf.readableBytes());
-                        cumulation.writeBytes(buf);
-
-                    } else {
-                        if (readable == cap) {
-                            cumulation = buf;
-                        } else {
-                            // create a new cumulation buffer that holds the
-                            // unwrapped parts of the CompositeChannelBuffer
-                            // that are not read yet.
-                            cumulation = ChannelBuffers.wrappedBuffer(((CompositeChannelBuffer) buf)
-                                    .decompose(buf.readerIndex(), buf.readableBytes())
-                                    .toArray(new ChannelBuffer[0]));
-                        }
-
-                    }
-                    replayable = new ReplayingDecoderBuffer(cumulation);
-                }
+                updateCumulation(ctx, input);
             }
-
         }
     }
 
@@ -600,7 +550,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 needsCleanup = false;
             }
 
-            this.cumulation = null;
             replayable.terminate();
 
             if (cumulation != null && cumulation.readable()) {
@@ -612,15 +561,16 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             // called even if there's nothing more to read from the buffer to
             // notify a user that the connection was closed explicitly.
             Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
+
+            this.cumulation = null;
+
             if (partiallyDecoded != null) {
                 unfoldAndFireMessageReceived(ctx, null, partiallyDecoded);
             }
         } catch (ReplayError replay) {
             // Ignore
         } finally {
-            replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
             ctx.sendUpstream(e);
         }
     }
-
 }

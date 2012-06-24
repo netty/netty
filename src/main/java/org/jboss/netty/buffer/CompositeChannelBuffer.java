@@ -174,6 +174,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return indices[components.length];
     }
 
+    public int numComponents() {
+        return components.length;
+    }
+
     public byte getByte(int index) {
         int componentId = componentId(index);
         return components[componentId].getByte(index - indices[componentId]);

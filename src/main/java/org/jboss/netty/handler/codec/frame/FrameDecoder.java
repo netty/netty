@@ -250,79 +250,66 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         }
 
         if (cumulation == null) {
-            // Wrap in try / finally.
-            //
-            // See https://github.com/netty/netty/issues/364
             try {
                 // the cumulation buffer is not created yet so just pass the input to callDecode(...) method
                 callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             } finally {
-                int readable = input.readableBytes();
-
-                if (readable > 0) {
-                    int cap = input.capacity();
-
-                    // check if readableBytes == capacity we can safe the copy as we will not be able to
-                    // optimize memory usage anyway
-                    if (readable != cap && cap > copyThreshold) {
-                        // seems like there is something readable left in the input buffer. So create
-                        // the cumulation buffer and copy the input into it
-                        cumulation = newCumulationBuffer(ctx, input.readableBytes());
-                        cumulation.writeBytes(input);
-                    } else {
-                        // just use the input as cumulation buffer for now
-                        cumulation = input;
-                    }
-
-                }
+                updateCumulation(ctx, input);
             }
 
         } else {
-            assert cumulation.readable();
-
-            // wrap the cumulation and input
-            ChannelBuffer buf = ChannelBuffers.wrappedBuffer(cumulation, input);
-            cumulation = buf;
-
-            // Wrap in try / finally.
-            //
-            // See https://github.com/netty/netty/issues/364
+            input = appendToCumulation(input);
             try {
-                callDecode(ctx, e.getChannel(), buf, e.getRemoteAddress());
+                callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             } finally {
-                int readable = buf.readableBytes();
-                if (readable == 0) {
-                    // nothing readable left so reset the state
-                    cumulation = null;
+                updateCumulation(ctx, input);
+            }
+        }
+    }
+
+    protected ChannelBuffer appendToCumulation(ChannelBuffer input) {
+        ChannelBuffer cumulation = this.cumulation;
+        assert cumulation.readable();
+        if (cumulation instanceof CompositeChannelBuffer) {
+            // Make sure the resulting cumulation buffer has no more than 4 components.
+            CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;
+            if (composite.numComponents() >= 4) {
+                cumulation = composite.copy();
+            }
+        }
+
+        this.cumulation = input = ChannelBuffers.wrappedBuffer(cumulation, input);
+        return input;
+    }
+
+    protected ChannelBuffer updateCumulation(ChannelHandlerContext ctx, ChannelBuffer input) {
+        ChannelBuffer newCumulation;
+        int readableBytes = input.readableBytes();
+        if (readableBytes > 0) {
+            int inputCapacity = input.capacity();
+
+            // If input.readableBytes() == input.capacity() (i.e. input is full),
+            // there's nothing to save from creating a new cumulation buffer
+            // even if input.capacity() exceeds the threshold, because the new cumulation
+            // buffer will have the same capacity and content with input.
+            if (readableBytes < inputCapacity && inputCapacity > copyThreshold) {
+                // At least one byte was consumed by callDecode() and input.capacity()
+                // exceeded the threshold.
+                cumulation = newCumulation = newCumulationBuffer(ctx, input.readableBytes());
+                cumulation.writeBytes(input);
+            } else {
+                // Nothing was consumed by callDecode() or input.capacity() did not
+                // exceed the threshold.
+                if (input.readerIndex() != 0) {
+                    cumulation = newCumulation = input.slice();
                 } else {
-                    int cap = buf.capacity();
-
-                    if (readable != cap && cap > copyThreshold) {
-                        // the readable bytes are > as the configured
-                        // copyThreshold, so create a new buffer and copy the
-                        // bytes into it
-                        cumulation = newCumulationBuffer(ctx, buf.readableBytes());
-                        cumulation.writeBytes(buf);
-
-                    } else {
-                        if (readable == cap) {
-                            cumulation = buf;
-                        } else {
-                            // create a new cumulation buffer that holds the
-                            // unwrapped parts of the CompositeChannelBuffer
-                            // that are not read yet.
-                            cumulation = ChannelBuffers.wrappedBuffer(((CompositeChannelBuffer) buf)
-                                    .decompose(buf.readerIndex(), buf.readableBytes())
-                                    .toArray(new ChannelBuffer[0]));
-
-                        }
-
-                    }
-
+                    cumulation = newCumulation = input;
                 }
             }
-
+        } else {
+            cumulation = newCumulation = null;
         }
+        return newCumulation;
     }
 
     @Override
