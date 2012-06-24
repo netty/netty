@@ -271,7 +271,9 @@ public class CookieDecoderTest {
             "d=\"1\\\"2\\\"3\"," +
             "e=\"\\\"\\\"\"," +
             "f=\"1\\\"\\\"2\"," +
-            "g=\"\\\\\"";
+            "g=\"\\\\\"," +
+            "h=\"';,\\x\"";
+
 
         Set<Cookie> cookies = new CookieDecoder().decode(source);
         Iterator<Cookie> it = cookies.iterator();
@@ -304,6 +306,10 @@ public class CookieDecoderTest {
         c = it.next();
         assertEquals("g", c.getName());
         assertEquals("\\", c.getValue());
+
+        c = it.next();
+        assertEquals("h", c.getName());
+        assertEquals("';,\\x", c.getValue());
 
         assertFalse(it.hasNext());
     }
@@ -389,5 +395,60 @@ public class CookieDecoderTest {
         Cookie c = cookies.iterator().next();
         assertEquals("HTTPOnly", c.getName());
         assertEquals("", c.getValue());
+    }
+
+    @Test
+    public void testDecodingLongValue() {
+        String longValue =
+                "b!!!$Q!!$ha!!<NC=MN(F!!%#4!!<NC=MN(F!!2!d!!!!#=IvZB!!2,F!!!!'=KqtH!!2-9!!!!" +
+                "'=IvZM!!3f:!!!!$=HbQW!!3g'!!!!%=J^wI!!3g-!!!!%=J^wI!!3g1!!!!$=HbQW!!3g2!!!!" +
+                "$=HbQW!!3g5!!!!%=J^wI!!3g9!!!!$=HbQW!!3gT!!!!$=HbQW!!3gX!!!!#=J^wI!!3gY!!!!" +
+                "#=J^wI!!3gh!!!!$=HbQW!!3gj!!!!$=HbQW!!3gr!!!!$=HbQW!!3gx!!!!#=J^wI!!3h!!!!!" +
+                "$=HbQW!!3h$!!!!#=J^wI!!3h'!!!!$=HbQW!!3h,!!!!$=HbQW!!3h0!!!!%=J^wI!!3h1!!!!" +
+                "#=J^wI!!3h2!!!!$=HbQW!!3h4!!!!$=HbQW!!3h7!!!!$=HbQW!!3h8!!!!%=J^wI!!3h:!!!!" +
+                "#=J^wI!!3h@!!!!%=J^wI!!3hB!!!!$=HbQW!!3hC!!!!$=HbQW!!3hL!!!!$=HbQW!!3hQ!!!!" +
+                "$=HbQW!!3hS!!!!%=J^wI!!3hU!!!!$=HbQW!!3h[!!!!$=HbQW!!3h^!!!!$=HbQW!!3hd!!!!" +
+                "%=J^wI!!3he!!!!%=J^wI!!3hf!!!!%=J^wI!!3hg!!!!$=HbQW!!3hh!!!!%=J^wI!!3hi!!!!" +
+                "%=J^wI!!3hv!!!!$=HbQW!!3i/!!!!#=J^wI!!3i2!!!!#=J^wI!!3i3!!!!%=J^wI!!3i4!!!!" +
+                "$=HbQW!!3i7!!!!$=HbQW!!3i8!!!!$=HbQW!!3i9!!!!%=J^wI!!3i=!!!!#=J^wI!!3i>!!!!" +
+                "%=J^wI!!3iD!!!!$=HbQW!!3iF!!!!#=J^wI!!3iH!!!!%=J^wI!!3iM!!!!%=J^wI!!3iS!!!!" +
+                "#=J^wI!!3iU!!!!%=J^wI!!3iZ!!!!#=J^wI!!3i]!!!!%=J^wI!!3ig!!!!%=J^wI!!3ij!!!!" +
+                "%=J^wI!!3ik!!!!#=J^wI!!3il!!!!$=HbQW!!3in!!!!%=J^wI!!3ip!!!!$=HbQW!!3iq!!!!" +
+                "$=HbQW!!3it!!!!%=J^wI!!3ix!!!!#=J^wI!!3j!!!!!$=HbQW!!3j%!!!!$=HbQW!!3j'!!!!" +
+                "%=J^wI!!3j(!!!!%=J^wI!!9mJ!!!!'=KqtH!!=SE!!<NC=MN(F!!?VS!!<NC=MN(F!!Zw`!!!!" +
+                "%=KqtH!!j+C!!<NC=MN(F!!j+M!!<NC=MN(F!!j+a!!<NC=MN(F!!j,.!!<NC=MN(F!!n>M!!!!" +
+                "'=KqtH!!s1X!!!!$=MMyc!!s1_!!!!#=MN#O!!ypn!!!!'=KqtH!!ypr!!!!'=KqtH!#%h!!!!!" +
+                "%=KqtH!#%o!!!!!'=KqtH!#)H6!!<NC=MN(F!#*%'!!!!%=KqtH!#+k(!!!!'=KqtH!#-E!!!!!" +
+                "'=KqtH!#1)w!!!!'=KqtH!#1)y!!!!'=KqtH!#1*M!!!!#=KqtH!#1*p!!!!'=KqtH!#14Q!!<N" +
+                "C=MN(F!#14S!!<NC=MN(F!#16I!!<NC=MN(F!#16N!!<NC=MN(F!#16X!!<NC=MN(F!#16k!!<N" +
+                "C=MN(F!#17@!!<NC=MN(F!#17A!!<NC=MN(F!#1Cq!!!!'=KqtH!#7),!!!!#=KqtH!#7)b!!!!" +
+                "#=KqtH!#7Ww!!!!'=KqtH!#?cQ!!!!'=KqtH!#His!!!!'=KqtH!#Jrh!!!!'=KqtH!#O@M!!<N" +
+                "C=MN(F!#O@O!!<NC=MN(F!#OC6!!<NC=MN(F!#Os.!!!!#=KqtH!#YOW!!!!#=H/Li!#Zat!!!!" +
+                "'=KqtH!#ZbI!!!!%=KqtH!#Zbc!!!!'=KqtH!#Zbs!!!!%=KqtH!#Zby!!!!'=KqtH!#Zce!!!!" +
+                "'=KqtH!#Zdc!!!!%=KqtH!#Zea!!!!'=KqtH!#ZhI!!!!#=KqtH!#ZiD!!!!'=KqtH!#Zis!!!!" +
+                "'=KqtH!#Zj0!!!!#=KqtH!#Zj1!!!!'=KqtH!#Zj[!!!!'=KqtH!#Zj]!!!!'=KqtH!#Zj^!!!!" +
+                "'=KqtH!#Zjb!!!!'=KqtH!#Zk!!!!!'=KqtH!#Zk6!!!!#=KqtH!#Zk9!!!!%=KqtH!#Zk<!!!!" +
+                "'=KqtH!#Zl>!!!!'=KqtH!#]9R!!!!$=H/Lt!#]I6!!!!#=KqtH!#]Z#!!!!%=KqtH!#^*N!!!!" +
+                "#=KqtH!#^:m!!!!#=KqtH!#_*_!!!!%=J^wI!#`-7!!!!#=KqtH!#`T>!!!!'=KqtH!#`T?!!!!" +
+                "'=KqtH!#`TA!!!!'=KqtH!#`TB!!!!'=KqtH!#`TG!!!!'=KqtH!#`TP!!!!#=KqtH!#`U,!!!!" +
+                "'=KqtH!#`U/!!!!'=KqtH!#`U0!!!!#=KqtH!#`U9!!!!'=KqtH!#aEQ!!!!%=KqtH!#b<)!!!!" +
+                "'=KqtH!#c9-!!!!%=KqtH!#dxC!!!!%=KqtH!#dxE!!!!%=KqtH!#ev$!!!!'=KqtH!#fBi!!!!" +
+                "#=KqtH!#fBj!!!!'=KqtH!#fG)!!!!'=KqtH!#fG+!!!!'=KqtH!#g<d!!!!'=KqtH!#g<e!!!!" +
+                "'=KqtH!#g=J!!!!'=KqtH!#gat!!!!#=KqtH!#s`D!!!!#=J_#p!#sg?!!!!#=J_#p!#t<a!!!!" +
+                "#=KqtH!#t<c!!!!#=KqtH!#trY!!!!$=JiYj!#vA$!!!!'=KqtH!#xs_!!!!'=KqtH!$$rO!!!!" +
+                "#=KqtH!$$rP!!!!#=KqtH!$(!%!!!!'=KqtH!$)]o!!!!%=KqtH!$,@)!!!!'=KqtH!$,k]!!!!" +
+                "'=KqtH!$1]+!!!!%=KqtH!$3IO!!!!%=KqtH!$3J#!!!!'=KqtH!$3J.!!!!'=KqtH!$3J:!!!!" +
+                "#=KqtH!$3JH!!!!#=KqtH!$3JI!!!!#=KqtH!$3JK!!!!%=KqtH!$3JL!!!!'=KqtH!$3JS!!!!" +
+                "'=KqtH!$8+M!!!!#=KqtH!$99d!!!!%=KqtH!$:Lw!!!!#=LK+x!$:N@!!!!#=KqtG!$:NC!!!!" +
+                "#=KqtG!$:hW!!!!'=KqtH!$:i[!!!!'=KqtH!$:ih!!!!'=KqtH!$:it!!!!'=KqtH!$:kO!!!!" +
+                "'=KqtH!$>*B!!!!'=KqtH!$>hD!!!!+=J^x0!$?lW!!!!'=KqtH!$?ll!!!!'=KqtH!$?lm!!!!" +
+                "%=KqtH!$?mi!!!!'=KqtH!$?mx!!!!'=KqtH!$D7]!!!!#=J_#p!$D@T!!!!#=J_#p!$V<g!!!!" +
+                "'=KqtH";
+
+        Set<Cookie> cookies = new CookieDecoder().decode("bh=\"" + longValue + "\";");
+        assertEquals(1, cookies.size());
+        Cookie c = cookies.iterator().next();
+        assertEquals("bh", c.getName());
+        assertEquals(longValue, c.getValue());
     }
 }
