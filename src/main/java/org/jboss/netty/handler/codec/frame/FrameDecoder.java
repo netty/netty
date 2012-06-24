@@ -281,9 +281,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
             assert cumulation.readable();
 
             // wrap the cumulation and input
-            //
-            // We use a CompositeBuffer all the time as its always faster the
-            // byte-copy if the wrapped buffer count == 2
             ChannelBuffer buf = ChannelBuffers.wrappedBuffer(cumulation, input);
             cumulation = buf;
 
