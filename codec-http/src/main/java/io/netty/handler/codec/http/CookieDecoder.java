@@ -49,24 +49,6 @@ public class CookieDecoder {
 
     private static final String COMMA = ",";
 
-    private final boolean lenient;
-
-    /**
-     * Creates a new decoder with strict parsing.
-     */
-    public CookieDecoder() {
-        this(false);
-    }
-
-    /**
-     * Creates a new decoder.
-     *
-     * @param lenient ignores cookies with the name 'HTTPOnly' instead of throwing an exception
-     */
-    public CookieDecoder(boolean lenient) {
-        this.lenient = lenient;
-    }
-
     /**
      * Decodes the specified HTTP header value into {@link Cookie}s.
      *
@@ -105,11 +87,6 @@ public class CookieDecoder {
         Set<Cookie> cookies = new TreeSet<Cookie>();
         for (; i < names.size(); i ++) {
             String name = names.get(i);
-            // Not all user agents understand the HttpOnly attribute
-            if (lenient && CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
-                continue;
-            }
-
             String value = values.get(i);
             if (value == null) {
                 value = "";

@@ -371,4 +371,23 @@ public class CookieDecoderTest {
         Cookie c = cookies.iterator().next();
         assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.getValue());
     }
+
+    @Test
+    public void testDecodingWeirdNames1() {
+        String src = "path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; domain=.www.google.com";
+        Set<Cookie> cookies = new CookieDecoder().decode(src);
+        Cookie c = cookies.iterator().next();
+        assertEquals("path", c.getName());
+        assertEquals("", c.getValue());
+        assertEquals("/", c.getPath());
+    }
+
+    @Test
+    public void testDecodingWeirdNames2() {
+        String src = "HTTPOnly=";
+        Set<Cookie> cookies = new CookieDecoder().decode(src);
+        Cookie c = cookies.iterator().next();
+        assertEquals("HTTPOnly", c.getName());
+        assertEquals("", c.getValue());
+    }
 }

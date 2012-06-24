@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.CaseIgnoringComparator;
-
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
@@ -27,22 +25,6 @@ import java.util.TreeSet;
  * The default {@link Cookie} implementation.
  */
 public class DefaultCookie implements Cookie {
-
-    private static final Set<String> RESERVED_NAMES = new TreeSet<String>(CaseIgnoringComparator.INSTANCE);
-
-    static {
-        RESERVED_NAMES.add("Domain");
-        RESERVED_NAMES.add("Path");
-        RESERVED_NAMES.add("Comment");
-        RESERVED_NAMES.add("CommentURL");
-        RESERVED_NAMES.add("Discard");
-        RESERVED_NAMES.add("Port");
-        RESERVED_NAMES.add("Max-Age");
-        RESERVED_NAMES.add("Expires");
-        RESERVED_NAMES.add("Version");
-        RESERVED_NAMES.add("Secure");
-        RESERVED_NAMES.add("HTTPOnly");
-    }
 
     private final String name;
     private String value;
@@ -87,8 +69,8 @@ public class DefaultCookie implements Cookie {
             }
         }
 
-        if (RESERVED_NAMES.contains(name)) {
-            throw new IllegalArgumentException("reserved name: " + name);
+        if (name.charAt(0) == '$') {
+            throw new IllegalArgumentException("name starting with '$' not allowed: " + name);
         }
 
         this.name = name;
