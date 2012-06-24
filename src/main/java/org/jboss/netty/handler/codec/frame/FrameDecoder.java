@@ -179,7 +179,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  */
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
-    private final boolean unfold;
+    private boolean unfold;
     protected ChannelBuffer cumulation;
     private volatile ChannelHandlerContext ctx;
     private int copyThreshold;
@@ -190,6 +190,19 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
 
     protected FrameDecoder(boolean unfold) {
         this.unfold = unfold;
+    }
+
+    public final boolean isUnfold() {
+        return unfold;
+    }
+
+    public final void setUnfold(boolean unfold) {
+        if (ctx == null) {
+            this.unfold = unfold;
+        } else {
+            throw new IllegalStateException(
+                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
+        }
     }
 
     /**
@@ -224,13 +237,13 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
      */
     public final void setMaxCumulationBufferCapacity(int copyThreshold) {
         if (copyThreshold < 0) {
-            throw new IllegalArgumentException("MaxCumulationBufferCapacity must be >= 0");
+            throw new IllegalArgumentException("maxCumulationBufferCapacity must be >= 0");
         }
         if (ctx == null) {
             this.copyThreshold = copyThreshold;
         } else {
-            throw new IllegalStateException("MaxCumulationBufferCapacity " +
-                    "can only be changed before the Decoder was added to the ChannelPipeline");
+            throw new IllegalStateException(
+                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
         }
     }
 
