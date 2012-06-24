@@ -94,7 +94,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    protected EncoderEmbedder<ChannelBuffer> newContentEncoder(String acceptEncoding) throws Exception {
+    protected EncoderEmbedder<ChannelBuffer> newContentEncoder(
+            HttpMessage msg, String acceptEncoding) throws Exception {
+        String contentEncoding = msg.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+        if (contentEncoding != null &&
+            !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
+            // Encoded already.
+            return null;
+        }
+
         ZlibWrapper wrapper = determineWrapper(acceptEncoding);
         if (wrapper == null) {
             return null;

@@ -29,17 +29,17 @@ import org.jboss.netty.util.internal.QueueFactory;
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
  * The original content is replaced with the new content encoded by the
- * {@link EncoderEmbedder}, which is created by {@link #newContentEncoder(String)}.
+ * {@link EncoderEmbedder}, which is created by {@link #newContentEncoder(HttpMessage, String)}.
  * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
  * is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
  * encoded content.  If there is no supported encoding in the
  * corresponding {@link HttpRequest}'s {@code "Accept-Encoding"} header,
- * {@link #newContentEncoder(String)} should return {@code null} so that no
+ * {@link #newContentEncoder(HttpMessage, String)} should return {@code null} so that no
  * encoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
- * and implement {@link #newContentEncoder(String)} and {@link #getTargetContentEncoding(String)}
+ * and implement {@link #newContentEncoder(HttpMessage, String)} and {@link #getTargetContentEncoding(String)}
  * properly to make this class functional.  For example, refer to the source
  * code of {@link HttpContentCompressor}.
  * <p>
@@ -105,7 +105,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                 }
 
                 boolean hasContent = m.isChunked() || m.getContent().readable();
-                if (hasContent && (encoder = newContentEncoder(acceptEncoding)) != null) {
+                if (hasContent && (encoder = newContentEncoder(m, acceptEncoding)) != null) {
                     // Encode the content and remove or replace the existing headers
                     // so that the message looks like a decoded message.
                     m.setHeader(
@@ -175,7 +175,8 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
      * @return a new {@link EncoderEmbedder} if there is a supported encoding
      *         in {@code acceptEncoding}.  {@code null} otherwise.
      */
-    protected abstract EncoderEmbedder<ChannelBuffer> newContentEncoder(String acceptEncoding) throws Exception;
+    protected abstract EncoderEmbedder<ChannelBuffer> newContentEncoder(
+            HttpMessage msg, String acceptEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the encoded content.
