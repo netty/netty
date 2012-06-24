@@ -93,11 +93,24 @@ public class CookieEncoderTest {
     }
 
     @Test
-    public void testEncodingMultipleCookies() {
-        String c1 = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard;";
-        String c2 = "myCookie2=myValue2;Path=\"/anotherpathsomewhere\";Domain=.anotherdomainsomewhere;Comment=\"this is another Comment\";Version=1;CommentURL=\"http://anotherurl.com\";";
-        String c3 = "myCookie3=myValue3;Version=1";
+    public void testEncodingMultipleServerCookies() {
         CookieEncoder encoder = new CookieEncoder(true);
+        encoder.addCookie("a", "b");
+        encoder.addCookie("b", "c");
+        try {
+            encoder.encode();
+            fail();
+        } catch (IllegalStateException e) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testEncodingMultipleClientCookies() {
+        String c1 = "$Version=1;myCookie=myValue;$Path=\"/apathsomewhere\";$Domain=.adomainsomewhere;$Port=\"80,8080\";";
+        String c2 = "$Version=1;myCookie2=myValue2;$Path=\"/anotherpathsomewhere\";$Domain=.anotherdomainsomewhere;";
+        String c3 = "$Version=1;myCookie3=myValue3";
+        CookieEncoder encoder = new CookieEncoder(false);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
