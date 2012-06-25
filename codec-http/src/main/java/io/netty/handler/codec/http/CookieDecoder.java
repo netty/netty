@@ -32,12 +32,13 @@ import java.util.TreeSet;
  * Set&lt;{@link Cookie}&gt; cookies = new {@link CookieDecoder}().decode(value);
  * </pre>
  *
- * @see CookieEncoder
+ * @see ClientCookieEncoder
+ * @see ServerCookieEncoder
  *
  * @apiviz.stereotype utility
  * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - decodes
  */
-public class CookieDecoder {
+public final class CookieDecoder {
 
     private static final String COMMA = ",";
 
@@ -46,7 +47,7 @@ public class CookieDecoder {
      *
      * @return the decoded {@link Cookie}s
      */
-    public Set<Cookie> decode(String header) {
+    public static Set<Cookie> decode(String header) {
         List<String> names = new ArrayList<String>(8);
         List<String> values = new ArrayList<String>(8);
         extractKeyValuePairs(header, names, values);
@@ -288,5 +289,9 @@ public class CookieDecoder {
             names.add(name);
             values.add(value);
         }
+    }
+
+    private CookieDecoder() {
+        // Unused
     }
 }

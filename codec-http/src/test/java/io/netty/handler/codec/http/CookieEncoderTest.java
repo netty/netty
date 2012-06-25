@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -28,8 +29,6 @@ public class CookieEncoderTest {
         String result = "myCookie=myValue;Expires=XXX;Path=/apathsomewhere;Domain=.adomainsomewhere;Secure";
         DateFormat df = new HttpHeaderDateFormat();
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
-        CookieEncoder encoder = new CookieEncoder(true);
-        encoder.addCookie(cookie);
         cookie.setComment("this is a Comment");
         cookie.setCommentUrl("http://aurl.com");
         cookie.setDomain(".adomainsomewhere");
@@ -39,7 +38,7 @@ public class CookieEncoderTest {
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
 
-        String encodedCookie = encoder.encode();
+        String encodedCookie = ServerCookieEncoder.encode(cookie);
 
         long currentTime = System.currentTimeMillis();
         boolean fail = true;
@@ -61,15 +60,13 @@ public class CookieEncoderTest {
     public void testEncodingSingleCookieV1() {
         String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
-        CookieEncoder encoder = new CookieEncoder(true);
-        encoder.addCookie(cookie);
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
         cookie.setDomain(".adomainsomewhere");
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
-        String encodedCookie = encoder.encode();
+        String encodedCookie = ServerCookieEncoder.encode(cookie);
         assertEquals(result, encodedCookie);
     }
 
@@ -77,8 +74,6 @@ public class CookieEncoderTest {
     public void testEncodingSingleCookieV2() {
         String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
-        CookieEncoder encoder = new CookieEncoder(true);
-        encoder.addCookie(cookie);
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
         cookie.setCommentUrl("http://aurl.com");
@@ -88,21 +83,8 @@ public class CookieEncoderTest {
         cookie.setPath("/apathsomewhere");
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
-        String encodedCookie = encoder.encode();
+        String encodedCookie = ServerCookieEncoder.encode(cookie);
         assertEquals(result, encodedCookie);
-    }
-
-    @Test
-    public void testEncodingMultipleServerCookies() {
-        CookieEncoder encoder = new CookieEncoder(true);
-        encoder.addCookie("a", "b");
-        encoder.addCookie("b", "c");
-        try {
-            encoder.encode();
-            fail();
-        } catch (IllegalStateException e) {
-            // Expected
-        }
     }
 
     @Test
@@ -110,7 +92,6 @@ public class CookieEncoderTest {
         String c1 = "$Version=1;myCookie=myValue;$Path=\"/apathsomewhere\";$Domain=.adomainsomewhere;$Port=\"80,8080\";";
         String c2 = "$Version=1;myCookie2=myValue2;$Path=\"/anotherpathsomewhere\";$Domain=.anotherdomainsomewhere;";
         String c3 = "$Version=1;myCookie3=myValue3";
-        CookieEncoder encoder = new CookieEncoder(false);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
@@ -121,7 +102,6 @@ public class CookieEncoderTest {
         cookie.setPath("/apathsomewhere");
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
-        encoder.addCookie(cookie);
         Cookie cookie2 = new DefaultCookie("myCookie2", "myValue2");
         cookie2.setVersion(1);
         cookie2.setComment("this is another Comment");
@@ -130,23 +110,17 @@ public class CookieEncoderTest {
         cookie2.setDiscard(false);
         cookie2.setPath("/anotherpathsomewhere");
         cookie2.setSecure(false);
-        encoder.addCookie(cookie2);
         Cookie cookie3 = new DefaultCookie("myCookie3", "myValue3");
         cookie3.setVersion(1);
-        encoder.addCookie(cookie3);
-        String encodedCookie = encoder.encode();
+        String encodedCookie = ClientCookieEncoder.encode(cookie, cookie2, cookie3);
         assertEquals(c1 + c2 + c3, encodedCookie);
     }
 
     @Test
     public void testEncodingWithNoCookies() {
-    	CookieEncoder encoderForServer = new CookieEncoder(true);
-    	String encodedCookie1 = encoderForServer.encode();
-    	CookieEncoder encoderForClient = new CookieEncoder(false);
-    	String encodedCookie2 = encoderForClient.encode();
-    	assertNotNull(encodedCookie1);
-    	assertNotNull(encodedCookie2);
-
+        String encodedCookie1 = ClientCookieEncoder.encode();
+        List<String> encodedCookie2 = ServerCookieEncoder.encode();
+        assertNotNull(encodedCookie1);
+        assertNotNull(encodedCookie2);
     }
-
 }
