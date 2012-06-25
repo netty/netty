@@ -2,8 +2,6 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.CookieEncoderUtil.*;
 
-import java.util.Collection;
-
 /**
  * Encodes client-side {@link Cookie}s into an HTTP header value.  This encoder can encode
  * the HTTP cookie version 0, 1, and 2.
@@ -38,22 +36,6 @@ public final class ClientCookieEncoder {
     }
 
     public static String encode(Cookie... cookies) {
-        if (cookies == null) {
-            throw new NullPointerException("cookies");
-        }
-
-        StringBuilder buf = new StringBuilder();
-        for (Cookie c: cookies) {
-            if (c == null) {
-                break;
-            }
-
-            encode(buf, c);
-        }
-        return stripTrailingSeparator(buf);
-    }
-
-    public static String encode(Collection<Cookie> cookies) {
         if (cookies == null) {
             throw new NullPointerException("cookies");
         }
