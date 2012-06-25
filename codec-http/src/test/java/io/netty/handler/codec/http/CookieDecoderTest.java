@@ -31,8 +31,7 @@ public class CookieDecoderTest {
         String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
         cookieString = cookieString.replace("XXX", new HttpHeaderDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
 
-        CookieDecoder cookieDecoder = new CookieDecoder();
-        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
@@ -62,8 +61,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0ExtraParamsIgnored() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=0;commentURL=http://aurl.com;port=\"80,8080\";discard;";
-        CookieDecoder cookieDecoder = new CookieDecoder();
-        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
@@ -81,8 +79,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV1() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
-        CookieDecoder cookieDecoder = new CookieDecoder();
-        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertEquals("myValue", cookie.getValue());
@@ -101,8 +98,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV1ExtraParamsIgnored() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=http://aurl.com;port='80,8080';discard;";
-        CookieDecoder cookieDecoder = new CookieDecoder();
-        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
@@ -120,8 +116,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV2() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=http://aurl.com;port=\"80,8080\";discard;";
-        CookieDecoder cookieDecoder = new CookieDecoder();
-        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
@@ -145,9 +140,8 @@ public class CookieDecoderTest {
         String c1 = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=\"http://aurl.com\";port='80,8080';discard;";
         String c2 = "myCookie2=myValue2;max-age=0;path=/anotherpathsomewhere;domain=.anotherdomainsomewhere;comment=this is another comment;version=2;commentURL=http://anotherurl.com;";
         String c3 = "myCookie3=myValue3;max-age=0;version=2;";
-        CookieDecoder decoder = new CookieDecoder();
 
-        Set<Cookie> cookies = decoder.decode(c1 + c2 + c3);
+        Set<Cookie> cookies = CookieDecoder.decode(c1 + c2 + c3);
         assertEquals(3, cookies.size());
         Iterator<Cookie> it = cookies.iterator();
         Cookie cookie = it.next();
@@ -196,7 +190,7 @@ public class CookieDecoderTest {
                 "Part_Number=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\"; " +
                 "Part_Number=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
 
-        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Set<Cookie> cookies = CookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -231,7 +225,7 @@ public class CookieDecoderTest {
             "$Version=\"1\"; session_id=\"1234\", " +
             "$Version=\"1\"; session_id=\"1111\"; $Domain=\".cracker.edu\"";
 
-        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Set<Cookie> cookies = CookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -275,7 +269,7 @@ public class CookieDecoderTest {
             "h=\"';,\\x\"";
 
 
-        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Set<Cookie> cookies = CookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -322,7 +316,7 @@ public class CookieDecoderTest {
             "__utma=48461872.1094088325.1258140131.1258140131.1258140131.1; " +
             "__utmb=48461872.13.10.1258140131; __utmc=48461872; " +
             "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
-        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Set<Cookie> cookies = CookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -361,7 +355,7 @@ public class CookieDecoderTest {
 
         String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";
 
-        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Set<Cookie> cookies = CookieDecoder.decode(source);
 
         Cookie c = cookies.iterator().next();
         assertTrue(Math.abs(expectedMaxAge - c.getMaxAge()) < 2);
@@ -372,7 +366,7 @@ public class CookieDecoderTest {
         String source = "UserCookie=timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE;" +
                 " expires=Sat, 01-Dec-2012 10:53:31 GMT; path=/";
 
-        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Set<Cookie> cookies = CookieDecoder.decode(source);
 
         Cookie c = cookies.iterator().next();
         assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.getValue());
@@ -381,7 +375,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingWeirdNames1() {
         String src = "path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; domain=.www.google.com";
-        Set<Cookie> cookies = new CookieDecoder().decode(src);
+        Set<Cookie> cookies = CookieDecoder.decode(src);
         Cookie c = cookies.iterator().next();
         assertEquals("path", c.getName());
         assertEquals("", c.getValue());
@@ -391,7 +385,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingWeirdNames2() {
         String src = "HTTPOnly=";
-        Set<Cookie> cookies = new CookieDecoder().decode(src);
+        Set<Cookie> cookies = CookieDecoder.decode(src);
         Cookie c = cookies.iterator().next();
         assertEquals("HTTPOnly", c.getName());
         assertEquals("", c.getValue());
@@ -445,7 +439,7 @@ public class CookieDecoderTest {
                 "%=KqtH!$?mi!!!!'=KqtH!$?mx!!!!'=KqtH!$D7]!!!!#=J_#p!$D@T!!!!#=J_#p!$V<g!!!!" +
                 "'=KqtH";
 
-        Set<Cookie> cookies = new CookieDecoder().decode("bh=\"" + longValue + "\";");
+        Set<Cookie> cookies = CookieDecoder.decode("bh=\"" + longValue + "\";");
         assertEquals(1, cookies.size());
         Cookie c = cookies.iterator().next();
         assertEquals("bh", c.getName());

@@ -23,10 +23,12 @@ package io.netty.handler.codec.http;
  * <p>
  * Unlike the Servlet API, a query string is constructed and decomposed by
  * {@link QueryStringEncoder} and {@link QueryStringDecoder}.  {@link Cookie}
- * support is also provided separately via {@link CookieEncoder} and
- * {@link CookieDecoder}.
+ * support is also provided separately via {@link CookieDecoder}, {@link ClientCookieEncoder},
+ * and {@link @ServerCookieEncoder}.
+ *
  * @see HttpResponse
- * @see CookieEncoder
+ * @see ClientCookieEncoder
+ * @see ServerCookieEncoder
  * @see CookieDecoder
  */
 public interface HttpRequest extends HttpMessage {
