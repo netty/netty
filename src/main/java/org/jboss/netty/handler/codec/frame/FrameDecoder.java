@@ -183,6 +183,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     protected ChannelBuffer cumulation;
     private volatile ChannelHandlerContext ctx;
     private int copyThreshold;
+    private int maxCumulationBufferComponents = 4;
 
     protected FrameDecoder() {
         this(false);
@@ -247,6 +248,37 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         }
     }
 
+    /**
+     * Returns the maximum number of components in the cumulation buffer.  If the number of
+     * the components in the cumulation buffer exceeds this value, the components of the
+     * cumulation buffer are consolidated into a single component, involving memory copies.
+     * The default value of this property is {@code 4}.
+     */
+    public final int getMaxCumulationBufferComponents() {
+        return maxCumulationBufferComponents;
+    }
+
+    /**
+     * Sets the maximum number of components in the cumulation buffer.  If the number of
+     * the components in the cumulation buffer exceeds this value, the components of the
+     * cumulation buffer are consolidated into a single component, involving memory copies.
+     * The default value of this property is {@code 4} and its minimum allowed value is {@code 2}.
+     */
+    public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
+        if (maxCumulationBufferComponents < 2) {
+            throw new IllegalArgumentException(
+                    "maxCumulationBufferComponents: " + maxCumulationBufferComponents +
+                    " (expected: >= 2)");
+        }
+
+        if (ctx == null) {
+            this.maxCumulationBufferComponents = maxCumulationBufferComponents;
+        } else {
+            throw new IllegalStateException(
+                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
+        }
+    }
+
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) throws Exception {
@@ -286,7 +318,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         if (cumulation instanceof CompositeChannelBuffer) {
             // Make sure the resulting cumulation buffer has no more than 4 components.
             CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;
-            if (composite.numComponents() >= 4) {
+            if (composite.numComponents() >= maxCumulationBufferComponents) {
                 cumulation = composite.copy();
             }
         }
