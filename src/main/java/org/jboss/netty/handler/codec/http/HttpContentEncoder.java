@@ -92,6 +92,11 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
 
             encoder = null;
 
+            String acceptEncoding = acceptEncodingQueue.poll();
+            if (acceptEncoding == null) {
+                throw new IllegalStateException("cannot send more responses than requests");
+            }
+
             String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
             if (contentEncoding != null &&
                 !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
@@ -99,11 +104,6 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                 ctx.sendDownstream(e);
             } else {
                 // Determine the content encoding.
-                String acceptEncoding = acceptEncodingQueue.poll();
-                if (acceptEncoding == null) {
-                    throw new IllegalStateException("cannot send more responses than requests");
-                }
-
                 boolean hasContent = m.isChunked() || m.getContent().readable();
                 if (hasContent && (encoder = newContentEncoder(m, acceptEncoding)) != null) {
                     // Encode the content and remove or replace the existing headers
