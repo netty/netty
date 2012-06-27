@@ -24,62 +24,101 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
+/**
+ * A class that holds a number of network-related constants.
+ */
 public final class NetworkConstants {
 
+    /**
+     * The {@link InetAddress} representing the host machine
+     *
+     * We cache this because some machines take almost forever to return from
+     * {@link InetAddress}.getLocalHost(). This may be due to incorrect
+     * configuration of the hosts and DNS client configuration files.
+     */
     public static final InetAddress LOCALHOST;
+
+    /**
+     * The loopback {@link NetworkInterface} on the current machine
+     */
     public static final NetworkInterface LOOPBACK_IF;
 
+    /**
+     * The logger being used by this class
+     */
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(NetworkConstants.class);
 
     static {
-        // We cache this because some machine takes almost forever to return
-        // from InetAddress.getLocalHost().  I think it's due to the incorrect
-        // /etc/hosts or /etc/resolve.conf.
+
+        //Start the process of discovering localhost
         InetAddress localhost = null;
+
         try {
+            //Let's start by getting localhost automatically
             localhost = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
+            //No? That's okay.
             try {
+                //Try to force an IPv4 localhost address
                 localhost = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
             } catch (UnknownHostException e1) {
+                //No? Okay. You must be using IPv6
                 try {
+                    //Try to force an IPv6 localhost address
                     localhost = InetAddress.getByAddress(
                             new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
                 } catch (UnknownHostException e2) {
-                    logger.error("Failed to resolve localhost", e2);
+                    //No? Okay.
+                    logger.error("Failed to resolve localhost - Incorrect network configuration?", e2);
                 }
             }
         }
 
+        //Set the localhost constant
         LOCALHOST = localhost;
 
-        NetworkInterface loopbackIf;
+        //Prepare to get the local NetworkInterface
+        NetworkInterface loopbackInterface;
+
         try {
-            loopbackIf = NetworkInterface.getByInetAddress(LOCALHOST);
+            //Automatically get the loopback interface
+            loopbackInterface = NetworkInterface.getByInetAddress(LOCALHOST);
         } catch (SocketException e) {
-            loopbackIf = null;
+            //No? Alright. There is a backup!
+            loopbackInterface = null;
         }
 
-        // If null is returned, iterate over all the available network interfaces.
-        if (loopbackIf == null) {
+        //Check to see if a network interface was not found
+        if (loopbackInterface == null) {
             try {
-                for (Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces();
-                     e.hasMoreElements();) {
-                    NetworkInterface nif = e.nextElement();
-                    if (nif.isLoopback()) {
-                        loopbackIf = nif;
+                //Start iterating over all network interfaces
+                for (Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                     interfaces.hasMoreElements();) {
+                    //Get the "next" interface
+                    NetworkInterface networkInterface = interfaces.nextElement();
+
+                    //Check to see if the interface is a loopback interface
+                    if (networkInterface.isLoopback()) {
+                        //Phew! The loopback interface was found.
+                        loopbackInterface = networkInterface;
+                        //No need to keep iterating
                         break;
                     }
                 }
             } catch (SocketException e) {
+                //Nope. Can't do anything else, sorry!
                 logger.error("Failed to enumerate network interfaces", e);
             }
         }
 
-        LOOPBACK_IF = loopbackIf;
+        //Set the loopback interface constant
+        LOOPBACK_IF = loopbackInterface;
     }
 
+    /**
+     * A constructor to stop this class being constructed.
+     */
     private NetworkConstants() {
         // Unused
     }
