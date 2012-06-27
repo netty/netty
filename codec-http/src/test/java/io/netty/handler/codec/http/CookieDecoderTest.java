@@ -392,6 +392,19 @@ public class CookieDecoderTest {
     }
 
     @Test
+    public void testDecodingValuesWithCommasAndEquals() {
+        String src = "A=v=1&lg=en-US,it-IT,it&intl=it&np=1;T=z=E";
+        Set<Cookie> cookies = CookieDecoder.decode(src);
+        Iterator<Cookie> i = cookies.iterator();
+        Cookie c = i.next();
+        assertEquals("A", c.getName());
+        assertEquals("v=1&lg=en-US,it-IT,it&intl=it&np=1", c.getValue());
+        c = i.next();
+        assertEquals("T", c.getName());
+        assertEquals("z=E", c.getValue());
+    }
+
+    @Test
     public void testDecodingLongValue() {
         String longValue =
                 "b!!!$Q!!$ha!!<NC=MN(F!!%#4!!<NC=MN(F!!2!d!!!!#=IvZB!!2,F!!!!'=KqtH!!2-9!!!!" +
