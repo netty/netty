@@ -575,7 +575,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
         dst.writerIndex(dst.capacity());
     }
     
-    public ByteBuf getBufferFor(int index) throws IOException {
+    public ByteBuf getBufferFor(int index) throws IndexOutOfBoundsException {
         if (index < 0 || index > capacity()) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
                     + " - Bytes needed: " + (index) + ", maximum is "
