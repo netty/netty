@@ -574,6 +574,24 @@ public class CompositeByteBuf extends AbstractByteBuf {
 
         dst.writerIndex(dst.capacity());
     }
+    
+    public ByteBuf getBufferFor(int index) throws IOException {
+        if (index < 0 || index > capacity()) {
+            throw new IndexOutOfBoundsException("Invalid index: " + index
+                    + " - Bytes needed: " + (index) + ", maximum is "
+                    + capacity());
+        }
+        
+        List<ByteBuf> components = decompose(index, 1);
+        switch (components.size()) {
+        case 0:
+            return Unpooled.EMPTY_BUFFER;
+        case 1:
+            return components.get(0);
+        default:
+            throw new IOException("Index " + index + " is part of " + components.size() + " buffers!");
+        }
+    }
 
     @Override
     public ByteBuf slice(int index, int length) {
