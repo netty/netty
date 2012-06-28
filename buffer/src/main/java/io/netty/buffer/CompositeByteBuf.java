@@ -575,17 +575,33 @@ public class CompositeByteBuf extends AbstractByteBuf {
         dst.writerIndex(dst.capacity());
     }
     
+    /**
+     * Gets the {@link ByteBuf} used at the specified index.
+     * <p>
+     * Please note that since a {@link CompositeByteBuf} is made up of
+     * multiple {@link ByteBuf}s, this does <em>not</em> return the full buffer.
+     * Instead, it only returns a portion of the composite buffer where the
+     * index is located
+     * </p>
+     * 
+     * <p>
+     * This is a method meant for use by <em>experts</em> - Please be careful
+     * when using it.
+     * </p>
+     * 
+     * @param index The index to use
+     * @return The {@link ByteBuf} used at the indes.
+     * @throws IndexOutOfBoundsException 
+     */
     public ByteBuf getBufferFor(int index) throws IndexOutOfBoundsException {
         if (index < 0 || index > capacity()) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
                     + " - Bytes needed: " + (index) + ", maximum is "
                     + capacity());
         }
-        
-        int componentId = componentId(index);
 
         //Return the component byte buffer
-        return components[componentId].duplicate();
+        return components[componentId(index)];
         
     }
 
