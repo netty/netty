@@ -165,6 +165,6 @@ public final class SpdyHttpHeaders {
      * Sets the {@code "X-SPDY-Scheme"} header.
      */
     public static void setScheme(HttpMessage message, String scheme) {
-        message.setHeader(Names.URL, scheme);
+        message.setHeader(Names.SCHEME, scheme);
     }
 }
