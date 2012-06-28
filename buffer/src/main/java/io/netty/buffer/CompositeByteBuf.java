@@ -582,15 +582,11 @@ public class CompositeByteBuf extends AbstractByteBuf {
                     + capacity());
         }
         
-        List<ByteBuf> components = decompose(index, 1);
-        switch (components.size()) {
-        case 0:
-            return Unpooled.EMPTY_BUFFER;
-        case 1:
-            return components.get(0);
-        default:
-            throw new IOException("Index " + index + " is part of " + components.size() + " buffers!");
-        }
+        int componentId = componentId(index);
+
+        //Return the component byte buffer
+        return components[componentId].duplicate();
+        
     }
 
     @Override
