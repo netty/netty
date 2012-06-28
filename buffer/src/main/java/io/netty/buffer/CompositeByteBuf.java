@@ -588,8 +588,8 @@ public class CompositeByteBuf extends AbstractByteBuf {
      *
      * @param index The {@code index} to search for and include in the returned {@link ByteBuf}
      * @return The {@link ByteBuf} that contains the specified {@code index}
-     * @throws IndexOutOfBoundsException when the specified {@code index} is less than
-     * zero, or larger than {@code capacity()}
+     * @throws IndexOutOfBoundsException when the specified {@code index} is
+     * less than zero, or larger than {@code capacity()}
      */
     public ByteBuf getBufferFor(int index) throws IndexOutOfBoundsException {
         if (index < 0 || index > capacity()) {
