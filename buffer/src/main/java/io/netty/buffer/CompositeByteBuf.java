@@ -576,7 +576,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
     }
 
     /**
-     * Gets the {@link ByteBuf} portion of this {@link CompositeByteBuf} that
+     * Returns the {@link ByteBuf} portion of this {@link CompositeByteBuf} that
      * contains the specified {@code index}. This is an expert method!
      *
      * <p>
