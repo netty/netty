@@ -42,7 +42,7 @@ public final class CaseIgnoringComparator implements Comparator<String>, Seriali
 
     /**
      * Compares two {@link String}s
-     * 
+     *
      * @param original The original {@link String} that is being used
      * @param otherString The other {@link String} to compare with
      * @return 1 if the original string is greater, 0 if it is the same, or -1

@@ -29,7 +29,7 @@ public class UnterminatableExecutor implements Executor {
 
     /**
      * Creates a new {@link UnterminatableExecutor}
-     * 
+     *
      * @param executor The initial {@link Executor} to wrap
      */
     public UnterminatableExecutor(Executor executor) {
@@ -45,7 +45,7 @@ public class UnterminatableExecutor implements Executor {
 
     /**
      * Executes the specified command
-     * 
+     *
      * @param command The command to execute
      */
     @Override
