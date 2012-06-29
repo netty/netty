@@ -213,6 +213,30 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     /**
+     * Return the readerIdleTime that was given when instance this class in milliseconds.
+     *
+     */
+    public long getReaderIdleTimeInMillis() {
+        return readerIdleTimeMillis;
+    }
+
+    /**
+     * Return the writerIdleTime that was given when instance this class in milliseconds.
+     *
+     */
+    public long getWriterIdleTimeInMillis() {
+        return writerIdleTimeMillis;
+    }
+
+    /**
+     * Return the allIdleTime that was given when instance this class in milliseconds.
+     *
+     */
+    public long getAllIdleTimeInMillis() {
+        return allIdleTimeMillis;
+    }
+
+    /**
      * Stops the {@link Timer} which was specified in the constructor of this
      * handler.  You should not call this method if the {@link Timer} is in use
      * by other objects.
