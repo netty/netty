@@ -577,7 +577,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
 
     /**
      * Returns the {@link ByteBuf} portion of this {@link CompositeByteBuf} that
-     * contains the specified {@code index}. This is an expert method!
+     * contains the specified {@code index}. <strong>This is an expert method!</strong>
      *
      * <p>
      * Please note that since a {@link CompositeByteBuf} is made up of
@@ -585,13 +585,14 @@ public class CompositeByteBuf extends AbstractByteBuf {
      * Instead, it only returns a portion of the composite buffer where the
      * index is located
      * </p>
+     * 
      *
      * @param index The {@code index} to search for and include in the returned {@link ByteBuf}
      * @return The {@link ByteBuf} that contains the specified {@code index}
      * @throws IndexOutOfBoundsException when the specified {@code index} is
      * less than zero, or larger than {@code capacity()}
      */
-    public ByteBuf getBufferFor(int index) throws IndexOutOfBoundsException {
+    public ByteBuf getBuffer(int index) throws IndexOutOfBoundsException {
         if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
                     + " - Bytes needed: " + index + ", maximum is "
