@@ -18,134 +18,191 @@ package io.netty.handler.codec.http;
 import java.util.Set;
 
 /**
- * An HTTP <a href="http://en.wikipedia.org/wiki/HTTP_cookie">Cookie</a>.
+ * An interface defining an
+ * <a href="http://en.wikipedia.org/wiki/HTTP_cookie">HTTP cookie</a>.
  */
 public interface Cookie extends Comparable<Cookie> {
 
     /**
-     * Returns the name of this cookie.
+     * Gets the name of this {@link Cookie}.
+     *
+     * @return The name of this {@link Cookie}
      */
     String getName();
 
     /**
-     * Returns the value of this cookie.
+     * Gets the value of this {@link Cookie}.
+     *
+     * @return The value of this {@link Cookie}
      */
     String getValue();
 
     /**
-     * Sets the value of this cookie.
+     * Sets the value of this {@link Cookie}.
+     *
+     * @param value The value to set
      */
     void setValue(String value);
 
     /**
-     * Returns the domain of this cookie.
+     * Gets the domain of this {@link Cookie}.
+     *
+     * @return The domain of this {@link Cookie}
      */
     String getDomain();
 
     /**
-     * Sets the domain of this cookie.
+     * Sets the domain of this {@link Cookie}.
+     *
+     * @param domain The domain to use
      */
     void setDomain(String domain);
 
     /**
-     * Returns the path of this cookie.
+     * Gets the path of this {@link Cookie}.
+     *
+     * @return The {@link Cookie}'s path
      */
     String getPath();
 
     /**
-     * Sets the path of this cookie.
+     * Sets the path of this {@link Cookie}.
+     *
+     * @param path The path to use for this {@link Cookie}
      */
     void setPath(String path);
 
     /**
-     * Returns the comment of this cookie.
+     * Gets the comment of this {@link Cookie}.
+     *
+     * @return The comment of this {@link Cookie}
      */
     String getComment();
 
     /**
-     * Sets the comment of this cookie.
+     * Sets the comment of this {@link Cookie}.
+     *
+     * @param comment The comment to use
      */
     void setComment(String comment);
 
     /**
-     * Returns the max age of this cookie in seconds.
+     * Gets the maximum age of this {@link Cookie} in seconds.
+     *
+     * @return The maximum age of this {@link Cookie}
      */
     long getMaxAge();
 
     /**
-     * Sets the max age of this cookie in seconds.  If {@code 0} is specified,
-     * this cookie will be removed by browser because it will be expired
-     * immediately.  If {@code -1} is specified, this cookie will be removed
-     * when a user terminates browser.
+     * Sets the maximum age of this {@link Cookie} in seconds.
+     * If an age of {@code 0} is specified, this {@link Cookie} will be
+     * automatically removed by browser because it will expire immediately.
+     * If {@code -1} is specified, this {@link Cookie} will be removed when the
+     * browser is closed.
+     *
+     * @param maxAge The maximum age of this {@link Cookie} in seconds
      */
     void setMaxAge(long maxAge);
 
     /**
-     * Returns the version of this cookie.
+     * Gets the version of this {@link Cookie}.
+     *
+     * @return The version of this {@link Cookie}
      */
     int getVersion();
 
     /**
-     * Sets the version of this cookie.
+     * Sets the version of this {@link Cookie}.
+     *
+     * @param version The new version to use
      */
     void setVersion(int version);
 
     /**
-     * Returns the secure flag of this cookie.
+     * Checks to see if this {@link Cookie} is secure
+     *
+     * @return True if this {@link Cookie} is secure, otherwise false
      */
     boolean isSecure();
 
     /**
-     * Sets the secure flag of this cookie.
+     * Sets the security status of this {@link Cookie}
+     *
+     * @param secure True if this {@link Cookie} is to be secure, otherwise false
      */
     void setSecure(boolean secure);
 
     /**
-     * Returns if this cookie cannot be accessed through client side script.
-     * This flag works only if the browser supports it.  For more information,
-     * see <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
+     * Checks to see if this {@link Cookie} can only be accessed via HTTP.
+     * If this returns true, the {@link Cookie} cannot be accessed through
+     * client side script - But only if the browser supports it.
+     * For more information, please look <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>
+     *
+     * @return True if this {@link Cookie} is HTTP-only or false if it isn't
      */
     boolean isHttpOnly();
 
     /**
-     * Sets if this cookie cannot be accessed through client side script.
-     * This flag works only if the browser supports it.  For more information,
-     * see <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
+     * Determines if this {@link Cookie} is HTTP only.
+     * If set to true, this {@link Cookie} cannot be accessed by a client
+     * side script. However, this works only if the browser supports it.
+     * For for information, please look
+     * <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
+     *
+     * @param httpOnly True if the {@link Cookie} is HTTP only, otherwise false.
      */
     void setHttpOnly(boolean httpOnly);
 
     /**
-     * Returns the comment URL of this cookie.
+     * Gets the comment URL of this {@link Cookie}.
+     *
+     * @return The comment URL of this {@link Cookie}
      */
     String getCommentUrl();
 
     /**
-     * Sets the comment URL of this cookie.
+     * Sets the comment URL of this {@link Cookie}.
+     *
+     * @param commentUrl The comment URL to use
      */
     void setCommentUrl(String commentUrl);
 
     /**
-     * Returns the discard flag of this cookie.
+     * Checks to see if this {@link Cookie} is to be discarded by the browser
+     * at the end of the current session.
+     *
+     * @return True if this {@link Cookie} is to be discarded, otherwise false
      */
     boolean isDiscard();
 
     /**
-     * Sets the discard flag of this cookie.
+     * Sets the discard flag of this {@link Cookie}.
+     * If set to true, this {@link Cookie} will be discarded by the browser
+     * at the end of the current session
+     *
+     * @param discard True if the {@link Cookie} is to be discarded
      */
     void setDiscard(boolean discard);
 
     /**
-     * Returns the ports of this cookie.
+     * Returns the ports that this {@link Cookie} can be accessed on.
+     *
+     * @return The {@link Set} of ports that this {@link Cookie} can use
      */
     Set<Integer> getPorts();
 
     /**
-     * Sets the ports of this cookie.
+     * Sets the ports that this {@link Cookie} can be accessed on.
+     *
+     * @param ports The ports that this {@link Cookie} can be accessed on
      */
     void setPorts(int... ports);
 
     /**
-     * Sets the ports of this cookie.
+     * Sets the ports that this {@link Cookie} can be accessed on.
+     *
+     * @param ports The {@link Iterable} collection of ports that this
+     *              {@link Cookie} can be accessed on.
      */
     void setPorts(Iterable<Integer> ports);
 }
