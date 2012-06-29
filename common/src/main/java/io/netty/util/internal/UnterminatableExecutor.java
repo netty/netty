@@ -37,7 +37,7 @@ public class UnterminatableExecutor implements Executor {
         if (executor == null) {
             //Alright, this doesn't look good!
             throw new NullPointerException("Executors provided to "
-                    + "UnterminableExecutors must not be null");
+                    + "UnterminatableExecutors must not be null");
         }
         //Set the executor
         this.executor = executor;
