@@ -19,7 +19,7 @@ package io.netty.handler.codec.http;
 /**
  * An HTTP response.
  *
- * <h3>Accessing Cookie</h3>
+ * <h3>Accessing Cookies</h3>
  * <p>
  * Unlike the Servlet API, {@link Cookie} support is provided separately via {@link CookieDecoder},
  * {@link ClientCookieEncoder}, and {@link ServerCookieEncoder}.
@@ -32,12 +32,16 @@ package io.netty.handler.codec.http;
 public interface HttpResponse extends HttpMessage {
 
     /**
-     * Returns the status of this response.
+     * Returns the status of this {@link HttpResponse}.
+     *
+     * @return The {@link HttpResponseStatus} of this {@link HttpResponse}
      */
     HttpResponseStatus getStatus();
 
     /**
-     * Sets the status of this response.
+     * Sets the status of this {@link HttpResponse}
+     *
+     * @param status The {@link HttpResponseStatus} to use
      */
     void setStatus(HttpResponseStatus status);
 }
