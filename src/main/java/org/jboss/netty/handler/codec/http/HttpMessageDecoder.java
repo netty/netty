@@ -461,7 +461,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     /**
-     * Try todo an optimized "read" of len from the given {@link ChannelBuffer}.
+     * Try to do an optimized "read" of len from the given {@link ChannelBuffer}.
      *
      * This is part of #412 to safe byte copies
      *
@@ -469,7 +469,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private ChannelBuffer read(ChannelBuffer buffer, int len) {
         ChannelBuffer internal = internalBuffer();
         if (internal.readableBytes() >= len) {
-            return internal.slice(internal.readerIndex(), len);
+            int index = internal.readerIndex();
+            ChannelBuffer buf = internal.slice(index, len);
+            
+            // update the readerindex so an the next read its on the correct position
+            buffer.readerIndex(index + len);
+            return buf;
         } else {
             return buffer.readBytes(len);
         }
