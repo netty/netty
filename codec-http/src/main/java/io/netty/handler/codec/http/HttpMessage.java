@@ -37,7 +37,7 @@ import java.util.Set;
 public interface HttpMessage {
 
     /**
-     * Gets the value of a header with the specified name.  If there are
+     * Returns the value of a header with the specified name.  If there are
      * more than one values for the specified name, the first value is returned.
      *
      * @param name The name of the header to search
@@ -78,7 +78,7 @@ public interface HttpMessage {
     Set<String> getHeaderNames();
 
     /**
-     * Gets the protocol version of this {@link HttpMessage}
+     * Returns the protocol version of this {@link HttpMessage}
      *
      * @returns The protocol version
      */
@@ -92,7 +92,7 @@ public interface HttpMessage {
     void setProtocolVersion(HttpVersion version);
 
     /**
-     * Gets the content of this {@link HttpMessage}.
+     * Returns the content of this {@link HttpMessage}.
      *
      * If there is no content or {@link #isChunked()} returns {@code true},
      * an {@link Unpooled#EMPTY_BUFFER} is returned.

@@ -24,14 +24,14 @@ import java.util.Set;
 public interface Cookie extends Comparable<Cookie> {
 
     /**
-     * Gets the name of this {@link Cookie}.
+     * Returns the name of this {@link Cookie}.
      *
      * @return The name of this {@link Cookie}
      */
     String getName();
 
     /**
-     * Gets the value of this {@link Cookie}.
+     * Returns the value of this {@link Cookie}.
      *
      * @return The value of this {@link Cookie}
      */
@@ -45,7 +45,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setValue(String value);
 
     /**
-     * Gets the domain of this {@link Cookie}.
+     * Returns the domain of this {@link Cookie}.
      *
      * @return The domain of this {@link Cookie}
      */
@@ -59,7 +59,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setDomain(String domain);
 
     /**
-     * Gets the path of this {@link Cookie}.
+     * Returns the path of this {@link Cookie}.
      *
      * @return The {@link Cookie}'s path
      */
@@ -73,7 +73,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setPath(String path);
 
     /**
-     * Gets the comment of this {@link Cookie}.
+     * Returns the comment of this {@link Cookie}.
      *
      * @return The comment of this {@link Cookie}
      */
@@ -87,7 +87,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setComment(String comment);
 
     /**
-     * Gets the maximum age of this {@link Cookie} in seconds.
+     * Returns the maximum age of this {@link Cookie} in seconds.
      *
      * @return The maximum age of this {@link Cookie}
      */
@@ -105,7 +105,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setMaxAge(long maxAge);
 
     /**
-     * Gets the version of this {@link Cookie}.
+     * Returns the version of this {@link Cookie}.
      *
      * @return The version of this {@link Cookie}
      */
@@ -154,7 +154,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setHttpOnly(boolean httpOnly);
 
     /**
-     * Gets the comment URL of this {@link Cookie}.
+     * Returns the comment URL of this {@link Cookie}.
      *
      * @return The comment URL of this {@link Cookie}
      */
