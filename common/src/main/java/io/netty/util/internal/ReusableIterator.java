@@ -23,5 +23,9 @@ import java.util.Iterator;
  * @param <E> The type to be iterated upon
  */
 public interface ReusableIterator<E> extends Iterator<E> {
+    
+    /**
+     * Rewinds the iterator to the previous state, allowing reuse
+     */
     void rewind();
 }
