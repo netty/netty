@@ -585,7 +585,6 @@ public class CompositeByteBuf extends AbstractByteBuf {
      * Instead, it only returns a portion of the composite buffer where the
      * index is located
      * </p>
-     * 
      *
      * @param index The {@code index} to search for and include in the returned {@link ByteBuf}
      * @return The {@link ByteBuf} that contains the specified {@code index}
