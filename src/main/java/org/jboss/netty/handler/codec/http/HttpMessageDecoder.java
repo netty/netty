@@ -471,7 +471,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (internal.readableBytes() >= len) {
             int index = internal.readerIndex();
             ChannelBuffer buf = internal.slice(index, len);
-            
+
             // update the readerindex so an the next read its on the correct position
             buffer.readerIndex(index + len);
             return buf;
