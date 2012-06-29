@@ -109,6 +109,8 @@ public abstract class AbstractCompositeChannelBufferTest extends
             ByteBuf _buf = buf.getBufferFor(index++);
             assertNotNull(_buf);
             assertTrue(_buf.capacity() > 0);
+            assertNotNull(_buf.getByte(0));
+            assertNotNull(_buf.getByte(_buf.readableBytes() - 1));
         }
     }
 
