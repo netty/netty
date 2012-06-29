@@ -32,7 +32,7 @@ package io.netty.handler.codec.http;
 public interface HttpResponse extends HttpMessage {
 
     /**
-     * Gets the status of this {@link HttpResponse}.
+     * Returns the status of this {@link HttpResponse}.
      *
      * @return The {@link HttpResponseStatus} of this {@link HttpResponse}
      */

@@ -34,7 +34,7 @@ package io.netty.handler.codec.http;
 public interface HttpRequest extends HttpMessage {
 
     /**
-     * Gets the {@link HttpMethod} of this {@link HttpRequest}.
+     * Returns the {@link HttpMethod} of this {@link HttpRequest}.
      *
      * @return The {@link HttpMethod} of this {@link HttpRequest}
      */
@@ -48,7 +48,7 @@ public interface HttpRequest extends HttpMessage {
     void setMethod(HttpMethod method);
 
     /**
-     * Gets the requested URI (or alternatively, path)
+     * Returns the requested URI (or alternatively, path)
      *
      * @return The URI being requested
      */
