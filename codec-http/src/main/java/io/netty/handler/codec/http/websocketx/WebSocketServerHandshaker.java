@@ -92,11 +92,9 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-<<<<<<< HEAD
-     * Returns the max length for any frame's payload.
-=======
-     * Returns the max length for any frame's payload
->>>>>>> abd10d9... Fixed bug where subprotocol not sent by client
+     * Gets the maximum length for any frame's payload.
+     *
+     * @return The maximum length for a frame's payload
      */
     public int getMaxFramePayloadLength() {
         return maxFramePayloadLength;
