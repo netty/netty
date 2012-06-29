@@ -592,7 +592,7 @@ public class CompositeByteBuf extends AbstractByteBuf {
      * less than zero, or larger than {@code capacity()}
      */
     public ByteBuf getBufferFor(int index) throws IndexOutOfBoundsException {
-        if (index < 0 || index > capacity()) {
+        if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
                     + " - Bytes needed: " + index + ", maximum is "
                     + capacity());
