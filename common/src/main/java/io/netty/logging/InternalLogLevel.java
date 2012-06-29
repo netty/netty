@@ -16,23 +16,27 @@
 package io.netty.logging;
 
 /**
- * The log level that {@link InternalLogger} can log at.
+ * A collection of the log levels that {@link InternalLogger} can log at.
  */
 public enum InternalLogLevel {
+    
     /**
-     * 'DEBUG' log level.
+     * A log level meant for debugging information
      */
     DEBUG,
+    
     /**
-     * 'INFO' log level.
+     * A log level meant for general information and notices
      */
     INFO,
+    
     /**
-     * 'WARN' log level.
+     * A log level meant for warnings
      */
     WARN,
+    
     /**
-     * 'ERROR' log level.
+     * A log level meant for errors
      */
     ERROR
 }
