@@ -38,15 +38,19 @@ public abstract class InternalLoggerFactory<T extends InternalLogger> {
     private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
 
     /**
-     * Returns the default factory.  The initial default factory is
-     * {@link JdkLoggerFactory}.
+     * Returns the default {@link InternalLoggerFactory.
+     * Initially, this is {@link JdkLoggerFactory}.
+     *
+     * @return the default {@link InternalLoggerFactory}
      */
     public static InternalLoggerFactory getDefaultFactory() {
         return defaultFactory;
     }
 
     /**
-     * Changes the default factory.
+     * Changes the default {@link InternalLoggerFactory}.
+     *
+     * @param defaultFactory the new default {@link InternalLoggerFactory}
      */
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
         if (defaultFactory == null) {
@@ -57,6 +61,9 @@ public abstract class InternalLoggerFactory<T extends InternalLogger> {
 
     /**
      * Creates a new logger instance with the name of the specified class.
+     *
+     * @param clazz the class to get a name from
+     * @return the new logger instance
      */
     public static InternalLogger getInstance(Class<?> clazz) {
         return getInstance(clazz.getName());
@@ -64,49 +71,22 @@ public abstract class InternalLoggerFactory<T extends InternalLogger> {
 
     /**
      * Creates a new logger instance with the specified name.
+     *
+     * @param name the name of the new logger
+     * @return the new logger instance
      */
     public static InternalLogger getInstance(String name) {
         final InternalLogger logger = getDefaultFactory().newInstance(name);
         return new InternalLogger() {
 
             @Override
-            public void debug(String msg) {
-                logger.debug(msg);
-            }
-
-            @Override
-            public void debug(String msg, Throwable cause) {
-                logger.debug(msg, cause);
-            }
-
-            @Override
-            public void error(String msg) {
-                logger.error(msg);
-            }
-
-            @Override
-            public void error(String msg, Throwable cause) {
-                logger.error(msg, cause);
-            }
-
-            @Override
-            public void info(String msg) {
-                logger.info(msg);
-            }
-
-            @Override
-            public void info(String msg, Throwable cause) {
-                logger.info(msg, cause);
+            public boolean isEnabled(InternalLogLevel level) {
+                return logger.isEnabled(level);
             }
 
             @Override
             public boolean isDebugEnabled() {
                 return logger.isDebugEnabled();
-            }
-
-            @Override
-            public boolean isErrorEnabled() {
-                return logger.isErrorEnabled();
             }
 
             @Override
@@ -120,6 +100,31 @@ public abstract class InternalLoggerFactory<T extends InternalLogger> {
             }
 
             @Override
+            public boolean isErrorEnabled() {
+                return logger.isErrorEnabled();
+            }
+
+            @Override
+            public void debug(String msg) {
+                logger.debug(msg);
+            }
+
+            @Override
+            public void debug(String msg, Throwable cause) {
+                logger.debug(msg, cause);
+            }
+
+            @Override
+            public void info(String msg) {
+                logger.info(msg);
+            }
+
+            @Override
+            public void info(String msg, Throwable cause) {
+                logger.info(msg, cause);
+            }
+
+            @Override
             public void warn(String msg) {
                 logger.warn(msg);
             }
@@ -130,8 +135,13 @@ public abstract class InternalLoggerFactory<T extends InternalLogger> {
             }
 
             @Override
-            public boolean isEnabled(InternalLogLevel level) {
-                return logger.isEnabled(level);
+            public void error(String msg) {
+                logger.error(msg);
+            }
+
+            @Override
+            public void error(String msg, Throwable cause) {
+                logger.error(msg, cause);
             }
 
             @Override
@@ -148,6 +158,9 @@ public abstract class InternalLoggerFactory<T extends InternalLogger> {
 
     /**
      * Creates a new logger instance with the specified name.
+     *
+     * @param name the name to use in the new logger
+     * @return the new {@link InternalLogger} implementation
      */
     public abstract T newInstance(String name);
 }
