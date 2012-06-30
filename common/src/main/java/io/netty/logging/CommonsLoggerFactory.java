@@ -19,12 +19,18 @@ package io.netty.logging;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * Logger factory which creates an
+ * A logger factory which creates
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
- * logger.
+ * loggers.
  */
 public class CommonsLoggerFactory extends InternalLoggerFactory {
 
+    /**
+     * Creates a new instance of a {@link CommonsLogger}
+     *
+     * @param name the name of the new logger
+     * @return the created {@link CommonsLogger}
+     */
     @Override
     public InternalLogger newInstance(String name) {
         return new CommonsLogger(LogFactory.getLog(name), name);
