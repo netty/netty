@@ -23,8 +23,8 @@ public class JBossLoggerFactoryTest {
 
     @Test
     public void testCreation() {
-        InternalLogger logger = new JBossLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof JBossLogger);
+        JBossLogger logger = new JBossLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof InternalLogger);
         assertEquals("foo", logger.toString());
     }
 }

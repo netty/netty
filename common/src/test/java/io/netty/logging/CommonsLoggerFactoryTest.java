@@ -23,8 +23,8 @@ public class CommonsLoggerFactoryTest {
 
     @Test
     public void testCreation() {
-        InternalLogger logger = new CommonsLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof CommonsLogger);
+        CommonsLogger logger = new CommonsLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof InternalLogger);
         assertEquals("foo", logger.toString());
     }
 }
