@@ -19,90 +19,91 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
-
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * TODO Document me.
+ * A utility class mainly for use by web sockets
  */
 final class WebSocketUtil {
 
     /**
-     * Performs an MD5 hash
+     * Performs a MD5 hash on the specified data
      *
-     * @param bytes
-     *            Data to hash
-     * @return Hashed data
+     * @param data The data to hash
+     * @return The hashed data
      */
-    static byte[] md5(byte[] bytes) {
+    static byte[] md5(byte[] data) {
         try {
+            //Try to get a MessageDigest that uses MD5
             MessageDigest md = MessageDigest.getInstance("MD5");
-            return md.digest(bytes);
+            //Hash the data
+            return md.digest(data);
         } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("MD5 not supported on this platform");
+            //This shouldn't happen! How old is the computer?
+            throw new InternalError("MD5 not supported on this platform - Outdated?");
         }
     }
 
     /**
-     * Performs an SHA-1 hash
+     * Performs a SHA-1 hash on the specified data
      *
-     * @param bytes
-     *            Data to hash
-     * @return Hashed data
+     * @param data The data to hash
+     * @return The hashed data
      */
-    static byte[] sha1(byte[] bytes) {
+    static byte[] sha1(byte[] data) {
         try {
+            //Attempt to get a MessageDigest that uses SHA1
             MessageDigest md = MessageDigest.getInstance("SHA1");
-            return md.digest(bytes);
+            //Hash the data
+            return md.digest(data);
         } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("SHA-1 not supported on this platform");
+            //Alright, you might have an old system.
+            throw new InternalError("SHA-1 is not supported on this platform - Outdated?");
         }
     }
 
     /**
-     * Base 64 encoding
+     * Performs base64 encoding on the specified data
      *
-     * @param bytes
-     *            Bytes to encode
-     * @return encoded string
+     * @param data The data to encode
+     * @return An encoded string containing the data
      */
-    static String base64(byte[] bytes) {
-        ByteBuf hashed = Unpooled.wrappedBuffer(bytes);
-        return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
+    static String base64(byte[] data) {
+        ByteBuf encodedData = Unpooled.wrappedBuffer(data);
+        return Base64.encode(encodedData).toString(CharsetUtil.UTF_8);
     }
 
     /**
-     * Creates some random bytes
+     * Creates an arbitrary number of random bytes
      *
-     * @param size
-     *            Number of random bytes to create
-     * @return random bytes
+     * @param size the number of random bytes to create
+     * @return An array of random bytes
      */
     static byte[] randomBytes(int size) {
         byte[] bytes = new byte[size];
 
-        for (int i = 0; i < size; i++) {
-            bytes[i] = (byte) randomNumber(0, 255);
+        for (int index = 0; index < size; index++) {
+            bytes[index] = (byte) randomNumber(0, 255);
         }
 
         return bytes;
     }
 
     /**
-     * Generates a random number
+     * Generates a pseudo-random number
      *
-     * @param min
-     *            Minimum value
-     * @param max
-     *            Maximum value
-     * @return Random number
+     * @param minimum The minimum allowable value
+     * @param maximum The maximum allowable value
+     * @return A pseudo-random number
      */
-    static int randomNumber(int min, int max) {
-        return (int) (Math.random() * max + min);
+    static int randomNumber(int minimum, int maximum) {
+        return (int) (Math.random() * maximum + minimum);
     }
 
-
+    /**
+     * A private constructor to ensure that instances of this class cannot be made
+     */
     private WebSocketUtil() {
         // Unused
     }
