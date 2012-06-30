@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
  * loggers.
  */
-public class CommonsLoggerFactory extends InternalLoggerFactory {
+public class CommonsLoggerFactory extends InternalLoggerFactory<CommonsLogger> {
 
     /**
      * Creates a new instance of a {@link CommonsLogger}
@@ -32,7 +32,7 @@ public class CommonsLoggerFactory extends InternalLoggerFactory {
      * @return the created {@link CommonsLogger}
      */
     @Override
-    public InternalLogger newInstance(String name) {
+    public CommonsLogger newInstance(String name) {
         return new CommonsLogger(LogFactory.getLog(name), name);
     }
 }

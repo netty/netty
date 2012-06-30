@@ -24,7 +24,7 @@ import org.osgi.util.tracker.ServiceTracker;
  * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
  * {@link LogService} logger.
  */
-public class OsgiLoggerFactory extends InternalLoggerFactory {
+public class OsgiLoggerFactory extends InternalLoggerFactory<OsgiLogger> {
 
     private final ServiceTracker logServiceTracker;
     private final InternalLoggerFactory fallback;
@@ -78,7 +78,7 @@ public class OsgiLoggerFactory extends InternalLoggerFactory {
     }
 
     @Override
-    public InternalLogger newInstance(String name) {
+    public OsgiLogger newInstance(String name) {
         return new OsgiLogger(this, name, fallback.newInstance(name));
     }
 }
