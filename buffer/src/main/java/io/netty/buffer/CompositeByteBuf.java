@@ -587,10 +587,10 @@ public class CompositeByteBuf extends AbstractByteBuf {
      * </p>
      *
      *
-     * @param index The {@code index} to search for and include in the returned {@link ByteBuf}
-     * @return The {@link ByteBuf} that contains the specified {@code index}
+     * @param index the {@code index} to search for and include in the returned {@link ByteBuf}
+     * @return the {@link ByteBuf} that contains the specified {@code index}
      * @throws IndexOutOfBoundsException when the specified {@code index} is
-     * less than zero, or larger than {@code capacity()}
+     * less than zero, or greater than {@code capacity()}
      */
     public ByteBuf getBuffer(int index) throws IndexOutOfBoundsException {
         if (index < 0 || index >= capacity()) {
@@ -601,7 +601,6 @@ public class CompositeByteBuf extends AbstractByteBuf {
 
         //Return the component byte buffer
         return components[componentId(index)];
-
     }
 
     @Override
