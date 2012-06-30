@@ -24,112 +24,112 @@ public interface InternalLogger {
     /**
      * Checks to see if debugging messages can be logged
      *
-     * @return True if able to be logged, otherwise false
+     * @return true if able to be logged, otherwise false
      */
     boolean isDebugEnabled();
 
     /**
      * Checks to see if informational messages can be logged
      *
-     * @return True if able to be logged, otherwise false
+     * @return true if able to be logged, otherwise false
      */
     boolean isInfoEnabled();
 
     /**
      * Checks to see if warnings can be logged
      *
-     * @return True if able to be logged, otherwise false
+     * @return true if able to be logged, otherwise false
      */
     boolean isWarnEnabled();
 
     /**
      * Checks to see if error messages can be logged
      *
-     * @return True if able to be logged, otherwise false
+     * @return true if able to be logged, otherwise false
      */
     boolean isErrorEnabled();
 
     /**
      * Checks to see if a specified {@link InternalLogLevel} can be logged
      *
-     * @return True if able to be logged, otherwise false
+     * @return true if able to be logged, otherwise false
      */
     boolean isEnabled(InternalLogLevel level);
 
     /**
      * Logs a message used for debugging
      *
-     * @param message The message to log
+     * @param message the message to log
      */
     void debug(String message);
 
     /**
      * Logs a message used for debugging with an attached cause
      *
-     * @param message The message to log
-     * @param cause The cause of the message
+     * @param message the message to log
+     * @param cause the cause of the message
      */
     void debug(String message, Throwable cause);
 
     /**
      * Logs a message used for information
      *
-     * @param message The message to log
+     * @param message the message to log
      */
     void info(String message);
 
     /**
      * Logs a message used for information with an attached cause
      *
-     * @param message The message to log
-     * @param cause The cause of the message
+     * @param message the message to log
+     * @param cause the cause of the message
      */
     void info(String message, Throwable cause);
 
     /**
      * Logs a message used as a warning
      *
-     * @param message The message to log
+     * @param message the message to log
      */
     void warn(String message);
 
     /**
      * Logs a message used as a warning with an attached cause
      *
-     * @param message The message to log
-     * @param cause The cause of the message
+     * @param message the message to log
+     * @param cause the cause of the message
      */
     void warn(String message, Throwable cause);
 
     /**
      * Logs a message used as an error
      *
-     * @param message The message to log
+     * @param message the message to log
      */
     void error(String message);
 
     /**
      * Logs a message used as an error with an attached cause
      *
-     * @param message The message to log
-     * @param cause The cause of the message
+     * @param message the message to log
+     * @param cause the cause of the message
      */
     void error(String message, Throwable cause);
 
     /**
      * Logs a message
      *
-     * @param level The {@link InternalLogLevel} to use
-     * @param message The message to log
+     * @param level the {@link InternalLogLevel} to use
+     * @param message the message to log
      */
     void log(InternalLogLevel level, String message);
 
     /**
      * Logs a message with an attached cause
      *
-     * @param level The {@link InternalLogLevel} to use
-     * @param message The message to log
-     * @param cause The cause of the message
+     * @param level the {@link InternalLogLevel} to use
+     * @param message the message to log
+     * @param cause the cause of the message
      */
     void log(InternalLogLevel level, String message, Throwable cause);
 }
