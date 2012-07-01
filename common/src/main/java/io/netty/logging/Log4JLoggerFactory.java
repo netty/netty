@@ -16,12 +16,18 @@
 package io.netty.logging;
 
 /**
- * Logger factory which creates an
+ * A logger factory which creates
  * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
- * logger.
+ * loggers.
  */
 public class Log4JLoggerFactory extends InternalLoggerFactory<Log4JLogger> {
 
+    /**
+     * Creates a new {@link Log4JLogger} instance
+     *
+     * @param name the name of the new instance
+     * @return a new {@link Log4JLogger} instance
+     */
     @Override
     public Log4JLogger newInstance(String name) {
         final org.apache.log4j.Logger logger =
