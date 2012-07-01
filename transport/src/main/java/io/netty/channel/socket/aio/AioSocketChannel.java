@@ -123,6 +123,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         expandReadBuffer(byteBuf);
         // Get a ByteBuffer view on the ByteBuf
         ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
+
         javaChannel().read(buffer, this, READ_HANDLER);
     }
 
@@ -169,7 +170,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         // into this
         if (flushing.compareAndSet(false, true)) {
             ByteBuffer buffer = buf.nioBuffer();
-            System.err.println("WRITE: " + buffer);
             javaChannel().write(buffer, this, WRITE_HANDLER);
         }
         return false;
@@ -194,6 +194,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             // Allow to have the next write pending
             channel.flushing.set(false);
+            try {
+                // try to flush it again if nothing is left it will return fast here
+                channel.doFlushByteBuffer(buf);
+            } catch (Exception e) {
+                // Should never happen, anyway call failed just in case
+                failed(e, channel);
+            }
         }
 
         @Override
