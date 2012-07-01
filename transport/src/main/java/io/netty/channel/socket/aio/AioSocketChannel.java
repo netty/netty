@@ -17,6 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -105,6 +106,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected Runnable doRegister() throws Exception {
+        Channel parent = parent();
+        if (parent != null) {
+            // check that the eventloop instance is shared for the parent and the child
+            // if not throw an IllegalStateException
+            if (parent.eventLoop() != eventLoop()) {
+                throw new IllegalStateException("eventLoop and childEventLoop must be the same!");
+            }
+        }
         if (ch == null) {
             ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
             config = new AioSocketChannelConfig(javaChannel());
