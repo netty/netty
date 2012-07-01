@@ -23,10 +23,12 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
@@ -50,13 +52,17 @@ import org.jboss.netty.util.CharsetUtil;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
+public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
     private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
     private HttpMessage currentMessage;
+
+    private ChannelHandlerContext ctx;
+
+    private int maxCumulationBufferComponents = 4;
 
     /**
      * Creates a new instance.
@@ -73,6 +79,37 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                     maxContentLength);
         }
         this.maxContentLength = maxContentLength;
+    }
+
+    /**
+     * Returns the maximum number of components in the cumulation buffer.  If the number of
+     * the components in the cumulation buffer exceeds this value, the components of the
+     * cumulation buffer are consolidated into a single component, involving memory copies.
+     * The default value of this property is {@code 4}.
+     */
+    public final int getMaxCumulationBufferComponents() {
+        return maxCumulationBufferComponents;
+    }
+
+    /**
+     * Sets the maximum number of components in the cumulation buffer.  If the number of
+     * the components in the cumulation buffer exceeds this value, the components of the
+     * cumulation buffer are consolidated into a single component, involving memory copies.
+     * The default value of this property is {@code 4} and its minimum allowed value is {@code 2}.
+     */
+    public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
+        if (maxCumulationBufferComponents < 2) {
+            throw new IllegalArgumentException(
+                    "maxCumulationBufferComponents: " + maxCumulationBufferComponents +
+                    " (expected: >= 2)");
+        }
+
+        if (ctx == null) {
+            this.maxCumulationBufferComponents = maxCumulationBufferComponents;
+        } else {
+            throw new IllegalStateException(
+                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
+        }
     }
 
     @Override
@@ -103,7 +140,6 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory()));
                 this.currentMessage = m;
             } else {
                 // Not a chunked message - pass through.
@@ -132,7 +168,9 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                         " bytes.");
             }
 
-            content.writeBytes(chunk.getContent());
+            // Append the content of the chunk
+            appendToCumulation(chunk.getContent());
+
             if (chunk.isLast()) {
                 this.currentMessage = null;
 
@@ -156,5 +194,41 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             // Neither HttpMessage or HttpChunk
             ctx.sendUpstream(e);
         }
+    }
+
+    protected void appendToCumulation(ChannelBuffer input) {
+        ChannelBuffer cumulation = this.currentMessage.getContent();
+        if (cumulation instanceof CompositeChannelBuffer) {
+            // Make sure the resulting cumulation buffer has no more than 4 components.
+            CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;
+            if (composite.numComponents() >= maxCumulationBufferComponents) {
+                currentMessage.setContent(ChannelBuffers.wrappedBuffer(composite.copy(), input));
+            } else {
+                List<ChannelBuffer> decomposed = composite.decompose(0, composite.readableBytes());
+                ChannelBuffer[] buffers = decomposed.toArray(new ChannelBuffer[decomposed.size() + 1]);
+                buffers[buffers.length - 1] = input;
+
+                currentMessage.setContent(ChannelBuffers.wrappedBuffer(buffers));
+            }
+        } else {
+            currentMessage.setContent(ChannelBuffers.wrappedBuffer(cumulation, input));
+        }
+
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // noop
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // noop
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        // noop
     }
 }
