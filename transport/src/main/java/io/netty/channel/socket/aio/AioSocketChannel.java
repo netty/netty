@@ -180,9 +180,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         public void completed(Integer result, AioSocketChannel channel) {
-            ByteBuf buf = channel.pipeline().outboundByteBuffer();
-
+            ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
             if (result > 0) {
+                
                 // Update the readerIndex with the amount of read bytes
                 buf.readerIndex(buf.readerIndex() + result);
 
