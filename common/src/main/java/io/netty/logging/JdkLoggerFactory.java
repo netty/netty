@@ -17,12 +17,18 @@ package io.netty.logging;
 
 
 /**
- * Logger factory which creates a
+ * A logger factory which creates
  * <a href="http://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
- * logger.
+ * loggers.
  */
 public class JdkLoggerFactory extends InternalLoggerFactory<JdkLogger> {
 
+    /**
+     * Creates a new {@link JdkLogger} instance
+     *
+     * @param name the name of the new {@link JdkLogger}
+     * @return a new {@link JdkLogger} instance
+     */
     @Override
     public JdkLogger newInstance(String name) {
         final java.util.logging.Logger logger =
