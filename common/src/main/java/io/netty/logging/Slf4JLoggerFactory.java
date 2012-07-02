@@ -15,14 +15,18 @@
  */
 package io.netty.logging;
 
-
-
 /**
- * Logger factory which creates a <a href="http://www.slf4j.org/">SLF4J</a>
- * logger.
+ * A logger factory which creates <a href="http://www.slf4j.org/">SLF4J</a>
+ * loggers.
  */
 public class Slf4JLoggerFactory extends InternalLoggerFactory<Slf4JLogger> {
 
+    /**
+     * Creates a new {@link Slf4JLogger} instance
+     *
+     * @param name the new {@link Slf4JLogger}'s name
+     * @return the new {@link Slf4JLogger} instance
+     */
     @Override
     public Slf4JLogger newInstance(String name) {
         final org.slf4j.Logger logger =
