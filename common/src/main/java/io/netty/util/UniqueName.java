@@ -84,6 +84,15 @@ public class UniqueName implements Comparable<UniqueName> {
     }
 
     /**
+     * Returns this {@link UniqueName}'s name
+     *
+     * @return the id
+     */
+    public final int id() {
+        return id;
+    }
+
+    /**
      * Returns this {@link UniqueName}'s hash code
      *
      * @return the hash code
