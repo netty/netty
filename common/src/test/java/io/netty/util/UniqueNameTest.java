@@ -15,8 +15,10 @@
  */
 package io.netty.util;
 
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotSame;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -74,6 +76,28 @@ public class UniqueNameTest {
             failed = true;
         }
         assertTrue(failed);
+    }
+
+    /**
+     * Tests to make sure IDs aren't used twice
+     */
+    @Test
+    public void testIDUniqueness() {
+        UniqueName one = registerName("one");
+        UniqueName two = registerName("two");
+        assertNotSame(one.id(), two.id());
+
+        ArrayList<UniqueName> _names = new ArrayList<UniqueName>();
+
+        for (int index = 0; index < 2500; index++) {
+            UniqueName name = registerName("test" + index);
+            _names.add(name);
+            for (UniqueName _name : _names) {
+                if (!name.name().equals(_name.name())) {
+                    assertNotSame(name.id(), _name.name());
+                }
+            }
+        }
     }
 
 }
