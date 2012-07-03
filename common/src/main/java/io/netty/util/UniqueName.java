@@ -47,10 +47,10 @@ public class UniqueName implements Comparable<UniqueName> {
      */
     public UniqueName(ConcurrentMap<String, Boolean> map, String name, Object... args) {
         if (map == null) {
-            throw new NullPointerException("Supplied map cannot be null");
+            throw new NullPointerException("map");
         }
         if (name == null) {
-            throw new NullPointerException("Supplied name cannot be null");
+            throw new NullPointerException("name");
         }
         if (args != null && args.length > 0) {
             validateArgs(args);
@@ -84,7 +84,7 @@ public class UniqueName implements Comparable<UniqueName> {
     }
 
     /**
-     * Returns this {@link UniqueName}'s name
+     * Returns this {@link UniqueName}'s ID
      *
      * @return the id
      */
@@ -92,34 +92,16 @@ public class UniqueName implements Comparable<UniqueName> {
         return id;
     }
 
-    /**
-     * Returns this {@link UniqueName}'s hash code
-     *
-     * @return the hash code
-     */
     @Override
     public final int hashCode() {
         return super.hashCode();
     }
 
-    /**
-     * Checks to see if this {@link UniqueName} is equal to another object
-     *
-     * @param o the other object to compare with
-     * @return true if equal, otherwise false
-     */
     @Override
     public final boolean equals(Object o) {
         return super.equals(o);
     }
 
-    /**
-     * Compares this {@link UniqueName} with another
-     *
-     * @param other the other {@link UniqueName} to compare with
-     * @return -1 if this {@link UniqueName} is less than, 0 if equal to, or 1
-     *         if it is greater than the other {@link UniqueName}
-     */
     @Override
     public int compareTo(UniqueName other) {
         if (this == other) {
@@ -140,12 +122,6 @@ public class UniqueName implements Comparable<UniqueName> {
         }
     }
 
-    /**
-     * Gets a representation of this class as a {@link String}.
-     * In this case, it is simply the name.
-     *
-     * @return the name
-     */
     @Override
     public String toString() {
         return name();
