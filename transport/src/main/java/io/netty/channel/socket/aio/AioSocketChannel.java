@@ -108,8 +108,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         if (ch == null) {
             ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
             config = new AioSocketChannelConfig(javaChannel());
+            return null;
         } else if (remoteAddress() != null) {
-            read();
+            return new Runnable() {
+                
+                @Override
+                public void run() {
+                    read();
+                }
+            };
         }
         return null;
     }
