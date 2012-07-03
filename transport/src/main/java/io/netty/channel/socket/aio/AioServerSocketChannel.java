@@ -25,6 +25,7 @@ import io.netty.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -123,10 +124,15 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(new AioSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
+            
         }
 
         public void failed(Throwable t, AioServerSocketChannel channel) {
-            logger.warn("Failed to create a new channel from an accepted socket.", t);
+            // check if the exception was thrown because the channel was closed before 
+            // log something
+            if (channel.isOpen() && !(t instanceof AsynchronousCloseException)) {
+                logger.warn("Failed to create a new channel from an accepted socket.", t);
+            }
         }
     }
 
