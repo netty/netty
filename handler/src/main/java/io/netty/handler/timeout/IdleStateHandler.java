@@ -200,6 +200,30 @@ public class IdleStateHandler extends ChannelHandlerAdapter {
         }
     }
 
+    /**
+     * Return the readerIdleTime that was given when instance this class in milliseconds.
+     *
+     */
+    public long getReaderIdleTimeInMillis() {
+        return readerIdleTimeMillis;
+    }
+
+    /**
+     * Return the writerIdleTime that was given when instance this class in milliseconds.
+     *
+     */
+    public long getWriterIdleTimeInMillis() {
+        return writerIdleTimeMillis;
+    }
+
+    /**
+     * Return the allIdleTime that was given when instance this class in milliseconds.
+     *
+     */
+    public long getAllIdleTimeInMillis() {
+        return allIdleTimeMillis;
+    }
+
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive() & ctx.channel().isRegistered()) {
