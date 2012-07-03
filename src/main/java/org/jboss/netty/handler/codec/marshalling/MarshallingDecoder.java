@@ -57,7 +57,6 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
     public MarshallingDecoder(UnmarshallerProvider provider, int maxObjectSize) {
         super(maxObjectSize, 0, 4, 0, 4);
         this.provider = provider;
-        setMaxCumulationBufferComponents(Integer.MAX_VALUE);
     }
 
 

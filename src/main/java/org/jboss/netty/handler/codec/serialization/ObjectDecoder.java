@@ -93,7 +93,6 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
     public ObjectDecoder(int maxObjectSize, ClassResolver classResolver) {
         super(maxObjectSize, 0, 4, 0, 4);
         this.classResolver = classResolver;
-        setMaxCumulationBufferComponents(Integer.MAX_VALUE);
     }
 
 

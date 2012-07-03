@@ -179,11 +179,13 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  */
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
+    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1000;
+
     private boolean unfold;
     protected ChannelBuffer cumulation;
     private volatile ChannelHandlerContext ctx;
     private int copyThreshold;
-    private int maxCumulationBufferComponents = 4;
+    private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
 
     protected FrameDecoder() {
         this(false);
@@ -252,7 +254,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
      * Returns the maximum number of components in the cumulation buffer.  If the number of
      * the components in the cumulation buffer exceeds this value, the components of the
      * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@code 4}.
+     * The default value of this property {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
      */
     public final int getMaxCumulationBufferComponents() {
         return maxCumulationBufferComponents;
@@ -262,7 +264,8 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
      * Sets the maximum number of components in the cumulation buffer.  If the number of
      * the components in the cumulation buffer exceeds this value, the components of the
      * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@code 4} and its minimum allowed value is {@code 2}.
+     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}
+     * and its minimum allowed value is {@code 2}.
      */
     public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
         if (maxCumulationBufferComponents < 2) {

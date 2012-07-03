@@ -55,7 +55,6 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     public CompatibleMarshallingDecoder(UnmarshallerProvider provider, int maxObjectSize) {
         this.provider = provider;
         this.maxObjectSize = maxObjectSize;
-        setMaxCumulationBufferComponents(Integer.MAX_VALUE);
     }
 
     @Override

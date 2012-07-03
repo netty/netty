@@ -61,7 +61,6 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
      */
     public CompatibleObjectDecoder() {
         super(CompatibleObjectDecoderState.READ_HEADER);
-        setMaxCumulationBufferComponents(Integer.MAX_VALUE);
     }
 
     /**
