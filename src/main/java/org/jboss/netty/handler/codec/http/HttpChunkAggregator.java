@@ -53,7 +53,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
-    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1000;
+    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
 
     private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);

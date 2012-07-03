@@ -179,7 +179,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  */
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
-    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1000;
+    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
 
     private boolean unfold;
     protected ChannelBuffer cumulation;
