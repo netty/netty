@@ -319,7 +319,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         ChannelBuffer cumulation = this.cumulation;
         assert cumulation.readable();
         if (cumulation instanceof CompositeChannelBuffer) {
-            // Make sure the resulting cumulation buffer has no more than 4 components.
+            // Make sure the resulting cumulation buffer has no more than the configured components.
             CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;
             if (composite.numComponents() >= maxCumulationBufferComponents) {
                 cumulation = composite.copy();
