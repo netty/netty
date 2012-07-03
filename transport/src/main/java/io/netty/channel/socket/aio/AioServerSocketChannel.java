@@ -28,7 +28,6 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
@@ -36,7 +35,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
     private volatile AioServerSocketChannelConfig config;
-    final AtomicBoolean closed = new AtomicBoolean(false);
+    private boolean closed;
 
     public AioServerSocketChannel() {
         super(null, null);
@@ -89,7 +88,8 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doClose() throws Exception {
-        if (closed.compareAndSet(false, true)) {
+        if (!closed) {
+            closed = true;
             javaChannel().close();
         }
     }
@@ -136,7 +136,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             boolean asyncClosed = false;
             if (t instanceof AsynchronousCloseException) {
                 asyncClosed = true;
-                channel.closed.set(true);
+                channel.closed = true;
             }
             // check if the exception was thrown because the channel was closed before
             // log something

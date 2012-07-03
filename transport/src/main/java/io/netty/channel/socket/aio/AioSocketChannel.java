@@ -29,7 +29,6 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
@@ -38,8 +37,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
 
-    private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final AtomicBoolean flushing = new AtomicBoolean(false);
+    private boolean closed;
+    private boolean flushing;
     private volatile AioSocketChannelConfig config;
 
     public AioSocketChannel() {
@@ -158,7 +157,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doClose() throws Exception {
-        if (closed.compareAndSet(false, true)) {
+        if (!closed) {
+            closed = true;
             javaChannel().close();
         }
     }
@@ -179,7 +179,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         // Only one pending write can be scheduled at one time. Otherwise
         // a PendingWriteException will be thrown. So use CAS to not run
         // into this
-        if (flushing.compareAndSet(false, true)) {
+        if (!flushing) {
+            flushing = true;
             ByteBuffer buffer = buf.nioBuffer();
             javaChannel().write(buffer, this, WRITE_HANDLER);
         }
@@ -204,7 +205,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             }
 
             // Allow to have the next write pending
-            channel.flushing.set(false);
+            channel.flushing = false;
             try {
                 // try to flush it again if nothing is left it will return fast here
                 channel.doFlushByteBuffer(buf);
@@ -217,7 +218,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void failed0(Throwable cause, AioSocketChannel channel) {
             if (cause instanceof AsynchronousCloseException) {
-                channel.closed.set(true);
+                channel.closed = true;
             }
 
             channel.notifyFlushFutures(cause);
@@ -232,7 +233,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
             }
             // Allow to have the next write pending
-            channel.flushing.set(false);
+            channel.flushing = false;
         }
     }
 
@@ -263,7 +264,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             } catch (Throwable t) {
                 if (t instanceof AsynchronousCloseException) {
-                    channel.closed.set(true);
+                    channel.closed = true;
                 }
 
                 if (read) {
@@ -293,7 +294,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void failed0(Throwable t, AioSocketChannel channel) {
             if (t instanceof AsynchronousCloseException) {
-                channel.closed.set(true);
+                channel.closed = true;
 
                 // TODO: This seems wrong!
                 return;
@@ -323,7 +324,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void failed0(Throwable exc, AioSocketChannel channel) {
             if (exc instanceof AsynchronousCloseException) {
-                channel.closed.set(true);
+                channel.closed = true;
             }
             ((AsyncUnsafe) channel.unsafe()).connectFailed(exc);
         }
