@@ -285,6 +285,7 @@
             <ignore>java.nio.channels.AsynchronousSocketChannel</ignore>
             <ignore>java.nio.channels.AsynchronousServerSocketChannel</ignore>
             <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
+            <ignore>java.nio.channels.NetworkChannel</ignore>
           </ignores>
         </configuration>
         <executions>
