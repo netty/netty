@@ -22,16 +22,13 @@ import static org.junit.Assert.assertNotSame;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * Tests the {@link UniqueName} class
- */
 public class UniqueNameTest {
 
     /**
      * A {@link ConcurrentHashMap} of registered names.
      * This is set up before each test
      */
-    ConcurrentHashMap<String, Boolean> names;
+    private ConcurrentHashMap<String, Boolean> names;
     
     /**
      * Registers a {@link UniqueName}
@@ -44,17 +41,11 @@ public class UniqueNameTest {
         return new UniqueName(names, name);
     }
 
-    /**
-     * Initializes each test
-     */
     @Before
     public void initializeTest() {
         this.names = new ConcurrentHashMap<String, Boolean>();
     }
 
-    /**
-     * Tests name registration
-     */
     @Test
     public void testRegisteringName() {
         registerName("Abcedrian");
@@ -63,9 +54,6 @@ public class UniqueNameTest {
         assertTrue(this.names.get("Hellyes") == null);
     }
 
-    /**
-     * Tests to make sure names can't be registered more than once
-     */
     @Test
     public void testNameUniqueness() {
         registerName("Leroy");
@@ -78,23 +66,20 @@ public class UniqueNameTest {
         assertTrue(failed);
     }
 
-    /**
-     * Tests to make sure IDs aren't used twice
-     */
     @Test
     public void testIDUniqueness() {
         UniqueName one = registerName("one");
         UniqueName two = registerName("two");
         assertNotSame(one.id(), two.id());
 
-        ArrayList<UniqueName> _names = new ArrayList<UniqueName>();
+        ArrayList<UniqueName> nameList = new ArrayList<UniqueName>();
 
         for (int index = 0; index < 2500; index++) {
-            UniqueName name = registerName("test" + index);
-            _names.add(name);
-            for (UniqueName _name : _names) {
-                if (!name.name().equals(_name.name())) {
-                    assertNotSame(name.id(), _name.name());
+            UniqueName currentName = registerName("test" + index);
+            nameList.add(currentName);
+            for (UniqueName otherName : nameList) {
+                if (!currentName.name().equals(otherName.name())) {
+                    assertNotSame(currentName.id(), otherName.name());
                 }
             }
         }
