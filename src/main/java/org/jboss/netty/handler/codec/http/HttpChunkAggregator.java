@@ -53,6 +53,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
+    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1000;
 
     private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
@@ -62,7 +63,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
 
     private ChannelHandlerContext ctx;
 
-    private int maxCumulationBufferComponents = 4;
+    private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
 
     /**
      * Creates a new instance.
@@ -85,7 +86,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
      * Returns the maximum number of components in the cumulation buffer.  If the number of
      * the components in the cumulation buffer exceeds this value, the components of the
      * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@code 4}.
+     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
      */
     public final int getMaxCumulationBufferComponents() {
         return maxCumulationBufferComponents;
@@ -95,7 +96,8 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
      * Sets the maximum number of components in the cumulation buffer.  If the number of
      * the components in the cumulation buffer exceeds this value, the components of the
      * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@code 4} and its minimum allowed value is {@code 2}.
+     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}
+     * and its minimum allowed value is {@code 2}.
      */
     public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
         if (maxCumulationBufferComponents < 2) {
