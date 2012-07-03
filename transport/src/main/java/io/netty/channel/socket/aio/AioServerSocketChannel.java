@@ -28,7 +28,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
@@ -36,6 +36,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
     private volatile AioServerSocketChannelConfig config;
+    final AtomicBoolean closed = new AtomicBoolean(false);
 
     public AioServerSocketChannel() {
         super(null, null);
@@ -88,7 +89,9 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doClose() throws Exception {
-        javaChannel().close();
+        if (closed.compareAndSet(false, true)) {
+            javaChannel().close();
+        }
     }
 
     @Override
@@ -116,21 +119,28 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     private static final class AcceptHandler
-            implements CompletionHandler<AsynchronousSocketChannel, AioServerSocketChannel> {
-        public void completed(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
-            // register again this handler to accept new connections
+            extends AioCompletionHandler<AsynchronousSocketChannel, AioServerSocketChannel> {
+
+        @Override
+        protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
+         // register again this handler to accept new connections
             channel.javaChannel().accept(channel, this);
 
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(new AioSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
-            
         }
 
-        public void failed(Throwable t, AioServerSocketChannel channel) {
-            // check if the exception was thrown because the channel was closed before 
+        @Override
+        protected void failed0(Throwable t, AioServerSocketChannel channel) {
+            boolean asyncClosed = false;
+            if (t instanceof AsynchronousCloseException) {
+                asyncClosed = true;
+                channel.closed.set(true);
+            }
+            // check if the exception was thrown because the channel was closed before
             // log something
-            if (channel.isOpen() && !(t instanceof AsynchronousCloseException)) {
+            if (channel.isOpen() && ! asyncClosed) {
                 logger.warn("Failed to create a new channel from an accepted socket.", t);
             }
         }

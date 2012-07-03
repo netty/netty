@@ -26,9 +26,11 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
 
@@ -36,6 +38,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
 
+    private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean flushing = new AtomicBoolean(false);
     private volatile AioSocketChannelConfig config;
 
@@ -111,7 +114,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             return null;
         } else if (remoteAddress() != null) {
             return new Runnable() {
-                
+
                 @Override
                 public void run() {
                     read();
@@ -130,12 +133,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         expandReadBuffer(byteBuf);
         // Get a ByteBuffer view on the ByteBuf
         ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-
         javaChannel().read(buffer, this, READ_HANDLER);
     }
 
 
-    private static boolean expandReadBuffer(ByteBuf byteBuf) {
+    private boolean expandReadBuffer(ByteBuf byteBuf) {
         if (!byteBuf.writable()) {
             // FIXME: Magic number
             byteBuf.ensureWritableBytes(4096);
@@ -156,7 +158,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doClose() throws Exception {
-        javaChannel().close();
+        if (closed.compareAndSet(false, true)) {
+            javaChannel().close();
+        }
     }
 
     @Override
@@ -183,13 +187,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
 
-    private static final class WriteHandler implements CompletionHandler<Integer, AioSocketChannel> {
+    private static final class WriteHandler extends AioCompletionHandler<Integer, AioSocketChannel> {
 
         @Override
-        public void completed(Integer result, AioSocketChannel channel) {
+        protected void completed0(Integer result, AioSocketChannel channel) {
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
             if (result > 0) {
-                
+
                 // Update the readerIndex with the amount of read bytes
                 buf.readerIndex(buf.readerIndex() + result);
 
@@ -211,11 +215,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
 
         @Override
-        public void failed(Throwable cause, AioSocketChannel channel) {
+        protected void failed0(Throwable cause, AioSocketChannel channel) {
+            if (cause instanceof AsynchronousCloseException) {
+                channel.closed.set(true);
+            }
 
             channel.notifyFlushFutures(cause);
             channel.pipeline().fireExceptionCaught(cause);
             if (cause instanceof IOException) {
+
                 channel.unsafe().close(channel.unsafe().voidFuture());
             } else {
                 ByteBuf buf = channel.pipeline().outboundByteBuffer();
@@ -228,13 +236,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private static final class ReadHandler implements CompletionHandler<Integer, AioSocketChannel> {
+    private static final class ReadHandler extends AioCompletionHandler<Integer, AioSocketChannel> {
 
         @Override
-        public void completed(Integer result, AioSocketChannel channel) {
-            assert channel.eventLoop().inEventLoop();
-
+        protected void completed0(Integer result, AioSocketChannel channel) {
             final ChannelPipeline pipeline = channel.pipeline();
+            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
+
             boolean closed = false;
             boolean read = false;
             try {
@@ -245,7 +253,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     //
                     // This is needed as the ByteBuffer and the ByteBuf does not share
                     // each others index
-                    final ByteBuf byteBuf = pipeline.inboundByteBuffer();
                     byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
 
                     read = true;
@@ -255,11 +262,17 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
             } catch (Throwable t) {
+                if (t instanceof AsynchronousCloseException) {
+                    channel.closed.set(true);
+                }
+
                 if (read) {
                     read = false;
                     pipeline.fireInboundBufferUpdated();
                 }
+
                 pipeline.fireExceptionCaught(t);
+
                 if (t instanceof IOException) {
                     channel.unsafe().close(channel.unsafe().voidFuture());
                 }
@@ -272,12 +285,20 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 } else {
                     // start the next read
                     channel.read();
+
                 }
             }
         }
 
         @Override
-        public void failed(Throwable t, AioSocketChannel channel) {
+        protected void failed0(Throwable t, AioSocketChannel channel) {
+            if (t instanceof AsynchronousCloseException) {
+                channel.closed.set(true);
+
+                // TODO: This seems wrong!
+                return;
+            }
+
             channel.pipeline().fireExceptionCaught(t);
             if (t instanceof IOException) {
                 channel.unsafe().close(channel.unsafe().voidFuture());
@@ -288,10 +309,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private static final class ConnectHandler implements CompletionHandler<Void, AioSocketChannel> {
+    private static final class ConnectHandler extends AioCompletionHandler<Void, AioSocketChannel> {
 
         @Override
-        public void completed(Void result, AioSocketChannel channel) {
+        protected void completed0(Void result, AioSocketChannel channel) {
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
             channel.pipeline().fireChannelActive();
 
@@ -300,7 +321,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
 
         @Override
-        public void failed(Throwable exc, AioSocketChannel channel) {
+        protected void failed0(Throwable exc, AioSocketChannel channel) {
+            if (exc instanceof AsynchronousCloseException) {
+                channel.closed.set(true);
+            }
             ((AsyncUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }
