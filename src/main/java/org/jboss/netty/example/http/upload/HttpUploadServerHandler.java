@@ -360,9 +360,10 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             CookieEncoder cookieEncoder = new CookieEncoder(true);
             for (Cookie cookie: cookies) {
                 cookieEncoder.addCookie(cookie);
+                response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder
+                        .encode());
+                cookieEncoder = new CookieEncoder(true);
             }
-            response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder
-                    .encode());
         }
         // Write the response.
         ChannelFuture future = channel.write(response);
