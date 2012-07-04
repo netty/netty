@@ -1281,12 +1281,12 @@ public class HttpPostRequestDecoder {
         throw new NotEnoughDataDecoderException();
     }
 
-	/**
+    /**
      * Read one line up to --delimiter or --delimiter-- and if existing the CRLF or LF
      * Read one line up to --delimiter or --delimiter-- and if existing the CRLF or LF.
      * Note that CRLF or LF are mandatory for opening delimiter (--delimiter) but not for
      * closing delimiter (--delimiter--) since some clients does not include CRLF in this case.
-     * 
+     *
      * @param delimiter of the form --string, such that '--' is already included
      * @return the String from one line as the delimiter searched (opening or closing)
      * @throws NotEnoughDataDecoderException Need more chunks and
@@ -1301,26 +1301,26 @@ public class HttpPostRequestDecoder {
             while (undecodedChunk.readable() && delimiterPos < len) {
                 byte nextByte = undecodedChunk.readByte();
                 if (nextByte == delimiter.charAt(delimiterPos)) {
-                	delimiterPos++;
+                    delimiterPos++;
                     sb.append((char) nextByte);
                 } else {
-                	// delimiter not found so break here !
-                	undecodedChunk.readerIndex(readerIndex);
+                    // delimiter not found so break here !
+                    undecodedChunk.readerIndex(readerIndex);
                     throw new NotEnoughDataDecoderException();
                 }
             }
             // Now check if either opening delimiter or closing delimiter
             if (undecodedChunk.readable()) {
-            	byte nextByte = undecodedChunk.readByte();
+                byte nextByte = undecodedChunk.readByte();
                 // first check for opening delimiter
                 if (nextByte == HttpConstants.CR) {
                     nextByte = undecodedChunk.readByte();
                     if (nextByte == HttpConstants.LF) {
                         return sb.toString();
                     } else {
-                    	// error since CR must be followed by LF
-                    	// delimiter not found so break here !
-                    	undecodedChunk.readerIndex(readerIndex);
+                        // error since CR must be followed by LF
+                        // delimiter not found so break here !
+                        undecodedChunk.readerIndex(readerIndex);
                         throw new NotEnoughDataDecoderException();
                     }
                 } else if (nextByte == HttpConstants.LF) {
@@ -1339,26 +1339,26 @@ public class HttpPostRequestDecoder {
                                 if (nextByte == HttpConstants.LF) {
                                     return sb.toString();
                                 } else {
-                                	// error CR without LF
-                                	// delimiter not found so break here !
-                                	undecodedChunk.readerIndex(readerIndex);
+                                    // error CR without LF
+                                    // delimiter not found so break here !
+                                   undecodedChunk.readerIndex(readerIndex);
                                     throw new NotEnoughDataDecoderException();
                                 }
                             } else if (nextByte == HttpConstants.LF) {
                                 return sb.toString();
                             } else {
-                            	// No CRLF but ok however (Adobe Flash uploader)
-                            	// minus 1 since we read one char ahead but should not
-                            	undecodedChunk.readerIndex(undecodedChunk.readerIndex()-1);
+                                // No CRLF but ok however (Adobe Flash uploader)
+                                // minus 1 since we read one char ahead but should not
+                                undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
                                 return sb.toString();
                             }
                         }
-                        // FIXME what do we do here? 
+                        // FIXME what do we do here?
                         // either considering it is fine, either waiting for more data to come?
                         // lets try considering it is fine...
                         return sb.toString();
                     }
-                	// only one '-' => not enough
+                    // only one '-' => not enough
                     // whatever now => error since incomplete
                 }
             }
@@ -1369,11 +1369,12 @@ public class HttpPostRequestDecoder {
         undecodedChunk.readerIndex(readerIndex);
         throw new NotEnoughDataDecoderException();
     }
+
     /**
      * Read one line up to --delimiter or --delimiter-- and if existing the CRLF or LF.
      * Note that CRLF or LF are mandatory for opening delimiter (--delimiter) but not for
      * closing delimiter (--delimiter--) since some clients does not include CRLF in this case.
-     * 
+     *
      * @param delimiter of the form --string, such that '--' is already included
      * @return the String from one line as the delimiter searched (opening or closing)
      * @throws NotEnoughDataDecoderException Need more chunks and
@@ -1395,11 +1396,11 @@ public class HttpPostRequestDecoder {
             while (sao.pos < sao.limit && delimiterPos < len) {
                 byte nextByte = sao.bytes[sao.pos ++];
                 if (nextByte == delimiter.charAt(delimiterPos)) {
-                	delimiterPos++;
+                    delimiterPos++;
                     sb.append((char) nextByte);
                 } else {
-                	// delimiter not found so break here !
-                	undecodedChunk.readerIndex(readerIndex);
+                    // delimiter not found so break here !
+                    undecodedChunk.readerIndex(readerIndex);
                     throw new NotEnoughDataDecoderException();
                 }
             }
@@ -1415,9 +1416,9 @@ public class HttpPostRequestDecoder {
                             return sb.toString();
                         }
                     } else {
-                    	// error since CR must be followed by LF
-                    	// delimiter not found so break here !
-                    	undecodedChunk.readerIndex(readerIndex);
+                        // error since CR must be followed by LF
+                        // delimiter not found so break here !
+                        undecodedChunk.readerIndex(readerIndex);
                         throw new NotEnoughDataDecoderException();
                     }
                 } else if (nextByte == HttpConstants.LF) {
@@ -1427,44 +1428,44 @@ public class HttpPostRequestDecoder {
                 } else if (nextByte == '-') {
                     sb.append((char) nextByte);
                     // second check for closing delimiter
-                	if (sao.pos < sao.limit) {
+                    if (sao.pos < sao.limit) {
                         nextByte = sao.bytes[sao.pos ++];
                         if (nextByte == '-') {
                             sb.append((char) nextByte);
                             // now try to find if CRLF or LF there
                             if (sao.pos < sao.limit) {
-                                nextByte = sao.bytes[sao.pos ++];
-	                            if (nextByte == HttpConstants.CR) {
-	                                if (sao.pos < sao.limit) {
-	                                    nextByte = sao.bytes[sao.pos ++];
-	                                    if (nextByte == HttpConstants.LF) {
-	                                        sao.setReadPosition(0);
-	                                        return sb.toString();
-	                                    }
-	                                } else {
-	                                	// error CR without LF
-	                                	// delimiter not found so break here !
-	                                	undecodedChunk.readerIndex(readerIndex);
-	                                    throw new NotEnoughDataDecoderException();
-	                                }
-	                            } else if (nextByte == HttpConstants.LF) {
-	                                sao.setReadPosition(0);
-	                                return sb.toString();
-	                            } else {
-	                            	// No CRLF but ok however (Adobe Flash uploader)
-	                            	// minus 1 since we read one char ahead but should not
-	                                sao.setReadPosition(1);
-	                                return sb.toString();
-	                            }
+                                nextByte = sao.bytes[sao.pos++];
+                                if (nextByte == HttpConstants.CR) {
+                                    if (sao.pos < sao.limit) {
+                                        nextByte = sao.bytes[sao.pos++];
+                                        if (nextByte == HttpConstants.LF) {
+                                            sao.setReadPosition(0);
+                                            return sb.toString();
+                                        }
+                                    } else {
+                                        // error CR without LF
+                                        // delimiter not found so break here !
+                                        undecodedChunk.readerIndex(readerIndex);
+                                        throw new NotEnoughDataDecoderException();
+                                    }
+                                } else if (nextByte == HttpConstants.LF) {
+                                    sao.setReadPosition(0);
+                                    return sb.toString();
+                                } else {
+                                    // No CRLF but ok however (Adobe Flash uploader)
+                                    // minus 1 since we read one char ahead but should not
+                                    sao.setReadPosition(1);
+                                    return sb.toString();
+                                }
                             }
-                            // FIXME what do we do here? 
+                            // FIXME what do we do here?
                             // either considering it is fine, either waiting for more data to come?
                             // lets try considering it is fine...
                             sao.setReadPosition(0);
                             return sb.toString();
                         }
                         // whatever now => error since incomplete
-                    	// only one '-' => not enough or whatever not enough element
+                        // only one '-' => not enough or whatever not enough element
                     }
                 }
             }
@@ -1476,7 +1477,6 @@ public class HttpPostRequestDecoder {
         throw new NotEnoughDataDecoderException();
     }
 
-    
     /**
      * Read a FileUpload data as Byte (Binary) and add the bytes directly to the
      * FileUpload. If the delimiter is found, the FileUpload is completed.
