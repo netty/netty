@@ -635,7 +635,7 @@ public class SslHandler extends FrameDecoder
 
                 if (!sslv2) {
                     // Bad data - discard the buffer and raise an exception.
-                    SSLException e = new SSLException(
+                    NotSslRecordException e = new NotSslRecordException(
                             "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
                     buffer.skipBytes(buffer.readableBytes());
                     throw e;
