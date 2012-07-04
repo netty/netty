@@ -23,6 +23,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.handler.codec.http.HttpMessageDecoder.State;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
@@ -274,6 +275,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
+
+            // Check if the buffer is readable first as we use the readable byte count
+            // to create the HttpChunk. This is needed as otherwise we may end up with
+            // create a HttpChunk instance that contains an empty buffer and so is
+            // handled like it is the last HttpChunk.
+            //
+            // See https://github.com/netty/netty/issues/433
+            if (readLimit == 0) {
+                return null;
+            }
+
             int toRead = chunkSize;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
@@ -327,6 +339,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
+
+            // Check if the buffer is readable first as we use the readable byte count
+            // to create the HttpChunk. This is needed as otherwise we may end up with
+            // create a HttpChunk instance that contains an empty buffer and so is
+            // handled like it is the last HttpChunk.
+            //
+            // See https://github.com/netty/netty/issues/433
+            if (readLimit == 0) {
+                return null;
+            }
+
             int toRead = chunkSize;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
