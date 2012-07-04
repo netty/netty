@@ -109,6 +109,7 @@ public final class ClientCookieEncoder {
                 }
                 buf.setCharAt(buf.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
                 buf.append((char) HttpConstants.SEMICOLON);
+                buf.append((char) HttpConstants.SP);
             }
         }
     }

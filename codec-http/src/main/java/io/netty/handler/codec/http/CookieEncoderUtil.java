@@ -20,7 +20,7 @@ final class CookieEncoderUtil {
 
     static String stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {
-            buf.setLength(buf.length() - 1);
+            buf.setLength(buf.length() - 2);
         }
         return buf.toString();
     }
@@ -51,6 +51,7 @@ final class CookieEncoderUtil {
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
         sb.append((char) HttpConstants.SEMICOLON);
+        sb.append((char) HttpConstants.SP);
     }
 
     static void addQuoted(StringBuilder sb, String name, String val) {
@@ -64,6 +65,7 @@ final class CookieEncoderUtil {
         sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
         sb.append((char) HttpConstants.DOUBLE_QUOTE);
         sb.append((char) HttpConstants.SEMICOLON);
+        sb.append((char) HttpConstants.SP);
     }
 
     static void add(StringBuilder sb, String name, long val) {
@@ -71,6 +73,7 @@ final class CookieEncoderUtil {
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
         sb.append((char) HttpConstants.SEMICOLON);
+        sb.append((char) HttpConstants.SP);
     }
 
     private CookieEncoderUtil() {
