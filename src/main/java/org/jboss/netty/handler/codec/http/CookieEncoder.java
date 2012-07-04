@@ -136,10 +136,12 @@ public class CookieEncoder {
             if (cookie.isSecure()) {
                 sb.append(CookieHeaderNames.SECURE);
                 sb.append((char) HttpConstants.SEMICOLON);
+                sb.append((char) HttpConstants.SP);
             }
             if (cookie.isHttpOnly()) {
                 sb.append(CookieHeaderNames.HTTPONLY);
                 sb.append((char) HttpConstants.SEMICOLON);
+                sb.append((char) HttpConstants.SP);
             }
             if (cookie.getVersion() >= 1) {
                 if (cookie.getComment() != null) {
@@ -162,16 +164,19 @@ public class CookieEncoder {
                     }
                     sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
                     sb.append((char) HttpConstants.SEMICOLON);
+                    sb.append((char) HttpConstants.SP);
+
                 }
                 if (cookie.isDiscard()) {
                     sb.append(CookieHeaderNames.DISCARD);
                     sb.append((char) HttpConstants.SEMICOLON);
+                    sb.append((char) HttpConstants.SP);
                 }
             }
         }
 
         if (sb.length() > 0) {
-            sb.setLength(sb.length() - 1);
+            sb.setLength(sb.length() - 2);
         }
 
         return sb.toString();
@@ -207,12 +212,13 @@ public class CookieEncoder {
                     }
                     sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
                     sb.append((char) HttpConstants.SEMICOLON);
+                    sb.append((char) HttpConstants.SP);
                 }
             }
         }
 
         if (sb.length() > 0) {
-            sb.setLength(sb.length() - 1);
+            sb.setLength(sb.length() - 2);
         }
         return sb.toString();
     }
@@ -243,6 +249,7 @@ public class CookieEncoder {
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
         sb.append((char) HttpConstants.SEMICOLON);
+        sb.append((char) HttpConstants.SP);
     }
 
     private static void addQuoted(StringBuilder sb, String name, String val) {
@@ -256,6 +263,8 @@ public class CookieEncoder {
         sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
         sb.append((char) HttpConstants.DOUBLE_QUOTE);
         sb.append((char) HttpConstants.SEMICOLON);
+        sb.append((char) HttpConstants.SP);
+
     }
 
     private static void add(StringBuilder sb, String name, int val) {
@@ -263,5 +272,6 @@ public class CookieEncoder {
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
         sb.append((char) HttpConstants.SEMICOLON);
+        sb.append((char) HttpConstants.SP);
     }
 }

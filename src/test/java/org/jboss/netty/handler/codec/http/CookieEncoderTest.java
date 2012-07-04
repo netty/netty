@@ -25,7 +25,7 @@ import org.junit.Test;
 public class CookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {
-        String result = "myCookie=myValue;Expires=XXX;Path=/apathsomewhere;Domain=.adomainsomewhere;Secure";
+        String result = "myCookie=myValue; Expires=XXX; Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
         DateFormat df = new CookieDateFormat();
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
@@ -59,7 +59,7 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingSingleCookieV1() {
-        String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1";
+        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
@@ -75,7 +75,7 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard";
+        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1; CommentURL=\"http://aurl.com\"; Port=\"80,8080\"; Discard";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
@@ -107,9 +107,9 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingMultipleClientCookies() {
-        String c1 = "$Version=1;myCookie=myValue;$Path=\"/apathsomewhere\";$Domain=.adomainsomewhere;$Port=\"80,8080\";";
-        String c2 = "$Version=1;myCookie2=myValue2;$Path=\"/anotherpathsomewhere\";$Domain=.anotherdomainsomewhere;";
-        String c3 = "$Version=1;myCookie3=myValue3";
+        String c1 = "$Version=1; myCookie=myValue; $Path=\"/apathsomewhere\"; $Domain=.adomainsomewhere; $Port=\"80,8080\"; ";
+        String c2 = "$Version=1; myCookie2=myValue2; $Path=\"/anotherpathsomewhere\"; $Domain=.anotherdomainsomewhere; ";
+        String c3 = "$Version=1; myCookie3=myValue3";
         CookieEncoder encoder = new CookieEncoder(false);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
@@ -135,7 +135,7 @@ public class CookieEncoderTest {
         cookie3.setVersion(1);
         encoder.addCookie(cookie3);
         String encodedCookie = encoder.encode();
-        assertEquals(c1 + c2 + c3, encodedCookie);
+        assertEquals(c1 +c2 + c3, encodedCookie);
     }
 
     @Test
