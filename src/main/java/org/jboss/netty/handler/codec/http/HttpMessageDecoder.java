@@ -23,7 +23,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.HttpMessageDecoder.State;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
