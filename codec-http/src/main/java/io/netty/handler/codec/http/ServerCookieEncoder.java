@@ -83,10 +83,12 @@ public final class ServerCookieEncoder {
         if (cookie.isSecure()) {
             buf.append(CookieHeaderNames.SECURE);
             buf.append((char) HttpConstants.SEMICOLON);
+            buf.append((char) HttpConstants.SP);
         }
         if (cookie.isHttpOnly()) {
             buf.append(CookieHeaderNames.HTTPONLY);
             buf.append((char) HttpConstants.SEMICOLON);
+            buf.append((char) HttpConstants.SP);
         }
         if (cookie.getVersion() >= 1) {
             if (cookie.getComment() != null) {
@@ -109,10 +111,12 @@ public final class ServerCookieEncoder {
                 }
                 buf.setCharAt(buf.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
                 buf.append((char) HttpConstants.SEMICOLON);
+                buf.append((char) HttpConstants.SP);
             }
             if (cookie.isDiscard()) {
                 buf.append(CookieHeaderNames.DISCARD);
                 buf.append((char) HttpConstants.SEMICOLON);
+                buf.append((char) HttpConstants.SP);
             }
         }
 
