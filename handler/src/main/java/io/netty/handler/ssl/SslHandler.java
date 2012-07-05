@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -463,6 +464,74 @@ public class SslHandler
     @Override
     public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
         final ByteBuf in = ctx.inboundByteBuffer();
+
+        if (in.readableBytes() < 5) {
+            return;
+        }
+
+        // SSLv3 or TLS - Check ContentType
+        boolean tls;
+        switch (in.getUnsignedByte(in.readerIndex())) {
+        case 20:  // change_cipher_spec
+        case 21:  // alert
+        case 22:  // handshake
+        case 23:  // application_data
+            tls = true;
+            break;
+        default:
+            // SSLv2 or bad data
+            tls = false;
+        }
+
+        int packetLength = -1;
+        if (tls) {
+            // SSLv3 or TLS - Check ProtocolVersion
+            int majorVersion = in.getUnsignedByte(in.readerIndex() + 1);
+            if (majorVersion == 3) {
+                // SSLv3 or TLS
+                packetLength = (getShort(in, in.readerIndex() + 3) & 0xFFFF) + 5;
+                if (packetLength <= 5) {
+                    // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
+                    tls = false;
+                }
+            } else {
+                // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
+                tls = false;
+            }
+        }
+
+        if (!tls) {
+            // SSLv2 or bad data - Check the version
+            boolean sslv2 = true;
+            int headerLength = (in.getUnsignedByte(
+                    in.readerIndex()) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = in.getUnsignedByte(
+                    in.readerIndex() + headerLength + 1);
+            if (majorVersion == 2 || majorVersion == 3) {
+                // SSLv2
+                if (headerLength == 2) {
+                    packetLength = (getShort(in, in.readerIndex()) & 0x7FFF) + 2;
+                } else {
+                    packetLength = (getShort(in, in.readerIndex()) & 0x3FFF) + 3;
+                }
+                if (packetLength <= headerLength) {
+                    sslv2 = false;
+                }
+            } else {
+                sslv2 = false;
+            }
+
+            if (!sslv2) {
+                // Bad data - discard the buffer and raise an exception.
+                NotSslRecordException e = new NotSslRecordException(
+                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                in.skipBytes(in.readableBytes());
+                throw e;
+            }
+        }
+
+        assert packetLength > 0;
+
         final ByteBuf out = ctx.nextInboundByteBuffer();
         out.discardReadBytes();
 
@@ -519,6 +588,14 @@ public class SslHandler
                 ctx.fireInboundBufferUpdated();
             }
         }
+    }
+
+    /**
+     * Reads a big-endian short integer from the buffer.  Please note that we do not use
+     * {@link ByteBuf#getShort(int)} because it might be a little-endian buffer.
+     */
+    private static short getShort(ByteBuf buf, int offset) {
+        return (short) (buf.getByte(offset) << 8 | buf.getByte(offset + 1) & 0xFF);
     }
 
     private static SSLEngineResult unwrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
