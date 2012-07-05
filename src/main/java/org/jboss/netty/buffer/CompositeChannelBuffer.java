@@ -571,7 +571,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     * </p>
     *
     *
-    * @param index The {@code index} to search for and include in the returned {@link ByteBuf}
+    * @param index The {@code index} to search for and include in the returned {@link ChannelBuffer}
     * @return The {@link ChannelBuffer} that contains the specified {@code index}
     * @throws IndexOutOfBoundsException when the specified {@code index} is
     * less than zero, or larger than {@code capacity()}
