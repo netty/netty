@@ -37,10 +37,12 @@
  *     Channel traffic shaping and Global traffic shaping.</li><br><br>
  *
  * The insertion in the pipeline of one of those handlers can be wherever you want, but
- * <b>it must be placed before any <tt>{@link MemoryAwareThreadPoolExecutor}</tt>
+ * <b>it must be placed before any <tt>{@link org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor}</tt>
  * in your pipeline</b>.<br>
- * <b><i>It is really recommended to have such a</i> <tt>{@link MemoryAwareThreadPoolExecutor}</tt>
- * <i>(either non ordered or </i> <tt>{@link OrderedMemoryAwareThreadPoolExecutor}</tt>
+ * <b><i>It is really recommended to have such a</i>
+ * <tt>{@link org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor}</tt>
+ * <i>(either non ordered or </i>
+ * <tt>{@link org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor}</tt>
  * <i>) in your pipeline</i></b>
  * when you want to use this feature with some real traffic shaping, since it will allow to relax the constraint on
  * NioWorker to do other jobs if necessary.<br>
@@ -52,9 +54,10 @@
  * 60KB/s for each channel since NioWorkers are stopping by this handler.<br>
  * When it is used as a read traffic shaper, the handler will set the channel as not readable, so as to relax the
  * NioWorkers.<br><br>
- * An {@link ObjectSizeEstimator} can be passed at construction to specify what
+ * An {@link org.jboss.netty.util.ObjectSizeEstimator} can be passed at construction to specify what
  * is the size of the object to be read or write accordingly to the type of
- * object. If not specified, it will used the {@link DefaultObjectSizeEstimator} implementation.<br><br>
+ * object. If not specified, it will used the {@link org.jboss.netty.util.DefaultObjectSizeEstimator}
+ * implementation.<br><br>
  * </ul></P>
  *
  * <P>Standard use could be as follow:</P>
