@@ -156,6 +156,9 @@ public class SslHandler
 
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
             "^.*(Socket|DatagramChannel|SctpChannel).*$");
+    private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
+            "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
+            Pattern.CASE_INSENSITIVE);
 
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
@@ -474,6 +477,14 @@ public class SslHandler
      */
     private boolean ignoreException(Throwable t) {
         if (!(t instanceof SSLException) && t instanceof IOException && engine.isOutboundDone()) {
+            String message = String.valueOf(t.getMessage()).toLowerCase();
+
+            // first try to match connection reset / broke peer based on the regex. This is the fastest way
+            // but may fail on different jdk impls or OS's
+            if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+                return true;
+            }
+
 
             // Inspect the StackTraceElements to see if it was a connection reset / broken pipe or not
             StackTraceElement[] elements = t.getStackTrace();
@@ -504,9 +515,7 @@ public class SslHandler
                     Class<?> clazz = getClass().getClassLoader().loadClass(classname);
 
                     if (SocketChannel.class.isAssignableFrom(clazz)
-                            || DatagramChannel.class.isAssignableFrom(clazz)
-                            || Socket.class.isAssignableFrom(clazz)
-                            || DatagramSocket.class.isAssignableFrom(clazz)) {
+                            || DatagramChannel.class.isAssignableFrom(clazz)) {
                         return true;
                     }
 
