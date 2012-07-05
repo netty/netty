@@ -20,6 +20,8 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -50,6 +52,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.DetectionUtil;
 import org.jboss.netty.util.internal.NonReentrantLock;
 import org.jboss.netty.util.internal.QueueFactory;
 
@@ -159,6 +162,8 @@ public class SslHandler extends FrameDecoder
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
+    private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
+            "^.*(Socket|DatagramChannel|SctpChannel).*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
             Pattern.CASE_INSENSITIVE);
@@ -550,27 +555,81 @@ public class SslHandler extends FrameDecoder
                         return;
                     }
                 }
-            } else if (engine.isOutboundDone()) {
-                String message = String.valueOf(cause.getMessage()).toLowerCase();
-                if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
-                    // It is safe to ignore the 'connection reset by peer' or
-                    // 'broken pipe' error after sending closure_notify.
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(
-                                "Swallowing a 'connection reset by peer / " +
-                                "broken pipe' error occurred while writing " +
-                                "'closure_notify'", cause);
-                    }
-
-                    // Close the connection explicitly just in case the transport
-                    // did not close the connection automatically.
-                    Channels.close(ctx, succeededFuture(e.getChannel()));
+            } else {
+                if (ignoreException(cause)) {
                     return;
                 }
             }
         }
 
         ctx.sendUpstream(e);
+    }
+
+    /**
+     * Checks if the given {@link Throwable} can be ignore and just "swallowed"
+     *
+     * When an ssl connection is closed a close_notify message is sent.
+     * After that the peer also sends close_notify however, it's not mandatory to receive
+     * the close_notify. The party who sent the initial close_notify can close the connection immediately
+     * then the peer will get connection reset error.
+     *
+     */
+    private boolean ignoreException(Throwable t) {
+        if (!(t instanceof SSLException) && t instanceof IOException && engine.isOutboundDone()) {
+            String message = String.valueOf(t.getMessage()).toLowerCase();
+
+            // first try to match connection reset / broke peer based on the regex. This is the fastest way
+            // but may fail on different jdk impls or OS's
+            if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+                return true;
+            }
+
+            // Inspect the StackTraceElements to see if it was a connection reset / broken pipe or not
+            StackTraceElement[] elements = t.getStackTrace();
+            for (StackTraceElement element: elements) {
+                String classname = element.getClassName();
+                String methodname = element.getMethodName();
+
+                // skip all classes that belong to the io.netty package
+                if (classname.startsWith("org.jboss.netty.")) {
+                    continue;
+                }
+
+                // check if the method name is read if not skip it
+                if (!methodname.equals("read")) {
+                    continue;
+                }
+
+                // This will also match against SocketInputStream which is used by openjdk 7 and maybe
+                // also others
+                if (IGNORABLE_CLASS_IN_STACK.matcher(classname).matches()) {
+                    return true;
+                }
+
+                try {
+                    // No match by now.. Try to load the class via classloader and inspect it.
+                    // This is mainly done as other JDK implementations may differ in name of
+                    // the impl.
+                    Class<?> clazz = getClass().getClassLoader().loadClass(classname);
+
+                    if (SocketChannel.class.isAssignableFrom(clazz)
+                            || DatagramChannel.class.isAssignableFrom(clazz)) {
+                        return true;
+                    }
+
+                    // also match against SctpChannel via String matching as it may not present.
+                    if (DetectionUtil.javaVersion() >= 7
+                            && "com.sun.nio.sctp.SctpChannel".equals(clazz.getSuperclass().getName())) {
+                        return true;
+                    }
+                } catch (ClassNotFoundException e) {
+                    // This should not happen just ignore
+                }
+
+            }
+        }
+
+        return false;
     }
 
     @Override
