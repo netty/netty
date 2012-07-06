@@ -81,8 +81,11 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
 
     @Override
     protected boolean setClosed() {
-        state = ST_CLOSED;
-        return super.setClosed();
+        if (super.setClosed()) {
+            state = ST_CLOSED;
+            return true;
+        }
+        return false;
     }
 
 
