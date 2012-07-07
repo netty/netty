@@ -17,6 +17,15 @@ package io.netty.util.internal;
 
 import java.util.Iterator;
 
+/**
+ * An interface for an {@link Iterator} that can be reused.
+ *
+ * @param <E> The type to be iterated upon
+ */
 public interface ReusableIterator<E> extends Iterator<E> {
+
+    /**
+     * Rewinds the iterator to the previous state, allowing reuse
+     */
     void rewind();
 }

@@ -18,19 +18,36 @@ package io.netty.util.internal;
 import java.util.concurrent.Executor;
 
 /**
- * Disables shutdown of an {@link Executor} by wrapping the {@link Executor}.
+ * An implementation of {@link Executor} that may not be shut down or terminated
  */
 public class UnterminatableExecutor implements Executor {
 
+    /**
+     * The {@link Executor} instance being used
+     */
     private final Executor executor;
 
+    /**
+     * Creates a new {@link UnterminatableExecutor}
+     *
+     * @param executor The initial {@link Executor} to wrap
+     */
     public UnterminatableExecutor(Executor executor) {
+        //See if the executor being provided is null
         if (executor == null) {
-            throw new NullPointerException("executor");
+            //Alright, this doesn't look good!
+            throw new NullPointerException("Executors provided to "
+                    + "UnterminatableExecutors must not be null");
         }
+        //Set the executor
         this.executor = executor;
     }
 
+    /**
+     * Executes the specified command
+     *
+     * @param command The command to execute
+     */
     @Override
     public void execute(Runnable command) {
         executor.execute(command);
