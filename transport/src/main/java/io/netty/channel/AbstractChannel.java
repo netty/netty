@@ -760,7 +760,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    private void notifyFlushFutures(Throwable cause) {
+    protected void notifyFlushFutures(Throwable cause) {
         notifyFlushFutures();
         for (;;) {
             FlushCheckpoint cp = flushCheckpoints.poll();

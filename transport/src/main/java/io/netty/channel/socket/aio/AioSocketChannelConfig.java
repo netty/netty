@@ -51,7 +51,6 @@ public class AioSocketChannelConfig extends DefaultChannelConfig
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_RCVBUF) {
@@ -107,7 +106,7 @@ public class AioSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getReceiveBufferSize() {
         try {
-            return (int) channel.getOption(StandardSocketOptions.SO_RCVBUF);
+            return channel.getOption(StandardSocketOptions.SO_RCVBUF);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
