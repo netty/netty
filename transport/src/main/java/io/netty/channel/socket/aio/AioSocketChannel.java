@@ -18,6 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 
@@ -32,6 +33,8 @@ import java.nio.channels.CompletionHandler;
 
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
 
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
@@ -68,8 +71,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.BYTE;
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
