@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.NetworkChannel;
 
@@ -117,7 +118,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             return null;
         } else if (remoteAddress() != null) {
             return new Runnable() {
-
                 @Override
                 public void run() {
                     read();
@@ -208,6 +208,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             // Allow to have the next write pending
             channel.flushing = false;
+
+            // Stop flushing if disconnected.
+            if (!channel.isActive()) {
+                return;
+            }
+
             try {
                 // try to flush it again if nothing is left it will return fast here
                 channel.doFlushByteBuffer(buf);
@@ -295,9 +301,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void failed0(Throwable t, AioSocketChannel channel) {
-            if (t instanceof AsynchronousCloseException) {
+            if (t instanceof ClosedChannelException) {
                 channel.closed = true;
-
                 // TODO: This seems wrong!
                 return;
             }
