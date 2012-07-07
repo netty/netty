@@ -21,33 +21,63 @@ import org.osgi.service.log.LogService;
 import org.osgi.util.tracker.ServiceTracker;
 
 /**
- * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
- * {@link LogService} logger.
+ * A logger factory which creates <a href="http://www.osgi.org/">OSGi</a>
+ * {@link LogService} loggers.
  */
-public class OsgiLoggerFactory extends InternalLoggerFactory {
+public class OsgiLoggerFactory extends InternalLoggerFactory<OsgiLogger> {
 
+    /**
+     * The log service tracker
+     */
     private final ServiceTracker logServiceTracker;
+
+    /**
+     * The fallback logger factory
+     */
     private final InternalLoggerFactory fallback;
+
+    /**
+     * The {@link LogService} to forward log messages to
+     */
     volatile LogService logService;
 
-    public OsgiLoggerFactory(BundleContext ctx) {
-        this(ctx, null);
+    /**
+     * Creates a new {@link OsgiLoggerFactory} without a manual fallback
+     *
+     * @param context the {@link BundleContext} being used
+     */
+    public OsgiLoggerFactory(BundleContext context) {
+        this(context, null);
     }
 
-    public OsgiLoggerFactory(BundleContext ctx, InternalLoggerFactory fallback) {
-        if (ctx == null) {
-            throw new NullPointerException("ctx");
+    /**
+     * Creates a new {@link OsgiLoggerFactory}
+     *
+     * @param context the {@link BundleContext} being used
+     * @param fallback The fallback logger factory
+     */
+    public OsgiLoggerFactory(BundleContext context, InternalLoggerFactory fallback) {
+        //Check to make sure the context isn't null
+        if (context == null) {
+            throw new NullPointerException("Context can not be null");
         }
+
+        //See if the fallback is null
         if (fallback == null) {
+            //Get the default fallback
             fallback = InternalLoggerFactory.getDefaultFactory();
+            //But wait! What if the fallback is another Osgi logger factory?
             if (fallback instanceof OsgiLoggerFactory) {
+                //Force a JDK logger factory if it is. Problem solved.
                 fallback = new JdkLoggerFactory();
             }
         }
 
+        //Set the fallback
         this.fallback = fallback;
+        //Set and start the log service tracker
         logServiceTracker = new ServiceTracker(
-                ctx, "org.osgi.service.log.LogService", null) {
+                context, "org.osgi.service.log.LogService", null) {
                     @Override
                     public Object addingService(ServiceReference reference) {
                         LogService service = (LogService) super.addingService(reference);
@@ -61,24 +91,44 @@ public class OsgiLoggerFactory extends InternalLoggerFactory {
                         logService = null;
                     }
         };
+        //Open the service tracker
         logServiceTracker.open();
     }
 
+    /**
+     * Gets the fallback {@link InternalLoggerFactory}
+     *
+     * @return the fallback factory
+     */
     public InternalLoggerFactory getFallback() {
         return fallback;
     }
 
+    /**
+     * Gets the {@link LogService} used to log messages
+     *
+     * @return the {@link LogService}
+     */
     public LogService getLogService() {
         return logService;
     }
 
+    /**
+     * Destroys all managed resources
+     */
     public void destroy() {
         logService = null;
         logServiceTracker.close();
     }
 
+    /**
+     * Creates a new {@link OsgiLogger} instance
+     *
+     * @param name the name of the new {@link OsgiLogger} instance
+     * @return a new {@link OsgiLogger} instance
+     */
     @Override
-    public InternalLogger newInstance(String name) {
+    public OsgiLogger newInstance(String name) {
         return new OsgiLogger(this, name, fallback.newInstance(name));
     }
 }

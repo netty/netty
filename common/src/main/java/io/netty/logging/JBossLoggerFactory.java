@@ -18,14 +18,20 @@ package io.netty.logging;
 
 
 /**
- * Logger factory which creates a
+ * A logger factory which creates
  * <a href="http://anonsvn.jboss.org/repos/common/common-logging-spi/">JBoss Logging</a>
- * logger.
+ * loggers.
  */
-public class JBossLoggerFactory extends InternalLoggerFactory {
+public class JBossLoggerFactory extends InternalLoggerFactory<JBossLogger> {
 
+    /**
+     * Creates a new {@link JBossLogger} instance
+     *
+     * @param name the name of the new logger
+     * @return the new {@link JBossLogger} instance
+     */
     @Override
-    public InternalLogger newInstance(String name) {
+    public JBossLogger newInstance(String name) {
         final org.jboss.logging.Logger logger =
             org.jboss.logging.Logger.getLogger(name);
         return new JBossLogger(logger);

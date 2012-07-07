@@ -15,8 +15,8 @@
  */
 
 /**
- * Simplistic <em>internal-use-only</em> logging layer which allows a user to
- * decide what logging framework Netty should use.
+ * A simplistic <em>internal-use-only</em> logging layer which allows the
+ * end user to decide which logging framework Netty should use.
  *
  * @apiviz.hidden
  */

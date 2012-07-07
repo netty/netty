@@ -18,76 +18,155 @@ package io.netty.logging;
 import org.slf4j.Logger;
 
 /**
+ * A logger that logs messages to a
  * <a href="http://www.slf4j.org/">SLF4J</a> logger.
  */
 class Slf4JLogger extends AbstractInternalLogger {
 
+    /**
+     * The SLF4J {@link Logger} to log messages to
+     */
     private final Logger logger;
 
+    /**
+     * Creates a new {@link Slf4JLogger}
+     *
+     * @param logger the SLF4J {@link Logger}
+     */
     Slf4JLogger(Logger logger) {
         this.logger = logger;
     }
 
-    @Override
-    public void debug(String msg) {
-        logger.debug(msg);
-    }
-
-    @Override
-    public void debug(String msg, Throwable cause) {
-        logger.debug(msg, cause);
-    }
-
-    @Override
-    public void error(String msg) {
-        logger.error(msg);
-    }
-
-    @Override
-    public void error(String msg, Throwable cause) {
-        logger.error(msg, cause);
-    }
-
-    @Override
-    public void info(String msg) {
-        logger.info(msg);
-    }
-
-    @Override
-    public void info(String msg, Throwable cause) {
-        logger.info(msg, cause);
-    }
-
+    /**
+     * Checks to see if debugging messages are allowed
+     *
+     * @return true if messages are allowed, otherwise false
+     */
     @Override
     public boolean isDebugEnabled() {
         return logger.isDebugEnabled();
     }
 
-    @Override
-    public boolean isErrorEnabled() {
-        return logger.isErrorEnabled();
-    }
-
+    /**
+     * Checks to see if informational messages are allowed
+     *
+     * @return true if messages are allowed, otherwise false
+     */
     @Override
     public boolean isInfoEnabled() {
         return logger.isInfoEnabled();
     }
 
+    /**
+     * Checks to see if warning messages are allowed
+     *
+     * @return true if messages are allowed, otherwise false
+     */
     @Override
     public boolean isWarnEnabled() {
         return logger.isWarnEnabled();
     }
 
+    /**
+     * Checks to see if error messages are allowed
+     *
+     * @return true if messages are allowed, otherwise false
+     */
     @Override
-    public void warn(String msg) {
-        logger.warn(msg);
+    public boolean isErrorEnabled() {
+        return logger.isErrorEnabled();
     }
 
+    /**
+     * Logs a message used for debugging
+     *
+     * @param message the message being logged
+     */
     @Override
-    public void warn(String msg, Throwable cause) {
-        logger.warn(msg, cause);
+    public void debug(String message) {
+        logger.debug(message);
     }
 
+    /**
+     * Logs a message used for debugging with an attached cause
+     *
+     * @param message the message being logged
+     * @param cause the cause of this message
+     */
+    @Override
+    public void debug(String message, Throwable cause) {
+        logger.debug(message, cause);
+    }
+
+    /**
+     * Logs a message used for information
+     *
+     * @param message the message being logged
+     */
+    @Override
+    public void info(String message) {
+        logger.info(message);
+    }
+
+    /**
+     * Logs a message used for information with an attached cause
+     *
+     * @param message the message being logged
+     * @param cause the cause of this message
+     */
+    @Override
+    public void info(String message, Throwable cause) {
+        logger.info(message, cause);
+    }
+
+    /**
+     * Logs a message used as a warning
+     *
+     * @param message the message being logged
+     */
+    @Override
+    public void warn(String message) {
+        logger.warn(message);
+    }
+
+    /**
+     * Logs a message used as a warning with an attached cause
+     *
+     * @param message the message being logged
+     * @param cause the cause of this message
+     */
+    @Override
+    public void warn(String message, Throwable cause) {
+        logger.warn(message, cause);
+    }
+
+    /**
+     * Logs a message used as an error
+     *
+     * @param message the message being logged
+     */
+    @Override
+    public void error(String message) {
+        logger.error(message);
+    }
+
+    /**
+     * Logs a message used as an error with an attached cause
+     *
+     * @param message the message being logged
+     * @param cause the cause of this message
+     */
+    @Override
+    public void error(String message, Throwable cause) {
+        logger.error(message, cause);
+    }
+
+    /**
+     * Returns a {@link String}-based representation of this logger.
+     * In this case, it is the logger's name
+     *
+     * @return the logger's name
+     */
     @Override
     public String toString() {
         return String.valueOf(logger.getName());

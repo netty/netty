@@ -16,82 +16,120 @@
 package io.netty.logging;
 
 /**
- * <em>Internal-use-only</em> logger used by Netty.  <strong>DO NOT</strong>
- * access this class outside of Netty.
+ * An <em>internal use only</em> logger used by Netty.
+ * <strong>DO NOT</strong> use this class outside of Netty!
  */
 public interface InternalLogger {
+
     /**
-     * Returns {@code true} if a DEBUG level message is logged.
+     * Checks to see if debugging messages can be logged
+     *
+     * @return true if able to be logged, otherwise false
      */
     boolean isDebugEnabled();
 
     /**
-     * Returns {@code true} if an INFO level message is logged.
+     * Checks to see if informational messages can be logged
+     *
+     * @return true if able to be logged, otherwise false
      */
     boolean isInfoEnabled();
 
     /**
-     * Returns {@code true} if a WARN level message is logged.
+     * Checks to see if warnings can be logged
+     *
+     * @return true if able to be logged, otherwise false
      */
     boolean isWarnEnabled();
 
     /**
-     * Returns {@code true} if an ERROR level message is logged.
+     * Checks to see if error messages can be logged
+     *
+     * @return true if able to be logged, otherwise false
      */
     boolean isErrorEnabled();
 
     /**
-     * Returns {@code true} if the specified log level message is logged.
+     * Checks to see if a specified {@link InternalLogLevel} can be logged
+     *
+     * @return true if able to be logged, otherwise false
      */
     boolean isEnabled(InternalLogLevel level);
 
     /**
-     * Logs a DEBUG level message.
+     * Logs a message used for debugging
+     *
+     * @param message the message to log
      */
-    void debug(String msg);
+    void debug(String message);
 
     /**
-     * Logs a DEBUG level message.
+     * Logs a message used for debugging with an attached cause
+     *
+     * @param message the message to log
+     * @param cause the cause of the message
      */
-    void debug(String msg, Throwable cause);
+    void debug(String message, Throwable cause);
 
     /**
-     * Logs an INFO level message.
+     * Logs a message used for information
+     *
+     * @param message the message to log
      */
-    void info(String msg);
+    void info(String message);
 
     /**
-     * Logs an INFO level message.
+     * Logs a message used for information with an attached cause
+     *
+     * @param message the message to log
+     * @param cause the cause of the message
      */
-    void info(String msg, Throwable cause);
+    void info(String message, Throwable cause);
 
     /**
-     * Logs a WARN level message.
+     * Logs a message used as a warning
+     *
+     * @param message the message to log
      */
-    void warn(String msg);
+    void warn(String message);
 
     /**
-     * Logs a WARN level message.
+     * Logs a message used as a warning with an attached cause
+     *
+     * @param message the message to log
+     * @param cause the cause of the message
      */
-    void warn(String msg, Throwable cause);
+    void warn(String message, Throwable cause);
 
     /**
-     * Logs an ERROR level message.
+     * Logs a message used as an error
+     *
+     * @param message the message to log
      */
-    void error(String msg);
+    void error(String message);
 
     /**
-     * Logs an ERROR level message.
+     * Logs a message used as an error with an attached cause
+     *
+     * @param message the message to log
+     * @param cause the cause of the message
      */
-    void error(String msg, Throwable cause);
+    void error(String message, Throwable cause);
 
     /**
-     * Logs a message.
+     * Logs a message
+     *
+     * @param level the {@link InternalLogLevel} to use
+     * @param message the message to log
      */
-    void log(InternalLogLevel level, String msg);
+    void log(InternalLogLevel level, String message);
 
     /**
-     * Logs a message.
+     * Logs a message with an attached cause
+     *
+     * @param level the {@link InternalLogLevel} to use
+     * @param message the message to log
+     * @param cause the cause of the message
      */
-    void log(InternalLogLevel level, String msg, Throwable cause);
+    void log(InternalLogLevel level, String message, Throwable cause);
 }

@@ -23,8 +23,8 @@ public class Log4JLoggerFactoryTest {
 
     @Test
     public void testCreation() {
-        InternalLogger logger = new Log4JLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof Log4JLogger);
+        Log4JLogger logger = new Log4JLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof InternalLogger);
         assertEquals("foo", logger.toString());
     }
 }

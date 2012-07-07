@@ -23,11 +23,17 @@ package io.netty.logging;
 public abstract class AbstractInternalLogger implements InternalLogger {
 
     /**
-     * Creates a new instance.
+     * Creates a new instance of this {@link AbstractInternalLogger}
      */
     protected AbstractInternalLogger() {
     }
 
+    /**
+     * Checks to see if the specified {@link InternalLogLevel} is enabled for logging
+     *
+     * @param level the {@link InternalLogLevel} to check
+     * @return {@code true} if the level is enabled, otherwise {@code false}
+     */
     @Override
     public boolean isEnabled(InternalLogLevel level) {
         switch (level) {
@@ -40,30 +46,16 @@ public abstract class AbstractInternalLogger implements InternalLogger {
         case ERROR:
             return isErrorEnabled();
         default:
-            throw new Error();
+            throw new Error("Invalid InternalLogLevel: " + level);
         }
     }
 
-    @Override
-    public void log(InternalLogLevel level, String msg, Throwable cause) {
-        switch (level) {
-        case DEBUG:
-            debug(msg, cause);
-            break;
-        case INFO:
-            info(msg, cause);
-            break;
-        case WARN:
-            warn(msg, cause);
-            break;
-        case ERROR:
-            error(msg, cause);
-            break;
-        default:
-            throw new Error();
-        }
-    }
-
+    /**
+     * Logs a message
+     *
+     * @param level the {@link InternalLogLevel} of the message being logged
+     * @param msg the message being logged
+     */
     @Override
     public void log(InternalLogLevel level, String msg) {
         switch (level) {
@@ -78,6 +70,33 @@ public abstract class AbstractInternalLogger implements InternalLogger {
             break;
         case ERROR:
             error(msg);
+            break;
+        default:
+            throw new Error();
+        }
+    }
+
+    /**
+     * Logs a message with an attached cause
+     *
+     * @param level the {@link InternalLogLevel} of the message being logged
+     * @param msg the message being logged
+     * @param cause the cause of the message being logged
+     */
+    @Override
+    public void log(InternalLogLevel level, String msg, Throwable cause) {
+        switch (level) {
+        case DEBUG:
+            debug(msg, cause);
+            break;
+        case INFO:
+            info(msg, cause);
+            break;
+        case WARN:
+            warn(msg, cause);
+            break;
+        case ERROR:
+            error(msg, cause);
             break;
         default:
             throw new Error();
