@@ -35,9 +35,8 @@ public class UniqueNameTest {
      *
      * @param name the name being registered
      * @return the unique name
-     * @throws IllegalArgumentException when the name is already taken
      */
-    public UniqueName registerName(String name) throws IllegalArgumentException {
+    public UniqueName registerName(String name) {
         return new UniqueName(names, name);
     }
 
