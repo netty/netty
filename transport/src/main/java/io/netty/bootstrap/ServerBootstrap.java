@@ -41,7 +41,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Queue;
 
 public class ServerBootstrap {
 
@@ -167,6 +166,13 @@ public class ServerBootstrap {
             return future;
         }
 
+        try {
+            channel.config().setOptions(parentOptions);
+        } catch (Exception e) {
+            future.setFailure(e);
+            return future;
+        }
+
         ChannelPipeline p = channel.pipeline();
         if (handler != null) {
             p.addLast(handler);
@@ -176,12 +182,6 @@ public class ServerBootstrap {
         ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
             future.setFailure(f.cause());
-            return future;
-        }
-        try {
-            channel.config().setOptions(parentOptions);
-        } catch (Exception e) {
-            future.setFailure(e);
             return future;
         }
 
