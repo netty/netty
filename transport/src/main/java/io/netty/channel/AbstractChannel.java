@@ -722,7 +722,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract boolean isFlushPending();
 
-    private void notifyFlushFutures() {
+    protected void notifyFlushFutures() {
         if (flushCheckpoints.isEmpty()) {
             return;
         }

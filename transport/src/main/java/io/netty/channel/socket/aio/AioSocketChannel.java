@@ -172,11 +172,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected boolean doFlushByteBuffer(ByteBuf buf) throws Exception {
+    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
             // Reset reader/writerIndex to 0 if the buffer is empty.
             buf.clear();
-            return true;
         }
 
         // Only one pending write can be scheduled at one time. Otherwise
@@ -187,7 +186,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             ByteBuffer buffer = buf.nioBuffer();
             javaChannel().write(buffer, this, WRITE_HANDLER);
         }
-        return false;
     }
 
 
