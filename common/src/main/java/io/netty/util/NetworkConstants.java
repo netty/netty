@@ -18,6 +18,8 @@ package io.netty.util;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -42,6 +44,12 @@ public final class NetworkConstants {
      * The loopback {@link NetworkInterface} on the current machine
      */
     public static final NetworkInterface LOOPBACK_IF;
+
+    /**
+     * The SOMAXCONN value of the current machine.  If failed to get the value, 3072 is used as a
+     * default value.
+     */
+    public static final int SOMAXCONN;
 
     /**
      * The logger being used by this class
@@ -114,6 +122,25 @@ public final class NetworkConstants {
 
         //Set the loopback interface constant
         LOOPBACK_IF = loopbackInterface;
+
+        int somaxconn = 3072;
+        BufferedReader in = null;
+        try {
+            in = new BufferedReader(new FileReader("/proc/sys/net/core/somaxconn"));
+            somaxconn = Integer.parseInt(in.readLine());
+        } catch (Exception e) {
+            // Failed to get SOMAXCONN
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (Exception e) {
+                    // Ignored.
+                }
+            }
+        }
+
+        SOMAXCONN = somaxconn;
     }
 
     /**
