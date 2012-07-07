@@ -641,9 +641,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         cause = t;
                     } finally {
                         final int newSize = out.readableBytes();
-                        writeCounter += oldSize - newSize;
-                        if (newSize == 0) {
-                            out.discardReadBytes();
+                        final int writtenBytes = oldSize - newSize;
+                        if (writtenBytes > 0) {
+                            writeCounter += writtenBytes;
+                            if (newSize == 0) {
+                                out.discardReadBytes();
+                            }
                         }
                     }
                 } else {
@@ -723,6 +726,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract boolean isFlushPending();
 
     protected void notifyFlushFutures() {
+        notifyFlushFutures(0);
+    }
+
+    protected void notifyFlushFutures(long writtenBytes) {
+        writeCounter += writtenBytes;
+
         if (flushCheckpoints.isEmpty()) {
             return;
         }

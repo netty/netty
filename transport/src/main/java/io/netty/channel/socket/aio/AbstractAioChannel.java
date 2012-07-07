@@ -43,7 +43,6 @@ public abstract class AbstractAioChannel extends AbstractChannel {
         super(parent, id);
     }
 
-
     @Override
     public InetSocketAddress localAddress() {
         if (ch == null) {
@@ -63,7 +62,6 @@ public abstract class AbstractAioChannel extends AbstractChannel {
     protected AsynchronousChannel javaChannel() {
         return ch;
     }
-
 
     @Override
     public boolean isOpen() {
@@ -162,6 +160,7 @@ public abstract class AbstractAioChannel extends AbstractChannel {
             }
         }
     }
+
     protected abstract void doConnect(SocketAddress remoteAddress,
             SocketAddress localAddress, ChannelFuture connectFuture);
 

@@ -43,7 +43,6 @@ abstract class AioCompletionHandler<V, A extends Channel> implements CompletionH
             completed0(result, channel);
         } else {
             channel.eventLoop().execute(new Runnable() {
-
                 @Override
                 public void run() {
                     completed0(result, channel);
@@ -58,7 +57,6 @@ abstract class AioCompletionHandler<V, A extends Channel> implements CompletionH
             failed0(exc, channel);
         } else {
             channel.eventLoop().execute(new Runnable() {
-
                 @Override
                 public void run() {
                     failed0(exc, channel);

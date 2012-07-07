@@ -129,7 +129,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     /**
      * Trigger a read from the {@link AioSocketChannel}
-     *
      */
     void read() {
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
@@ -138,7 +137,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
         javaChannel().read(buffer, this, READ_HANDLER);
     }
-
 
     private static boolean expandReadBuffer(ByteBuf byteBuf) {
         if (!byteBuf.writable()) {
@@ -175,51 +173,55 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
-            // Reset reader/writerIndex to 0 if the buffer is empty.
-            buf.clear();
+            return;
         }
 
-        // Only one pending write can be scheduled at one time. Otherwise
-        // a PendingWriteException will be thrown. So use CAS to not run
-        // into this
         if (!flushing) {
             flushing = true;
-            ByteBuffer buffer = buf.nioBuffer();
-            javaChannel().write(buffer, this, WRITE_HANDLER);
+            buf.discardReadBytes();
+            javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
         }
     }
-
 
     private static final class WriteHandler extends AioCompletionHandler<Integer, AioSocketChannel> {
 
         @Override
         protected void completed0(Integer result, AioSocketChannel channel) {
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-            if (result > 0) {
-
+            int writtenBytes = result;
+            if (writtenBytes > 0) {
                 // Update the readerIndex with the amount of read bytes
-                buf.readerIndex(buf.readerIndex() + result);
-
-                channel.notifyFlushFutures();
-                if (!buf.readable()) {
-                    buf.discardReadBytes();
-                }
+                buf.readerIndex(buf.readerIndex() + writtenBytes);
             }
+
+            boolean empty = !buf.readable();
+
+            if (empty) {
+                // Reset reader/writerIndex to 0 if the buffer is empty.
+                buf.clear();
+            }
+
+            channel.notifyFlushFutures(writtenBytes);
 
             // Allow to have the next write pending
             channel.flushing = false;
 
             // Stop flushing if disconnected.
             if (!channel.isActive()) {
+                if (!empty) {
+                    channel.notifyFlushFutures(new ClosedChannelException());
+                }
                 return;
             }
 
-            try {
-                // try to flush it again if nothing is left it will return fast here
-                channel.doFlushByteBuffer(buf);
-            } catch (Exception e) {
-                // Should never happen, anyway call failed just in case
-                failed(e, channel);
+            if (buf.readable()) {
+                try {
+                    // try to flush it again if nothing is left it will return fast here
+                    channel.doFlushByteBuffer(buf);
+                } catch (Exception e) {
+                    // Should never happen, anyway call failed just in case
+                    failed0(e, channel);
+                }
             }
         }
 
@@ -232,7 +234,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.notifyFlushFutures(cause);
             channel.pipeline().fireExceptionCaught(cause);
             if (cause instanceof IOException) {
-
                 channel.unsafe().close(channel.unsafe().voidFuture());
             } else {
                 ByteBuf buf = channel.pipeline().outboundByteBuffer();
@@ -265,13 +266,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
 
                     read = true;
-
                 } else if (localReadAmount < 0) {
                     closed = true;
                 }
 
             } catch (Throwable t) {
-                if (t instanceof AsynchronousCloseException) {
+                if (t instanceof ClosedChannelException) {
                     channel.closed = true;
                 }
 
@@ -294,7 +294,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 } else {
                     // start the next read
                     channel.read();
-
                 }
             }
         }
