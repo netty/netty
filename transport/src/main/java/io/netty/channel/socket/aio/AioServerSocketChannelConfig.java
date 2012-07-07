@@ -50,7 +50,6 @@ public class AioServerSocketChannelConfig extends DefaultChannelConfig
         return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_RCVBUF) {
