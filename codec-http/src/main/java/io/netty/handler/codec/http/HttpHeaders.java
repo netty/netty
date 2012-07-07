@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.CaseIgnoringComparator;
-
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
@@ -1134,8 +1132,8 @@ public class HttpHeaders {
     }
 
     Set<String> getHeaderNames() {
-        Set<String> names =
-            new TreeSet<String>(CaseIgnoringComparator.INSTANCE);
+
+        Set<String> names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
 
         Entry e = head.after;
         while (e != head) {
