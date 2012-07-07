@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractAioChannel extends AbstractChannel {
 
-    protected volatile AsynchronousChannel ch;
+    private final AsynchronousChannel ch;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -39,23 +39,18 @@ public abstract class AbstractAioChannel extends AbstractChannel {
     protected ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
-    protected AbstractAioChannel(Channel parent, Integer id) {
+    protected AbstractAioChannel(Channel parent, Integer id, AsynchronousChannel ch) {
         super(parent, id);
+        this.ch = ch;
     }
 
     @Override
     public InetSocketAddress localAddress() {
-        if (ch == null) {
-            return null;
-        }
         return (InetSocketAddress) super.localAddress();
     }
 
     @Override
     public InetSocketAddress remoteAddress() {
-        if (ch == null) {
-            return null;
-        }
         return (InetSocketAddress) super.remoteAddress();
     }
 
@@ -65,7 +60,7 @@ public abstract class AbstractAioChannel extends AbstractChannel {
 
     @Override
     public boolean isOpen() {
-        return ch == null || ch.isOpen();
+        return ch.isOpen();
     }
 
     @Override

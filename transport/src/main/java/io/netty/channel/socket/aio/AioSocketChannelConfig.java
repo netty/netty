@@ -32,48 +32,17 @@ import java.util.Map;
 final class AioSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    private volatile NetworkChannel channel;
-    private volatile Integer receiveBufferSize;
-    private volatile Integer sendBufferSize;
-    private volatile Boolean tcpNoDelay;
-    private volatile Boolean keepAlive;
-    private volatile Boolean reuseAddress;
-    private volatile Integer soLinger;
-    private volatile Integer trafficClass;
+    private final NetworkChannel channel;
 
     /**
      * Creates a new instance.
      */
-    void setChannel(NetworkChannel channel) {
+    AioSocketChannelConfig(NetworkChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        if (this.channel != null) {
-            throw new IllegalStateException();
-        }
-        this.channel = channel;
 
-        if (receiveBufferSize != null) {
-            setReceiveBufferSize(receiveBufferSize);
-        }
-        if (sendBufferSize != null) {
-            setSendBufferSize(sendBufferSize);
-        }
-        if (reuseAddress != null) {
-            setReuseAddress(reuseAddress);
-        }
-        if (tcpNoDelay != null) {
-            setTcpNoDelay(tcpNoDelay);
-        }
-        if (keepAlive != null) {
-            setKeepAlive(keepAlive);
-        }
-        if (soLinger != null) {
-            setSoLinger(soLinger);
-        }
-        if (trafficClass != null) {
-            setTrafficClass(trafficClass);
-        }
+        this.channel = channel;
     }
 
     @Override
@@ -137,15 +106,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getReceiveBufferSize() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (receiveBufferSize == null) {
-                return 0;
-            } else {
-                return receiveBufferSize;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.SO_RCVBUF);
         } catch (IOException e) {
@@ -155,15 +115,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getSendBufferSize() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (sendBufferSize == null) {
-                return 0;
-            } else {
-                return sendBufferSize;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.SO_SNDBUF);
         } catch (IOException e) {
@@ -173,15 +124,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getSoLinger() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (soLinger == null) {
-                return 1;
-            } else {
-                return soLinger;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.SO_LINGER);
         } catch (IOException e) {
@@ -191,15 +133,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getTrafficClass() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (trafficClass == null) {
-                return 0;
-            } else {
-                return trafficClass;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.IP_TOS);
         } catch (IOException e) {
@@ -209,15 +142,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isKeepAlive() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (keepAlive == null) {
-                return false;
-            } else {
-                return keepAlive;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.SO_KEEPALIVE);
         } catch (IOException e) {
@@ -227,15 +151,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isReuseAddress() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (reuseAddress == null) {
-                return false;
-            } else {
-                return reuseAddress;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
         } catch (IOException e) {
@@ -245,15 +160,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isTcpNoDelay() {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            if (tcpNoDelay == null) {
-                return false;
-            } else {
-                return tcpNoDelay;
-            }
-        }
-
         try {
             return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
         } catch (IOException e) {
@@ -263,12 +169,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setKeepAlive(boolean keepAlive) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.keepAlive = keepAlive;
-            return;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
         } catch (IOException e) {
@@ -284,12 +184,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.receiveBufferSize = receiveBufferSize;
-            return;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {
@@ -299,12 +193,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReuseAddress(boolean reuseAddress) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.reuseAddress = reuseAddress;
-            return;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
         } catch (IOException e) {
@@ -314,12 +202,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setSendBufferSize(int sendBufferSize) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.sendBufferSize = sendBufferSize;
-            return;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
         } catch (IOException e) {
@@ -329,12 +211,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setSoLinger(int soLinger) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.soLinger = soLinger;
-            return;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.SO_LINGER, soLinger);
         } catch (IOException e) {
@@ -344,12 +220,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.tcpNoDelay = tcpNoDelay;
-            return;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
         } catch (IOException e) {
@@ -359,11 +229,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setTrafficClass(int trafficClass) {
-        NetworkChannel channel = this.channel;
-        if (channel == null) {
-            this.trafficClass = trafficClass;
-        }
-
         try {
             channel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
         } catch (IOException e) {

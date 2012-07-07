@@ -26,7 +26,6 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -39,11 +38,20 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
-    private final AioServerSocketChannelConfig config = new AioServerSocketChannelConfig();
+    private final AioServerSocketChannelConfig config;
     private boolean closed;
 
+    private static AsynchronousServerSocketChannel newSocket() {
+        try {
+            return AsynchronousServerSocketChannel.open(AioGroup.GROUP);
+        } catch (IOException e) {
+            throw new ChannelException("Failed to open a socket.", e);
+        }
+    }
+
     public AioServerSocketChannel() {
-        super(null, null);
+        super(null, null, newSocket());
+        config = new AioServerSocketChannelConfig(javaChannel());
     }
 
     @Override
@@ -53,15 +61,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     public boolean isActive() {
-        AsynchronousServerSocketChannel channel = javaChannel();
-        try {
-            if (channel != null && channel.getLocalAddress() != null) {
-                return true;
-            }
-        } catch (IOException e) {
-            return true;
-        }
-        return false;
+        return javaChannel().isOpen() && localAddress0() != null;
     }
 
     @Override
@@ -85,9 +85,9 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress);
-        javaChannel().accept(this, ACCEPT_HANDLER);
-
+        AsynchronousServerSocketChannel ch = javaChannel();
+        ch.bind(localAddress);
+        ch.accept(this, ACCEPT_HANDLER);
     }
 
     @Override
@@ -116,9 +116,6 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected Runnable doRegister() throws Exception {
-        ch = AsynchronousServerSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
-        config.setChannel(javaChannel());
-
         return null;
     }
 

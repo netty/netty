@@ -32,8 +32,6 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
@@ -721,7 +719,6 @@ public class SslHandler
                         "SSLEngine.closeInbound() raised an exception after " +
                         "a handshake failure.", e);
             }
-
         }
 
         for (;;) {
@@ -757,7 +754,7 @@ public class SslHandler
             @Override
             public void run() {
                 if (future.setSuccess()) {
-                    logger.debug("close_notify write attempt timed out. Force-closing the connection.");
+                    logger.warn("close_notify write attempt timed out. Force-closing the connection.");
                     ctx.close(ctx.newFuture());
                 }
             }
@@ -768,8 +765,9 @@ public class SslHandler
             @Override
             public void operationComplete(ChannelFuture f)
                     throws Exception {
-                timeoutFuture.cancel(false);
-                ctx.close(future);
+                if (timeoutFuture.cancel(false)) {
+                    ctx.close(future);
+                }
             }
         });
     }

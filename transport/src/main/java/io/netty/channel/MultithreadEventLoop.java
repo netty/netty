@@ -19,7 +19,6 @@ import java.util.concurrent.ThreadFactory;
 
 public abstract class MultithreadEventLoop extends MultithreadEventExecutor implements EventLoop {
 
-
     protected MultithreadEventLoop(int nThreads, ThreadFactory threadFactory,
             Object... args) {
         super(nThreads, threadFactory, args);

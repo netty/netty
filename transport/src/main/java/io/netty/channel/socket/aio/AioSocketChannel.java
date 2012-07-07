@@ -17,6 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
@@ -26,12 +27,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
-import java.nio.channels.NetworkChannel;
 
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
@@ -42,29 +41,30 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
 
-    private final AioSocketChannelConfig config = new AioSocketChannelConfig();
+    private final AioSocketChannelConfig config;
     private boolean closed;
     private boolean flushing;
 
-    public AioSocketChannel() {
-        this(null, null, null);
+    private static AsynchronousSocketChannel newSocket() {
+        try {
+            return AsynchronousSocketChannel.open(AioGroup.GROUP);
+        } catch (IOException e) {
+            throw new ChannelException("Failed to open a socket.", e);
+        }
     }
 
-    public AioSocketChannel(AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel channel) {
-        super(parent, id);
-        ch = channel;
-        if (ch != null) {
-            config.setChannel(channel);
-        }
+    public AioSocketChannel() {
+        this(null, null, newSocket());
+    }
+
+    AioSocketChannel(AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
+        super(parent, id, ch);
+        config = new AioSocketChannelConfig(ch);
     }
 
     @Override
     public boolean isActive() {
-        if (ch == null) {
-            return false;
-        }
-        AsynchronousSocketChannel ch = javaChannel();
-        return ch.isOpen() && remoteAddress() != null;
+        return javaChannel().isOpen() && remoteAddress0() != null;
     }
 
     @Override
@@ -79,7 +79,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, final ChannelFuture future) {
-        assert ch != null;
         if (localAddress != null) {
             try {
                 javaChannel().bind(localAddress);
@@ -112,19 +111,16 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected Runnable doRegister() throws Exception {
-        if (ch == null) {
-            ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
-            config.setChannel((NetworkChannel) ch);
+        if (remoteAddress() == null) {
             return null;
-        } else if (remoteAddress() != null) {
-            return new Runnable() {
-                @Override
-                public void run() {
-                    read();
-                }
-            };
         }
-        return null;
+
+        return new Runnable() {
+            @Override
+            public void run() {
+                read();
+            }
+        };
     }
 
     /**
@@ -132,7 +128,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
      */
     void read() {
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
-        expandReadBuffer(byteBuf);
+        if (!byteBuf.readable()) {
+            byteBuf.clear();
+        } else {
+            expandReadBuffer(byteBuf);
+        }
         // Get a ByteBuffer view on the ByteBuf
         ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
         javaChannel().read(buffer, this, READ_HANDLER);
@@ -264,6 +264,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // This is needed as the ByteBuffer and the ByteBuf does not share
                     // each others index
                     byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+                    expandReadBuffer(byteBuf);
 
                     read = true;
                 } else if (localReadAmount < 0) {
@@ -338,11 +339,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     public AioSocketChannelConfig config() {
-        if (config == null) {
-            throw new IllegalStateException("Channel not open yet");
-        }
         return config;
     }
-
-
 }

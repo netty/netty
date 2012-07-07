@@ -290,7 +290,7 @@ public class SingleThreadEventLoopTest {
 
         @Override
         protected void wakeup(boolean inEventLoop) {
-            if (!inEventLoop) {
+            if (!inEventLoop && isShutdown()) {
                 interruptThread();
             }
         }

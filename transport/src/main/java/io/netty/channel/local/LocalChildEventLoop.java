@@ -36,15 +36,19 @@ final class LocalChildEventLoop extends SingleThreadEventLoop {
                 // Waken up by interruptThread()
             }
 
-            if (isShutdown() && peekTask() == null) {
-                break;
+            if (isShutdown()) {
+                task = pollTask();
+                if (task == null) {
+                    break;
+                }
+                task.run();
             }
         }
     }
 
     @Override
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop) {
+        if (!inEventLoop && isShutdown()) {
             interruptThread();
         }
     }
