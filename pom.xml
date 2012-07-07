@@ -276,11 +276,19 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>java.util.zip.Deflater</ignore>
+
             <!-- Used for NIO UDP multicast -->
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
+
+            <!-- Used for NIO. 2 -->
+            <ignore>java.nio.channels.AsynchronousChannel</ignore>
+            <ignore>java.nio.channels.AsynchronousSocketChannel</ignore>
+            <ignore>java.nio.channels.AsynchronousServerSocketChannel</ignore>
+            <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
+            <ignore>java.nio.channels.NetworkChannel</ignore>
           </ignores>
         </configuration>
         <executions>

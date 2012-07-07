@@ -17,7 +17,11 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.aio.AioEventLoop;
+import io.netty.channel.socket.aio.AioServerSocketChannel;
+import io.netty.channel.socket.aio.AioSocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoop;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -51,6 +55,15 @@ final class SocketTestPermutation {
         sbfs.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
+                EventLoop loop = new AioEventLoop();
+                return new ServerBootstrap().
+                                eventLoop(loop, loop).
+                                channel(new AioServerSocketChannel());
+            }
+        });
+        sbfs.add(new Factory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
                                 eventLoop(new OioEventLoop(), new OioEventLoop()).
                                 channel(new OioServerSocketChannel());
@@ -64,6 +77,12 @@ final class SocketTestPermutation {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().eventLoop(new NioEventLoop()).channel(new NioSocketChannel());
+            }
+        });
+        cbfs.add(new Factory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().eventLoop(new AioEventLoop()).channel(new AioSocketChannel());
             }
         });
         cbfs.add(new Factory<Bootstrap>() {
