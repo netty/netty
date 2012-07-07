@@ -109,7 +109,7 @@
         <executions>
           <execution>
             <id>unpack-sources</id>
-            <phase>generate-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
@@ -122,7 +122,7 @@
           </execution>
           <execution>
             <id>unpack-jars</id>
-            <phase>generate-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
@@ -141,7 +141,7 @@
         <executions>
           <execution>
             <id>add-source</id>
-            <phase>generate-sources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>add-source</goal>
             </goals>
