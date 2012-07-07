@@ -23,19 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class UniqueName implements Comparable<UniqueName> {
 
-    /**
-     * The {@link AtomicInteger} that indicates the next ID
-     */
     private static final AtomicInteger nextId = new AtomicInteger();
 
-    /**
-     * This {@link UniqueName}'s ID
-     */
     private final int id;
 
-    /**
-     * This {@link UniqueName}'s name
-     */
     private final String name;
 
     /**
@@ -68,9 +59,9 @@ public class UniqueName implements Comparable<UniqueName> {
      * Validates the given arguments.
      * This does not do anything on its own, but must be overridden by subclasses
      *
-     * @param arguments the arguments to validate
+     * @param args the arguments to validate
      */
-    protected void validateArgs(Object... arguments) {
+    protected void validateArgs(Object... args) {
         // Subclasses will override.
     }
 
