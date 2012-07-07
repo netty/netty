@@ -30,20 +30,29 @@ import java.util.Map;
 /**
  * The Async {@link ServerSocketChannelConfig} implementation.
  */
-public class AioServerSocketChannelConfig extends DefaultChannelConfig
+final class AioServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final AsynchronousServerSocketChannel channel;
+    private volatile AsynchronousServerSocketChannel channel;
+    private volatile Integer receiveBufferSize;
+    private volatile Boolean reuseAddress;
     private volatile int backlog = NetworkConstants.SOMAXCONN;
 
-    /**
-     * Creates a new instance.
-     */
-    public AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
+    void setChannel(AsynchronousServerSocketChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
+        if (this.channel != null) {
+            throw new IllegalStateException();
+        }
         this.channel = channel;
+
+        if (receiveBufferSize != null) {
+            setReceiveBufferSize(receiveBufferSize);
+        }
+        if (reuseAddress != null) {
+            setReuseAddress(reuseAddress);
+        }
     }
 
     @Override
@@ -85,6 +94,14 @@ public class AioServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isReuseAddress() {
+        AsynchronousServerSocketChannel channel = this.channel;
+        if (channel == null) {
+            if (reuseAddress == null) {
+                return false;
+            } else {
+                return reuseAddress;
+            }
+        }
         try {
             return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
         } catch (IOException e) {
@@ -94,6 +111,10 @@ public class AioServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReuseAddress(boolean reuseAddress) {
+        AsynchronousServerSocketChannel channel = this.channel;
+        if (channel == null) {
+            this.reuseAddress = reuseAddress;
+        }
         try {
             channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
         } catch (IOException e) {
@@ -103,6 +124,14 @@ public class AioServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getReceiveBufferSize() {
+        AsynchronousServerSocketChannel channel = this.channel;
+        if (channel == null) {
+            if (receiveBufferSize == null) {
+                return 0;
+            } else {
+                return receiveBufferSize;
+            }
+        }
         try {
             return channel.getOption(StandardSocketOptions.SO_RCVBUF);
         } catch (IOException e) {
@@ -112,6 +141,12 @@ public class AioServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
+        AsynchronousServerSocketChannel channel = this.channel;
+        if (channel == null) {
+            this.receiveBufferSize = receiveBufferSize;
+            return;
+        }
+
         try {
             channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {

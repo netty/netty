@@ -30,6 +30,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.nio.channels.NetworkChannel;
 
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
@@ -40,9 +41,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
 
+    private final AioSocketChannelConfig config = new AioSocketChannelConfig();
     private boolean closed;
     private boolean flushing;
-    private volatile AioSocketChannelConfig config;
 
     public AioSocketChannel() {
         this(null, null, null);
@@ -52,7 +53,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         super(parent, id);
         ch = channel;
         if (ch != null) {
-            config = new AioSocketChannelConfig(javaChannel());
+            config.setChannel(channel);
         }
     }
 
@@ -112,7 +113,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     protected Runnable doRegister() throws Exception {
         if (ch == null) {
             ch = AsynchronousSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
-            config = new AioSocketChannelConfig(javaChannel());
+            config.setChannel((NetworkChannel) ch);
             return null;
         } else if (remoteAddress() != null) {
             return new Runnable() {
@@ -139,7 +140,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
 
-    private boolean expandReadBuffer(ByteBuf byteBuf) {
+    private static boolean expandReadBuffer(ByteBuf byteBuf) {
         if (!byteBuf.writable()) {
             // FIXME: Magic number
             byteBuf.ensureWritableBytes(4096);

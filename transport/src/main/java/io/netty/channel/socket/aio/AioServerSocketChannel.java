@@ -20,6 +20,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -37,13 +38,13 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
-    private volatile AioServerSocketChannelConfig config;
+
+    private final AioServerSocketChannelConfig config = new AioServerSocketChannelConfig();
     private boolean closed;
 
     public AioServerSocketChannel() {
         super(null, null);
     }
-
 
     @Override
     protected AsynchronousServerSocketChannel javaChannel() {
@@ -116,7 +117,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     @Override
     protected Runnable doRegister() throws Exception {
         ch = AsynchronousServerSocketChannel.open(AsynchronousChannelGroup.withThreadPool(eventLoop()));
-        config = new AioServerSocketChannelConfig(javaChannel());
+        config.setChannel(javaChannel());
 
         return null;
     }
@@ -150,10 +151,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     @Override
-    public AioServerSocketChannelConfig config() {
-        if (config == null) {
-            throw new IllegalStateException("Channel not registered yet");
-        }
+    public ServerSocketChannelConfig config() {
         return config;
     }
 }
