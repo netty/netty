@@ -18,12 +18,12 @@ package io.netty.util;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DetectionUtil;
-import io.netty.util.internal.ReusableIterator;
 import io.netty.util.internal.SharedResourceMisuseDetector;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,7 +91,6 @@ public class HashedWheelTimer implements Timer {
     private final long roundDuration;
     final long tickDuration;
     final Set<HashedWheelTimeout>[] wheel;
-    final ReusableIterator<HashedWheelTimeout>[] iterators;
     final int mask;
     final ReadWriteLock lock = new ReentrantReadWriteLock();
     volatile int wheelCursor;
@@ -186,7 +185,6 @@ public class HashedWheelTimer implements Timer {
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
-        iterators = createIterators(wheel);
         mask = wheel.length - 1;
 
         // Convert tickDuration to milliseconds.
@@ -226,15 +224,6 @@ public class HashedWheelTimer implements Timer {
                     new ConcurrentHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
         }
         return wheel;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static ReusableIterator<HashedWheelTimeout>[] createIterators(Set<HashedWheelTimeout>[] wheel) {
-        ReusableIterator<HashedWheelTimeout>[] iterators = new ReusableIterator[wheel.length];
-        for (int i = 0; i < wheel.length; i ++) {
-            iterators[i] = (ReusableIterator<HashedWheelTimeout>) wheel[i].iterator();
-        }
-        return iterators;
     }
 
     private static int normalizeTicksPerWheel(int ticksPerWheel) {
@@ -385,8 +374,7 @@ public class HashedWheelTimer implements Timer {
             lock.writeLock().lock();
             try {
                 int newWheelCursor = wheelCursor = wheelCursor + 1 & mask;
-                ReusableIterator<HashedWheelTimeout> i = iterators[newWheelCursor];
-                fetchExpiredTimeouts(expiredTimeouts, i, deadline);
+                fetchExpiredTimeouts(expiredTimeouts, wheel[newWheelCursor].iterator(), deadline);
             } finally {
                 lock.writeLock().unlock();
             }
@@ -394,10 +382,9 @@ public class HashedWheelTimer implements Timer {
 
         private void fetchExpiredTimeouts(
                 List<HashedWheelTimeout> expiredTimeouts,
-                ReusableIterator<HashedWheelTimeout> i, long deadline) {
+                Iterator<HashedWheelTimeout> i, long deadline) {
 
             List<HashedWheelTimeout> slipped = null;
-            i.rewind();
             while (i.hasNext()) {
                 HashedWheelTimeout timeout = i.next();
                 if (timeout.remainingRounds <= 0) {
