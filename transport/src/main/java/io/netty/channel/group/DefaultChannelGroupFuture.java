@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -216,7 +215,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         synchronized (this) {
             while (!done) {
-                checkDeadLock();
                 waiters++;
                 try {
                     wait();
@@ -244,7 +242,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         boolean interrupted = false;
         synchronized (this) {
             while (!done) {
-                checkDeadLock();
                 waiters++;
                 try {
                     wait();
@@ -298,7 +295,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                     return done;
                 }
 
-                checkDeadLock();
                 waiters++;
                 try {
                     for (;;) {
@@ -329,15 +325,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
             if (interrupted) {
                 Thread.currentThread().interrupt();
             }
-        }
-    }
-
-    private static void checkDeadLock() {
-        if (DeadLockProofWorker.PARENT.get() != null) {
-            throw new IllegalStateException(
-                    "await*() in I/O thread causes a dead lock or " +
-                    "sudden performance drop. Use addListener() instead or " +
-                    "call await*() from a different thread.");
         }
     }
 
