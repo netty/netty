@@ -73,7 +73,7 @@ public class AioEventLoop extends MultithreadEventLoop {
         if (l.isShutdown()) {
             command.run();
         } else {
-            ch.eventLoop().execute(command);
+            l.execute(command);
         }
     }
 

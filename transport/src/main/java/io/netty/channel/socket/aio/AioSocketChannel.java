@@ -165,6 +165,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
+            notifyFlushFutures();
             return;
         }
 
