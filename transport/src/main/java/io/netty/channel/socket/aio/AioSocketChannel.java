@@ -49,22 +49,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private final Runnable readTask = new Runnable() {
-        @Override
-        public void run() {
-            ByteBuf byteBuf = pipeline().inboundByteBuffer();
-            if (!byteBuf.readable()) {
-                byteBuf.clear();
-            } else {
-                expandReadBuffer(byteBuf);
-            }
-
-            // Get a ByteBuffer view on the ByteBuf
-            ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-            javaChannel().read(buffer, AioSocketChannel.this, READ_HANDLER);
-        }
-    };
-
     private final AioSocketChannelConfig config;
     private boolean flushing;
 
@@ -130,7 +114,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             return null;
         }
 
-        return readTask;
+        return new Runnable() {
+            @Override
+            public void run() {
+                beginRead();
+            }
+        };
     }
 
     private static boolean expandReadBuffer(ByteBuf byteBuf) {
@@ -174,6 +163,19 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             buf.discardReadBytes();
             javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
         }
+    }
+
+    private void beginRead() {
+        ByteBuf byteBuf = pipeline().inboundByteBuffer();
+        if (!byteBuf.readable()) {
+            byteBuf.clear();
+        } else {
+            expandReadBuffer(byteBuf);
+        }
+
+        // Get a ByteBuffer view on the ByteBuf
+        ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
+        javaChannel().read(buffer, AioSocketChannel.this, READ_HANDLER);
     }
 
     private static final class WriteHandler extends AioCompletionHandler<Integer, AioSocketChannel> {
@@ -275,7 +277,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     channel.unsafe().close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
-                    channel.eventLoop().execute(channel.readTask);
+                    channel.beginRead();
                 }
             }
         }
@@ -292,7 +294,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 channel.unsafe().close(channel.unsafe().voidFuture());
             } else {
                 // start the next read
-                channel.eventLoop().execute(channel.readTask);
+                channel.beginRead();
             }
         }
     }
@@ -301,7 +303,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
-            channel.readTask.run();
+            channel.beginRead();
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
             channel.pipeline().fireChannelActive();
         }
