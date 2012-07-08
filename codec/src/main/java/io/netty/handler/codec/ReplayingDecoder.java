@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
-import io.netty.util.VoidEnum;
 
 /**
  * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
@@ -105,7 +104,7 @@ import io.netty.util.VoidEnum;
  * <li>You must keep in mind that {@code decode(..)} method can be called many
  *     times to decode a single message.  For example, the following code will
  *     not work:
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
@@ -125,7 +124,7 @@ import io.netty.util.VoidEnum;
  *      The correct implementation looks like the following, and you can also
  *      utilize the 'checkpoint' feature which is explained in detail in the
  *      next section.
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
@@ -206,7 +205,7 @@ import io.netty.util.VoidEnum;
  * An alternative way to manage the decoder state is to manage it by yourself.
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;<strong>{@link VoidEnum}</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;<strong>{@link Void}</strong>&gt; {
  *
  *   <strong>private boolean readLength;</strong>
  *   private int length;
@@ -215,7 +214,7 @@ import io.netty.util.VoidEnum;
  *   protected Object decode({@link ChannelHandlerContext} ctx,
  *                           {@link Channel} channel,
  *                           {@link ByteBuf} buf,
- *                           {@link VoidEnum} state) throws Exception {
+ *                           {@link Void} state) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
  *       <strong>readLength = true;</strong>
@@ -241,7 +240,7 @@ import io.netty.util.VoidEnum;
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
  * some additional steps are required:
  * <pre>
- * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
+ * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *     public FirstDecoder() {
  *         super(true); // Enable unfold
@@ -251,7 +250,7 @@ import io.netty.util.VoidEnum;
  *     protected Object decode({@link ChannelHandlerContext} ctx,
  *                             {@link Channel} ch,
  *                             {@link ByteBuf} buf,
- *                             {@link VoidEnum} state) {
+ *                             {@link Void} state) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;
@@ -272,12 +271,13 @@ import io.netty.util.VoidEnum;
  *     }
  * </pre>
  * @param <S>
- *        the state type; use {@link VoidEnum} if state management is unused
+ *        the state type which is usually an {@link Enum}; use {@link Void} if state management is
+ *        unused
  *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.UnreplayableOperationException oneway - - throws
  */
-public abstract class ReplayingDecoder<O, S extends Enum<S>> extends ByteToMessageDecoder<O> {
+public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 

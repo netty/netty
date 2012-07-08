@@ -153,22 +153,24 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        if (!buf.readable()) {
-            notifyFlushFutures();
+        if (flushing) {
             return;
         }
 
-        if (!flushing) {
-            flushing = true;
+        flushing = true;
+        if (buf.readable()) {
             buf.discardReadBytes();
             javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
+        } else {
+            notifyFlushFutures();
+            flushing = false;
         }
     }
 
     private void beginRead() {
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
         if (!byteBuf.readable()) {
-            byteBuf.clear();
+            byteBuf.discardReadBytes();
         } else {
             expandReadBuffer(byteBuf);
         }

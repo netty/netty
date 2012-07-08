@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.util.VoidEnum;
 
 import org.junit.Test;
 
@@ -48,7 +47,7 @@ public class ReplayingDecoderTest {
         assertNull(ch.readInbound());
     }
 
-    private static final class LineDecoder extends ReplayingDecoder<ByteBuf, VoidEnum> {
+    private static final class LineDecoder extends ReplayingDecoder<ByteBuf, Void> {
 
         LineDecoder() {
         }

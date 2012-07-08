@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.VoidEnum;
 
 /**
  * Decodes {@link ByteBuf}s into {@link WebSocketFrame}s.
@@ -30,7 +29,7 @@ import io.netty.util.VoidEnum;
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
-public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, VoidEnum> {
+public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Void> {
 
     static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
