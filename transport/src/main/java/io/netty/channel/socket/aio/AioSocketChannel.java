@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
@@ -66,7 +65,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     };
 
     private final AioSocketChannelConfig config;
-    private boolean closed;
     private boolean flushing;
 
     public AioSocketChannel() {
@@ -155,10 +153,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doClose() throws Exception {
-        if (!closed) {
-            closed = true;
-            javaChannel().close();
-        }
+        javaChannel().close();
     }
 
     @Override
@@ -204,9 +199,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             // Stop flushing if disconnected.
             if (!channel.isActive()) {
-                if (!empty) {
-                    channel.notifyFlushFutures(new ClosedChannelException());
-                }
                 return;
             }
 
@@ -223,20 +215,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void failed0(Throwable cause, AioSocketChannel channel) {
-            if (cause instanceof AsynchronousCloseException) {
-                channel.closed = true;
-            }
-
             channel.notifyFlushFutures(cause);
             channel.pipeline().fireExceptionCaught(cause);
-            if (cause instanceof IOException) {
-                channel.unsafe().close(channel.unsafe().voidFuture());
-            } else {
-                ByteBuf buf = channel.pipeline().outboundByteBuffer();
-                if (!buf.readable()) {
-                    buf.discardReadBytes();
-                }
+
+            ByteBuf buf = channel.pipeline().outboundByteBuffer();
+            if (!buf.readable()) {
+                buf.discardReadBytes();
             }
+
             // Allow to have the next write pending
             channel.flushing = false;
         }
@@ -268,19 +254,17 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
             } catch (Throwable t) {
-                if (t instanceof ClosedChannelException) {
-                    channel.closed = true;
-                }
-
                 if (read) {
                     read = false;
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                pipeline.fireExceptionCaught(t);
+                if (!(t instanceof ClosedChannelException)) {
+                    pipeline.fireExceptionCaught(t);
 
-                if (t instanceof IOException) {
-                    channel.unsafe().close(channel.unsafe().voidFuture());
+                    if (t instanceof IOException) {
+                        channel.unsafe().close(channel.unsafe().voidFuture());
+                    }
                 }
             } finally {
                 if (read) {
@@ -298,12 +282,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void failed0(Throwable t, AioSocketChannel channel) {
             if (t instanceof ClosedChannelException) {
-                channel.closed = true;
-                // TODO: This seems wrong!
                 return;
             }
 
             channel.pipeline().fireExceptionCaught(t);
+
             if (t instanceof IOException) {
                 channel.unsafe().close(channel.unsafe().voidFuture());
             } else {
@@ -326,9 +309,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void failed0(Throwable exc, AioSocketChannel channel) {
-            if (exc instanceof AsynchronousCloseException) {
-                channel.closed = true;
-            }
             ((AsyncUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }
