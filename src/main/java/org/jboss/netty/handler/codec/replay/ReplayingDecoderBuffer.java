@@ -106,12 +106,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public byte getByte(int index) {
-        checkIndex(index);
+        checkIndex(index, 1);
         return buf().getByte(index);
     }
 
     public short getUnsignedByte(int index) {
-        checkIndex(index);
+        checkIndex(index, 1);
         return buf().getUnsignedByte(index);
     }
 
@@ -689,12 +689,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public void writeDouble(double value) {
         throw new UnreplayableOperationException();
-    }
-
-    private void checkIndex(int index) {
-        if (index > buf().writerIndex()) {
-            throw REPLAY;
-        }
     }
 
     private void checkIndex(int index, int length) {
