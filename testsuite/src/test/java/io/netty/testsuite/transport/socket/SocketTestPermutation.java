@@ -17,7 +17,6 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.aio.AioEventLoop;
 import io.netty.channel.socket.aio.AioServerSocketChannel;
@@ -55,10 +54,10 @@ final class SocketTestPermutation {
         sbfs.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                EventLoop loop = new AioEventLoop();
+                AioEventLoop loop = new AioEventLoop();
                 return new ServerBootstrap().
                                 eventLoop(loop, loop).
-                                channel(new AioServerSocketChannel());
+                                channel(new AioServerSocketChannel(loop));
             }
         });
         sbfs.add(new Factory<ServerBootstrap>() {
@@ -82,7 +81,8 @@ final class SocketTestPermutation {
         cbfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().eventLoop(new AioEventLoop()).channel(new AioSocketChannel());
+                AioEventLoop loop = new AioEventLoop();
+                return new Bootstrap().eventLoop(loop).channel(new AioSocketChannel(loop));
             }
         });
         cbfs.add(new Factory<Bootstrap>() {

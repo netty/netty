@@ -16,11 +16,17 @@
 package io.netty.channel.socket.aio;
 
 import io.netty.channel.EventExecutor;
+import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoop;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.util.concurrent.ThreadFactory;
 
 public class AioEventLoop extends MultithreadEventLoop {
+
+    final AsynchronousChannelGroup group;
 
     public AioEventLoop() {
         this(0);
@@ -32,6 +38,66 @@ public class AioEventLoop extends MultithreadEventLoop {
 
     public AioEventLoop(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
+        try {
+            group = AsynchronousChannelGroup.withThreadPool(this);
+        } catch (IOException e) {
+            throw new EventLoopException("Failed to create an AsynchronousChannelGroup", e);
+        }
+    }
+
+    @Override
+    public void execute(Runnable command) {
+        Class<? extends Runnable> commandType = command.getClass();
+        if (commandType.getName().startsWith("sun.nio.ch.")) {
+            executeAioTask(command);
+        } else {
+            super.execute(command);
+        }
+    }
+
+    private void executeAioTask(Runnable command) {
+        AbstractAioChannel ch = null;
+        try {
+            ch = findChannel(command);
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        EventExecutor l;
+        if (ch != null) {
+            l = ch.eventLoop();
+        } else {
+            l = unsafe().nextChild();
+        }
+
+        if (l.isShutdown()) {
+            command.run();
+        } else {
+            ch.eventLoop().execute(command);
+        }
+    }
+
+    private static AbstractAioChannel findChannel(Runnable command) throws Exception {
+        // TODO: Optimize me
+        Class<?> commandType = command.getClass();
+        for (Field f: commandType.getDeclaredFields()) {
+            if (f.getType() == Runnable.class) {
+                f.setAccessible(true);
+                AbstractAioChannel ch = findChannel((Runnable) f.get(command));
+                if (ch != null) {
+                    return ch;
+                }
+            }
+            if (f.getType() == Object.class) {
+                f.setAccessible(true);
+                Object candidate = f.get(command);
+                if (candidate instanceof AbstractAioChannel) {
+                    return (AbstractAioChannel) candidate;
+                }
+            }
+        }
+
+        return null;
     }
 
     @Override

@@ -26,6 +26,7 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -41,16 +42,16 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private final AioServerSocketChannelConfig config;
     private boolean closed;
 
-    private static AsynchronousServerSocketChannel newSocket() {
+    private static AsynchronousServerSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
-            return AsynchronousServerSocketChannel.open(AioGroup.GROUP);
+            return AsynchronousServerSocketChannel.open(group);
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
 
-    public AioServerSocketChannel() {
-        super(null, null, newSocket());
+    public AioServerSocketChannel(AioEventLoop eventLoop) {
+        super(null, null, newSocket(eventLoop.group));
         config = new AioServerSocketChannelConfig(javaChannel());
     }
 

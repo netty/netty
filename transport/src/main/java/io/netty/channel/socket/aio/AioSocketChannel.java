@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
@@ -40,9 +41,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
 
-    private static AsynchronousSocketChannel newSocket() {
+    private static AsynchronousSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
-            return AsynchronousSocketChannel.open(AioGroup.GROUP);
+            return AsynchronousSocketChannel.open(group);
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
@@ -67,8 +68,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private final AioSocketChannelConfig config;
     private boolean flushing;
 
-    public AioSocketChannel() {
-        this(null, null, newSocket());
+    public AioSocketChannel(AioEventLoop eventLoop) {
+        this(null, null, newSocket(eventLoop.group));
     }
 
     AioSocketChannel(AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
@@ -204,7 +205,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             if (buf.readable()) {
                 try {
-                    // try to flush it again if nothing is left it will return fast here
+                    // Try to flush it again.
                     channel.doFlushByteBuffer(buf);
                 } catch (Exception e) {
                     // Should never happen, anyway call failed just in case
@@ -252,7 +253,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 } else if (localReadAmount < 0) {
                     closed = true;
                 }
-
             } catch (Throwable t) {
                 if (read) {
                     read = false;
@@ -274,6 +274,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     channel.unsafe().close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
+                    //channel.readTask.run();
                     channel.eventLoop().execute(channel.readTask);
                 }
             }
@@ -300,11 +301,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
+            channel.readTask.run();
             ((AsyncUnsafe) channel.unsafe()).connectSuccess();
             channel.pipeline().fireChannelActive();
-
-            // start reading from channel
-            channel.eventLoop().execute(channel.readTask);
         }
 
         @Override
