@@ -38,12 +38,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
 
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
-    private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
-
-    private final AioSocketChannelConfig config;
-    private boolean closed;
-    private boolean flushing;
+    private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
 
     private static AsynchronousSocketChannel newSocket() {
         try {
@@ -52,6 +48,26 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
+
+    private final Runnable readTask = new Runnable() {
+        @Override
+        public void run() {
+            ByteBuf byteBuf = pipeline().inboundByteBuffer();
+            if (!byteBuf.readable()) {
+                byteBuf.clear();
+            } else {
+                expandReadBuffer(byteBuf);
+            }
+
+            // Get a ByteBuffer view on the ByteBuf
+            ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
+            javaChannel().read(buffer, AioSocketChannel.this, READ_HANDLER);
+        }
+    };
+
+    private final AioSocketChannelConfig config;
+    private boolean closed;
+    private boolean flushing;
 
     public AioSocketChannel() {
         this(null, null, newSocket());
@@ -115,27 +131,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             return null;
         }
 
-        return new Runnable() {
-            @Override
-            public void run() {
-                read();
-            }
-        };
-    }
-
-    /**
-     * Trigger a read from the {@link AioSocketChannel}
-     */
-    void read() {
-        ByteBuf byteBuf = pipeline().inboundByteBuffer();
-        if (!byteBuf.readable()) {
-            byteBuf.clear();
-        } else {
-            expandReadBuffer(byteBuf);
-        }
-        // Get a ByteBuffer view on the ByteBuf
-        ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-        javaChannel().read(buffer, this, READ_HANDLER);
+        return readTask;
     }
 
     private static boolean expandReadBuffer(ByteBuf byteBuf) {
@@ -294,7 +290,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     channel.unsafe().close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
-                    channel.read();
+                    channel.eventLoop().execute(channel.readTask);
                 }
             }
         }
@@ -312,7 +308,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 channel.unsafe().close(channel.unsafe().voidFuture());
             } else {
                 // start the next read
-                channel.read();
+                channel.eventLoop().execute(channel.readTask);
             }
         }
     }
@@ -325,7 +321,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.pipeline().fireChannelActive();
 
             // start reading from channel
-            channel.read();
+            channel.eventLoop().execute(channel.readTask);
         }
 
         @Override
