@@ -400,8 +400,8 @@ public class SslHandler
         } finally {
             if (bytesProduced > 0) {
                 in.discardReadBytes();
-                ctx.flush(future);
             }
+            ctx.flush(future);
         }
     }
 
@@ -753,10 +753,8 @@ public class SslHandler
         final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (future.setSuccess()) {
-                    logger.warn("close_notify write attempt timed out. Force-closing the connection.");
-                    ctx.close(ctx.newFuture());
-                }
+                logger.warn(ctx.channel() + "close_notify write attempt timed out. Force-closing the connection.");
+                ctx.close(future);
             }
         }, 3, TimeUnit.SECONDS); // FIXME: Magic value
 
