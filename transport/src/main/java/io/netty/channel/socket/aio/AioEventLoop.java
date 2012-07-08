@@ -88,12 +88,9 @@ public class AioEventLoop extends MultithreadEventLoop {
                     return ch;
                 }
             }
-            if (f.getType() == Object.class) {
+            if (AbstractAioChannel.class.isAssignableFrom(f.getType())) {
                 f.setAccessible(true);
-                Object candidate = f.get(command);
-                if (candidate instanceof AbstractAioChannel) {
-                    return (AbstractAioChannel) candidate;
-                }
+                return (AbstractAioChannel) f.get(command);
             }
         }
 
