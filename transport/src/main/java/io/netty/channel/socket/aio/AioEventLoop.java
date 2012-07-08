@@ -59,7 +59,7 @@ public class AioEventLoop extends MultithreadEventLoop {
         AbstractAioChannel ch = null;
         try {
             ch = findChannel(command);
-        } catch (Exception e) {
+        } catch (Throwable t) {
             // Ignore
         }
 
