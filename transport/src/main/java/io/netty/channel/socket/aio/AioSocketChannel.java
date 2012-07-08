@@ -190,7 +190,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             if (empty) {
                 // Reset reader/writerIndex to 0 if the buffer is empty.
-                buf.clear();
+                buf.discardReadBytes();
             }
 
             channel.notifyFlushFutures(writtenBytes);
@@ -274,7 +274,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     channel.unsafe().close(channel.unsafe().voidFuture());
                 } else {
                     // start the next read
-                    //channel.readTask.run();
                     channel.eventLoop().execute(channel.readTask);
                 }
             }

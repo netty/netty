@@ -37,7 +37,7 @@ abstract class AioCompletionHandler<V, A extends Channel> implements CompletionH
      */
     protected abstract void failed0(Throwable exc, A channel);
 
-    private static final int MAX_STACK_DEPTH = 4;
+    private static final int MAX_STACK_DEPTH = Integer.MAX_VALUE;
     private static final ThreadLocal<Integer> STACK_DEPTH = new ThreadLocal<Integer>() {
         @Override
         protected Integer initialValue() {
