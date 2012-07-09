@@ -222,42 +222,41 @@ public class JdkZlibEncoder extends OneToOneEncoder implements LifeCycleAwareCha
     }
 
     private ChannelFuture finishEncode(final ChannelHandlerContext ctx, final ChannelEvent evt) {
+        ChannelFuture future = Channels.succeededFuture(ctx.getChannel());
+
         if (!finished.compareAndSet(false, true)) {
             if (evt != null) {
                 ctx.sendDownstream(evt);
             }
-            return Channels.succeededFuture(ctx.getChannel());
+            return future;
         }
 
-        ChannelBuffer footer = ChannelBuffers.EMPTY_BUFFER;
+        ChannelBuffer footer = ChannelBuffers.dynamicBuffer(ctx.getChannel().getConfig().getBufferFactory());
         synchronized (deflater) {
-            int numBytes = 0;
             deflater.finish();
-            if (!deflater.finished()) {
-              numBytes = deflater.deflate(out, 0, out.length);
-            }
-            int footerSize = gzip ? numBytes + 8 : numBytes;
-            if (footerSize > 0) {
-                footer = ctx.getChannel().getConfig().getBufferFactory().getBuffer(footerSize);
+            while (!deflater.finished()) {
+                int numBytes = deflater.deflate(out, 0, out.length);
                 footer.writeBytes(out, 0, numBytes);
-                if (gzip) {
-                    int crcValue = (int) crc.getValue();
-                    int uncBytes = deflater.getTotalIn();
-                    footer.writeByte(crcValue);
-                    footer.writeByte(crcValue >>> 8);
-                    footer.writeByte(crcValue >>> 16);
-                    footer.writeByte(crcValue >>> 24);
-                    footer.writeByte(uncBytes);
-                    footer.writeByte(uncBytes >>> 8);
-                    footer.writeByte(uncBytes >>> 16);
-                    footer.writeByte(uncBytes >>> 24);
-                }
+            }
+            if (gzip) {
+                int crcValue = (int) crc.getValue();
+                int uncBytes = deflater.getTotalIn();
+                footer.writeByte(crcValue);
+                footer.writeByte(crcValue >>> 8);
+                footer.writeByte(crcValue >>> 16);
+                footer.writeByte(crcValue >>> 24);
+                footer.writeByte(uncBytes);
+                footer.writeByte(uncBytes >>> 8);
+                footer.writeByte(uncBytes >>> 16);
+                footer.writeByte(uncBytes >>> 24);
             }
             deflater.end();
         }
 
-        ChannelFuture future = Channels.future(ctx.getChannel());
-        Channels.write(ctx, future, footer);
+        if (footer.readable()) {
+            future = Channels.future(ctx.getChannel());
+            Channels.write(ctx, future, footer);
+        }
 
         if (evt != null) {
             future.addListener(new ChannelFutureListener() {
