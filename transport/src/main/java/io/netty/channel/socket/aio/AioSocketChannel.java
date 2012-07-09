@@ -224,7 +224,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.notifyFlushFutures(cause);
             channel.pipeline().fireExceptionCaught(cause);
 
-            ByteBuf buf = channel.pipeline().outboundByteBuffer();
+            ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
             if (!buf.readable()) {
                 buf.discardReadBytes();
             }
