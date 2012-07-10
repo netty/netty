@@ -146,16 +146,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return;
         }
 
-        if (readerIndex == writerIndex) {
-            clear();
-            return;
+        if (readerIndex != writerIndex) {
+            setBytes(0, this, readerIndex, writerIndex - readerIndex);
+            writerIndex -= readerIndex;
+            markedReaderIndex = Math.max(markedReaderIndex - readerIndex, 0);
+            markedWriterIndex = Math.max(markedWriterIndex - readerIndex, 0);
+            readerIndex = 0;
+        } else {
+            markedReaderIndex = Math.max(markedReaderIndex - readerIndex, 0);
+            markedWriterIndex = Math.max(markedWriterIndex - readerIndex, 0);
+            writerIndex = readerIndex = 0;
         }
-
-        setBytes(0, this, readerIndex, writerIndex - readerIndex);
-        writerIndex -= readerIndex;
-        markedReaderIndex = Math.max(markedReaderIndex - readerIndex, 0);
-        markedWriterIndex = Math.max(markedWriterIndex - readerIndex, 0);
-        readerIndex = 0;
     }
 
     @Override
