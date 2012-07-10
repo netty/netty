@@ -356,7 +356,8 @@
         <artifactId>maven-release-plugin</artifactId>
         <version>2.3.2</version>
         <configuration>
-          <arguments>-P release,full</arguments>
+          <useReleaseProfile>false</useReleaseProfile>
+          <arguments>-P release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
           <localCheckout>true</localCheckout>
