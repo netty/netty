@@ -163,9 +163,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         flushing = true;
         if (buf.readable()) {
-            buf.discardReadBytes();
             javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
         } else {
+            buf.discardReadBytes();
             notifyFlushFutures();
             flushing = false;
         }
