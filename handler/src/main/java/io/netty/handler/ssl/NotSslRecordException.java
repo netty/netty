@@ -29,7 +29,20 @@ public class NotSslRecordException extends SSLException {
 
     private static final long serialVersionUID = -4316784434770656841L;
 
-    public NotSslRecordException(String reason) {
-        super(reason);
+    public NotSslRecordException() {
+        super("");
     }
+
+    public NotSslRecordException(String message) {
+        super(message);
+    }
+
+    public NotSslRecordException(Throwable cause) {
+        super(cause);
+    }
+
+    public NotSslRecordException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }
