@@ -356,9 +356,10 @@
         <artifactId>maven-release-plugin</artifactId>
         <version>2.3.2</version>
         <configuration>
-          <releaseProfiles>release,full</releaseProfiles>
+          <arguments>-P release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
+          <localCheckout>true</localCheckout>
         </configuration>
       </plugin>
     </plugins>
