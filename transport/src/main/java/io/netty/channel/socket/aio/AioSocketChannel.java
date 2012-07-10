@@ -162,10 +162,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
 
         flushing = true;
+
+        // Ensure the readerIndex of the buffer is 0 before beginning an async write.
+        // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
+        // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
+        buf.discardReadBytes();
+
         if (buf.readable()) {
             javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
         } else {
-            buf.discardReadBytes();
             notifyFlushFutures();
             flushing = false;
         }
