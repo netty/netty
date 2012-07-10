@@ -235,29 +235,24 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return future;
         }
 
-        ByteBuf footer = Unpooled.EMPTY_BUFFER;
+        ByteBuf footer = Unpooled.dynamicBuffer();
         synchronized (deflater) {
-            int numBytes = 0;
             deflater.finish();
-            if (!deflater.finished()) {
-              numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length);
-            }
-            int footerSize = gzip ? numBytes + 8 : numBytes;
-            if (footerSize > 0) {
-                footer = Unpooled.buffer(footerSize);
+            while (!deflater.finished()) {
+                int numBytes = deflater.deflate(encodeBuf, 0, encodeBuf.length);
                 footer.writeBytes(encodeBuf, 0, numBytes);
-                if (gzip) {
-                    int crcValue = (int) crc.getValue();
-                    int uncBytes = deflater.getTotalIn();
-                    footer.writeByte(crcValue);
-                    footer.writeByte(crcValue >>> 8);
-                    footer.writeByte(crcValue >>> 16);
-                    footer.writeByte(crcValue >>> 24);
-                    footer.writeByte(uncBytes);
-                    footer.writeByte(uncBytes >>> 8);
-                    footer.writeByte(uncBytes >>> 16);
-                    footer.writeByte(uncBytes >>> 24);
-                }
+            }
+            if (gzip) {
+                int crcValue = (int) crc.getValue();
+                int uncBytes = deflater.getTotalIn();
+                footer.writeByte(crcValue);
+                footer.writeByte(crcValue >>> 8);
+                footer.writeByte(crcValue >>> 16);
+                footer.writeByte(crcValue >>> 24);
+                footer.writeByte(uncBytes);
+                footer.writeByte(uncBytes >>> 8);
+                footer.writeByte(uncBytes >>> 16);
+                footer.writeByte(uncBytes >>> 24);
             }
             deflater.end();
         }
