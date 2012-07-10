@@ -81,17 +81,8 @@
     <module>example</module>
     <module>testsuite</module>
     <module>all</module>
+    <module>tarball</module>
   </modules>
-
-  <profiles>
-    <!-- Build xref, Javadoc, and tarball only on full build -->
-    <profile>
-      <id>full</id>
-      <modules>
-        <module>tarball</module>
-      </modules>
-    </profile>
-  </profiles>
 
   <dependencyManagement>
     <dependencies>
