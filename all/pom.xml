@@ -244,7 +244,6 @@
           </plugin>
           <plugin>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.8.1</version>
             <executions>
               <execution>
                 <id>javadoc</id>
