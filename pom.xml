@@ -357,7 +357,7 @@
         <configuration>
           <releaseProfiles>release,full</releaseProfiles>
           <autoVersionSubmodules>true</autoVersionSubmodules>
-          <tagNameFormat>netty-${project.version}</tagNameFormat>
+          <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
     </plugins>
