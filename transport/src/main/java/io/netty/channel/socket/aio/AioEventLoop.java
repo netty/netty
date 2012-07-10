@@ -22,9 +22,16 @@ import io.netty.channel.MultithreadEventLoop;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadFactory;
 
 public class AioEventLoop extends MultithreadEventLoop {
+
+    private static final ConcurrentMap<Class<?>, Field[]> fieldCache = new ConcurrentHashMap<Class<?>, Field[]>();
+    private static final Field[] FAILURE = new Field[0];
 
     final AsynchronousChannelGroup group;
 
@@ -78,22 +85,60 @@ public class AioEventLoop extends MultithreadEventLoop {
     }
 
     private static AbstractAioChannel findChannel(Runnable command) throws Exception {
-        // TODO: Optimize me
+        Class<?> commandType = command.getClass();
+        Field[] fields = fieldCache.get(commandType);
+        if (fields == null) {
+            try {
+                fields = findFieldSequence(command, new ArrayDeque<Field>(2));
+            } catch (Throwable t) {
+                // Failed to get the field list
+            }
+
+            if (fields == null) {
+                fields = FAILURE;
+            }
+
+            fieldCache.put(commandType, fields); // No need to use putIfAbsent()
+        }
+
+        if (fields == FAILURE) {
+            return null;
+        }
+
+        final int lastIndex = fields.length - 1;
+        for (int i = 0; i < lastIndex; i ++) {
+            command = (Runnable) fields[i].get(command);
+        }
+
+        return (AbstractAioChannel) fields[lastIndex].get(command);
+    }
+
+    private static Field[] findFieldSequence(Runnable command, Deque<Field> fields) throws Exception {
         Class<?> commandType = command.getClass();
         for (Field f: commandType.getDeclaredFields()) {
             if (f.getType() == Runnable.class) {
                 f.setAccessible(true);
-                AbstractAioChannel ch = findChannel((Runnable) f.get(command));
-                if (ch != null) {
-                    return ch;
+                fields.addLast(f);
+                try {
+                    Field[] ret = findFieldSequence((Runnable) f.get(command), fields);
+                    if (ret != null) {
+                        return ret;
+                    }
+                } finally {
+                    fields.removeLast();
                 }
             }
 
             if (f.getType() == Object.class) {
                 f.setAccessible(true);
-                Object candidate = f.get(command);
-                if (candidate instanceof AbstractAioChannel) {
-                    return (AbstractAioChannel) candidate;
+                fields.addLast(f);
+                try {
+                    Object candidate = f.get(command);
+                    if (candidate instanceof AbstractAioChannel) {
+                        return fields.toArray(new Field[fields.size()]);
+                    }
+                } finally {
+                    fields.removeLast();
                 }
             }
         }
