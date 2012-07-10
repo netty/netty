@@ -17,6 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 
@@ -27,8 +28,9 @@ import java.nio.channels.AsynchronousChannel;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public abstract class AbstractAioChannel extends AbstractChannel {
+abstract class AbstractAioChannel extends AbstractChannel {
 
+    protected final AioEventLoop eventLoop;
     private final AsynchronousChannel ch;
 
     /**
@@ -39,9 +41,10 @@ public abstract class AbstractAioChannel extends AbstractChannel {
     protected ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
-    protected AbstractAioChannel(Channel parent, Integer id, AsynchronousChannel ch) {
+    protected AbstractAioChannel(Channel parent, Integer id, AioEventLoop eventLoop, AsynchronousChannel ch) {
         super(parent, id);
         this.ch = ch;
+        this.eventLoop = eventLoop;
     }
 
     @Override
@@ -61,6 +64,16 @@ public abstract class AbstractAioChannel extends AbstractChannel {
     @Override
     public boolean isOpen() {
         return ch.isOpen();
+    }
+
+    @Override
+    protected Runnable doRegister() throws Exception {
+        if (((AioChildEventLoop) eventLoop()).parent != eventLoop) {
+            throw new ChannelException(
+                    getClass().getSimpleName() + " must be registered to the " +
+                    AioEventLoop.class.getSimpleName() + " which was specified in the constructor.");
+        }
+        return null;
     }
 
     @Override

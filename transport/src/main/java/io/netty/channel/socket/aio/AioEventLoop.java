@@ -99,6 +99,6 @@ public class AioEventLoop extends MultithreadEventLoop {
 
     @Override
     protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new AioChildEventLoop(threadFactory);
+        return new AioChildEventLoop(this, threadFactory);
     }
 }

@@ -53,11 +53,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private boolean flushing;
 
     public AioSocketChannel(AioEventLoop eventLoop) {
-        this(null, null, newSocket(eventLoop.group));
+        this(null, null, eventLoop, newSocket(eventLoop.group));
     }
 
-    AioSocketChannel(AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
-        super(parent, id, ch);
+    AioSocketChannel(
+            AioServerSocketChannel parent, Integer id,
+            AioEventLoop eventLoop, AsynchronousSocketChannel ch) {
+        super(parent, id, eventLoop, ch);
         config = new AioSocketChannelConfig(ch);
     }
 
@@ -110,6 +112,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected Runnable doRegister() throws Exception {
+        super.doRegister();
+
         if (remoteAddress() == null) {
             return null;
         }

@@ -51,7 +51,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     public AioServerSocketChannel(AioEventLoop eventLoop) {
-        super(null, null, newSocket(eventLoop.group));
+        super(null, null, eventLoop, newSocket(eventLoop.group));
         config = new AioServerSocketChannelConfig(javaChannel());
     }
 
@@ -117,7 +117,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected Runnable doRegister() throws Exception {
-        return null;
+        return super.doRegister();
     }
 
     private static final class AcceptHandler
@@ -129,7 +129,8 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             channel.javaChannel().accept(channel, this);
 
             // create the socket add it to the buffer and fire the event
-            channel.pipeline().inboundMessageBuffer().add(new AioSocketChannel(channel, null, ch));
+            channel.pipeline().inboundMessageBuffer().add(
+                    new AioSocketChannel(channel, null, channel.eventLoop, ch));
             channel.pipeline().fireInboundBufferUpdated();
         }
 

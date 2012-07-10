@@ -437,7 +437,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 future.setFailure(t);
                 pipeline.fireExceptionCaught(t);
-                closeFuture().setSuccess();
+                closeFuture.setClosed();
             }
         }
 
