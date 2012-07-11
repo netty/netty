@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.easymock.EasyMock;
+import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 /**
@@ -424,5 +425,19 @@ public class ChannelBuffersTest {
         } catch (UnsupportedOperationException e) {
             // Expected
         }
+    }
+    
+    /**
+     * Test for https://github.com/netty/netty/issues/449
+     */
+    @Test
+    public void testHexDumpOperations() {
+        ChannelBuffer buffer = ChannelBuffers.copiedBuffer("This is some testdata", CharsetUtil.ISO_8859_1);
+        String hexDump = ChannelBuffers.hexDump(buffer);
+        ChannelBuffer buffer2 = ChannelBuffers.hexDump(hexDump);
+        assertEquals(buffer, buffer2);
+        
+        String hexDump2 = ChannelBuffers.hexDump(buffer2);
+        assertEquals(hexDump, hexDump2);
     }
 }

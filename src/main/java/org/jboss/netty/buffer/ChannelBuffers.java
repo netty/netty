@@ -868,6 +868,19 @@ public final class ChannelBuffers {
     }
 
     /**
+     * Create a {@link ChannelBuffer} from the given <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     */
+    public static ChannelBuffer hexDump(String hexString) {
+        int len = hexString.length();
+        byte[] hexData = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            hexData[i / 2] = (byte) ((Character.digit(hexString.charAt(i), 16) << 4)
+                                 + Character.digit(hexString.charAt(i + 1), 16));
+        }
+        return wrappedBuffer(hexData);
+    }
+
+    /**
      * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
      */
