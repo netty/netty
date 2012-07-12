@@ -28,6 +28,9 @@ class CompactObjectInputStream extends ObjectInputStream {
 
     CompactObjectInputStream(InputStream in, ClassResolver classResolver) throws IOException {
         super(in);
+        if (classResolver == null) {
+            throw new NullPointerException("classResolver");
+        }
         this.classResolver = classResolver;
     }
 

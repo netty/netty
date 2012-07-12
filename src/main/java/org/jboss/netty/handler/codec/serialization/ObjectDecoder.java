@@ -92,6 +92,9 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      */
     public ObjectDecoder(int maxObjectSize, ClassResolver classResolver) {
         super(maxObjectSize, 0, 4, 0, 4);
+        if (classResolver == null) {
+            throw new NullPointerException("classResolver");
+        }
         this.classResolver = classResolver;
     }
 
