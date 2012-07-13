@@ -22,12 +22,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.StreamCorruptedException;
 
-/**
- * Custom {@link ObjectInputStream} implementation.<br/>
- *
- * <b>Be aware that this implementation only works with jdk6+.</b>
- *
- */
 class CompactObjectInputStream extends ObjectInputStream {
 
     private final ClassResolver classResolver;
@@ -62,12 +56,7 @@ class CompactObjectInputStream extends ObjectInputStream {
         case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
             Class<?> clazz = classResolver.resolve(className);
-
-            // Use lookupAny(..) because otherwise the lookup of an interface
-            // will return null and so cause a NPE later.
-            //
-            // See https://github.com/netty/netty/issues/452
-            return ObjectStreamClass.lookupAny(clazz);
+            return ObjectStreamClass.lookup(clazz);
         default:
             throw new StreamCorruptedException(
                     "Unexpected class descriptor type: " + type);

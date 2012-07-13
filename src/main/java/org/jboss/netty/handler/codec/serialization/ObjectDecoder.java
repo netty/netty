@@ -33,9 +33,6 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
  * {@link ObjectEncoder} or {@link ObjectEncoderOutputStream} to ensure the
  * interoperability with this decoder.
  *
- * <br/>
- * <b>Be aware that this implementation only works with jdk6+.</b>
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */
