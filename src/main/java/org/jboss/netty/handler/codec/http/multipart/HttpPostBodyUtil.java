@@ -148,8 +148,8 @@ final class HttpPostBodyUtil {
             }
             this.buffer = buffer;
             bytes = buffer.array();
-            pos = readerIndex = buffer.readerIndex();
-            limit = buffer.writerIndex();
+            pos = readerIndex = buffer.arrayOffset() + buffer.readerIndex();
+            limit = buffer.arrayOffset() + buffer.writerIndex();
         }
 
         /**
