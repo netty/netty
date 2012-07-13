@@ -56,7 +56,19 @@ class CompactObjectInputStream extends ObjectInputStream {
         case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
             Class<?> clazz = classResolver.resolve(className);
-            return ObjectStreamClass.lookup(clazz);
+            ObjectStreamClass streamClass = ObjectStreamClass.lookup(clazz);
+            if (streamClass == null) {
+                // If streamClass is null its very likely that we had an old netty version that was writing an
+                // interface with a thin descriptor. Fall back to use ObjectStreamClazz.lookupAny(..) to resolve
+                // it.
+                //
+                // This will only work on java6+ but if we hit this line its very likely that a user is upgrading
+                // from netty 3.2.x which was using the method before and so use java6+.
+                //
+                // See https://github.com/netty/netty/commit/6c2eba79d70a532822a0e38092faa9783d90906b
+                streamClass = ObjectStreamClass.lookupAny(clazz);
+            }
+            return streamClass;
         default:
             throw new StreamCorruptedException(
                     "Unexpected class descriptor type: " + type);
