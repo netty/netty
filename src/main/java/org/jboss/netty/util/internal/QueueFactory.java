@@ -41,16 +41,14 @@ public final class QueueFactory {
      * @param itemClass  the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue     the {@link BlockingQueue} implementation
      */
-    @SuppressWarnings("unchecked")
     public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
+        // if we run in java >=7 its the best to just use the LinkedTransferQueue which
+        // comes with java bundled. See #273
+        if (DetectionUtil.javaVersion() >= 7)  {
+            return new java.util.concurrent.LinkedTransferQueue<T>();
+        }
+
         try {
-         // if we run in java >=7 its the best to just use the LinkedTransferQueue which
-            // comes with java bundled. See #273
-            if (DetectionUtil.javaVersion() >= 7)  {
-                // Use reflect as android otherwise will panic out. See #458
-                return (BlockingQueue<T>) QueueFactory.class.getClassLoader()
-                        .loadClass("java.util.concurrent.LinkedTransferQueue").newInstance();
-            }
             if (useUnsafe) {
                 return new LinkedTransferQueue<T>();
             }
@@ -77,16 +75,13 @@ public final class QueueFactory {
      * @return queue      the {@link BlockingQueue} implementation
      */
     public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
+        // if we run in java >=7 its the best to just use the LinkedTransferQueue which
+        // comes with java bundled. See #273
+        if (DetectionUtil.javaVersion() >= 7)  {
+            return new java.util.concurrent.LinkedTransferQueue<T>();
+        }
+
         try {
-            // if we run in java >=7 its the best to just use the LinkedTransferQueue which
-            // comes with java bundled. See #273
-            if (DetectionUtil.javaVersion() >= 7)  {
-                // Use reflect as android otherwise will panic out. See #458
-                @SuppressWarnings("unchecked")
-                Class<BlockingQueue<T>> clazz = (Class<BlockingQueue<T>>) QueueFactory.class.getClassLoader()
-                        .loadClass("java.util.concurrent.LinkedTransferQueue");
-                return clazz.getConstructor(Collection.class).newInstance(collection);
-            }
             if (useUnsafe) {
                 return new LinkedTransferQueue<T>(collection);
             }
@@ -104,5 +99,4 @@ public final class QueueFactory {
         return new LegacyLinkedTransferQueue<T>(collection);
 
     }
-
 }
