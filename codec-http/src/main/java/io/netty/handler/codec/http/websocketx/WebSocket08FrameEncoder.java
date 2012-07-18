@@ -166,7 +166,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
         if (maskPayload) {
             int random = (int) (Math.random() * Integer.MAX_VALUE);
             mask = ByteBuffer.allocate(4).putInt(random).array();
-            out.writeInt(random);
+            header.writeBytes(mask);
 
             int counter = 0;
             for (int i = data.readerIndex(); i < data.writerIndex(); i ++) {
