@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.util.internal;
 
-import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 
 import org.jboss.netty.logging.InternalLogger;
@@ -64,39 +63,6 @@ public final class QueueFactory {
         }
 
         return new LegacyLinkedTransferQueue<T>();
-
-    }
-
-    /**
-     * Create a new unbound {@link BlockingQueue}
-     *
-     * @param collection  the collection which should get copied to the newly created {@link BlockingQueue}
-     * @param itemClass   the {@link Class} type which will be used as {@link BlockingQueue} items
-     * @return queue      the {@link BlockingQueue} implementation
-     */
-    public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
-        // if we run in java >=7 its the best to just use the LinkedTransferQueue which
-        // comes with java bundled. See #273
-        if (DetectionUtil.javaVersion() >= 7)  {
-            return new java.util.concurrent.LinkedTransferQueue<T>();
-        }
-
-        try {
-            if (useUnsafe) {
-                return new LinkedTransferQueue<T>(collection);
-            }
-        } catch (Throwable t) {
-            // For whatever reason an exception was thrown while loading the LinkedTransferQueue
-            //
-            // This mostly happens because of a custom classloader or security policy that did not
-            // allow us to access the com.sun.Unmisc class. So just log it and fallback to the old
-            // LegacyLinkedTransferQueue that works in all cases
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
-            }
-        }
-
-        return new LegacyLinkedTransferQueue<T>(collection);
 
     }
 }
