@@ -23,7 +23,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        callDecode(ctx, in, ctx.nextOutboundByteBuffer());
+        callDecode(ctx, in, ctx.nextInboundByteBuffer());
     }
 
     @Override
