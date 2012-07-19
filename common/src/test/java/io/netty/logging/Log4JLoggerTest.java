@@ -24,6 +24,20 @@ public class Log4JLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
+    public void testIsTraceEnabled() {
+
+        org.apache.log4j.Logger mock =
+            createStrictMock(org.apache.log4j.Logger.class);
+
+        expect(mock.isTraceEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new Log4JLogger(mock);
+        assertTrue(logger.isTraceEnabled());
+        verify(mock);
+    }
+
+    @Test
     public void testIsDebugEnabled() {
 
         org.apache.log4j.Logger mock =
@@ -70,6 +84,32 @@ public class Log4JLoggerTest {
 
         InternalLogger logger = new Log4JLogger(mock);
         assertTrue(logger.isErrorEnabled());
+        verify(mock);
+    }
+
+    @Test
+    public void testTrace() {
+        org.apache.log4j.Logger mock =
+            createStrictMock(org.apache.log4j.Logger.class);
+
+        mock.trace("a");
+        replay(mock);
+
+        InternalLogger logger = new Log4JLogger(mock);
+        logger.trace("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testTraceWithException() {
+        org.apache.log4j.Logger mock =
+            createStrictMock(org.apache.log4j.Logger.class);
+
+        mock.trace("a", e);
+        replay(mock);
+
+        InternalLogger logger = new Log4JLogger(mock);
+        logger.trace("a", e);
         verify(mock);
     }
 

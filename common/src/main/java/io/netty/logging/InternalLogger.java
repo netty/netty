@@ -21,6 +21,11 @@ package io.netty.logging;
  */
 public interface InternalLogger {
     /**
+     * Returns {@code true} if a TRACE level message is logged.
+     */
+    boolean isTraceEnabled();
+
+    /**
      * Returns {@code true} if a DEBUG level message is logged.
      */
     boolean isDebugEnabled();
@@ -44,6 +49,16 @@ public interface InternalLogger {
      * Returns {@code true} if the specified log level message is logged.
      */
     boolean isEnabled(InternalLogLevel level);
+
+    /**
+     * Logs a TRACE level message.
+     */
+    void trace(String msg);
+
+    /**
+     * Logs a TRACE level message.
+     */
+    void trace(String msg, Throwable cause);
 
     /**
      * Logs a DEBUG level message.
