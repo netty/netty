@@ -30,28 +30,23 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
-    private final ByteBuf buffer;
+    final ByteBuf buffer;
 
     public DuplicatedByteBuf(ByteBuf buffer) {
-        super(buffer.order());
-        this.buffer = buffer;
-        setIndex(buffer.readerIndex(), buffer.writerIndex());
-    }
+        super(buffer.order(), buffer.maxCapacity());
 
-    private DuplicatedByteBuf(DuplicatedByteBuf buffer) {
-        super(buffer.buffer.order());
-        this.buffer = buffer.buffer;
+        if (buffer instanceof DuplicatedByteBuf) {
+            this.buffer = ((DuplicatedByteBuf) buffer).buffer;
+        } else {
+            this.buffer = buffer;
+        }
+
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return buffer.factory();
     }
 
     @Override
@@ -62,6 +57,11 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     @Override
     public int capacity() {
         return buffer.capacity();
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        buffer.capacity(newCapacity);
     }
 
     @Override
@@ -206,5 +206,10 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         return buffer.nioBuffer(index, length);
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return buffer.unsafe();
     }
 }

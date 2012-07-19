@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import static io.netty.buffer.Unpooled.*;
-import java.io.IOException;
 import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;
@@ -47,31 +46,13 @@ public abstract class AbstractCompositeChannelBufferTest extends
     @Override
     protected ByteBuf newBuffer(int length) {
         buffers = new ArrayList<ByteBuf>();
-        for (int i = 0; i < length; i += 10) {
+        for (int i = 0; i < length; i ++) {
             buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[1]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[2]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[3]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[4]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[5]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[6]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[7]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[8]).order(order));
-            buffers.add(Unpooled.EMPTY_BUFFER);
-            buffers.add(Unpooled.wrappedBuffer(new byte[9]).order(order));
+            buffers.add(Unpooled.wrappedBuffer(new byte[1]));
             buffers.add(Unpooled.EMPTY_BUFFER);
         }
 
-        buffer = Unpooled.wrappedBuffer(buffers.toArray(new ByteBuf[buffers.size()]));
-        buffer.writerIndex(length);
-        buffer = Unpooled.wrappedBuffer(buffer);
+        buffer = Unpooled.wrappedBuffer(buffers.toArray(new ByteBuf[buffers.size()])).order(order);
         assertEquals(length, buffer.capacity());
         assertEquals(length, buffer.readableBytes());
         assertFalse(buffer.writable());
@@ -90,23 +71,23 @@ public abstract class AbstractCompositeChannelBufferTest extends
     protected boolean discardReadBytesDoesNotMoveWritableBytes() {
         return false;
     }
-    
+
     /**
      * Tests the "getBufferFor" method
      */
     @Test
-    public void testGetBufferFor() throws IOException {
+    public void testComponentAtOffset() {
         CompositeByteBuf buf = (CompositeByteBuf) Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5 }, new byte[] {4, 5, 6, 7, 8, 9, 26});
-    
+
         //Ensure that a random place will be fine
-        assertEquals(buf.getBuffer(2).capacity(), 5);
-        
+        assertEquals(buf.componentAtOffset(2).capacity(), 5);
+
         //Loop through each byte
-        
+
         byte index = 0;
-        
+
         while (index < buf.capacity()) {
-            ByteBuf _buf = buf.getBuffer(index++);
+            ByteBuf _buf = buf.componentAtOffset(index++);
             assertNotNull(_buf);
             assertTrue(_buf.capacity() > 0);
             assertNotNull(_buf.getByte(0));
@@ -155,8 +136,8 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
     @Test
     public void testCompositeWrappedBuffer() {
-        ByteBuf header = dynamicBuffer(12).order(order);
-        ByteBuf payload = dynamicBuffer(512).order(order);
+        ByteBuf header = buffer(12).order(order);
+        ByteBuf payload = buffer(512).order(order);
 
         header.writeBytes(new byte[12]);
         payload.writeBytes(new byte[512]);

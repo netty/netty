@@ -24,7 +24,7 @@ public abstract class ChannelInboundByteHandlerAdapter
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.dynamicBuffer();
+        return Unpooled.buffer();
     }
 
     @Override

@@ -231,15 +231,25 @@ import java.nio.charset.UnsupportedCharsetException;
 public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
 
     /**
-     * Returns the factory which creates a {@link ByteBuf} whose
-     * type and default {@link ByteOrder} are same with this buffer.
-     */
-    ByteBufFactory factory();
-
-    /**
      * Returns the number of bytes (octets) this buffer can contain.
      */
     int capacity();
+
+    /**
+     * Adjusts the capacity of this buffer.  If the {@code newCapacity} is less than the current
+     * capacity, the content of this buffer is truncated.  If the {@code newCapacity} is greater
+     * than the current capacity, the buffer is appended with unspecified data whose length is
+     * {@code (newCapacity - currentCapacity)}.
+     */
+    void capacity(int newCapacity);
+
+    /**
+     * Returns the maximum allowed capacity of this buffer.  If a user attempts to increase the
+     * capacity of this buffer beyond the maximum capacity using {@link #capacity(int)} or
+     * {@link #ensureWritableBytes(int)}, those methods will raise an
+     * {@link IllegalArgumentException}.
+     */
+    int maxCapacity();
 
     /**
      * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
@@ -1776,4 +1786,32 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      */
     @Override
     String toString();
+
+    /**
+     * Returns an object that exposes unsafe expert-only operations which can lead to unspecified
+     * behavior.
+     */
+    Unsafe unsafe();
+
+    interface Unsafe {
+        /**
+         * Returns the internal NIO buffer that is reused for I/O.
+         *
+         * @throws IllegalStateException if the buffer has no internal NIO buffer
+         */
+        ByteBuffer nioBuffer();
+
+        /**
+         * Returns a new buffer whose type is identical to the callee.
+         *
+         * @param initialCapacity the initial capacity of the new buffer
+         */
+        ByteBuf newBuffer(int initialCapacity);
+
+        /**
+         * Deallocates the internal memory block of the buffer explicitly.  The result of accessing
+         * a freed buffer is unspecified and can even cause JVM crash.
+         */
+        void free();
+    }
 }

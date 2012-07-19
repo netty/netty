@@ -1443,7 +1443,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.metadata().bufferType()) {
             case BYTE:
-                return Unpooled.dynamicBuffer();
+                return Unpooled.buffer();
             case MESSAGE:
                 return Unpooled.messageBuffer();
             default:

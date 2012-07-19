@@ -29,46 +29,48 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class HeapByteBuf extends AbstractByteBuf {
 
-    /**
-     * The underlying heap byte array that this buffer is wrapping.
-     */
-    protected final byte[] array;
+    private final Unsafe unsafe = new HeapUnsafe();
 
-    protected final ByteBuffer nioBuf;
+    private byte[] array;
+    private ByteBuffer nioBuf;
 
     /**
      * Creates a new heap buffer with a newly allocated byte array.
      *
-     * @param length the length of the new byte array
+     * @param initialCapacity the initial capacity of the underlying byte array
+     * @param maxCapacity the max capacity of the underlying byte array
      */
-    public HeapByteBuf(int length) {
-        this(new byte[length], 0, 0);
+    public HeapByteBuf(int initialCapacity, int maxCapacity) {
+        this(new byte[initialCapacity], 0, 0, maxCapacity);
     }
 
     /**
      * Creates a new heap buffer with an existing byte array.
      *
-     * @param array the byte array to wrap
+     * @param initialArray the initial underlying byte array
+     * @param maxCapacity the max capacity of the underlying byte array
      */
-    public HeapByteBuf(byte[] array) {
-        this(array, 0, array.length);
+    public HeapByteBuf(byte[] initialArray, int maxCapacity) {
+        this(initialArray, 0, initialArray.length, maxCapacity);
     }
 
-    /**
-     * Creates a new heap buffer with an existing byte array.
-     *
-     * @param array        the byte array to wrap
-     * @param readerIndex  the initial reader index of this buffer
-     * @param writerIndex  the initial writer index of this buffer
-     */
-    protected HeapByteBuf(byte[] array, int readerIndex, int writerIndex) {
-        super(ByteOrder.BIG_ENDIAN);
-        if (array == null) {
-            throw new NullPointerException("array");
+    private HeapByteBuf(byte[] initialArray, int readerIndex, int writerIndex, int maxCapacity) {
+        super(ByteOrder.BIG_ENDIAN, maxCapacity);
+        if (initialArray == null) {
+            throw new NullPointerException("initialArray");
         }
-        this.array = array;
+        if (initialArray.length > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "initialCapacity(%d) > maxCapacity(%d)", initialArray.length, maxCapacity));
+        }
+
+        setArray(initialArray);
         setIndex(readerIndex, writerIndex);
-        nioBuf = ByteBuffer.wrap(array);
+    }
+
+    private void setArray(byte[] initialArray) {
+        array = initialArray;
+        nioBuf = ByteBuffer.wrap(initialArray);
     }
 
     @Override
@@ -79,6 +81,31 @@ public class HeapByteBuf extends AbstractByteBuf {
     @Override
     public int capacity() {
         return array.length;
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        if (newCapacity < 0 || newCapacity > maxCapacity()) {
+            throw new IllegalArgumentException("newCapacity: " + newCapacity);
+        }
+
+        int oldCapacity = array.length;
+        if (newCapacity > oldCapacity) {
+            byte[] newArray = new byte[newCapacity];
+            System.arraycopy(array, readerIndex(), newArray, readerIndex(), readableBytes());
+            setArray(newArray);
+        } else if (newCapacity < oldCapacity) {
+            byte[] newArray = new byte[newCapacity];
+            int readerIndex = readerIndex();
+            if (readerIndex < newCapacity) {
+                int writerIndex = writerIndex();
+                if (writerIndex > newCapacity) {
+                    writerIndex(writerIndex = newCapacity);
+                }
+                System.arraycopy(array, readerIndex, newArray, readerIndex, writerIndex - readerIndex);
+            }
+            setArray(newArray);
+        }
     }
 
     @Override
@@ -171,39 +198,13 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBuf slice(int index, int length) {
-        if (index == 0) {
-            if (length == 0) {
-                return Unpooled.EMPTY_BUFFER;
-            }
-            if (length == array.length) {
-                ByteBuf slice = duplicate();
-                slice.setIndex(0, length);
-                return slice;
-            } else {
-                return new TruncatedByteBuf(this, length);
-            }
-        } else {
-            if (length == 0) {
-                return Unpooled.EMPTY_BUFFER;
-            }
-            return new SlicedByteBuf(this, index, length);
-        }
-    }
-
-    @Override
     public boolean hasNioBuffer() {
         return true;
     }
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        return ByteBuffer.wrap(array, index, length).order(order());
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return HeapByteBufFactory.getInstance(ByteOrder.BIG_ENDIAN);
+        return ByteBuffer.wrap(array, index, length);
     }
 
     @Override
@@ -272,11 +273,6 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBuf duplicate() {
-        return new HeapByteBuf(array, readerIndex(), writerIndex());
-    }
-
-    @Override
     public ByteBuf copy(int index, int length) {
         if (index < 0 || length < 0 || index + length > array.length) {
             throw new IndexOutOfBoundsException("Too many bytes to copy - Need "
@@ -285,6 +281,29 @@ public class HeapByteBuf extends AbstractByteBuf {
 
         byte[] copiedArray = new byte[length];
         System.arraycopy(array, index, copiedArray, 0, length);
-        return new HeapByteBuf(copiedArray);
+        return new HeapByteBuf(copiedArray, maxCapacity());
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
+    }
+
+    private class HeapUnsafe implements Unsafe {
+        @Override
+        public ByteBuffer nioBuffer() {
+            return nioBuf;
+        }
+
+        @Override
+        public ByteBuf newBuffer(int initialCapacity) {
+            return new HeapByteBuf(initialCapacity, Math.max(initialCapacity, maxCapacity()));
+        }
+
+        @Override
+        public void free() {
+            array = null;
+            nioBuf = null;
+        }
     }
 }

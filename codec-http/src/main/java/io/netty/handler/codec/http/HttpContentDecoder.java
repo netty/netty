@@ -84,7 +84,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                 if (!m.isChunked()) {
                     ByteBuf content = m.getContent();
                     // Decode the content
-                    ByteBuf newContent = Unpooled.dynamicBuffer();
+                    ByteBuf newContent = Unpooled.buffer();
                     decode(content, newContent);
                     finishDecode(newContent);
 
@@ -104,7 +104,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
             // Decode the chunk if necessary.
             if (decoder != null) {
                 if (!c.isLast()) {
-                    ByteBuf newContent = Unpooled.dynamicBuffer();
+                    ByteBuf newContent = Unpooled.buffer();
                     decode(content, newContent);
                     if (newContent.readable()) {
                         c.setContent(newContent);
@@ -112,7 +112,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                         return null;
                     }
                 } else {
-                    ByteBuf lastProduct = Unpooled.dynamicBuffer();
+                    ByteBuf lastProduct = Unpooled.buffer();
                     finishDecode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced

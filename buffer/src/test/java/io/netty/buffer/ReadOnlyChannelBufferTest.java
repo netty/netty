@@ -76,6 +76,7 @@ public class ReadOnlyChannelBufferTest {
     public void shouldForwardReadCallsBlindly() throws Exception {
         ByteBuf buf = createStrictMock(ByteBuf.class);
         expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
+        expect(buf.maxCapacity()).andReturn(65536).anyTimes();
         expect(buf.readerIndex()).andReturn(0).anyTimes();
         expect(buf.writerIndex()).andReturn(0).anyTimes();
         expect(buf.capacity()).andReturn(0).anyTimes();
