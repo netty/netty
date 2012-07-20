@@ -46,14 +46,33 @@ public abstract class AbstractCompositeChannelBufferTest extends
     @Override
     protected ByteBuf newBuffer(int length) {
         buffers = new ArrayList<ByteBuf>();
-        for (int i = 0; i < length; i ++) {
+        for (int i = 0; i < length + 45; i += 45) {
             buffers.add(Unpooled.EMPTY_BUFFER);
             buffers.add(Unpooled.wrappedBuffer(new byte[1]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[2]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[3]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[4]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[5]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[6]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[7]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[8]));
+            buffers.add(Unpooled.EMPTY_BUFFER);
+            buffers.add(Unpooled.wrappedBuffer(new byte[9]));
             buffers.add(Unpooled.EMPTY_BUFFER);
         }
 
         buffer = Unpooled.wrappedBuffer(
                 Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
+
+        // Truncate to the requested capacity.
+        buffer.capacity(length);
 
         assertEquals(length, buffer.capacity());
         assertEquals(length, buffer.readableBytes());

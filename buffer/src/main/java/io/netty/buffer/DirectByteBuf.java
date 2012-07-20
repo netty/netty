@@ -173,6 +173,8 @@ public class DirectByteBuf extends AbstractByteBuf {
                 newBuffer.position(readerIndex).limit(writerIndex);
                 newBuffer.put(oldBuffer);
                 newBuffer.clear();
+            } else {
+                setIndex(newCapacity, newCapacity);
             }
             setByteBuffer(newBuffer);
         }

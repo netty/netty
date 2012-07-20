@@ -103,6 +103,8 @@ public class HeapByteBuf extends AbstractByteBuf {
                     writerIndex(writerIndex = newCapacity);
                 }
                 System.arraycopy(array, readerIndex, newArray, readerIndex, writerIndex - readerIndex);
+            } else {
+                setIndex(newCapacity, newCapacity);
             }
             setArray(newArray);
         }

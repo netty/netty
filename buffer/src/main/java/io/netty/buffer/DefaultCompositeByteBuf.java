@@ -25,6 +25,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -58,19 +59,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
         }
 
-        if (buffers == null) {
-            throw new NullPointerException("buffers");
-        }
-
         this.maxNumComponents = maxNumComponents;
 
-        // TODO: Handle the case where the number of specified buffers already exceeds maxNumComponents.
-        for (ByteBuf b: buffers) {
-            if (b == null) {
-                break;
-            }
-            addComponent(b);
-        }
+        addComponents(0, buffers);
         setIndex(0, capacity());
     }
 
@@ -82,25 +73,24 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
         }
 
-        if (buffers == null) {
-            throw new NullPointerException("buffers");
-        }
-
         this.maxNumComponents = maxNumComponents;
-
-        // TODO: Handle the case where the numer of specified buffers already exceeds maxNumComponents.
-        for (ByteBuf b: buffers) {
-            if (b == null) {
-                break;
-            }
-            addComponent(b);
-        }
+        addComponents(0, buffers);
         setIndex(0, capacity());
     }
 
     @Override
     public void addComponent(ByteBuf buffer) {
         addComponent(components.size(), buffer);
+    }
+
+    @Override
+    public void addComponents(ByteBuf... buffers) {
+        addComponents(components.size(), buffers);
+    }
+
+    @Override
+    public void addComponents(Iterable<ByteBuf> buffers) {
+        addComponents(components.size(), buffers);
     }
 
     @Override
@@ -111,12 +101,17 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             throw new NullPointerException("buffer");
         }
 
+        if (buffer instanceof Iterable) {
+            @SuppressWarnings("unchecked")
+            Iterable<ByteBuf> composite = (Iterable<ByteBuf>) buffer;
+            addComponents(cIndex, composite);
+            return;
+        }
+
         int readableBytes = buffer.readableBytes();
         if (readableBytes == 0) {
             return;
         }
-
-        // TODO: Handle the case where buffer is actually another CompositeByteBuf.
 
         // Consolidate if the number of components will exceed the allowed maximum by the current
         // operation.
@@ -126,7 +121,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
             ByteBuf consolidated = buffer.unsafe().newBuffer(capacity);
             for (int i = 0; i < numComponents; i ++) {
-                consolidated.writeBytes(components.get(i).buf);
+                ByteBuf b = components.get(i).buf;
+                consolidated.writeBytes(b);
+                b.unsafe().release();
             }
             consolidated.writeBytes(buffer, buffer.readerIndex(), readableBytes);
 
@@ -152,6 +149,129 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             components.add(cIndex, c);
             updateComponentOffsets(cIndex);
         }
+    }
+
+    @Override
+    public void addComponents(int cIndex, ByteBuf... buffers) {
+        checkComponentIndex(cIndex);
+
+        if (buffers == null) {
+            throw new NullPointerException("buffers");
+        }
+
+        ByteBuf lastBuf = null;
+        int cnt = 0;
+        int readableBytes = 0;
+        for (ByteBuf b: buffers) {
+            if (b == null) {
+                break;
+            }
+            lastBuf = b;
+            cnt ++;
+            readableBytes += b.readableBytes();
+        }
+
+        if (readableBytes == 0) {
+            return;
+        }
+
+        // Consolidate if the number of components will exceed the maximum by this operation.
+        final int numComponents = components.size();
+        if (numComponents + cnt > maxNumComponents) {
+            final ByteBuf consolidated;
+            if (numComponents != 0) {
+                final int capacity = components.get(numComponents - 1).endOffset + readableBytes;
+                consolidated = lastBuf.unsafe().newBuffer(capacity);
+                for (int i = 0; i < cIndex; i ++) {
+                    ByteBuf b = components.get(i).buf;
+                    consolidated.writeBytes(b);
+                    b.unsafe().release();
+                }
+
+                for (ByteBuf b: buffers) {
+                    if (b == null) {
+                        break;
+                    }
+                    consolidated.writeBytes(b, b.readerIndex(), b.readableBytes());
+                }
+
+                for (int i = cIndex; i < numComponents; i ++) {
+                    ByteBuf b = components.get(i).buf;
+                    consolidated.writeBytes(b);
+                    b.unsafe().release();
+                }
+            } else {
+                consolidated = lastBuf.unsafe().newBuffer(readableBytes);
+                for (ByteBuf b: buffers) {
+                    if (b == null) {
+                        break;
+                    }
+                    consolidated.writeBytes(b, b.readerIndex(), b.readableBytes());
+                }
+            }
+
+            Component c = new Component(consolidated);
+            c.endOffset = c.length;
+            components.clear();
+            components.add(c);
+            updateComponentOffsets(0);
+            return;
+        }
+
+        // No need for consolidation
+        for (ByteBuf b: buffers) {
+            if (b == null) {
+                break;
+            }
+
+            if (b.readable()) {
+                addComponent(cIndex ++, b);
+            }
+        }
+    }
+
+    @Override
+    public void addComponents(int cIndex, Iterable<ByteBuf> buffers) {
+        if (buffers == null) {
+            throw new NullPointerException("buffers");
+        }
+
+        if (buffers instanceof DefaultCompositeByteBuf) {
+            List<Component> list = ((DefaultCompositeByteBuf) buffers).components;
+            ByteBuf[] array = new ByteBuf[list.size()];
+            for (int i = 0; i < array.length; i ++) {
+                array[i] = list.get(i).buf;
+            }
+            addComponents(cIndex, array);
+            return;
+        }
+
+        if (buffers instanceof List) {
+            List<ByteBuf> list = (List<ByteBuf>) buffers;
+            ByteBuf[] array = new ByteBuf[list.size()];
+            for (int i = 0; i < array.length; i ++) {
+                array[i] = list.get(i);
+            }
+            addComponents(cIndex, array);
+            return;
+        }
+
+        if (buffers instanceof Collection) {
+            Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
+            ByteBuf[] array = new ByteBuf[col.size()];
+            int i = 0;
+            for (ByteBuf b: col) {
+                array[i ++] = b;
+            }
+            addComponents(cIndex, array);
+            return;
+        }
+
+        List<ByteBuf> list = new ArrayList<ByteBuf>();
+        for (ByteBuf b: buffers) {
+            list.add(b);
+        }
+        addComponents(cIndex, list.toArray(new ByteBuf[list.size()]));
     }
 
     private void checkComponentIndex(int cIndex) {
@@ -338,6 +458,12 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 c.buf.unsafe().release();
                 i.set(newC);
                 break;
+            }
+
+            if (readerIndex() > newCapacity) {
+                setIndex(newCapacity, newCapacity);
+            } else if (writerIndex() > newCapacity) {
+                writerIndex(newCapacity);
             }
         }
     }
@@ -868,7 +994,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         if (components.size() == 1) {
-            return components.get(0).buf.nioBuffer();
+            return components.get(0).buf.nioBuffer(index, length);
         }
         throw new UnsupportedOperationException();
     }

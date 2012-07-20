@@ -21,6 +21,12 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     void addComponent(ByteBuf buffer);
     void addComponent(int cIndex, ByteBuf buffer);
+
+    void addComponents(ByteBuf... buffers);
+    void addComponents(Iterable<ByteBuf> buffers);
+    void addComponents(int cIndex, ByteBuf... buffers);
+    void addComponents(int cIndex, Iterable<ByteBuf> buffers);
+
     void removeComponent(int cIndex);
     void removeComponents(int cIndex, int numComponents);
 
