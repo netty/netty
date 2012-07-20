@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import static io.netty.handler.codec.http.HttpHeaders.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.DefaultCompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -138,7 +137,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(new DefaultCompositeByteBuf(maxCumulationBufferComponents));
+                m.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
                 this.currentMessage = m;
                 return null;
             } else {

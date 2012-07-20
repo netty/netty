@@ -301,9 +301,23 @@ public class HeapByteBuf extends AbstractByteBuf {
         }
 
         @Override
-        public void free() {
-            array = null;
-            nioBuf = null;
+        public void acquire() {
+            if (refCnt <= 0) {
+                throw new IllegalStateException();
+            }
+            refCnt ++;
+        }
+
+        @Override
+        public void release() {
+            if (refCnt <= 0) {
+                throw new IllegalStateException();
+            }
+            refCnt --;
+            if (refCnt == 0) {
+                array = null;
+                nioBuf = null;
+            }
         }
     }
 }

@@ -1797,7 +1797,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
         /**
          * Returns the internal NIO buffer that is reused for I/O.
          *
-         * @throws IllegalStateException if the buffer has no internal NIO buffer
+         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer
          */
         ByteBuffer nioBuffer();
 
@@ -1809,9 +1809,15 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
         ByteBuf newBuffer(int initialCapacity);
 
         /**
-         * Deallocates the internal memory block of the buffer explicitly.  The result of accessing
-         * a freed buffer is unspecified and can even cause JVM crash.
+         * Increases the reference count of the buffer.
          */
-        void free();
+        void acquire();
+
+        /**
+         * Decreases the reference count of the buffer.  If decreased to 0, the internal memory
+         * block of the buffer will be deallocated.  The result of accessing a freed buffer is
+         * unspecified and can even cause JVM crash.
+         */
+        void release();
     }
 }

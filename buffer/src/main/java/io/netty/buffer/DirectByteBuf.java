@@ -412,19 +412,29 @@ public class DirectByteBuf extends AbstractByteBuf {
         }
 
         @Override
-        public void free() {
-            if (buffer == null) {
-                return;
+        public void acquire() {
+            if (refCnt <= 0) {
+                throw new IllegalStateException();
             }
+            refCnt ++;
+        }
 
-            if (doNotFree) {
+        @Override
+        public void release() {
+            if (refCnt <= 0) {
+                throw new IllegalStateException();
+            }
+            refCnt --;
+            if (refCnt == 0) {
+                if (doNotFree) {
+                    doNotFree = false;
+                } else {
+                    freeDirect(buffer);
+                }
+
                 buffer = null;
-                doNotFree = false;
-                return;
+                tmpBuf = null;
             }
-
-            freeDirect(buffer);
-            buffer = null;
         }
     }
 }

@@ -17,7 +17,7 @@ package io.netty.buffer;
 
 import java.util.List;
 
-public interface CompositeByteBuf extends ByteBuf {
+public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     void addComponent(ByteBuf buffer);
     void addComponent(int cIndex, ByteBuf buffer);

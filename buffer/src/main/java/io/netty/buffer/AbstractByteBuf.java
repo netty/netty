@@ -39,6 +39,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     private int markedReaderIndex;
     private int markedWriterIndex;
 
+    int refCnt = 1;
+
     protected AbstractByteBuf(ByteOrder endianness, int maxCapacity) {
         if (endianness == null) {
             throw new NullPointerException("endianness");

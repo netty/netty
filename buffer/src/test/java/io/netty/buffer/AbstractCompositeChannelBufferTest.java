@@ -52,7 +52,9 @@ public abstract class AbstractCompositeChannelBufferTest extends
             buffers.add(Unpooled.EMPTY_BUFFER);
         }
 
-        buffer = Unpooled.wrappedBuffer(buffers.toArray(new ByteBuf[buffers.size()])).order(order);
+        buffer = Unpooled.wrappedBuffer(
+                Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
+
         assertEquals(length, buffer.capacity());
         assertEquals(length, buffer.readableBytes());
         assertFalse(buffer.writable());

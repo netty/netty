@@ -31,6 +31,7 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
+    private final Unsafe unsafe = new SlicedUnsafe();
     private final ByteBuf buffer;
     private final int adjustment;
     private final int length;
@@ -60,6 +61,8 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
         this.length = length;
 
         writerIndex(length);
+
+        buffer.unsafe().acquire();
     }
 
     @Override
@@ -277,6 +280,29 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
     @Override
     public Unsafe unsafe() {
-        return buffer.unsafe();
+        return unsafe;
+    }
+
+    private final class SlicedUnsafe implements Unsafe {
+
+        @Override
+        public ByteBuffer nioBuffer() {
+            return buffer.nioBuffer(adjustment, length);
+        }
+
+        @Override
+        public ByteBuf newBuffer(int initialCapacity) {
+            return buffer.unsafe().newBuffer(initialCapacity);
+        }
+
+        @Override
+        public void acquire() {
+            buffer.unsafe().acquire();
+        }
+
+        @Override
+        public void release() {
+            buffer.unsafe().release();
+        }
     }
 }

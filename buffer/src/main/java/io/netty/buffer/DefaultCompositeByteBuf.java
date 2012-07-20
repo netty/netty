@@ -26,6 +26,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -44,6 +45,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     private Component lastAccessed;
     private int lastAccessedId;
 
+    public DefaultCompositeByteBuf(int maxNumComponents) {
+        super(ByteOrder.BIG_ENDIAN, Integer.MAX_VALUE);
+        this.maxNumComponents = maxNumComponents;
+    }
+
     public DefaultCompositeByteBuf(int maxNumComponents, ByteBuf... buffers) {
         super(ByteOrder.BIG_ENDIAN, Integer.MAX_VALUE);
 
@@ -58,7 +64,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
         this.maxNumComponents = maxNumComponents;
 
-        // TODO: Handle the case where the numer of specified buffers already exceeds maxNumComponents.
+        // TODO: Handle the case where the number of specified buffers already exceeds maxNumComponents.
         for (ByteBuf b: buffers) {
             if (b == null) {
                 break;
@@ -124,7 +130,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             }
             consolidated.writeBytes(buffer, buffer.readerIndex(), readableBytes);
 
-            Component c = new Component(consolidated.slice());
+            Component c = new Component(consolidated);
             c.endOffset = c.length;
             components.clear();
             components.add(c);
@@ -199,6 +205,15 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             components.remove(cIndex);
         }
         updateComponentOffsets(cIndex);
+    }
+
+    @Override
+    public Iterator<ByteBuf> iterator() {
+        List<ByteBuf> list = new ArrayList<ByteBuf>(components.size());
+        for (Component c: components) {
+            list.add(c.buf);
+        }
+        return list.iterator();
     }
 
     @Override
@@ -305,7 +320,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 padding = last.buf.unsafe().newBuffer(paddingLength);
             }
             padding.setIndex(0, paddingLength);
-            padding = padding.slice();
             addComponent(padding);
         } else if (newCapacity < oldCapacity) {
             int bytesToTrim = oldCapacity - newCapacity;
@@ -321,6 +335,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim));
                 newC.offset = c.offset;
                 newC.endOffset = newC.offset + newC.length;
+                c.buf.unsafe().release();
+                i.set(newC);
                 break;
             }
         }
@@ -916,14 +932,16 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         final ByteBuf consolidated = last.buf.unsafe().newBuffer(capacity);
 
         for (int i = cIndex; i < endCIndex; i ++) {
-            consolidated.writeBytes(components.get(i).buf);
+            ByteBuf b = components.get(i).buf;
+            consolidated.writeBytes(b);
+            b.unsafe().release();
         }
 
         for (int i = numComponents - 1; i > 0; i --) {
             components.remove(cIndex);
         }
 
-        components.set(cIndex, new Component(consolidated.slice()));
+        components.set(cIndex, new Component(consolidated));
         updateComponentOffsets(cIndex);
     }
 
@@ -937,6 +955,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
+            for (Component c: components) {
+                c.buf.unsafe().release();
+            }
             components.clear();
             setIndex(0, 0);
             adjustMarkers(readerIndex);
@@ -946,7 +967,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.remove(0);
+            components.remove(0).buf.unsafe().release();
         }
 
         // Update indexes and markers.
@@ -966,6 +987,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
+            for (Component c: components) {
+                c.buf.unsafe().release();
+            }
             components.clear();
             setIndex(0, 0);
             adjustMarkers(readerIndex);
@@ -975,14 +999,15 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.remove(0);
+            components.remove(0).buf.unsafe().release();
         }
 
         // Replace the first readable component with a new slice.
         Component c = components.get(0);
         int adjustment = readerIndex - c.offset;
-        c = new Component(c.buf.slice(adjustment, c.length - adjustment));
-        components.set(0, c);
+        Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
+        c.buf.unsafe().release();
+        components.set(0, newC);
 
         // Update indexes and markers.
         updateComponentOffsets(0);
@@ -1017,7 +1042,10 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     private final class CompositeUnsafe implements Unsafe {
         @Override
         public ByteBuffer nioBuffer() {
-            return null;
+            if (components.size() == 1) {
+                return components.get(0).buf.unsafe().nioBuffer();
+            }
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -1028,8 +1056,27 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         @Override
-        public void free() {
-            // NOOP
+        public void acquire() {
+            if (refCnt <= 0) {
+                throw new IllegalStateException();
+            }
+            refCnt ++;
+        }
+
+        @Override
+        public void release() {
+            if (refCnt <= 0) {
+                throw new IllegalStateException();
+            }
+            refCnt --;
+            if (refCnt == 0) {
+                for (Component c: components) {
+                    c.buf.unsafe().release();
+                }
+
+                components.clear();
+                lastAccessed = null;
+            }
         }
     }
 }

@@ -354,6 +354,20 @@ public final class Unpooled {
     }
 
     /**
+     * Returns a new big-endian composite buffer with no components.
+     */
+    public static CompositeByteBuf compositeBuffer() {
+        return compositeBuffer(16);
+    }
+
+    /**
+     * Returns a new big-endian composite buffer with no components.
+     */
+    public static CompositeByteBuf compositeBuffer(int maxNumComponents) {
+        return new DefaultCompositeByteBuf(maxNumComponents);
+    }
+
+    /**
      * Creates a new big-endian buffer whose content is a copy of the
      * specified {@code array}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0} and {@code array.length} respectively.
