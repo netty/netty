@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
@@ -62,6 +61,16 @@ class ReplayingDecoderBuffer implements ByteBuf {
         } else {
             return Integer.MAX_VALUE;
         }
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public int maxCapacity() {
+        return capacity();
     }
 
     @Override
@@ -347,11 +356,6 @@ class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public void markWriterIndex() {
         throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return buffer.factory();
     }
 
     @Override
@@ -811,5 +815,10 @@ class ReplayingDecoderBuffer implements ByteBuf {
         if (buffer.readableBytes() < readableBytes) {
             throw REPLAY;
         }
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        throw new UnreplayableOperationException();
     }
 }

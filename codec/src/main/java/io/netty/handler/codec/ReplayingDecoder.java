@@ -281,7 +281,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
-    private final ByteBuf cumulation = Unpooled.dynamicBuffer();
+    private final ByteBuf cumulation = Unpooled.buffer();
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(cumulation);
     private S state;
     private int checkpoint = -1;

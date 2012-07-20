@@ -309,7 +309,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             throw new IllegalArgumentException(
                     "header block contains too many headers");
         }
-        ByteBuf headerBlock = Unpooled.dynamicBuffer(256);
+        ByteBuf headerBlock = Unpooled.buffer();
         writeLengthField(version, headerBlock, numHeaders);
         for (String name: names) {
             byte[] nameBytes = name.getBytes("UTF-8");
@@ -340,7 +340,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         if (uncompressed.readableBytes() == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        ByteBuf compressed = Unpooled.dynamicBuffer();
+        ByteBuf compressed = Unpooled.buffer();
         synchronized (headerBlockCompressor) {
             if (!finished) {
                 headerBlockCompressor.setInput(uncompressed);

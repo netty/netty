@@ -16,18 +16,17 @@
 package io.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.CharsetUtil;
 
 import java.util.List;
 
 import org.easymock.EasyMock;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
-import io.netty.handler.codec.TooLongFrameException;
-
-import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 public class HttpChunkAggregatorTest {
@@ -46,13 +45,13 @@ public class HttpChunkAggregatorTest {
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
-        
+
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
         HttpMessage aggratedMessage = (HttpMessage) embedder.readInbound();
         assertNotNull(aggratedMessage);
-        
+
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
@@ -82,17 +81,17 @@ public class HttpChunkAggregatorTest {
         HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
         trailer.setHeader("X-Trailer", true);
-        
+
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
-        
+
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
         HttpMessage aggratedMessage = (HttpMessage) embedder.readInbound();
         assertNotNull(aggratedMessage);
-        
+
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.getHeader("X-Trailer"), Boolean.TRUE.toString());
@@ -122,13 +121,13 @@ public class HttpChunkAggregatorTest {
     public void testInvalidConstructorUsage() {
         new HttpChunkAggregator(0);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidMaxCumulationBufferComponents() {
         HttpChunkAggregator aggr= new HttpChunkAggregator(Integer.MAX_VALUE);
         aggr.setMaxCumulationBufferComponents(1);
     }
-    
+
     @Test(expected = IllegalStateException.class)
     public void testSetMaxCumulationBufferComponentsAfterInit() throws Exception {
         HttpChunkAggregator aggr = new HttpChunkAggregator(Integer.MAX_VALUE);

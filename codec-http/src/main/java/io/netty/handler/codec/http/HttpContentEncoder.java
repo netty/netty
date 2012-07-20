@@ -117,7 +117,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             if (!m.isChunked()) {
                 ByteBuf content = m.getContent();
                 // Encode the content.
-                ByteBuf newContent = Unpooled.dynamicBuffer();
+                ByteBuf newContent = Unpooled.buffer();
                 encode(content, newContent);
                 finishEncode(newContent);
 
@@ -136,7 +136,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // Encode the chunk if necessary.
             if (encoder != null) {
                 if (!c.isLast()) {
-                    ByteBuf newContent = Unpooled.dynamicBuffer();
+                    ByteBuf newContent = Unpooled.buffer();
                     encode(content, newContent);
                     if (content.readable()) {
                         c.setContent(newContent);
@@ -144,7 +144,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                         return null;
                     }
                 } else {
-                    ByteBuf lastProduct = Unpooled.dynamicBuffer();
+                    ByteBuf lastProduct = Unpooled.buffer();
                     finishEncode(lastProduct);
 
                     // Generate an additional chunk if the decoder produced

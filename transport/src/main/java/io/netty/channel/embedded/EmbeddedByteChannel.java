@@ -26,7 +26,7 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
 
     public EmbeddedByteChannel(ChannelHandler... handlers) {
-        super(Unpooled.dynamicBuffer(), handlers);
+        super(Unpooled.buffer(), handlers);
     }
 
     @Override

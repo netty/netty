@@ -73,13 +73,18 @@ public class SwappedByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public ByteBufFactory factory() {
-        return buf.factory();
+    public int capacity() {
+        return buf.capacity();
     }
 
     @Override
-    public int capacity() {
-        return buf.capacity();
+    public void capacity(int newCapacity) {
+        buf.capacity(newCapacity);
+    }
+
+    @Override
+    public int maxCapacity() {
+        return buf.maxCapacity();
     }
 
     @Override
@@ -675,6 +680,11 @@ public class SwappedByteBuf implements WrappedByteBuf {
     @Override
     public String toString(int index, int length, Charset charset) {
         return buf.toString(index, length, charset);
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return buf.unsafe();
     }
 
     @Override
