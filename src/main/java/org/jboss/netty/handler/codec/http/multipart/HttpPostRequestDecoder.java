@@ -709,6 +709,8 @@ public class HttpPostRequestDecoder {
             return URLDecoder.decode(s, charset.name());
         } catch (UnsupportedEncodingException e) {
             throw new ErrorDataDecoderException(charset.toString(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ErrorDataDecoderException("Bad string: '" + s + "'", e);
         }
     }
 
