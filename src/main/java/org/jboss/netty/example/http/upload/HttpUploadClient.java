@@ -124,6 +124,7 @@ public class HttpUploadClient {
         DiskAttribute.baseDirectory = null; // system temp directory
 
         // Simple Get form: no factory used (not usable)
+        System.err.println("==========================================\nStarting Get\n==========================================");
         List<Entry<String, String>> headers =
             formget(bootstrap, host, port, get, uriSimple);
         if (headers == null) {
@@ -131,6 +132,7 @@ public class HttpUploadClient {
             return;
         }
         // Simple Post form: factory used for big attributes
+        System.err.println("==========================================\nStarting Simple Post\n==========================================");
         List<InterfaceHttpData> bodylist =
             formpost(bootstrap, host, port, uriSimple, file, factory, headers);
         if (bodylist == null) {
@@ -138,7 +140,10 @@ public class HttpUploadClient {
             return;
         }
         // Multipart Post form: factory used
-        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist);
+        System.err.println("==========================================\nStarting PostUpload with no force chunk\n==========================================");
+        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist, false);
+        System.err.println("==========================================\nStarting PostUpload with force chunk\n==========================================");
+        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist, true);
 
         // Shut down executor threads to exit.
         bootstrap.releaseExternalResources();
@@ -311,7 +316,7 @@ public class HttpUploadClient {
      */
     private static void formpostmultipart(ClientBootstrap bootstrap, String host, int port,
             URI uriFile, HttpDataFactory factory,
-            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) {
+            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist, boolean forceChunk) {
         // XXX /formpostmultipart
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -331,7 +336,7 @@ public class HttpUploadClient {
         HttpPostRequestEncoder bodyRequestEncoder = null;
         try {
             bodyRequestEncoder = new HttpPostRequestEncoder(factory,
-                    request, true); // true => multipart
+                    request, true, forceChunk); // true => multipart
         } catch (NullPointerException e) {
             // should not be since no null args
             e.printStackTrace();
@@ -365,6 +370,7 @@ public class HttpUploadClient {
         }
 
         // send request
+        System.err.println("Request is chunked? " + request.isChunked() + ":" + bodyRequestEncoder.isChunked());
         channel.write(request);
 
         // test if request was chunked and if so, finish the write
@@ -394,7 +400,8 @@ public class HttpUploadClient {
     }
 
     // use to simulate a big TEXTAREA field in a form
-    private static final String textArea =
+    private static final String textArea = "short text";
+    private static final String textAreaLong =
         "lkjlkjlKJLKJLKJLKJLJlkj lklkj\r\n\r\nLKJJJJJJJJKKKKKKKKKKKKKKK ����&\r\n\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +
