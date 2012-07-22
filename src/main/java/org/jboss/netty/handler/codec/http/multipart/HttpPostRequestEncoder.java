@@ -60,6 +60,11 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     private boolean isChunked;
 
     /**
+     * Force chunked for instance to cover when the size could be bigger due to SSL/TLS
+     */
+    private boolean forceChunked;
+
+    /**
      * InterfaceHttpData for Body (without encoding)
      */
     private final List<InterfaceHttpData> bodyListDatas;
@@ -98,7 +103,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     public HttpPostRequestEncoder(HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
-                request, multipart, HttpConstants.DEFAULT_CHARSET);
+                request, multipart, HttpConstants.DEFAULT_CHARSET, false);
     }
 
     /**
@@ -111,8 +116,37 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
-        this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET);
+        this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET, false);
     }
+
+    /**
+    *
+    * @param request the request to encode
+    * @param multipart True if the FORM is a ENCTYPE="multipart/form-data"
+    * @param chunkeForce to allow chunk mode even if not detected to be so (SSL issue)
+    * @throws NullPointerException for request
+    * @throws ErrorDataEncoderException if the request is not a POST
+    */
+    public HttpPostRequestEncoder(HttpRequest request, boolean multipart, boolean chunkeForce)
+            throws ErrorDataEncoderException {
+        this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
+                request, multipart, HttpConstants.DEFAULT_CHARSET, chunkeForce);
+    }
+
+    /**
+     *
+     * @param factory the factory used to create InterfaceHttpData
+     * @param request the request to encode
+     * @param multipart True if the FORM is a ENCTYPE="multipart/form-data"
+     * @param chunkeForce to allow chunk mode even if not detected to be so (SSL issue)
+     * @throws NullPointerException for request and factory
+     * @throws ErrorDataEncoderException if the request is not a POST
+     */
+    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart, boolean chunkeForce)
+            throws ErrorDataEncoderException {
+        this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET, chunkeForce);
+    }
+
 
     /**
      *
@@ -125,6 +159,20 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request,
             boolean multipart, Charset charset) throws ErrorDataEncoderException {
+        this(factory, request, multipart, charset, false);
+    }
+    /**
+     *
+     * @param factory the factory used to create InterfaceHttpData
+     * @param request the request to encode
+     * @param multipart True if the FORM is a ENCTYPE="multipart/form-data"
+     * @param charset the charset to use as default
+     * @param chunkeForce to allow chunk mode even if not detected to be so (SSL issue)
+     * @throws NullPointerException for request or charset or factory
+     * @throws ErrorDataEncoderException if the request is not a POST
+     */
+    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request,
+            boolean multipart, Charset charset, boolean chunkeForce) throws ErrorDataEncoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -146,6 +194,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         isLastChunk = false;
         isLastChunkSent = false;
         isMultipart = multipart;
+        this.forceChunked = forceChunked;
         multipartHttpDatas = new ArrayList<InterfaceHttpData>();
         if (isMultipart) {
             initDataMultipart();
@@ -628,7 +677,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         }
         request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String
                 .valueOf(realSize));
-        if (realSize > HttpPostBodyUtil.chunkSize) {
+        if (realSize > HttpPostBodyUtil.chunkSize || forceChunked) {
             isChunked = true;
             if (transferEncoding != null) {
                 request.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
