@@ -68,7 +68,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         if (allocateFullBuffer) {
-            return Unpooled.dynamicBuffer(frameLength);
+            return Unpooled.buffer(frameLength);
         } else {
             return super.newInboundBuffer(ctx);
         }

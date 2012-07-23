@@ -32,18 +32,25 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     private final SwappedByteBuf swappedBuf;
     private final ByteOrder order;
+    private final int maxCapacity;
 
     private int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
 
-    protected AbstractByteBuf(ByteOrder endianness) {
+    int refCnt = 1;
+
+    protected AbstractByteBuf(ByteOrder endianness, int maxCapacity) {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
+        if (maxCapacity < 0) {
+            throw new IllegalArgumentException("maxCapacity: " + maxCapacity + " (expected: >= 0)");
+        }
         order = endianness;
         swappedBuf = new SwappedByteBuf(this);
+        this.maxCapacity = maxCapacity;
     }
 
     @Override
@@ -54,6 +61,11 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ChannelBufType type() {
         return ChannelBufType.BYTE;
+    }
+
+    @Override
+    public int maxCapacity() {
+        return maxCapacity;
     }
 
     @Override
@@ -149,22 +161,69 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (readerIndex != writerIndex) {
             setBytes(0, this, readerIndex, writerIndex - readerIndex);
             writerIndex -= readerIndex;
-            markedReaderIndex = Math.max(markedReaderIndex - readerIndex, 0);
-            markedWriterIndex = Math.max(markedWriterIndex - readerIndex, 0);
+            adjustMarkers(readerIndex);
             readerIndex = 0;
         } else {
-            markedReaderIndex = Math.max(markedReaderIndex - readerIndex, 0);
-            markedWriterIndex = Math.max(markedWriterIndex - readerIndex, 0);
+            adjustMarkers(readerIndex);
             writerIndex = readerIndex = 0;
         }
     }
 
+    protected void adjustMarkers(int decrement) {
+        markedReaderIndex = Math.max(markedReaderIndex - decrement, 0);
+        markedWriterIndex = Math.max(markedWriterIndex - decrement, 0);
+    }
+
     @Override
-    public void ensureWritableBytes(int writableBytes) {
-        if (writableBytes > writableBytes()) {
-            throw new IndexOutOfBoundsException("Writable bytes exceeded: Got "
-                    + writableBytes + ", maximum is " + writableBytes());
+    public void ensureWritableBytes(int minWritableBytes) {
+        if (minWritableBytes <= writableBytes()) {
+            return;
         }
+
+        if (minWritableBytes > maxCapacity - writerIndex) {
+            throw new IllegalArgumentException(String.format(
+                    "minWritableBytes(%d) + writerIndex(%d) > maxCapacity(%d)",
+                    minWritableBytes, writerIndex, maxCapacity));
+        }
+
+        int minNewCapacity = writerIndex + minWritableBytes;
+
+        if (minNewCapacity > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "minWritableBytes: %d (exceeds maxCapacity(%d))", minWritableBytes, maxCapacity));
+        }
+
+        // Normalize the current capacity to the power of 2.
+        int newCapacity = calculateNewCapacity(minNewCapacity);
+
+        // Adjust to the new capacity.
+        capacity(newCapacity);
+    }
+
+    private int calculateNewCapacity(int minNewCapacity) {
+        final int threshold = 1048576 * 4; // 4 MiB page
+
+        if (minNewCapacity == threshold) {
+            return minNewCapacity;
+        }
+
+        // If over threshold, do not double but just increase by threshold.
+        if (minNewCapacity > threshold) {
+            int newCapacity = minNewCapacity / threshold * threshold;
+            if (newCapacity > maxCapacity - threshold) {
+                newCapacity = maxCapacity;
+            } else {
+                newCapacity += threshold;
+            }
+            return newCapacity;
+        }
+
+        // Not over threshold. Double up to 4 MiB, starting from 64.
+        int newCapacity = 64;
+        while (newCapacity < minNewCapacity) {
+            newCapacity <<= 1;
+        }
+        return newCapacity;
     }
 
     @Override
@@ -411,7 +470,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        ByteBuf buf = factory().getBuffer(order(), length);
+        ByteBuf buf = unsafe().newBuffer(length);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;
@@ -499,29 +558,34 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public void writeByte(int value) {
+        ensureWritableBytes(1);
         setByte(writerIndex ++, value);
     }
 
     @Override
     public void writeShort(int value) {
+        ensureWritableBytes(2);
         setShort(writerIndex, value);
         writerIndex += 2;
     }
 
     @Override
     public void writeMedium(int value) {
+        ensureWritableBytes(3);
         setMedium(writerIndex, value);
         writerIndex += 3;
     }
 
     @Override
     public void writeInt(int value) {
+        ensureWritableBytes(4);
         setInt(writerIndex, value);
         writerIndex += 4;
     }
 
     @Override
     public void writeLong(long value) {
+        ensureWritableBytes(8);
         setLong(writerIndex, value);
         writerIndex += 8;
     }
@@ -543,6 +607,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public void writeBytes(byte[] src, int srcIndex, int length) {
+        ensureWritableBytes(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
     }
@@ -569,6 +634,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public void writeBytes(ByteBuf src, int srcIndex, int length) {
+        ensureWritableBytes(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
     }
@@ -576,6 +642,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public void writeBytes(ByteBuffer src) {
         int length = src.remaining();
+        ensureWritableBytes(length);
         setBytes(writerIndex, src);
         writerIndex += length;
     }
@@ -583,6 +650,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public int writeBytes(InputStream in, int length)
             throws IOException {
+        ensureWritableBytes(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
             writerIndex += writtenBytes;
@@ -593,6 +661,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public int writeBytes(ScatteringByteChannel in, int length)
             throws IOException {
+        ensureWritableBytes(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
             writerIndex += writtenBytes;
@@ -634,8 +703,22 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuf duplicate() {
+        return new DuplicatedByteBuf(this);
+    }
+
+    @Override
     public ByteBuf slice() {
         return slice(readerIndex, readableBytes());
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        if (length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        return new SlicedByteBuf(this, index, length);
     }
 
     @Override

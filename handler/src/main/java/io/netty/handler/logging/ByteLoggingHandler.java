@@ -108,12 +108,12 @@ public class ByteLoggingHandler
     }
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.dynamicBuffer();
+        return Unpooled.buffer();
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.dynamicBuffer();
+        return Unpooled.buffer();
     }
 
     @Override

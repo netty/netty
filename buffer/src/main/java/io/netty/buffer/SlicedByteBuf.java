@@ -31,12 +31,13 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
+    private final Unsafe unsafe = new SlicedUnsafe();
     private final ByteBuf buffer;
     private final int adjustment;
     private final int length;
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
-        super(buffer.order());
+        super(buffer.order(), length);
         if (index < 0 || index > buffer.capacity()) {
             throw new IndexOutOfBoundsException("Invalid index of " + index
                     + ", maximum is " + buffer.capacity());
@@ -47,20 +48,26 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
                     + (index + length) + ", maximum is " + buffer.capacity());
         }
 
-        this.buffer = buffer;
-        adjustment = index;
+        if (buffer instanceof SlicedByteBuf) {
+            this.buffer = ((SlicedByteBuf) buffer).buffer;
+            adjustment = ((SlicedByteBuf) buffer).adjustment + index;
+        } else if (buffer instanceof DuplicatedByteBuf) {
+            this.buffer = ((DuplicatedByteBuf) buffer).buffer;
+            adjustment = index;
+        } else {
+            this.buffer = buffer;
+            adjustment = index;
+        }
         this.length = length;
+
         writerIndex(length);
+
+        buffer.unsafe().acquire();
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return buffer.factory();
     }
 
     @Override
@@ -71,6 +78,11 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     @Override
     public int capacity() {
         return length;
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        throw new UnsupportedOperationException("sliced buffer");
     }
 
     @Override
@@ -263,6 +275,34 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
         if (startIndex + length > capacity()) {
             throw new IndexOutOfBoundsException("Index too big - Bytes needed: "
                     + (startIndex + length) + ", maximum is " + capacity());
+        }
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
+    }
+
+    private final class SlicedUnsafe implements Unsafe {
+
+        @Override
+        public ByteBuffer nioBuffer() {
+            return buffer.nioBuffer(adjustment, length);
+        }
+
+        @Override
+        public ByteBuf newBuffer(int initialCapacity) {
+            return buffer.unsafe().newBuffer(initialCapacity);
+        }
+
+        @Override
+        public void acquire() {
+            buffer.unsafe().acquire();
+        }
+
+        @Override
+        public void release() {
+            buffer.unsafe().release();
         }
     }
 }

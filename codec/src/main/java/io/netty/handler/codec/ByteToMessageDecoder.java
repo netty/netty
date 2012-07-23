@@ -35,7 +35,7 @@ public abstract class ByteToMessageDecoder<O>
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.dynamicBuffer();
+        return Unpooled.buffer();
     }
 
     @Override

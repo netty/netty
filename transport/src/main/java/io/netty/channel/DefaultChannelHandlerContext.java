@@ -770,7 +770,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class ByteBridge {
-        final ByteBuf byteBuf = Unpooled.dynamicBuffer();
+        final ByteBuf byteBuf = Unpooled.buffer();
         final BlockingQueue<ByteBuf> exchangeBuf = QueueFactory.createQueue();
 
         void fill() {

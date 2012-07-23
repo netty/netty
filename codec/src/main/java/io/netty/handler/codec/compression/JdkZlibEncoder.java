@@ -235,7 +235,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return future;
         }
 
-        ByteBuf footer = Unpooled.dynamicBuffer();
+        ByteBuf footer = Unpooled.buffer();
         synchronized (deflater) {
             deflater.finish();
             while (!deflater.finished()) {

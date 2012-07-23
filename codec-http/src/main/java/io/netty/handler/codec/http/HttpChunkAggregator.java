@@ -137,7 +137,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(Unpooled.dynamicBuffer());
+                m.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
                 this.currentMessage = m;
                 return null;
             } else {
@@ -198,26 +198,13 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
         }
     }
 
-    protected void appendToCumulation(ByteBuf input) {
-        ByteBuf cumulation = this.currentMessage.getContent();
-        if (cumulation instanceof CompositeByteBuf) {
-            // Make sure the resulting cumulation buffer has no more than 4 components.
-            CompositeByteBuf composite = (CompositeByteBuf) cumulation;
-            if (composite.numComponents() >= maxCumulationBufferComponents) {
-                currentMessage.setContent(Unpooled.wrappedBuffer(composite.copy(), input));
-            } else {
-                List<ByteBuf> decomposed = composite.decompose(0, composite.readableBytes());
-                ByteBuf[] buffers = decomposed.toArray(new ByteBuf[decomposed.size() + 1]);
-                buffers[buffers.length - 1] = input;
-
-                currentMessage.setContent(Unpooled.wrappedBuffer(buffers));
-            }
-        } else {
-            currentMessage.setContent(Unpooled.wrappedBuffer(cumulation, input));
-        }
-
+    private void appendToCumulation(ByteBuf input) {
+        CompositeByteBuf cumulation = (CompositeByteBuf) currentMessage.getContent();
+        cumulation.addComponent(input);
+        cumulation.writerIndex(cumulation.capacity());
     }
 
+    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }

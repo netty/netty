@@ -20,8 +20,6 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufFactory;
-import io.netty.buffer.HeapByteBufFactory;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
@@ -78,39 +76,17 @@ public final class Base64 {
         return encode(src, breakLines(dialect), dialect);
     }
 
-    public static ByteBuf encode(
-            ByteBuf src, ByteBufFactory bufferFactory) {
-        return encode(src, Base64Dialect.STANDARD, bufferFactory);
-    }
-
-    public static ByteBuf encode(
-            ByteBuf src, Base64Dialect dialect, ByteBufFactory bufferFactory) {
-        return encode(src, breakLines(dialect), dialect, bufferFactory);
-    }
-
     public static ByteBuf encode(ByteBuf src, boolean breakLines) {
         return encode(src, breakLines, Base64Dialect.STANDARD);
     }
 
-    public static ByteBuf encode(
-            ByteBuf src, boolean breakLines, Base64Dialect dialect) {
-        return encode(src, breakLines, dialect, HeapByteBufFactory.getInstance());
-    }
-
-    public static ByteBuf encode(
-            ByteBuf src, boolean breakLines, ByteBufFactory bufferFactory) {
-        return encode(src, breakLines, Base64Dialect.STANDARD, bufferFactory);
-    }
-
-    public static ByteBuf encode(
-            ByteBuf src, boolean breakLines, Base64Dialect dialect, ByteBufFactory bufferFactory) {
+    public static ByteBuf encode(ByteBuf src, boolean breakLines, Base64Dialect dialect) {
 
         if (src == null) {
             throw new NullPointerException("src");
         }
 
-        ByteBuf dest = encode(
-                src, src.readerIndex(), src.readableBytes(), breakLines, dialect, bufferFactory);
+        ByteBuf dest = encode(src, src.readerIndex(), src.readableBytes(), breakLines, dialect);
         src.readerIndex(src.writerIndex());
         return dest;
     }
@@ -123,35 +99,13 @@ public final class Base64 {
         return encode(src, off, len, breakLines(dialect), dialect);
     }
 
-    public static ByteBuf encode(ByteBuf src, int off, int len, ByteBufFactory bufferFactory) {
-        return encode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
-    }
-
-    public static ByteBuf encode(
-            ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufFactory bufferFactory) {
-        return encode(src, off, len, breakLines(dialect), dialect, bufferFactory);
-    }
-
     public static ByteBuf encode(
             ByteBuf src, int off, int len, boolean breakLines) {
         return encode(src, off, len, breakLines, Base64Dialect.STANDARD);
     }
 
     public static ByteBuf encode(
-            ByteBuf src, int off, int len,
-            boolean breakLines, Base64Dialect dialect) {
-        return encode(src, off, len, breakLines, dialect, HeapByteBufFactory.getInstance());
-    }
-
-    public static ByteBuf encode(
-            ByteBuf src, int off, int len,
-            boolean breakLines, ByteBufFactory bufferFactory) {
-        return encode(src, off, len, breakLines, Base64Dialect.STANDARD, bufferFactory);
-    }
-
-    public static ByteBuf encode(
-            ByteBuf src, int off, int len,
-            boolean breakLines, Base64Dialect dialect, ByteBufFactory bufferFactory) {
+            ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect) {
 
         if (src == null) {
             throw new NullPointerException("src");
@@ -159,16 +113,12 @@ public final class Base64 {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
 
         int len43 = len * 4 / 3;
-        ByteBuf dest = bufferFactory.getBuffer(
-                src.order(),
+        ByteBuf dest = src.unsafe().newBuffer(
                 len43 +
                 (len % 3 > 0? 4 : 0) + // Account for padding
-                (breakLines? len43 / MAX_LINE_LENGTH : 0)); // New lines
+                (breakLines? len43 / MAX_LINE_LENGTH : 0)).order(src.order()); // New lines
         int d = 0;
         int e = 0;
         int len2 = len - 2;
@@ -241,20 +191,12 @@ public final class Base64 {
     }
 
     public static ByteBuf decode(ByteBuf src, Base64Dialect dialect) {
-        return decode(src, dialect, HeapByteBufFactory.getInstance());
-    }
-
-    public static ByteBuf decode(ByteBuf src, ByteBufFactory bufferFactory) {
-        return decode(src, Base64Dialect.STANDARD, bufferFactory);
-    }
-
-    public static ByteBuf decode(ByteBuf src, Base64Dialect dialect, ByteBufFactory bufferFactory) {
 
         if (src == null) {
             throw new NullPointerException("src");
         }
 
-        ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect, bufferFactory);
+        ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect);
         src.readerIndex(src.writerIndex());
         return dest;
     }
@@ -266,17 +208,6 @@ public final class Base64 {
 
     public static ByteBuf decode(
             ByteBuf src, int off, int len, Base64Dialect dialect) {
-        return decode(src, off, len, dialect, HeapByteBufFactory.getInstance());
-    }
-
-    public static ByteBuf decode(
-            ByteBuf src, int off, int len, ByteBufFactory bufferFactory) {
-        return decode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
-    }
-
-    public static ByteBuf decode(
-            ByteBuf src, int off, int len, Base64Dialect dialect,
-            ByteBufFactory bufferFactory) {
 
         if (src == null) {
             throw new NullPointerException("src");
@@ -284,14 +215,11 @@ public final class Base64 {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
 
         byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        ByteBuf dest = bufferFactory.getBuffer(src.order(), len34); // Upper limit on size of output
+        ByteBuf dest = src.unsafe().newBuffer(len34).order(src.order()); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];
