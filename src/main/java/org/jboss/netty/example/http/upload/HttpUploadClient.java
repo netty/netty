@@ -140,10 +140,8 @@ public class HttpUploadClient {
             return;
         }
         // Multipart Post form: factory used
-        System.err.println("==========================================\nStarting PostUpload with no force chunk\n==========================================");
-        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist, false);
-        System.err.println("==========================================\nStarting PostUpload with force chunk\n==========================================");
-        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist, true);
+        System.err.println("==========================================\nStarting PostUpload Multipart\n==========================================");
+        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist);
 
         // Shut down executor threads to exit.
         bootstrap.releaseExternalResources();
@@ -316,7 +314,7 @@ public class HttpUploadClient {
      */
     private static void formpostmultipart(ClientBootstrap bootstrap, String host, int port,
             URI uriFile, HttpDataFactory factory,
-            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist, boolean forceChunk) {
+            List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) {
         // XXX /formpostmultipart
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -336,7 +334,7 @@ public class HttpUploadClient {
         HttpPostRequestEncoder bodyRequestEncoder = null;
         try {
             bodyRequestEncoder = new HttpPostRequestEncoder(factory,
-                    request, true, forceChunk); // true => multipart
+                    request, true); // true => multipart
         } catch (NullPointerException e) {
             // should not be since no null args
             e.printStackTrace();
@@ -399,8 +397,9 @@ public class HttpUploadClient {
         new HttpUploadClient(baseUri, filePath).run();
     }
 
-    // use to simulate a big TEXTAREA field in a form
+    // use to simulate a small TEXTAREA field in a form
     private static final String textArea = "short text";
+    // use to simulate a big TEXTAREA field in a form
     private static final String textAreaLong =
         "lkjlkjlKJLKJLKJLKJLJlkj lklkj\r\n\r\nLKJJJJJJJJKKKKKKKKKKKKKKK ����&\r\n\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +
