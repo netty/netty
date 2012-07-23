@@ -136,14 +136,15 @@ abstract class AbstractNioWorker implements Worker {
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
 
         Runnable registerTask = createRegisterTask(channel, future);
-        Selector selector = start();
+
+        synchronized (startStopLock) {
+            Selector selector = start();
 
 
-        boolean offered = registerTaskQueue.offer(registerTask);
-        assert offered;
+            boolean offered = registerTaskQueue.offer(registerTask);
+            assert offered;
 
-        if (wakenUp.compareAndSet(false, true)) {
-            synchronized (startStopLock) {
+            if (wakenUp.compareAndSet(false, true)) {
                 // wake up the selector to speed things
                 selector = this.selector;
 
@@ -164,38 +165,36 @@ abstract class AbstractNioWorker implements Worker {
      * @return selector
      */
     private Selector start() {
-        synchronized (startStopLock) {
-            if (!started) {
-                // Open a selector if this worker didn't start yet.
-                try {
-                    selector = Selector.open();
-                } catch (Throwable t) {
-                    throw new ChannelException("Failed to create a selector.", t);
-                }
-
-                // Start the worker thread with the new Selector.
-                boolean success = false;
-                try {
-                    DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id));
-                    success = true;
-                } finally {
-                    if (!success) {
-                        // Release the Selector if the execution fails.
-                        try {
-                            selector.close();
-                        } catch (Throwable t) {
-                            logger.warn("Failed to close a selector.", t);
-                        }
-                        selector = null;
-                        // The method will return to the caller at this point.
-                    }
-                }
+        if (!started) {
+            // Open a selector if this worker didn't start yet.
+            try {
+                selector = Selector.open();
+            } catch (Throwable t) {
+                throw new ChannelException("Failed to create a selector.", t);
             }
 
-            assert selector != null && selector.isOpen();
-
-            started = true;
+            // Start the worker thread with the new Selector.
+            boolean success = false;
+            try {
+                DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id));
+                success = true;
+            } finally {
+                if (!success) {
+                    // Release the Selector if the execution fails.
+                    try {
+                        selector.close();
+                    } catch (Throwable t) {
+                        logger.warn("Failed to close a selector.", t);
+                    }
+                    selector = null;
+                    // The method will return to the caller at this point.
+                }
+            }
         }
+
+        assert selector != null && selector.isOpen();
+
+        started = true;
         return selector;
     }
 
@@ -322,17 +321,20 @@ abstract class AbstractNioWorker implements Worker {
         if (!alwaysAsync && Thread.currentThread() == thread) {
             task.run();
         } else {
-            start();
-            boolean added = eventQueue.offer(task);
+            synchronized (startStopLock) {
+                start();
+                boolean added = eventQueue.offer(task);
 
-            assert added;
-            if (added) {
-                // wake up the selector to speed things
-                Selector selector = this.selector;
-                if (selector != null) {
-                    selector.wakeup();
+                assert added;
+                if (added) {
+                    // wake up the selector to speed things
+                    Selector selector = this.selector;
+                    if (selector != null) {
+                        selector.wakeup();
+                    }
                 }
             }
+
         }
 
     }
