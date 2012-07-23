@@ -44,7 +44,9 @@ public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
                 SecureChatSslContextFactory.getClientContext().createSSLEngine();
             engine.setUseClientMode(true);
 
-            pipeline.addLast("ssl", new SslHandler(engine));
+            SslHandler handler = new SslHandler(engine);
+            handler.setIssueHandshake(true);
+            pipeline.addLast("ssl", handler);
         }
 
         pipeline.addLast("codec", new HttpClientCodec());

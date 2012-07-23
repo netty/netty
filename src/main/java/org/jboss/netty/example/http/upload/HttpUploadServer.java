@@ -24,6 +24,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class HttpUploadServer {
 
     private final int port;
+    public static boolean isSSL;
 
     public HttpUploadServer(int port) {
         this.port = port;
@@ -49,6 +50,9 @@ public class HttpUploadServer {
             port = Integer.parseInt(args[0]);
         } else {
             port = 8080;
+        }
+        if (args.length > 1) {
+            isSSL = true;
         }
         new HttpUploadServer(port).run();
     }
