@@ -143,14 +143,17 @@ abstract class AbstractNioWorker implements Worker {
         assert offered;
 
         if (wakenUp.compareAndSet(false, true)) {
-            // wake up the selector to speed things
-            selector = this.selector;
+            synchronized (startStopLock) {
+                // wake up the selector to speed things
+                selector = this.selector;
 
-            // Check if the selector is not null to prevent NPE if selector was
-            // set to null from another thread. See #469
-            if (selector != null) {
-                selector.wakeup();
+                // Check if the selector is not null to prevent NPE if selector was
+                // set to null from another thread. See #469
+                if (selector != null) {
+                    selector.wakeup();
+                }
             }
+
         }
     }
 
