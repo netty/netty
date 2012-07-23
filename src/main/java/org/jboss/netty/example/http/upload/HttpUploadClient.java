@@ -124,6 +124,7 @@ public class HttpUploadClient {
         DiskAttribute.baseDirectory = null; // system temp directory
 
         // Simple Get form: no factory used (not usable)
+        System.err.println("==========================================\nStarting Get\n==========================================");
         List<Entry<String, String>> headers =
             formget(bootstrap, host, port, get, uriSimple);
         if (headers == null) {
@@ -131,6 +132,7 @@ public class HttpUploadClient {
             return;
         }
         // Simple Post form: factory used for big attributes
+        System.err.println("==========================================\nStarting Simple Post\n==========================================");
         List<InterfaceHttpData> bodylist =
             formpost(bootstrap, host, port, uriSimple, file, factory, headers);
         if (bodylist == null) {
@@ -138,6 +140,7 @@ public class HttpUploadClient {
             return;
         }
         // Multipart Post form: factory used
+        System.err.println("==========================================\nStarting PostUpload Multipart\n==========================================");
         formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist);
 
         // Shut down executor threads to exit.
@@ -365,6 +368,7 @@ public class HttpUploadClient {
         }
 
         // send request
+        System.err.println("Request is chunked? " + request.isChunked() + ":" + bodyRequestEncoder.isChunked());
         channel.write(request);
 
         // test if request was chunked and if so, finish the write
@@ -393,8 +397,10 @@ public class HttpUploadClient {
         new HttpUploadClient(baseUri, filePath).run();
     }
 
+    // use to simulate a small TEXTAREA field in a form
+    private static final String textArea = "short text";
     // use to simulate a big TEXTAREA field in a form
-    private static final String textArea =
+    private static final String textAreaLong =
         "lkjlkjlKJLKJLKJLKJLJlkj lklkj\r\n\r\nLKJJJJJJJJKKKKKKKKKKKKKKK ����&\r\n\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +
         "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n" +

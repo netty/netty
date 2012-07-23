@@ -628,7 +628,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         }
         request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String
                 .valueOf(realSize));
-        if (realSize > HttpPostBodyUtil.chunkSize) {
+        if (realSize > HttpPostBodyUtil.chunkSize || isMultipart) {
             isChunked = true;
             if (transferEncoding != null) {
                 request.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
