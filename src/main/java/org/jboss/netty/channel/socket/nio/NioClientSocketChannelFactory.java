@@ -146,7 +146,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int bossCount, int workerCount) {
-        this(bossExecutor, bossCount, new NioWorkerPool(workerExecutor, workerCount, true));
+        this(bossExecutor, bossCount, new NioWorkerPool(workerExecutor, workerCount));
     }
 
     public NioClientSocketChannelFactory(

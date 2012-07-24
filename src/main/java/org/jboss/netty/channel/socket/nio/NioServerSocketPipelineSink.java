@@ -92,6 +92,8 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
                 close(channel, future);
             }
             break;
+        default:
+            break;
         }
     }
 

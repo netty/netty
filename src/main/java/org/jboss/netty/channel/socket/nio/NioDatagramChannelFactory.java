@@ -133,7 +133,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      *            the maximum number of I/O worker threads
      */
     public NioDatagramChannelFactory(final Executor workerExecutor, final int workerCount) {
-        this(new NioDatagramWorkerPool(workerExecutor, workerCount, true));
+        this(new NioDatagramWorkerPool(workerExecutor, workerCount));
     }
 
     /**
@@ -180,7 +180,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      */
     public NioDatagramChannelFactory(final Executor workerExecutor,
             final int workerCount, InternetProtocolFamily family) {
-        this(new NioDatagramWorkerPool(workerExecutor, workerCount, true), family);
+        this(new NioDatagramWorkerPool(workerExecutor, workerCount), family);
     }
 
     /**

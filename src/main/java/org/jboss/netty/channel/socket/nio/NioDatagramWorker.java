@@ -51,6 +51,11 @@ public class NioDatagramWorker extends AbstractNioWorker {
         super(executor);
     }
 
+    /**
+     *
+     * @deprecated use {@link #NioDatagramWorker(Executor)}
+     */
+    @Deprecated
     NioDatagramWorker(final Executor executor, boolean allowShutdownOnIdle) {
         super(executor, allowShutdownOnIdle);
     }

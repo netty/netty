@@ -128,7 +128,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
-        this(bossExecutor, new NioWorkerPool(workerExecutor, workerCount, true));
+        this(bossExecutor, new NioWorkerPool(workerExecutor, workerCount));
     }
 
     /**

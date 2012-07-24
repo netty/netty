@@ -128,6 +128,11 @@ abstract class AbstractNioWorker implements Worker {
         this(executor, true);
     }
 
+    /**
+     *
+     * @deprecated Use {@link #AbstractNioWorker(Executor)}
+     */
+    @Deprecated
     public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
         this.allowShutdownOnIdle = allowShutdownOnIdle;

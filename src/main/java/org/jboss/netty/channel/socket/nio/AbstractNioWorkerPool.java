@@ -34,6 +34,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
+    private final boolean allowShutDownOnIdle;
 
     /**
      * Create a new instance
@@ -42,6 +43,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
      * @param allowShutdownOnIdle allow the {@link Worker}'s to shutdown when there is not
      *                            {@link Channel} is registered with it
      * @param workerCount the count of {@link Worker}'s to create
+     * @deprecated use {@link #AbstractNioWorkerPool(Executor, int)}
      */
     AbstractNioWorkerPool(Executor workerExecutor, int workerCount, boolean allowShutDownOnIdle) {
         if (workerExecutor == null) {
@@ -55,10 +57,21 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
         workers = new AbstractNioWorker[workerCount];
 
         for (int i = 0; i < workers.length; i++) {
-            workers[i] = createWorker(workerExecutor, allowShutDownOnIdle);
+            workers[i] = createWorker(workerExecutor);
         }
+        this.allowShutDownOnIdle = allowShutDownOnIdle;
         this.workerExecutor = workerExecutor;
 
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param workerExecutor the {@link Executor} to use for the {@link Worker}'s
+     * @param workerCount the count of {@link Worker}'s to create
+     */
+    AbstractNioWorkerPool(Executor workerExecutor, int workerCount) {
+        this(workerExecutor, workerCount, false);
     }
 
     /**
@@ -69,8 +82,21 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
      * @param allowShutdownOnIdle allow the {@link Worker} to shutdown when there is not
      *                            {@link Channel} is registered with it
      * @return worker the new {@link Worker}
+     * @deprecated use {@link #createWorker(Executor)}
      */
+    @Deprecated
     protected abstract E createWorker(Executor executor, boolean allowShutdownOnIdle);
+
+    /**
+     * Create a new {@link Worker} which uses the given {@link Executor} to service IO
+     *
+     *
+     * @param executor the {@link Executor} to use
+     * @return worker the new {@link Worker}
+     */
+    protected E createWorker(Executor executor) {
+        return createWorker(executor, allowShutDownOnIdle);
+    }
 
     @SuppressWarnings("unchecked")
     public E nextWorker() {
