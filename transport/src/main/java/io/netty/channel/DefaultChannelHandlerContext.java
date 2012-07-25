@@ -240,7 +240,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
 
             if (buf == null) {
-                throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
+                throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
             }
 
             if (buf instanceof ByteBuf) {
