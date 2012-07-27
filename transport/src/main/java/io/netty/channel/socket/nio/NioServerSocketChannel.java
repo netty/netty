@@ -128,4 +128,21 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    protected NioMessageUnsafe newUnsafe() {
+        return new NioServerSocketUnsafe();
+    }
+
+    private final class NioServerSocketUnsafe extends NioMessageUnsafe {
+        @Override
+        public void suspendRead() {
+            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_ACCEPT);
+        }
+
+        @Override
+        public void resumeRead() {
+            selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_ACCEPT);
+        }
+    }
 }

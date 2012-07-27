@@ -55,6 +55,8 @@ public final class NioDatagramChannel
     private final Map<InetAddress, List<MembershipKey>> memberships =
             new HashMap<InetAddress, List<MembershipKey>>();
 
+    private volatile boolean connected;
+
     private static DatagramChannel newSocket() {
         try {
             return DatagramChannel.open();
@@ -149,6 +151,7 @@ public final class NioDatagramChannel
         try {
             javaChannel().connect(remoteAddress);
             selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_READ);
+            connected = true;
             success = true;
             return true;
         } finally {
@@ -456,5 +459,27 @@ public final class NioDatagramChannel
             future.setFailure(e);
         }
         return future;
+    }
+
+    @Override
+    protected NioMessageUnsafe newUnsafe() {
+        return new NioDatagramChannelUnsafe();
+    }
+
+    private final class NioDatagramChannelUnsafe extends NioMessageUnsafe {
+
+        @Override
+        public void suspendRead() {
+            if (!connected) {
+                selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
+            }
+        }
+
+        @Override
+        public void resumeRead() {
+            if (!connected) {
+                selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
+            }
+        }
     }
 }

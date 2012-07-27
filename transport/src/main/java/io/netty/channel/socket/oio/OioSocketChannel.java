@@ -46,6 +46,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     private final SocketChannelConfig config;
     private InputStream is;
     private OutputStream os;
+    private volatile boolean suspendRead;
 
     public OioSocketChannel() {
         this(new Socket());
@@ -160,8 +161,24 @@ public class OioSocketChannel extends AbstractOioByteChannel
         if (socket.isClosed()) {
             return -1;
         }
+
+        if (suspendRead) {
+            try {
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            return 0;
+        }
+
         try {
-            return buf.writeBytes(is, buf.writableBytes());
+            int read = buf.writeBytes(is, buf.writableBytes());
+            if (read > 0 && !suspendRead) {
+                return read;
+            } else {
+                // so the read bytes were 0 or the read was suspend
+                return 0;
+            }
         } catch (SocketTimeoutException e) {
             return 0;
         }
@@ -174,5 +191,24 @@ public class OioSocketChannel extends AbstractOioByteChannel
             throw new NotYetConnectedException();
         }
         buf.readBytes(os, buf.readableBytes());
+    }
+
+
+    @Override
+    protected OioByteUnsafe newUnsafe() {
+        return new OioSocketChannelUnsafe();
+    }
+
+    private final class OioSocketChannelUnsafe extends OioByteUnsafe {
+
+        @Override
+        public void suspendRead() {
+            suspendRead = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            suspendRead = false;
+        }
     }
 }

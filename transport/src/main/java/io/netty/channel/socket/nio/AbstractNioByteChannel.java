@@ -31,11 +31,9 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
-        return new NioByteUnsafe();
-    }
+    protected abstract NioByteUnsafe newUnsafe();
 
-    private class NioByteUnsafe extends AbstractNioUnsafe {
+    protected abstract class NioByteUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

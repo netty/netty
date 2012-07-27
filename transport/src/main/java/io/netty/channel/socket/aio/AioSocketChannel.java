@@ -31,6 +31,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
@@ -51,6 +52,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     private final AioSocketChannelConfig config;
     private boolean flushing;
+
+    private final AtomicBoolean readSuspend = new AtomicBoolean(false);
+
+    private final Runnable readTask = new Runnable() {
+        @Override
+        public void run() {
+            AioSocketChannel.this.beginRead();
+        }
+    };
 
     public AioSocketChannel(AioEventLoop eventLoop) {
         this(null, null, eventLoop, newSocket(eventLoop.group));
@@ -177,6 +187,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private void beginRead() {
+        if (readSuspend.get()) {
+            return;
+        }
+
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
         if (!byteBuf.readable()) {
             byteBuf.discardReadBytes();
@@ -270,7 +284,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             } catch (Throwable t) {
                 if (read) {
                     read = false;
-                    pipeline.fireInboundBufferUpdated();
+                    if (!channel.readSuspend.get()) {
+                        pipeline.fireInboundBufferUpdated();
+                    }
                 }
 
                 if (!(t instanceof ClosedChannelException)) {
@@ -282,7 +298,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
             } finally {
                 if (read) {
-                    pipeline.fireInboundBufferUpdated();
+                    if (!channel.readSuspend.get()) {
+                        pipeline.fireInboundBufferUpdated();
+                    }
                 }
                 if (closed && channel.isOpen()) {
                     channel.unsafe().close(channel.unsafe().voidFuture());
@@ -328,5 +346,29 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     public AioSocketChannelConfig config() {
         return config;
+    }
+
+    @Override
+    protected Unsafe newUnsafe() {
+        return new AioSocketChannelAsyncUnsafe();
+    }
+
+    private final class AioSocketChannelAsyncUnsafe extends AsyncUnsafe {
+
+        @Override
+        public void suspendRead() {
+            readSuspend.set(true);
+        }
+
+        @Override
+        public void resumeRead() {
+            if (readSuspend.compareAndSet(true, false)) {
+                if (eventLoop().inEventLoop()) {
+                    beginRead();
+                } else {
+                    eventLoop.execute(readTask);
+                }
+            }
+        }
     }
 }

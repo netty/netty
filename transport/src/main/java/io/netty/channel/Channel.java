@@ -194,5 +194,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
 
         void flush(ChannelFuture future);
         void flushNow();
+        void suspendRead();
+        void resumeRead();
     }
 }

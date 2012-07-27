@@ -54,6 +54,8 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     final Lock shutdownLock = new ReentrantLock();
     private final ServerSocketChannelConfig config;
 
+    private volatile boolean readSuspend;
+
     public OioServerSocketChannel() {
         this(newServerSocket());
     }
@@ -138,11 +140,23 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             return -1;
         }
 
+        if (readSuspend) {
+            try {
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            return 0;
+        }
+
         Socket s = null;
         try {
             s = socket.accept();
             if (s != null) {
                 buf.add(new OioSocketChannel(this, null, s));
+                if (readSuspend) {
+                    return 0;
+                }
                 return 1;
             }
         } catch (SocketTimeoutException e) {
@@ -180,5 +194,23 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     @Override
     protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected OioMessageUnsafe newUnsafe() {
+        return new OioServerSocketUnsafe();
+    }
+
+    private final class OioServerSocketUnsafe extends OioMessageUnsafe {
+
+        @Override
+        public void suspendRead() {
+            readSuspend = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            readSuspend = false;
+        }
     }
 }

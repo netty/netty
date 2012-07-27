@@ -62,10 +62,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return null;
     }
 
-    @Override
-    protected Unsafe newUnsafe() {
-        return new DefaultServerUnsafe();
-    }
 
     @Override
     protected SocketAddress remoteAddress0() {
@@ -92,7 +88,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return false;
     }
 
-    protected class DefaultServerUnsafe extends AbstractUnsafe {
+    protected abstract class DefaultServerUnsafe extends AbstractUnsafe {
 
         @Override
         public void flush(final ChannelFuture future) {

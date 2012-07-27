@@ -193,6 +193,16 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
                 SocketAddress localAddress, ChannelFuture future) {
             future.setSuccess();
         }
+
+        @Override
+        public void suspendRead() {
+            // NOOP
+        }
+
+        @Override
+        public void resumeRead() {
+            // NOOP
+        }
     }
 
     private final class LastInboundMessageHandler extends ChannelInboundHandlerAdapter {

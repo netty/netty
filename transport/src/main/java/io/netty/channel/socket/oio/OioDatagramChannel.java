@@ -52,6 +52,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
 
+    private volatile boolean readSuspend;
+
     private static MulticastSocket newSocket() {
         try {
             return new MulticastSocket(null);
@@ -163,6 +165,15 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+        if (readSuspend) {
+            try {
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore;
+            }
+            return 0;
+        }
+
         int packetSize = config().getReceivePacketSize();
         byte[] data = new byte[packetSize];
         tmpPacket.setData(data);
@@ -174,7 +185,12 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             }
             buf.add(new DatagramPacket(Unpooled.wrappedBuffer(
                     data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
-            return 1;
+
+            if (readSuspend) {
+                return 0;
+            } else {
+                return 1;
+            }
         } catch (SocketTimeoutException e) {
             // Expected
             return 0;
@@ -335,5 +351,23 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             InetAddress sourceToBlock, ChannelFuture future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
+    }
+
+    @Override
+    protected OioMessageUnsafe newUnsafe() {
+        return new OioDatagramChannelUnsafe();
+    }
+
+    private final class OioDatagramChannelUnsafe extends OioMessageUnsafe {
+
+        @Override
+        public void suspendRead() {
+            readSuspend = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            readSuspend = false;
+        }
     }
 }

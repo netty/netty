@@ -30,6 +30,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
@@ -41,6 +42,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     private final AioServerSocketChannelConfig config;
     private boolean closed;
+    private AtomicBoolean readSuspend = new AtomicBoolean();
 
     private static AsynchronousServerSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
@@ -88,7 +90,14 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     protected void doBind(SocketAddress localAddress) throws Exception {
         AsynchronousServerSocketChannel ch = javaChannel();
         ch.bind(localAddress);
-        ch.accept(this, ACCEPT_HANDLER);
+        doAccept();
+    }
+
+    private void doAccept() {
+        if (readSuspend.get()) {
+            return;
+        }
+        javaChannel().accept(this, ACCEPT_HANDLER);
     }
 
     @Override
@@ -125,13 +134,15 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
         @Override
         protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
-         // register again this handler to accept new connections
-            channel.javaChannel().accept(channel, this);
+            // register again this handler to accept new connections
+            channel.doAccept();
 
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, channel.eventLoop, ch));
-            channel.pipeline().fireInboundBufferUpdated();
+            if (!channel.readSuspend.get()) {
+                channel.pipeline().fireInboundBufferUpdated();
+            }
         }
 
         @Override
@@ -152,5 +163,23 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     @Override
     public ServerSocketChannelConfig config() {
         return config;
+    }
+
+    @Override
+    protected Unsafe newUnsafe() {
+        return new AsyncUnsafe() {
+
+            @Override
+            public void suspendRead() {
+                readSuspend.set(true);
+            }
+
+            @Override
+            public void resumeRead() {
+                if (readSuspend.compareAndSet(true, false)) {
+                    doAccept();
+                }
+            }
+        };
     }
 }

@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
@@ -61,6 +62,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     final AtomicReference<MessageBridge> outMsgBridge;
     final AtomicReference<ByteBridge> inByteBridge;
     final AtomicReference<ByteBridge> outByteBridge;
+
+    final AtomicBoolean suspendRead = new AtomicBoolean(false);
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {
@@ -792,5 +795,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 out.writeBytes(data);
             }
         }
+    }
+
+    @Override
+    public boolean isReadable() {
+        return !suspendRead.get();
+    }
+
+    @Override
+    public void readable(boolean readable) {
+        this.pipeline.readable(this, readable);
     }
 }

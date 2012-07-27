@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -56,7 +57,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     final Map<EventExecutor, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutor, EventExecutor>();
-
+    private final AtomicInteger suspendRead = new AtomicInteger();
 
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
@@ -465,6 +466,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         name2ctx.remove(ctx.name());
 
         callAfterRemove(ctx);
+
+        // make sure we clear the readable flag
+        ctx.readable(true);
     }
 
     @Override
@@ -524,6 +528,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         name2ctx.remove(oldTail.name());
 
         callBeforeRemove(oldTail);
+
+        // clear readable suspend if necessary
+        oldTail.readable(true);
+
+
+
     }
 
     @Override
@@ -640,6 +650,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         boolean removed = false;
         try {
             callAfterRemove(ctx);
+
+            // clear readable suspend if necessary
+            ctx.readable(true);
+
             removed = true;
         } catch (ChannelHandlerLifeCycleException e) {
             removeException = e;
@@ -1435,6 +1449,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NoSuchElementException(handlerType.getName());
         } else {
             return ctx;
+        }
+    }
+
+    void readable(DefaultChannelHandlerContext ctx, boolean readable) {
+        if (ctx.suspendRead.compareAndSet(!readable, readable)) {
+            if (!readable) {
+                if (suspendRead.incrementAndGet() == 1) {
+                    unsafe.suspendRead();
+                }
+            } else {
+                if (suspendRead.decrementAndGet() == 0) {
+                    unsafe.resumeRead();
+                }
+            }
         }
     }
 

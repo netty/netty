@@ -155,4 +155,7 @@ public interface ChannelHandlerContext
     boolean hasNextOutboundMessageBuffer();
     ByteBuf nextOutboundByteBuffer();
     MessageBuf<Object> nextOutboundMessageBuffer();
+
+    boolean isReadable();
+    void readable(boolean readable);
 }

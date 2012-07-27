@@ -295,5 +295,15 @@ public class LocalChannel extends AbstractChannel {
                 });
             }
         }
+
+        @Override
+        public void suspendRead() {
+            // TODO: Implement me
+        }
+
+        @Override
+        public void resumeRead() {
+            // TODO: Implement me
+        }
     }
 }
