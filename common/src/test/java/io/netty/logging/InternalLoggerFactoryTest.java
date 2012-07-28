@@ -55,6 +55,16 @@ public class InternalLoggerFactoryTest {
     }
 
     @Test
+    public void testIsTraceEnabled() {
+        expect(mock.isTraceEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        assertTrue(logger.isTraceEnabled());
+        verify(mock);
+    }
+
+    @Test
     public void testIsDebugEnabled() {
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
@@ -91,6 +101,26 @@ public class InternalLoggerFactoryTest {
 
         InternalLogger logger = InternalLoggerFactory.getInstance("mock");
         assertTrue(logger.isErrorEnabled());
+        verify(mock);
+    }
+
+    @Test
+    public void testTrace() {
+        mock.trace("a");
+        replay(mock);
+
+        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        logger.trace("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testTraceWithException() {
+        mock.trace("a", e);
+        replay(mock);
+
+        InternalLogger logger = InternalLoggerFactory.getInstance("mock");
+        logger.trace("a", e);
         verify(mock);
     }
 

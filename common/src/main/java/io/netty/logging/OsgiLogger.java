@@ -35,6 +35,16 @@ class OsgiLogger extends AbstractInternalLogger {
     }
 
     @Override
+    public void trace(String msg) {
+        // This logger doesn't have TRACE level
+    }
+
+    @Override
+    public void trace(String msg, Throwable cause) {
+        // This logger doesn't have TRACE level
+    }
+
+    @Override
     public void debug(String msg) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -92,6 +102,11 @@ class OsgiLogger extends AbstractInternalLogger {
         } else {
             fallback.info(msg, cause);
         }
+    }
+
+    @Override
+    public boolean isTraceEnabled() {
+        return false;
     }
 
     @Override
