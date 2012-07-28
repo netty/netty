@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -26,7 +27,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.PrematureChannelClosureException;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
@@ -49,7 +49,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         ChannelDownstreamHandler {
 
     /** A queue that is used for correlating a request and a response. */
-    final Queue<HttpMethod> queue = QueueFactory.createQueue(HttpMethod.class);
+    final Queue<HttpMethod> queue = new ConcurrentLinkedQueue<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
     volatile boolean done;

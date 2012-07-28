@@ -20,6 +20,7 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -38,7 +39,6 @@ import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
@@ -79,7 +79,7 @@ public class ChunkedWriteHandler
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final Queue<MessageEvent> queue = QueueFactory.createQueue(MessageEvent.class);
+    private final Queue<MessageEvent> queue = new ConcurrentLinkedQueue<MessageEvent>();
 
     private volatile ChannelHandlerContext ctx;
     private final AtomicBoolean flush = new AtomicBoolean(false);

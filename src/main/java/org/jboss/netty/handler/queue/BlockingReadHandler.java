@@ -17,6 +17,7 @@ package org.jboss.netty.handler.queue;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -29,7 +30,6 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Emulates blocking read operation.  This handler stores all received messages
@@ -77,11 +77,10 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
     private volatile boolean closed;
 
     /**
-     * Creates a new instance with the default unbounded {@link BlockingQueue}
-     * implementation.
+     * Creates a new instance with {@link LinkedBlockingQueue}
      */
     public BlockingReadHandler() {
-        this(QueueFactory.createQueue(ChannelEvent.class));
+        this(new LinkedBlockingQueue<ChannelEvent>());
     }
 
     /**

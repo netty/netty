@@ -24,6 +24,7 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -54,7 +55,6 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.DetectionUtil;
 import org.jboss.netty.util.internal.NonReentrantLock;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -199,7 +199,7 @@ public class SslHandler extends FrameDecoder
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
-    private final Queue<MessageEvent> pendingEncryptedWrites = QueueFactory.createQueue(MessageEvent.class);
+    private final Queue<MessageEvent> pendingEncryptedWrites = new ConcurrentLinkedQueue<MessageEvent>();
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
     private volatile boolean issueHandshake;

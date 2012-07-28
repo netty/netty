@@ -23,8 +23,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,7 +35,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel {
@@ -204,13 +202,13 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
 
     abstract InetSocketAddress getRemoteSocketAddress() throws Exception;
 
-    private final class WriteRequestQueue implements BlockingQueue<MessageEvent> {
+    private final class WriteRequestQueue implements Queue<MessageEvent> {
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
-        private final BlockingQueue<MessageEvent> queue;
+        private final Queue<MessageEvent> queue;
 
         public WriteRequestQueue() {
-            this.queue = QueueFactory.createQueue(MessageEvent.class);
+            this.queue = new ConcurrentLinkedQueue<MessageEvent>();
         }
 
         public MessageEvent remove() {
@@ -269,40 +267,12 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             return queue.add(e);
         }
 
-        public void put(MessageEvent e) throws InterruptedException {
-            queue.put(e);
-        }
-
-        public boolean offer(MessageEvent e, long timeout, TimeUnit unit) throws InterruptedException {
-            return queue.offer(e, timeout, unit);
-        }
-
-        public MessageEvent take() throws InterruptedException {
-            return queue.take();
-        }
-
-        public MessageEvent poll(long timeout, TimeUnit unit) throws InterruptedException {
-            return queue.poll(timeout, unit);
-        }
-
-        public int remainingCapacity() {
-            return queue.remainingCapacity();
-        }
-
         public boolean remove(Object o) {
             return queue.remove(o);
         }
 
         public boolean contains(Object o) {
             return queue.contains(o);
-        }
-
-        public int drainTo(Collection<? super MessageEvent> c) {
-            return queue.drainTo(c);
-        }
-
-        public int drainTo(Collection<? super MessageEvent> c, int maxElements) {
-            return queue.drainTo(c, maxElements);
         }
 
         public boolean offer(MessageEvent e) {

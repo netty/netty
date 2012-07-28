@@ -24,6 +24,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * This factory should be used to create the "optimal" {@link BlockingQueue}
  * instance for the running JVM.
  */
+@Deprecated
 public final class QueueFactory {
 
     private static final boolean useUnsafe = DetectionUtil.hasUnsafe();

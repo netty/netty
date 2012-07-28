@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -36,7 +37,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Emulates buffered write operation.  This handler stores all write requests
@@ -185,15 +185,14 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
     }
 
     /**
-     * Creates a new instance with the default unbounded {@link BlockingQueue}
-     * implementation.
+     * Creates a new instance with {@link ConcurrentLinkedQueue}
      *
      * @param consolidateOnFlush
      *        {@code true} if and only if the buffered write requests are merged
      *        into a single write request on {@link #flush()}
      */
     public BufferedWriteHandler(boolean consolidateOnFlush) {
-        this(QueueFactory.createQueue(MessageEvent.class), consolidateOnFlush);
+        this(new ConcurrentLinkedQueue<MessageEvent>(), consolidateOnFlush);
     }
 
     /**

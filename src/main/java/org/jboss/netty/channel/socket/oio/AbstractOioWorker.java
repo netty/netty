@@ -19,12 +19,12 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.Worker;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Abstract base class for Oio-Worker implementations
@@ -33,7 +33,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  */
 abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker {
 
-    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<Runnable> eventQueue = new ConcurrentLinkedQueue<Runnable>();
 
     protected final C channel;
 

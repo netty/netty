@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -24,7 +25,6 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
-import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
@@ -49,7 +49,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  */
 public abstract class HttpContentEncoder extends SimpleChannelHandler {
 
-    private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue(String.class);
+    private final Queue<String> acceptEncodingQueue = new ConcurrentLinkedQueue<String>();
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
 
     /**

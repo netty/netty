@@ -28,6 +28,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,7 +46,6 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.QueueFactory;
 
 abstract class AbstractNioWorker implements Worker {
 
@@ -108,14 +108,14 @@ abstract class AbstractNioWorker implements Worker {
     /**
      * Queue of channel registration tasks.
      */
-    private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<Runnable> registerTaskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     /**
      * Queue of WriteTasks
      */
-    protected final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
+    protected final Queue<Runnable> writeTaskQueue = new ConcurrentLinkedQueue<Runnable>();
 
-    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<Runnable> eventQueue = new ConcurrentLinkedQueue<Runnable>();
 
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation

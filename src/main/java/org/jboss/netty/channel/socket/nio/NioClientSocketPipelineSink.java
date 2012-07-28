@@ -26,6 +26,7 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,7 +44,6 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.QueueFactory;
 
 class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
@@ -174,7 +174,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         private boolean started;
         private final AtomicBoolean wakenUp = new AtomicBoolean();
         private final Object startStopLock = new Object();
-        private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
+        private final Queue<Runnable> registerTaskQueue = new ConcurrentLinkedQueue<Runnable>();
         private final int subId;
 
         Boss(int subId) {

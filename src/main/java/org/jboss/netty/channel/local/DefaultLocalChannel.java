@@ -20,6 +20,7 @@ import static org.jboss.netty.channel.Channels.*;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannel;
@@ -32,7 +33,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
@@ -49,7 +49,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     private final ChannelConfig config;
     private final ThreadLocalBoolean delivering = new ThreadLocalBoolean();
 
-    final Queue<MessageEvent> writeBuffer = QueueFactory.createQueue(MessageEvent.class);
+    final Queue<MessageEvent> writeBuffer = new ConcurrentLinkedQueue<MessageEvent>();
 
     volatile DefaultLocalChannel pairedChannel;
     volatile LocalAddress localAddress;

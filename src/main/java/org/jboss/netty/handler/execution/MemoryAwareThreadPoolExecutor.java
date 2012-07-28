@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
@@ -45,7 +46,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
@@ -227,7 +227,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             ThreadFactory threadFactory) {
 
         super(corePoolSize, corePoolSize, keepAliveTime, unit,
-              QueueFactory.createQueue(Runnable.class), threadFactory, new NewThreadRunsPolicy());
+              new LinkedBlockingQueue<Runnable>(), threadFactory, new NewThreadRunsPolicy());
 
         if (objectSizeEstimator == null) {
             throw new NullPointerException("objectSizeEstimator");
