@@ -26,6 +26,20 @@ public class JdkLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
+    public void testIsTraceEnabled() {
+
+        java.util.logging.Logger mock =
+            createStrictMock(java.util.logging.Logger.class);
+
+        expect(mock.isLoggable(Level.FINEST)).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new JdkLogger(mock, "foo");
+        assertTrue(logger.isTraceEnabled());
+        verify(mock);
+    }
+
+    @Test
     public void testIsDebugEnabled() {
 
         java.util.logging.Logger mock =
@@ -75,6 +89,32 @@ public class JdkLoggerTest {
 
         InternalLogger logger = new JdkLogger(mock, "foo");
         assertTrue(logger.isErrorEnabled());
+        verify(mock);
+    }
+
+    @Test
+    public void testTrace() {
+        java.util.logging.Logger mock =
+            createStrictMock(java.util.logging.Logger.class);
+
+        mock.logp(Level.FINEST, "foo", null, "a");
+        replay(mock);
+
+        InternalLogger logger = new JdkLogger(mock, "foo");
+        logger.trace("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testTraceWithException() {
+        java.util.logging.Logger mock =
+            createStrictMock(java.util.logging.Logger.class);
+
+        mock.logp(Level.FINEST, "foo", null, "a", e);
+        replay(mock);
+
+        InternalLogger logger = new JdkLogger(mock, "foo");
+        logger.trace("a", e);
         verify(mock);
     }
 

@@ -20,6 +20,10 @@ package io.netty.logging;
  */
 public enum InternalLogLevel {
     /**
+     * 'TRACE' log level.
+     */
+    TRACE,
+    /**
      * 'DEBUG' log level.
      */
     DEBUG,

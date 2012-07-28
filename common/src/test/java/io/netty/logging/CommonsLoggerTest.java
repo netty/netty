@@ -24,6 +24,19 @@ public class CommonsLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
+    public void testIsTraceEnabled() {
+        org.apache.commons.logging.Log mock =
+            createStrictMock(org.apache.commons.logging.Log.class);
+
+        expect(mock.isTraceEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new CommonsLogger(mock, "foo");
+        assertTrue(logger.isTraceEnabled());
+        verify(mock);
+    }
+
+    @Test
     public void testIsDebugEnabled() {
         org.apache.commons.logging.Log mock =
             createStrictMock(org.apache.commons.logging.Log.class);
@@ -72,6 +85,32 @@ public class CommonsLoggerTest {
 
         InternalLogger logger = new CommonsLogger(mock, "foo");
         assertTrue(logger.isErrorEnabled());
+        verify(mock);
+    }
+
+    @Test
+    public void testTrace() {
+        org.apache.commons.logging.Log mock =
+            createStrictMock(org.apache.commons.logging.Log.class);
+
+        mock.trace("a");
+        replay(mock);
+
+        InternalLogger logger = new CommonsLogger(mock, "foo");
+        logger.trace("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testTraceWithException() {
+        org.apache.commons.logging.Log mock =
+            createStrictMock(org.apache.commons.logging.Log.class);
+
+        mock.trace("a", e);
+        replay(mock);
+
+        InternalLogger logger = new CommonsLogger(mock, "foo");
+        logger.trace("a", e);
         verify(mock);
     }
 
