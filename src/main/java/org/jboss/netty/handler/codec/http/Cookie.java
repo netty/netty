@@ -75,7 +75,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Sets the max age of this cookie in seconds.  If {@code 0} is specified,
      * this cookie will be removed by browser because it will be expired
-     * immediately.  If {@code -1} is specified, this cookie will be removed
+     * immediately.  If {@link Integer#MIN_VALUE} is specified, this cookie will be removed
      * when a user terminates browser.
      */
     void setMaxAge(int maxAge);

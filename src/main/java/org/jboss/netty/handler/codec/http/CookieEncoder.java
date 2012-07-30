@@ -107,7 +107,7 @@ public class CookieEncoder {
         for (Cookie cookie: cookies) {
             add(sb, cookie.getName(), cookie.getValue());
 
-            if (cookie.getMaxAge() >= 0) {
+            if (cookie.getMaxAge() != Integer.MIN_VALUE) {
                 if (cookie.getVersion() == 0) {
                     addUnquoted(sb, CookieHeaderNames.EXPIRES,
                             new CookieDateFormat().format(
