@@ -19,13 +19,13 @@ import java.nio.ByteBuffer;
 
 import org.jboss.netty.util.internal.ByteBufferUtil;
 
-final class SocketReceiveBuffer {
+final class SocketReceiveBufferAllocator {
 
     private ByteBuffer buf;
     private int exceedCount;
     private final int maxExceedCount;
 
-    SocketReceiveBuffer(int maxExceedCount) {
+    SocketReceiveBufferAllocator(int maxExceedCount) {
         this.maxExceedCount = maxExceedCount;
     }
 
