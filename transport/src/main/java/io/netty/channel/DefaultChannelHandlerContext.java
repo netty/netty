@@ -21,13 +21,13 @@ import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.internal.QueueFactory;
 
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
@@ -746,7 +746,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     static final class MessageBridge {
         final MessageBuf<Object> msgBuf = Unpooled.messageBuffer();
-        final BlockingQueue<Object[]> exchangeBuf = QueueFactory.createQueue();
+        final Queue<Object[]> exchangeBuf = new ConcurrentLinkedQueue<Object[]>();
 
         void fill() {
             if (msgBuf.isEmpty()) {
@@ -771,7 +771,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     static final class ByteBridge {
         final ByteBuf byteBuf = Unpooled.buffer();
-        final BlockingQueue<ByteBuf> exchangeBuf = QueueFactory.createQueue();
+        final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
 
         void fill() {
             if (!byteBuf.readable()) {

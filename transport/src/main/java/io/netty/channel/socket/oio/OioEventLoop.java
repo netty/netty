@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventExecutor;
-import io.netty.util.internal.QueueFactory;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -31,6 +30,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -45,7 +45,7 @@ public class OioEventLoop implements EventLoop {
     final ThreadFactory threadFactory;
     final Set<OioChildEventLoop> activeChildren = Collections.newSetFromMap(
             new ConcurrentHashMap<OioChildEventLoop, Boolean>());
-    final Queue<OioChildEventLoop> idleChildren = QueueFactory.createQueue();
+    final Queue<OioChildEventLoop> idleChildren = new ConcurrentLinkedQueue<OioChildEventLoop>();
     private final ChannelException tooManyChannels;
     private final Unsafe unsafe = new Unsafe() {
         @Override
