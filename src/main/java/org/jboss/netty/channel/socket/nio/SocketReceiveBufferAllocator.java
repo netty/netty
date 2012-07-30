@@ -24,10 +24,17 @@ final class SocketReceiveBufferAllocator {
     private ByteBuffer buf;
     private int exceedCount;
     private final int maxExceedCount;
+    private final int percentual;
 
-    SocketReceiveBufferAllocator(int maxExceedCount) {
-        this.maxExceedCount = maxExceedCount;
+    SocketReceiveBufferAllocator() {
+        this(16, 80);
     }
+
+    SocketReceiveBufferAllocator(int maxExceedCount, int percentual) {
+        this.maxExceedCount = maxExceedCount;
+        this.percentual = percentual;
+    }
+
 
     ByteBuffer get(int size) {
         if (buf == null) {
@@ -37,14 +44,17 @@ final class SocketReceiveBufferAllocator {
             ByteBufferUtil.destroy(buf);
             buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
         } else if (buf.capacity() > size) {
-            if (++exceedCount == maxExceedCount) {
+            if (((buf.capacity() / 100) * percentual) > size) {
+                if (++exceedCount == maxExceedCount) {
+                    exceedCount = 0;
+                    ByteBufferUtil.destroy(buf);
+                    buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
+                }
+            } else {
                 exceedCount = 0;
-                ByteBufferUtil.destroy(buf);
-                buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
             }
-        } else {
-            buf.position(0).limit(size);
         }
+        buf.clear();
         return buf;
     }
 
