@@ -34,7 +34,8 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 public class NioWorker extends AbstractNioWorker {
 
-    private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
+    // TODO: Make this configurable ?
+    private final SocketReceiveBuffer recvBufferPool = new SocketReceiveBuffer(10);
 
     public NioWorker(Executor executor) {
         super(executor);
@@ -63,7 +64,7 @@ public class NioWorker extends AbstractNioWorker {
         int readBytes = 0;
         boolean failure = true;
 
-        ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
+        ByteBuffer bb = recvBufferPool.get(predictedRecvBufSize);
         try {
             while ((ret = ch.read(bb)) > 0) {
                 readBytes += ret;
@@ -87,15 +88,12 @@ public class NioWorker extends AbstractNioWorker {
             buffer.setBytes(0, bb);
             buffer.writerIndex(readBytes);
 
-            recvBufferPool.release(bb);
 
             // Update the predictor.
             predictor.previousReceiveBufferSize(readBytes);
 
             // Fire the event.
             fireMessageReceived(channel, buffer);
-        } else {
-            recvBufferPool.release(bb);
         }
 
         if (ret < 0 || failure) {
