@@ -88,7 +88,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return false;
     }
 
-    protected abstract class DefaultServerUnsafe extends AbstractUnsafe {
+    protected abstract class AbstractServerUnsafe extends AbstractUnsafe {
 
         @Override
         public void flush(final ChannelFuture future) {
