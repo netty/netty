@@ -38,12 +38,12 @@ final class SocketReceiveBufferAllocator {
 
     ByteBuffer get(int size) {
         if (buf == null) {
-            buf = newBuffer(size);
+            return newBuffer(size);
         } else if (buf.capacity() < size) {
-            buf = newBuffer(size);
+            return newBuffer(size);
         } else if (((buf.capacity() / 100) * percentual) > size) {
             if (++exceedCount == maxExceedCount) {
-                buf = newBuffer(size);
+               return newBuffer(size);
             } else {
                 buf.clear();
             }
@@ -59,7 +59,8 @@ final class SocketReceiveBufferAllocator {
             exceedCount = 0;
             ByteBufferUtil.destroy(buf);
         }
-        return ByteBuffer.allocateDirect(normalizeCapacity(size));
+        buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
+        return buf;
     }
 
     private static int normalizeCapacity(int capacity) {
