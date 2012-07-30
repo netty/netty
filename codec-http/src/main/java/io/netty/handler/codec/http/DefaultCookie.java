@@ -35,7 +35,7 @@ public class DefaultCookie implements Cookie {
     private boolean discard;
     private Set<Integer> ports = Collections.emptySet();
     private Set<Integer> unmodifiablePorts = ports;
-    private long maxAge = -1;
+    private long maxAge = Long.MIN_VALUE;
     private int version;
     private boolean secure;
     private boolean httpOnly;

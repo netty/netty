@@ -87,7 +87,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setComment(String comment);
 
     /**
-     * Returns the maximum age of this {@link Cookie} in seconds.
+     * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified
      *
      * @return The maximum age of this {@link Cookie}
      */
@@ -97,7 +97,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Sets the maximum age of this {@link Cookie} in seconds.
      * If an age of {@code 0} is specified, this {@link Cookie} will be
      * automatically removed by browser because it will expire immediately.
-     * If {@code -1} is specified, this {@link Cookie} will be removed when the
+     * If {@link Long#MIN_VALUE} is specified, this {@link Cookie} will be removed when the
      * browser is closed.
      *
      * @param maxAge The maximum age of this {@link Cookie} in seconds
