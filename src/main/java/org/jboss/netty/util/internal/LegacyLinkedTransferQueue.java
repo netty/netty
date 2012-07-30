@@ -69,6 +69,7 @@ import java.util.concurrent.locks.LockSupport;
  * Java Collections Framework</a>.
  * @param <E> the type of elements held in this collection
  */
+@Deprecated
 public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
     implements BlockingQueue<E>, java.io.Serializable {
     private static final long serialVersionUID = -3223113410248163686L;
