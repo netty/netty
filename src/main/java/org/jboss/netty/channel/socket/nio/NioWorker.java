@@ -35,7 +35,7 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 public class NioWorker extends AbstractNioWorker {
 
     // TODO: Make this configurable ?
-    private final SocketReceiveBuffer recvBufferPool = new SocketReceiveBuffer(10);
+    private final SocketReceiveBufferAllocator recvBufferPool = new SocketReceiveBufferAllocator(10);
 
     public NioWorker(Executor executor) {
         super(executor);
