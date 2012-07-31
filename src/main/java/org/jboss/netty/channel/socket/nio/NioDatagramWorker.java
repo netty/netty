@@ -41,6 +41,8 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
  */
 public class NioDatagramWorker extends AbstractNioWorker {
 
+    private final SocketReceiveBufferAllocator bufferAllocator = new SocketReceiveBufferAllocator();
+
     /**
      * Sole constructor.
      *
@@ -67,13 +69,9 @@ public class NioDatagramWorker extends AbstractNioWorker {
             channel.getConfig().getReceiveBufferSizePredictor();
         final ChannelBufferFactory bufferFactory = channel.getConfig().getBufferFactory();
         final DatagramChannel nioChannel = (DatagramChannel) key.channel();
+        final int predictedRecvBufSize = predictor.nextReceiveBufferSize();
 
-        // Allocating a non-direct buffer with a max udp packge size.
-        // Would using a direct buffer be more efficient or would this negatively
-        // effect performance, as direct buffer allocation has a higher upfront cost
-        // where as a ByteBuffer is heap allocated.
-        final ByteBuffer byteBuffer = ByteBuffer.allocate(
-                predictor.nextReceiveBufferSize()).order(bufferFactory.getDefaultOrder());
+        final ByteBuffer byteBuffer = bufferAllocator.get(predictedRecvBufSize).order(bufferFactory.getDefaultOrder());
 
         boolean failure = true;
         SocketAddress remoteAddress = null;
