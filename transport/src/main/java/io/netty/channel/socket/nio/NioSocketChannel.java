@@ -193,11 +193,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected NioByteUnsafe newUnsafe() {
+    protected AbstractNioByteUnsafe newUnsafe() {
         return new NioSocketChannelUnsafe();
     }
 
-    private final class NioSocketChannelUnsafe extends NioByteUnsafe {
+    private final class NioSocketChannelUnsafe extends AbstractNioByteUnsafe {
 
         @Override
         public void suspendRead() {

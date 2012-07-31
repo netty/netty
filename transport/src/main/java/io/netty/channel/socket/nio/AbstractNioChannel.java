@@ -187,7 +187,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectFuture = null;
             }
         }
-
     }
 
     @Override

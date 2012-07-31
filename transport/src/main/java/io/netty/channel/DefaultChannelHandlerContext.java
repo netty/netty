@@ -63,7 +63,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     final AtomicReference<ByteBridge> inByteBridge;
     final AtomicReference<ByteBridge> outByteBridge;
 
-    final AtomicBoolean suspendRead = new AtomicBoolean(false);
+    final AtomicBoolean suspendRead = new AtomicBoolean();
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {

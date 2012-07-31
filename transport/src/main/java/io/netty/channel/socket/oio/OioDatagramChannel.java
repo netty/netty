@@ -52,7 +52,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
 
-    private volatile boolean readSuspend;
+    private volatile boolean readSuspended;
 
     private static MulticastSocket newSocket() {
         try {
@@ -165,7 +165,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
-        if (readSuspend) {
+        if (readSuspended) {
             try {
                 Thread.sleep(SO_TIMEOUT);
             } catch (InterruptedException e) {
@@ -186,7 +186,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             buf.add(new DatagramPacket(Unpooled.wrappedBuffer(
                     data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
 
-            if (readSuspend) {
+            if (readSuspended) {
                 return 0;
             } else {
                 return 1;
@@ -354,20 +354,20 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected OioMessageUnsafe newUnsafe() {
+    protected AbstractOioMessageUnsafe newUnsafe() {
         return new OioDatagramChannelUnsafe();
     }
 
-    private final class OioDatagramChannelUnsafe extends OioMessageUnsafe {
+    private final class OioDatagramChannelUnsafe extends AbstractOioMessageUnsafe {
 
         @Override
         public void suspendRead() {
-            readSuspend = true;
+            readSuspended = true;
         }
 
         @Override
         public void resumeRead() {
-            readSuspend = false;
+            readSuspended = false;
         }
     }
 }

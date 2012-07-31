@@ -86,7 +86,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
         return loop instanceof AioChildEventLoop;
     }
 
-    protected abstract class AsyncUnsafe extends AbstractUnsafe {
+    protected abstract class AbstractAioUnsafe extends AbstractUnsafe {
 
         @Override
         public void connect(final SocketAddress remoteAddress,

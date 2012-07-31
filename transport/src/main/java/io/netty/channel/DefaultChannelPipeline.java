@@ -467,7 +467,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         callAfterRemove(ctx);
 
-        // make sure we clear the readable flag
+        // make sure the it's set back to readable
         ctx.readable(true);
     }
 
@@ -529,11 +529,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         callBeforeRemove(oldTail);
 
-        // clear readable suspend if necessary
+        // make sure the it's set back to readable
         oldTail.readable(true);
-
-
-
     }
 
     @Override

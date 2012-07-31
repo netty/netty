@@ -53,7 +53,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private final AioSocketChannelConfig config;
     private boolean flushing;
 
-    private final AtomicBoolean readSuspend = new AtomicBoolean(false);
+    private final AtomicBoolean readSuspended = new AtomicBoolean();
 
     private final Runnable readTask = new Runnable() {
         @Override
@@ -187,7 +187,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private void beginRead() {
-        if (readSuspend.get()) {
+        if (readSuspended.get()) {
             return;
         }
 
@@ -284,7 +284,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             } catch (Throwable t) {
                 if (read) {
                     read = false;
-                    if (!channel.readSuspend.get()) {
+                    if (!channel.readSuspended.get()) {
                         pipeline.fireInboundBufferUpdated();
                     }
                 }
@@ -298,7 +298,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
             } finally {
                 if (read) {
-                    if (!channel.readSuspend.get()) {
+                    if (!channel.readSuspended.get()) {
                         pipeline.fireInboundBufferUpdated();
                     }
                 }
@@ -333,13 +333,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
             channel.beginRead();
-            ((AsyncUnsafe) channel.unsafe()).connectSuccess();
+            ((AbstractAioUnsafe) channel.unsafe()).connectSuccess();
             channel.pipeline().fireChannelActive();
         }
 
         @Override
         protected void failed0(Throwable exc, AioSocketChannel channel) {
-            ((AsyncUnsafe) channel.unsafe()).connectFailed(exc);
+            ((AbstractAioUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }
 
@@ -353,16 +353,16 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         return new AioSocketChannelAsyncUnsafe();
     }
 
-    private final class AioSocketChannelAsyncUnsafe extends AsyncUnsafe {
+    private final class AioSocketChannelAsyncUnsafe extends AbstractAioUnsafe {
 
         @Override
         public void suspendRead() {
-            readSuspend.set(true);
+            readSuspended.set(true);
         }
 
         @Override
         public void resumeRead() {
-            if (readSuspend.compareAndSet(true, false)) {
+            if (readSuspended.compareAndSet(true, false)) {
                 if (eventLoop().inEventLoop()) {
                     beginRead();
                 } else {

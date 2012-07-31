@@ -42,7 +42,15 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     private final AioServerSocketChannelConfig config;
     private boolean closed;
-    private AtomicBoolean readSuspend = new AtomicBoolean();
+    private AtomicBoolean readSuspended = new AtomicBoolean();
+
+    private final Runnable acceptTask = new Runnable() {
+
+        @Override
+        public void run() {
+            doAccept();
+        }
+    };
 
     private static AsynchronousServerSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
@@ -94,7 +102,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     private void doAccept() {
-        if (readSuspend.get()) {
+        if (readSuspended.get()) {
             return;
         }
         javaChannel().accept(this, ACCEPT_HANDLER);
@@ -140,7 +148,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, channel.eventLoop, ch));
-            if (!channel.readSuspend.get()) {
+            if (!channel.readSuspended.get()) {
                 channel.pipeline().fireInboundBufferUpdated();
             }
         }
@@ -167,19 +175,25 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected Unsafe newUnsafe() {
-        return new AsyncUnsafe() {
+        return new AioServerSocketUnsafe();
+    }
 
-            @Override
-            public void suspendRead() {
-                readSuspend.set(true);
-            }
+    private final class AioServerSocketUnsafe extends AbstractAioUnsafe {
 
-            @Override
-            public void resumeRead() {
-                if (readSuspend.compareAndSet(true, false)) {
+        @Override
+        public void suspendRead() {
+            readSuspended.set(true);
+        }
+
+        @Override
+        public void resumeRead() {
+            if (readSuspended.compareAndSet(true, false)) {
+                if (eventLoop().inEventLoop()) {
                     doAccept();
+                } else {
+                    eventLoop().execute(acceptTask);
                 }
             }
-        };
+        }
     }
 }

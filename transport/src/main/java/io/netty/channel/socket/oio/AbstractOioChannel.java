@@ -50,7 +50,7 @@ abstract class AbstractOioChannel extends AbstractChannel {
         void read();
     }
 
-    protected abstract class AbstractOioUnsafe extends AbstractUnsafe implements OioUnsafe {
+    abstract class AbstractOioUnsafe extends AbstractUnsafe implements OioUnsafe {
 
         @Override
         public void connect(

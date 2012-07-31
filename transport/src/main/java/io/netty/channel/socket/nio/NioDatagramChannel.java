@@ -462,24 +462,20 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected NioMessageUnsafe newUnsafe() {
+    protected AbstractNioMessageUnsafe newUnsafe() {
         return new NioDatagramChannelUnsafe();
     }
 
-    private final class NioDatagramChannelUnsafe extends NioMessageUnsafe {
+    private final class NioDatagramChannelUnsafe extends AbstractNioMessageUnsafe {
 
         @Override
         public void suspendRead() {
-            if (!connected) {
-                selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-            }
+            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
         }
 
         @Override
         public void resumeRead() {
-            if (!connected) {
-                selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-            }
+            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
         }
     }
 }

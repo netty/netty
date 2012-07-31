@@ -130,11 +130,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected NioMessageUnsafe newUnsafe() {
+    protected AbstractNioMessageUnsafe newUnsafe() {
         return new NioServerSocketUnsafe();
     }
 
-    private final class NioServerSocketUnsafe extends NioMessageUnsafe {
+    private final class NioServerSocketUnsafe extends AbstractNioMessageUnsafe {
         @Override
         public void suspendRead() {
             selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_ACCEPT);

@@ -23,5 +23,4 @@ public interface ChannelStateHandler extends ChannelHandler {
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
 
     void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
-
 }
