@@ -58,12 +58,13 @@ public class NioWorker extends AbstractNioWorker {
         final ReceiveBufferSizePredictor predictor =
             channel.getConfig().getReceiveBufferSizePredictor();
         final int predictedRecvBufSize = predictor.nextReceiveBufferSize();
+        final ChannelBufferFactory bufferFactory = channel.getConfig().getBufferFactory();
 
         int ret = 0;
         int readBytes = 0;
         boolean failure = true;
 
-        ByteBuffer bb = recvBufferPool.get(predictedRecvBufSize);
+        ByteBuffer bb = recvBufferPool.get(predictedRecvBufSize).order(bufferFactory.getDefaultOrder());
         try {
             while ((ret = ch.read(bb)) > 0) {
                 readBytes += ret;
@@ -81,8 +82,6 @@ public class NioWorker extends AbstractNioWorker {
         if (readBytes > 0) {
             bb.flip();
 
-            final ChannelBufferFactory bufferFactory =
-                channel.getConfig().getBufferFactory();
             final ChannelBuffer buffer = bufferFactory.getBuffer(readBytes);
             buffer.setBytes(0, bb);
             buffer.writerIndex(readBytes);
