@@ -28,6 +28,7 @@ import java.nio.channels.Selector;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
@@ -95,9 +96,16 @@ public class NioDatagramWorker extends AbstractNioWorker {
                 // Update the predictor.
                 predictor.previousReceiveBufferSize(readBytes);
 
+                final ChannelBuffer buffer = bufferFactory.getBuffer(readBytes);
+                buffer.setBytes(0, byteBuffer);
+                buffer.writerIndex(readBytes);
+
+                // Update the predictor.
+                predictor.previousReceiveBufferSize(readBytes);
+
                 // Notify the interested parties about the newly arrived message.
                 fireMessageReceived(
-                        channel, bufferFactory.getBuffer(byteBuffer), remoteAddress);
+                        channel, buffer, remoteAddress);
             }
         }
 
