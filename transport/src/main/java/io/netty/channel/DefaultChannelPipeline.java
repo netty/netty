@@ -1450,7 +1450,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     void readable(DefaultChannelHandlerContext ctx, boolean readable) {
-        if (ctx.suspendRead.compareAndSet(!readable, readable)) {
+        if (ctx.readable.compareAndSet(!readable, readable)) {
             if (!readable) {
                 if (suspendRead.incrementAndGet() == 1) {
                     unsafe.suspendRead();
