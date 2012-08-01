@@ -214,38 +214,16 @@ final class SocketSendBufferPool {
         }
     }
 
-    final class PooledSendBuffer implements SendBuffer {
+    final class PooledSendBuffer extends UnpooledSendBuffer {
 
         private final Preallocation parent;
-        final ByteBuffer buffer;
-        final int initialPos;
 
         PooledSendBuffer(Preallocation parent, ByteBuffer buffer) {
+            super(buffer);
             this.parent = parent;
-            this.buffer = buffer;
-            initialPos = buffer.position();
         }
 
-        public boolean finished() {
-            return !buffer.hasRemaining();
-        }
-
-        public long writtenBytes() {
-            return buffer.position() - initialPos;
-        }
-
-        public long totalBytes() {
-            return buffer.limit() - initialPos;
-        }
-
-        public long transferTo(WritableByteChannel ch) throws IOException {
-            return ch.write(buffer);
-        }
-
-        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
-            return ch.send(buffer, raddr);
-        }
-
+        @Override
         public void release() {
             final Preallocation parent = this.parent;
             if (-- parent.refCnt == 0) {
