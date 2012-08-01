@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.QueueFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
@@ -71,7 +71,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         }
     };
 
-    private final BlockingQueue<Runnable> taskQueue = QueueFactory.createQueue();
+    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);

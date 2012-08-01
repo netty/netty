@@ -24,6 +24,19 @@ public class JBossLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
+    public void testIsTraceEnabled() {
+        org.jboss.logging.Logger mock =
+            createStrictMock(org.jboss.logging.Logger.class);
+
+        expect(mock.isTraceEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new JBossLogger(mock);
+        assertTrue(logger.isTraceEnabled());
+        verify(mock);
+    }
+
+    @Test
     @SuppressWarnings("deprecation")
     public void testIsDebugEnabled() {
         org.jboss.logging.Logger mock =
@@ -70,6 +83,32 @@ public class JBossLoggerTest {
 
         InternalLogger logger = new JBossLogger(mock);
         assertTrue(logger.isErrorEnabled());
+        verify(mock);
+    }
+
+    @Test
+    public void testTrace() {
+        org.jboss.logging.Logger mock =
+            createStrictMock(org.jboss.logging.Logger.class);
+
+        mock.trace("a");
+        replay(mock);
+
+        InternalLogger logger = new JBossLogger(mock);
+        logger.trace("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testTraceWithException() {
+        org.jboss.logging.Logger mock =
+            createStrictMock(org.jboss.logging.Logger.class);
+
+        mock.trace("a", e);
+        replay(mock);
+
+        InternalLogger logger = new JBossLogger(mock);
+        logger.trace("a", e);
         verify(mock);
     }
 

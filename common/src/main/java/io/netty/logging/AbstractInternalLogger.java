@@ -31,6 +31,8 @@ public abstract class AbstractInternalLogger implements InternalLogger {
     @Override
     public boolean isEnabled(InternalLogLevel level) {
         switch (level) {
+        case TRACE:
+            return isTraceEnabled();
         case DEBUG:
             return isDebugEnabled();
         case INFO:
@@ -47,6 +49,9 @@ public abstract class AbstractInternalLogger implements InternalLogger {
     @Override
     public void log(InternalLogLevel level, String msg, Throwable cause) {
         switch (level) {
+        case TRACE:
+            trace(msg, cause);
+            break;
         case DEBUG:
             debug(msg, cause);
             break;
@@ -67,6 +72,9 @@ public abstract class AbstractInternalLogger implements InternalLogger {
     @Override
     public void log(InternalLogLevel level, String msg) {
         switch (level) {
+        case TRACE:
+            trace(msg);
+            break;
         case DEBUG:
             debug(msg);
             break;

@@ -32,11 +32,11 @@ import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.DefaultEventExecutor;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.QueueFactory;
 
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -337,8 +337,8 @@ public class LocalTransportThreadModelTest {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
-        private final Queue<String> inboundThreadNames = QueueFactory.createQueue();
-        private final Queue<String> outboundThreadNames = QueueFactory.createQueue();
+        private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
+        private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {

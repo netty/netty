@@ -30,6 +30,16 @@ class JBossLogger extends AbstractInternalLogger {
     }
 
     @Override
+    public void trace(String msg) {
+        logger.trace(msg);
+    }
+
+    @Override
+    public void trace(String msg, Throwable cause) {
+        logger.trace(msg, cause);
+    }
+
+    @Override
     public void debug(String msg) {
         logger.debug(msg);
     }
@@ -57,6 +67,11 @@ class JBossLogger extends AbstractInternalLogger {
     @Override
     public void info(String msg, Throwable cause) {
         logger.info(msg, cause);
+    }
+
+    @Override
+    public boolean isTraceEnabled() {
+        return logger.isTraceEnabled();
     }
 
     @Override
