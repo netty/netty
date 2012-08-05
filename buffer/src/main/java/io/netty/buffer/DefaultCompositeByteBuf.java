@@ -321,9 +321,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public void removeComponents(int cIndex, int numComponents) {
         checkComponentIndex(cIndex, numComponents);
-        for (int i = 0; i < numComponents; i ++) {
-            components.remove(cIndex);
-        }
+        components.subList(cIndex, cIndex + numComponents).clear();
         updateComponentOffsets(cIndex);
     }
 
@@ -1046,6 +1044,28 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
+    public void consolidate() {
+        final int numComponents = numComponents();
+        if (numComponents <= 1) {
+            return;
+        }
+
+        final Component last = components.get(numComponents - 1);
+        final int capacity = last.endOffset;
+        final ByteBuf consolidated = last.buf.unsafe().newBuffer(capacity);
+
+        for (int i = 0; i < numComponents; i ++) {
+            ByteBuf b = components.get(i).buf;
+            consolidated.writeBytes(b);
+            b.unsafe().release();
+        }
+
+        components.clear();
+        components.add(new Component(consolidated));
+        updateComponentOffsets(0);
+    }
+
+    @Override
     public void consolidate(int cIndex, int numComponents) {
         checkComponentIndex(cIndex, numComponents);
         if (numComponents <= 1) {
@@ -1063,10 +1083,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             b.unsafe().release();
         }
 
-        for (int i = numComponents - 1; i > 0; i --) {
-            components.remove(cIndex);
-        }
-
+        components.subList(cIndex + 1, endCIndex).clear();
         components.set(cIndex, new Component(consolidated));
         updateComponentOffsets(cIndex);
     }
@@ -1093,8 +1110,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.remove(0).buf.unsafe().release();
+            components.get(i).buf.unsafe().release();
         }
+        components.subList(0, firstComponentId).clear();
 
         // Update indexes and markers.
         Component first = components.get(0);
@@ -1125,8 +1143,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.remove(0).buf.unsafe().release();
+            components.get(i).buf.unsafe().release();
         }
+        components.subList(0, firstComponentId).clear();
 
         // Replace the first readable component with a new slice.
         Component c = components.get(0);
