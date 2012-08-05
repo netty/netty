@@ -54,6 +54,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private boolean flushing;
 
     private final AtomicBoolean readSuspended = new AtomicBoolean();
+    private final AtomicBoolean readInProgress = new AtomicBoolean();
 
     private final Runnable readTask = new Runnable() {
         @Override
@@ -191,6 +192,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             return;
         }
 
+        // prevent ReadPendingException
+        if (!readInProgress.compareAndSet(false, true)) {
+            return;
+        }
+
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
         if (!byteBuf.readable()) {
             byteBuf.discardReadBytes();
@@ -297,6 +303,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     }
                 }
             } finally {
+                // see beginRead
+                channel.readInProgress.set(false);
+
                 if (read) {
                     if (!channel.readSuspended.get()) {
                         pipeline.fireInboundBufferUpdated();
