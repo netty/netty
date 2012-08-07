@@ -37,6 +37,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     ByteBuf componentAtOffset(int offset);
 
     void discardReadComponents();
+    void consolidate();
     void consolidate(int cIndex, int numComponents);
 
     int toComponentIndex(int offset);
