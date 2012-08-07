@@ -46,7 +46,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     public NioServerSocketChannel() {
-        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, null, newSocket(), 0);
         config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 
@@ -137,12 +137,17 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final class NioServerSocketUnsafe extends AbstractNioMessageUnsafe {
         @Override
         public void suspendRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_ACCEPT);
+            selectionKey().cancel();
         }
 
         @Override
         public void resumeRead() {
-            selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_ACCEPT);
+            try {
+                doRegister();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
     }
 }
