@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
@@ -47,4 +48,32 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      * Same with {@link #slice(int, int)} except that this method returns a list.
      */
     List<ByteBuf> decompose(int offset, int length);
+
+    /**
+     * Exposes this buffer's readable bytes as an NIO {@link ByteBuffer}'s.  The returned buffer
+     * shares the content with this buffer, while changing the position and limit of the returned
+     * NIO buffer does not affect the indexes and marks of this buffer. This method does not
+     * modify {@code readerIndex} or {@code writerIndex} of this buffer.  Please note that the
+     * returned NIO buffer will not see the changes of this buffer if this buffer is a dynamic
+     * buffer and it adjusted its capacity.
+     *
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
+     */
+    ByteBuffer[] nioBuffers();
+
+    /**
+     * Exposes this buffer's bytes as an NIO {@link ByteBuffer}'s for the specified offset and length
+     * The returned buffer shares the content with this buffer, while changing the position and limit
+     * of the returned NIO buffer does not affect the indexes and marks of this buffer. This method does
+     * not modify {@code readerIndex} or {@code writerIndex} of this buffer.  Please note that the
+     * returned NIO buffer will not see the changes of this buffer if this buffer is a dynamic
+     * buffer and it adjusted its capacity.
+     *
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
+     */
+    ByteBuffer[] nioBuffers(int offset, int length);
 }

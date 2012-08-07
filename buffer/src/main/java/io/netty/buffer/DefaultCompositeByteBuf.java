@@ -1011,7 +1011,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         return merged;
     }
 
-    private ByteBuffer[] nioBuffers(int index, int length) {
+    @Override
+    public ByteBuffer[] nioBuffers(int index, int length) {
         int componentId = toComponentIndex(index);
         if (index + length > capacity()) {
             throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
@@ -1223,5 +1224,10 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 lastAccessed = null;
             }
         }
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers() {
+        return nioBuffers(readerIndex(), readableBytes());
     }
 }
