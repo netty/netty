@@ -336,7 +336,7 @@ public class SslHandler
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        out.discardReadBytes();
+        out.unsafe().discardSomeReadBytes();
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -398,9 +398,7 @@ public class SslHandler
             setHandshakeFailure(e);
             throw e;
         } finally {
-            if (bytesProduced > 0) {
-                in.discardReadBytes();
-            }
+            in.unsafe().discardSomeReadBytes();
             ctx.flush(future);
         }
     }

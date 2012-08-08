@@ -229,6 +229,11 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
         }
 
         @Override
+        public void discardSomeReadBytes() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void acquire() {
             buffer.unsafe().acquire();
         }

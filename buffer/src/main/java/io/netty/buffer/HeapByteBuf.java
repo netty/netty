@@ -303,6 +303,19 @@ public class HeapByteBuf extends AbstractByteBuf {
         }
 
         @Override
+        public void discardSomeReadBytes() {
+            final int readerIndex = readerIndex();
+            if (readerIndex == writerIndex()) {
+                discardReadBytes();
+                return;
+            }
+
+            if (readerIndex > 0 && readerIndex >= capacity() >>> 1) {
+                discardReadBytes();
+            }
+        }
+
+        @Override
         public void acquire() {
             if (refCnt <= 0) {
                 throw new IllegalStateException();

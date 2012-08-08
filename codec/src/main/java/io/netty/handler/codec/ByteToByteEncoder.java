@@ -44,10 +44,7 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
             }
         }
 
-        if (out.readableBytes() > oldOutSize) {
-            in.discardReadBytes();
-        }
-
+        in.unsafe().discardSomeReadBytes();
         ctx.flush(future);
     }
 

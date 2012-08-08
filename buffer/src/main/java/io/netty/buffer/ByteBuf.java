@@ -1809,6 +1809,14 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
         ByteBuf newBuffer(int initialCapacity);
 
         /**
+         * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
+         * some, all, or none of read bytes depending on its internal implementation to reduce
+         * overall memory bandwidth consumption at the cost of potentially additional memory
+         * consumption.
+         */
+        void discardSomeReadBytes();
+
+        /**
          * Increases the reference count of the buffer.
          */
         void acquire();

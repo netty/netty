@@ -441,7 +441,7 @@ public class LocalTransportThreadModelTest {
                     out.add(msg);
                 }
             }
-            in.discardReadBytes();
+            in.unsafe().discardSomeReadBytes();
             if (swallow) {
                 future.setSuccess();
             } else {

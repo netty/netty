@@ -52,7 +52,6 @@ public abstract class ByteToMessageDecoder<O>
 
         try {
             if (CodecUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
-                in.discardReadBytes();
                 ctx.fireInboundBufferUpdated();
             }
         } catch (Throwable t) {
@@ -93,9 +92,10 @@ public abstract class ByteToMessageDecoder<O>
                     break;
                 }
             } catch (Throwable t) {
+                in.unsafe().discardSomeReadBytes();
+
                 if (decoded) {
                     decoded = false;
-                    in.discardReadBytes();
                     ctx.fireInboundBufferUpdated();
                 }
 
@@ -107,8 +107,9 @@ public abstract class ByteToMessageDecoder<O>
             }
         }
 
+        in.unsafe().discardSomeReadBytes();
+
         if (decoded) {
-            in.discardReadBytes();
             ctx.fireInboundBufferUpdated();
         }
     }

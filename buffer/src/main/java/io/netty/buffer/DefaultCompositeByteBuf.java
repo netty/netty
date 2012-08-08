@@ -1202,6 +1202,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         @Override
+        public void discardSomeReadBytes() {
+            discardReadComponents();
+        }
+
+        @Override
         public void acquire() {
             if (refCnt <= 0) {
                 throw new IllegalStateException();
