@@ -884,6 +884,18 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             int localReadBytes = s.setBytes(index - adjustment, in, localLength);
 
+            if (localReadBytes == 0) {
+                break;
+            }
+
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
+            }
+
             if (localReadBytes == localLength) {
                 index += localLength;
                 length -= localLength;
