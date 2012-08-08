@@ -28,7 +28,7 @@ public abstract class AbstractChannel implements Channel {
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
 
     private static Integer allocateId(Channel channel) {
-        Integer id = Integer.valueOf(System.identityHashCode(channel));
+        Integer id = System.identityHashCode(channel);
         for (;;) {
             // Loop until a unique ID is acquired.
             // It should be found in one loop practically.
@@ -37,7 +37,7 @@ public abstract class AbstractChannel implements Channel {
                 return id;
             } else {
                 // Taken by other channel at almost the same moment.
-                id = Integer.valueOf(id.intValue() + 1);
+                id = id.intValue() + 1;
             }
         }
     }

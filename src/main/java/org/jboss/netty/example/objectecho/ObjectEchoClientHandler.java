@@ -52,7 +52,7 @@ public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
         }
         firstMessage = new ArrayList<Integer>(firstMessageSize);
         for (int i = 0; i < firstMessageSize; i ++) {
-            firstMessage.add(Integer.valueOf(i));
+            firstMessage.add(i);
         }
     }
 
