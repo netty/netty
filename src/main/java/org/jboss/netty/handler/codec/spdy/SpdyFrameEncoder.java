@@ -246,7 +246,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                     // Chromium Issue 79156
                     // SPDY setting ids are not written in network byte order
                     // Write id assuming the architecture is little endian
-                    frame.writeByte(id >>  0 & 0xFF);
+                    frame.writeByte(id & 0xFF);
                     frame.writeByte(id >>  8 & 0xFF);
                     frame.writeByte(id >> 16 & 0xFF);
                     frame.writeByte(ID_flags);
