@@ -500,13 +500,13 @@ public class HashedWheelTimer implements Timer {
             return task;
         }
 
-        public void cancel() {
+        public boolean cancel() {
             if (!state.compareAndSet(ST_INIT, ST_CANCELLED)) {
-                // TODO return false
-                return;
+                return false;
             }
 
             wheel[stopIndex].remove(this);
+            return true;
         }
 
         public boolean isCancelled() {

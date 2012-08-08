@@ -45,8 +45,9 @@ public interface Timeout {
 
     /**
      * Cancels the {@link TimerTask} associated with this handle.  It the
-     * task has been executed or cancelled already, it will return with no
-     * side effect.
+     * task has been executed or cancelled already, it will return {@code true}
+     * with no side effects. Additionally, if the task cannot cancel, it
+     * will return {@code false}.
      */
-    void cancel();
+    boolean cancel();
 }
