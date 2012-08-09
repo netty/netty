@@ -508,11 +508,16 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
             int localReadBytes = s.setBytes(index - adjustment, in, localLength);
 
-            if (localReadBytes <= 0) {
-                if (readBytes == 0) {
-                    readBytes = localReadBytes;
-                }
+            if (localReadBytes == 0) {
                 break;
+            }
+
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
             }
 
             if (localReadBytes == localLength) {
