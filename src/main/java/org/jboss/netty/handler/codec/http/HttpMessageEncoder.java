@@ -124,11 +124,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                             wrappedBuffer(CRLF));
                 }
             } else {
-                if (chunk.isLast()) {
-                    return null;
-                } else {
-                    return chunk.getContent();
-                }
+                return chunk.getContent();
             }
 
         }
