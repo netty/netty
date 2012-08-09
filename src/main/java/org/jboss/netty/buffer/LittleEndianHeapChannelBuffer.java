@@ -84,25 +84,25 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
     }
 
     public void setShort(int index, int value) {
-        array[index]     = (byte) (value);
+        array[index]     = (byte) value;
         array[index + 1] = (byte) (value >>> 8);
     }
 
     public void setMedium(int index, int   value) {
-        array[index]     = (byte) (value);
+        array[index]     = (byte) value;
         array[index + 1] = (byte) (value >>> 8);
         array[index + 2] = (byte) (value >>> 16);
     }
 
     public void setInt(int index, int   value) {
-        array[index]     = (byte) (value);
+        array[index]     = (byte) value;
         array[index + 1] = (byte) (value >>> 8);
         array[index + 2] = (byte) (value >>> 16);
         array[index + 3] = (byte) (value >>> 24);
     }
 
     public void setLong(int index, long  value) {
-        array[index]     = (byte) (value);
+        array[index]     = (byte) value;
         array[index + 1] = (byte) (value >>> 8);
         array[index + 2] = (byte) (value >>> 16);
         array[index + 3] = (byte) (value >>> 24);

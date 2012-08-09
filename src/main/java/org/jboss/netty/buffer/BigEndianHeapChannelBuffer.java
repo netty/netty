@@ -85,20 +85,20 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
 
     public void setShort(int index, int value) {
         array[index]     = (byte) (value >>> 8);
-        array[index + 1] = (byte) (value);
+        array[index + 1] = (byte) value;
     }
 
     public void setMedium(int index, int   value) {
         array[index]     = (byte) (value >>> 16);
         array[index + 1] = (byte) (value >>> 8);
-        array[index + 2] = (byte) (value);
+        array[index + 2] = (byte) value;
     }
 
     public void setInt(int index, int   value) {
         array[index]     = (byte) (value >>> 24);
         array[index + 1] = (byte) (value >>> 16);
         array[index + 2] = (byte) (value >>> 8);
-        array[index + 3] = (byte) (value);
+        array[index + 3] = (byte) value;
     }
 
     public void setLong(int index, long  value) {
@@ -109,7 +109,7 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
         array[index + 4] = (byte) (value >>> 24);
         array[index + 5] = (byte) (value >>> 16);
         array[index + 6] = (byte) (value >>> 8);
-        array[index + 7] = (byte) (value);
+        array[index + 7] = (byte) value;
     }
 
     public ChannelBuffer duplicate() {

@@ -158,7 +158,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     public void setMedium(int index, int   value) {
         setByte(index,     (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>>  8));
-        setByte(index + 2, (byte) (value));
+        setByte(index + 2, (byte) value);
     }
 
     public void setInt(int index, int   value) {
