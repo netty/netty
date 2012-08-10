@@ -49,7 +49,7 @@ public class LocalEcho {
             // Note that we can use any event loop to ensure certain local channels
             // are handled by the same event loop thread which drives a certain socket channel
             // to reduce the communication latency between socket channels and local channels.
-            sb.group(new LocalEventLoopGroup(), new LocalEventLoopGroup())
+            sb.group(new LocalEventLoopGroup())
               .channel(new LocalServerChannel())
               .localAddress(addr)
               .handler(new ChannelInitializer<LocalServerChannel>() {
@@ -67,7 +67,7 @@ public class LocalEcho {
                   }
               });
 
-            cb.group(new NioEventLoopGroup())
+            cb.group(new NioEventLoopGroup()) // NIO event loops are also OK
               .channel(new LocalChannel())
               .remoteAddress(addr)
               .handler(new ChannelInitializer<LocalChannel>() {

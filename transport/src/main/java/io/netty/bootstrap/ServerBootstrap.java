@@ -63,6 +63,18 @@ public class ServerBootstrap {
     private ChannelHandler childHandler;
     private SocketAddress localAddress;
 
+    public ServerBootstrap group(EventLoopGroup group) {
+        if (group == null) {
+            throw new NullPointerException("group");
+        }
+        if (parentGroup != null) {
+            throw new IllegalStateException("parentGroup set already");
+        }
+        parentGroup = group;
+        childGroup = group;
+        return this;
+    }
+
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         if (parentGroup == null) {
             throw new NullPointerException("parentGroup");

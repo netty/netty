@@ -56,7 +56,7 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 AioEventLoopGroup loop = new AioEventLoopGroup();
                 return new ServerBootstrap().
-                                group(loop, loop).
+                                group(loop).
                                 channel(new AioServerSocketChannel(loop));
             }
         });

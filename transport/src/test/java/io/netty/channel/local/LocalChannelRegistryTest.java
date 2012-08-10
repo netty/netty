@@ -47,7 +47,7 @@ public class LocalChannelRegistryTest {
               .remoteAddress(addr)
               .handler(new TestHandler());
 
-            sb.group(new LocalEventLoopGroup(), new LocalEventLoopGroup())
+            sb.group(new LocalEventLoopGroup())
               .channel(new LocalServerChannel())
               .localAddress(addr)
               .childHandler(new ChannelInitializer<LocalChannel>() {
