@@ -28,7 +28,7 @@ import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -56,22 +56,22 @@ public class ServerBootstrap {
 
     private final Map<ChannelOption<?>, Object> parentOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
-    private EventLoop parentEventLoop;
-    private EventLoop childEventLoop;
+    private EventLoopGroup parentGroup;
+    private EventLoopGroup childGroup;
     private ServerChannel channel;
     private ChannelHandler handler;
     private ChannelHandler childHandler;
     private SocketAddress localAddress;
 
-    public ServerBootstrap eventLoop(EventLoop parentEventLoop, EventLoop childEventLoop) {
-        if (parentEventLoop == null) {
-            throw new NullPointerException("parentEventLoop");
+    public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+        if (parentGroup == null) {
+            throw new NullPointerException("parentGroup");
         }
-        if (this.parentEventLoop != null) {
-            throw new IllegalStateException("eventLoop set already");
+        if (this.parentGroup != null) {
+            throw new IllegalStateException("parentGroup set already");
         }
-        this.parentEventLoop = parentEventLoop;
-        this.childEventLoop = childEventLoop;
+        this.parentGroup = parentGroup;
+        this.childGroup = childGroup;
         return this;
     }
 
@@ -179,7 +179,7 @@ public class ServerBootstrap {
         }
         p.addLast(acceptor);
 
-        ChannelFuture f = parentEventLoop.register(channel).awaitUninterruptibly();
+        ChannelFuture f = parentGroup.register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
             future.setFailure(f.cause());
             return future;
@@ -198,17 +198,17 @@ public class ServerBootstrap {
     }
 
     public void shutdown() {
-        if (parentEventLoop != null) {
-            parentEventLoop.shutdown();
+        if (parentGroup != null) {
+            parentGroup.shutdown();
         }
-        if (childEventLoop != null) {
-            childEventLoop.shutdown();
+        if (childGroup != null) {
+            childGroup.shutdown();
         }
     }
 
     private void validate() {
-        if (parentEventLoop == null) {
-            throw new IllegalStateException("eventLoop not set");
+        if (parentGroup == null) {
+            throw new IllegalStateException("parentGroup not set");
         }
         if (channel == null) {
             throw new IllegalStateException("channel not set");
@@ -216,9 +216,9 @@ public class ServerBootstrap {
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
         }
-        if (childEventLoop == null) {
-            logger.warn("childEventLoop is not set. Using eventLoop instead.");
-            childEventLoop = parentEventLoop;
+        if (childGroup == null) {
+            logger.warn("childGroup is not set. Using parentGroup instead.");
+            childGroup = parentGroup;
         }
         if (localAddress == null) {
             logger.warn("localAddress is not set. Using " + DEFAULT_LOCAL_ADDR + " instead.");
@@ -267,7 +267,7 @@ public class ServerBootstrap {
                 }
 
                 try {
-                    childEventLoop.register(child);
+                    childGroup.register(child);
                 } catch (Throwable t) {
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }

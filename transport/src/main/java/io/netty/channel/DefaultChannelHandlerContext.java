@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Queue;
 import java.util.Set;
-
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -149,7 +148,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
-            DefaultChannelPipeline pipeline, EventExecutor executor,
+            DefaultChannelPipeline pipeline, EventExecutorGroup group,
             DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
             String name, ChannelHandler handler) {
 
@@ -188,19 +187,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.name = name;
         this.handler = handler;
 
-        if (executor != null) {
+        if (group != null) {
             // Pin one of the child executors once and remember it so that the same child executor
             // is used to fire events for the same channel.
-            EventExecutor childExecutor = pipeline.childExecutors.get(executor);
+            EventExecutor childExecutor = pipeline.childExecutors.get(group);
             if (childExecutor == null) {
-                childExecutor = executor.unsafe().nextChild();
-                pipeline.childExecutors.put(executor, childExecutor);
+                childExecutor = group.next();
+                pipeline.childExecutors.put(group, childExecutor);
             }
-            this.executor = childExecutor;
+            executor = childExecutor;
         } else if (channel.isRegistered()) {
-            this.executor = channel.eventLoop();
+            executor = channel.eventLoop();
         } else {
-            this.executor = null;
+            executor = null;
         }
 
         if (type.contains(ChannelHandlerType.INBOUND)) {
@@ -805,6 +804,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void readable(boolean readable) {
-        this.pipeline.readable(this, readable);
+        pipeline.readable(this, readable);
     }
 }

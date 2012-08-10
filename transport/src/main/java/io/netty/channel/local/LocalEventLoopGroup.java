@@ -13,37 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.local;
+
+import io.netty.channel.EventExecutor;
+import io.netty.channel.MultithreadEventLoopGroup;
 
 import java.util.concurrent.ThreadFactory;
 
-class DefaultChildEventExecutor extends SingleThreadEventExecutor {
+public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
 
-    DefaultChildEventExecutor(ThreadFactory threadFactory) {
-        super(threadFactory);
+    public LocalEventLoopGroup() {
+        this(0);
+    }
+
+    public LocalEventLoopGroup(int nThreads) {
+        this(nThreads, null);
+    }
+
+    public LocalEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
+        super(nThreads, threadFactory);
     }
 
     @Override
-    protected void run() {
-        for (;;) {
-            Runnable task;
-            try {
-                task = takeTask();
-                task.run();
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
-            }
-
-            if (isShutdown() && peekTask() == null) {
-                break;
-            }
-        }
-    }
-
-    @Override
-    protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && isShutdown()) {
-            interruptThread();
-        }
+    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
+        return new LocalEventLoop(this, threadFactory);
     }
 }

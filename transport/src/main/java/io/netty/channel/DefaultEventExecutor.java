@@ -17,18 +17,33 @@ package io.netty.channel;
 
 import java.util.concurrent.ThreadFactory;
 
-public class DefaultEventExecutor extends MultithreadEventExecutor {
+class DefaultEventExecutor extends SingleThreadEventExecutor {
 
-    public DefaultEventExecutor(int nThreads) {
-        this(nThreads, null);
-    }
-
-    public DefaultEventExecutor(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+    DefaultEventExecutor(DefaultEventExecutorGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory);
     }
 
     @Override
-    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new DefaultChildEventExecutor(threadFactory);
+    protected void run() {
+        for (;;) {
+            Runnable task;
+            try {
+                task = takeTask();
+                task.run();
+            } catch (InterruptedException e) {
+                // Waken up by interruptThread()
+            }
+
+            if (isShutdown() && peekTask() == null) {
+                break;
+            }
+        }
+    }
+
+    @Override
+    protected void wakeup(boolean inEventLoop) {
+        if (!inEventLoop && isShutdown()) {
+            interruptThread();
+        }
     }
 }

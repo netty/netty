@@ -191,7 +191,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof NioChildEventLoop;
+        return loop instanceof NioEventLoop;
     }
 
     @Override
@@ -202,7 +202,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        NioChildEventLoop loop = (NioChildEventLoop) eventLoop();
+        NioEventLoop loop = (NioEventLoop) eventLoop();
         selectionKey = javaChannel().register(
                 loop.selector, isActive()? defaultInterestOps : 0, this);
         return null;
@@ -210,7 +210,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((NioChildEventLoop) eventLoop()).cancel(selectionKey());
+        ((NioEventLoop) eventLoop()).cancel(selectionKey());
     }
 
     protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;

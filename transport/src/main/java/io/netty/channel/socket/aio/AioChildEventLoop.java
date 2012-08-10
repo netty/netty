@@ -21,11 +21,8 @@ import java.util.concurrent.ThreadFactory;
 
 final class AioChildEventLoop extends SingleThreadEventLoop {
 
-    final AioEventLoop parent;
-
-    AioChildEventLoop(AioEventLoop parent, ThreadFactory threadFactory) {
-        super(threadFactory);
-        this.parent = parent;
+    AioChildEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory);
     }
 
     @Override

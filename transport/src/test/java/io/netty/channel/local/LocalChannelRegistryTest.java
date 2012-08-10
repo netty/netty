@@ -42,12 +42,12 @@ public class LocalChannelRegistryTest {
             Bootstrap cb = new Bootstrap();
             ServerBootstrap sb = new ServerBootstrap();
 
-            cb.eventLoop(new LocalEventLoop())
+            cb.group(new LocalEventLoopGroup())
               .channel(new LocalChannel())
               .remoteAddress(addr)
               .handler(new TestHandler());
 
-            sb.eventLoop(new LocalEventLoop(), new LocalEventLoop())
+            sb.group(new LocalEventLoopGroup(), new LocalEventLoopGroup())
               .channel(new LocalServerChannel())
               .localAddress(addr)
               .childHandler(new ChannelInitializer<LocalChannel>() {

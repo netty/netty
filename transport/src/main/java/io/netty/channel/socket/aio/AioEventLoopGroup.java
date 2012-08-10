@@ -17,49 +17,48 @@ package io.netty.channel.socket.aio;
 
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
-import io.netty.channel.MultithreadEventLoop;
+import io.netty.channel.MultithreadEventLoopGroup;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
-public class AioEventLoop extends MultithreadEventLoop {
+public class AioEventLoopGroup extends MultithreadEventLoopGroup {
 
     private static final ConcurrentMap<Class<?>, Field[]> fieldCache = new ConcurrentHashMap<Class<?>, Field[]>();
     private static final Field[] FAILURE = new Field[0];
 
     final AsynchronousChannelGroup group;
 
-    public AioEventLoop() {
+    public AioEventLoopGroup() {
         this(0);
     }
 
-    public AioEventLoop(int nThreads) {
+    public AioEventLoopGroup(int nThreads) {
         this(nThreads, null);
     }
 
-    public AioEventLoop(int nThreads, ThreadFactory threadFactory) {
+    public AioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
         try {
-            group = AsynchronousChannelGroup.withThreadPool(this);
+            group = AsynchronousChannelGroup.withThreadPool(new AioExecutorService());
         } catch (IOException e) {
             throw new EventLoopException("Failed to create an AsynchronousChannelGroup", e);
         }
     }
 
     @Override
-    public void execute(Runnable command) {
-        Class<? extends Runnable> commandType = command.getClass();
-        if (commandType.getName().startsWith("sun.nio.ch.")) {
-            executeAioTask(command);
-        } else {
-            super.execute(command);
-        }
+    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
+        return new AioChildEventLoop(this, threadFactory);
     }
 
     private void executeAioTask(Runnable command) {
@@ -74,7 +73,7 @@ public class AioEventLoop extends MultithreadEventLoop {
         if (ch != null) {
             l = ch.eventLoop();
         } else {
-            l = unsafe().nextChild();
+            l = next();
         }
 
         if (l.isShutdown()) {
@@ -146,8 +145,42 @@ public class AioEventLoop extends MultithreadEventLoop {
         return null;
     }
 
-    @Override
-    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new AioChildEventLoop(this, threadFactory);
+    private final class AioExecutorService extends AbstractExecutorService {
+
+        @Override
+        public void shutdown() {
+            AioEventLoopGroup.this.shutdown();
+        }
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            AioEventLoopGroup.this.shutdown();
+            return Collections.emptyList();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return AioEventLoopGroup.this.isShutdown();
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return AioEventLoopGroup.this.isTerminated();
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return AioEventLoopGroup.this.awaitTermination(timeout, unit);
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            Class<? extends Runnable> commandType = command.getClass();
+            if (commandType.getName().startsWith("sun.nio.ch.")) {
+                executeAioTask(command);
+            } else {
+                next().execute(command);
+            }
+        }
     }
 }

@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.util.CharsetUtil;
 
 import java.net.InetSocketAddress;
@@ -43,7 +43,7 @@ public class QuoteOfTheMomentClient {
     public void run() throws Exception {
         Bootstrap b = new Bootstrap();
         try {
-            b.eventLoop(new NioEventLoop())
+            b.group(new NioEventLoopGroup())
              .channel(new NioDatagramChannel())
              .localAddress(new InetSocketAddress(0))
              .option(ChannelOption.SO_BROADCAST, true)

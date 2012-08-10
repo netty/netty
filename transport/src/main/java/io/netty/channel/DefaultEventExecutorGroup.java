@@ -15,10 +15,20 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 
-public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
-    EventExecutorGroup parent();
-    boolean inEventLoop();
-    boolean inEventLoop(Thread thread);
+public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
+
+    public DefaultEventExecutorGroup(int nThreads) {
+        this(nThreads, null);
+    }
+
+    public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
+        super(nThreads, threadFactory);
+    }
+
+    @Override
+    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
+        return new DefaultEventExecutor(this, threadFactory);
+    }
 }

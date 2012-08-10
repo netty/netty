@@ -234,7 +234,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    ChannelPipeline addFirst(EventExecutor executor, String name, ChannelHandler handler);
+    ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler);
 
     /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
@@ -260,7 +260,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    ChannelPipeline addLast(EventExecutor executor, String name, ChannelHandler handler);
+    ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -294,7 +294,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    ChannelPipeline addBefore(EventExecutor executor, String baseName, String name, ChannelHandler handler);
+    ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} after an existing handler of this
@@ -328,15 +328,15 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    ChannelPipeline addAfter(EventExecutor executor, String baseName, String name, ChannelHandler handler);
+    ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
-    ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers);
+    ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
 
     ChannelPipeline addLast(ChannelHandler... handlers);
 
-    ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers);
+    ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.

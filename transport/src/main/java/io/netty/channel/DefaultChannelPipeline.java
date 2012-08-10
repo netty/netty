@@ -55,8 +55,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private boolean firedChannelActive;
     private boolean fireInboundBufferUpdatedOnActivation;
 
-    final Map<EventExecutor, EventExecutor> childExecutors =
-            new IdentityHashMap<EventExecutor, EventExecutor>();
+    final Map<EventExecutorGroup, EventExecutor> childExecutors =
+            new IdentityHashMap<EventExecutorGroup, EventExecutor>();
     private final AtomicInteger suspendRead = new AtomicInteger();
 
     public DefaultChannelPipeline(Channel channel) {
@@ -84,7 +84,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutor executor, final String name, final ChannelHandler handler) {
+    public ChannelPipeline addFirst(EventExecutorGroup group, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
@@ -92,7 +92,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext nextCtx = head.next;
                 final DefaultChannelHandlerContext newCtx =
-                        new DefaultChannelHandlerContext(this, executor, head, nextCtx, name, handler);
+                        new DefaultChannelHandlerContext(this, group, head, nextCtx, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addFirst0(name, nextCtx, newCtx);
@@ -143,7 +143,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutor executor, final String name, final ChannelHandler handler) {
+    public ChannelPipeline addLast(EventExecutorGroup group, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
@@ -152,7 +152,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
                 final DefaultChannelHandlerContext oldTail = tail;
                 final DefaultChannelHandlerContext newTail =
-                        new DefaultChannelHandlerContext(this, executor, oldTail, null, name, handler);
+                        new DefaultChannelHandlerContext(this, group, oldTail, null, name, handler);
 
                 if (!newTail.channel().isRegistered() || newTail.executor().inEventLoop()) {
                     addLast0(name, oldTail, newTail);
@@ -203,7 +203,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addBefore(
-            EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
+            EventExecutorGroup group, String baseName, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
@@ -211,7 +211,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 final DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext newCtx =
-                        new DefaultChannelHandlerContext(this, executor, ctx.prev, ctx, name, handler);
+                        new DefaultChannelHandlerContext(this, group, ctx.prev, ctx, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addBefore0(name, ctx, newCtx);
@@ -262,7 +262,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addAfter(
-            EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
+            EventExecutorGroup group, String baseName, final String name, final ChannelHandler handler) {
 
         try {
             Future<Throwable> future;
@@ -274,7 +274,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext newCtx =
-                        new DefaultChannelHandlerContext(this, executor, ctx, ctx.next, name, handler);
+                        new DefaultChannelHandlerContext(this, group, ctx, ctx.next, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addAfter0(name, ctx, newCtx);
@@ -325,7 +325,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers) {
+    public ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -354,7 +354,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers) {
+    public ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }

@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -49,7 +49,7 @@ public class EchoClient {
         // Configure the client.
         Bootstrap b = new Bootstrap();
         try {
-            b.eventLoop(new NioEventLoop())
+            b.group(new NioEventLoopGroup())
              .channel(new NioSocketChannel())
              .option(ChannelOption.TCP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))

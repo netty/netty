@@ -63,13 +63,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     };
 
-    public AioSocketChannel(AioEventLoop eventLoop) {
+    public AioSocketChannel(AioEventLoopGroup eventLoop) {
         this(null, null, eventLoop, newSocket(eventLoop.group));
     }
 
     AioSocketChannel(
             AioServerSocketChannel parent, Integer id,
-            AioEventLoop eventLoop, AsynchronousSocketChannel ch) {
+            AioEventLoopGroup eventLoop, AsynchronousSocketChannel ch) {
         super(parent, id, eventLoop, ch);
         config = new AioSocketChannelConfig(ch);
     }
@@ -375,7 +375,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 if (eventLoop().inEventLoop()) {
                     beginRead();
                 } else {
-                    eventLoop.execute(readTask);
+                    eventLoop().execute(readTask);
                 }
             }
         }

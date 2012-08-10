@@ -17,20 +17,25 @@ package io.netty.channel;
 
 import java.util.concurrent.ThreadFactory;
 
-public abstract class MultithreadEventLoop extends MultithreadEventExecutor implements EventLoop {
+public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
 
-    protected MultithreadEventLoop(int nThreads, ThreadFactory threadFactory,
+    protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory,
             Object... args) {
         super(nThreads, threadFactory, args);
     }
 
     @Override
+    public EventLoop next() {
+        return (EventLoop) super.next();
+    }
+
+    @Override
     public ChannelFuture register(Channel channel) {
-        return ((EventLoop) unsafe().nextChild()).register(channel);
+        return next().register(channel);
     }
 
     @Override
     public ChannelFuture register(Channel channel, ChannelFuture future) {
-        return ((EventLoop) unsafe().nextChild()).register(channel, future);
+        return next().register(channel, future);
     }
 }

@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 abstract class AbstractAioChannel extends AbstractChannel {
 
-    protected final AioEventLoop eventLoop;
+    protected final AioEventLoopGroup group;
     private final AsynchronousChannel ch;
 
     /**
@@ -41,10 +41,10 @@ abstract class AbstractAioChannel extends AbstractChannel {
     protected ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
-    protected AbstractAioChannel(Channel parent, Integer id, AioEventLoop eventLoop, AsynchronousChannel ch) {
+    protected AbstractAioChannel(Channel parent, Integer id, AioEventLoopGroup group, AsynchronousChannel ch) {
         super(parent, id);
         this.ch = ch;
-        this.eventLoop = eventLoop;
+        this.group = group;
     }
 
     @Override
@@ -68,10 +68,10 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        if (((AioChildEventLoop) eventLoop()).parent != eventLoop) {
+        if (((AioChildEventLoop) eventLoop()).parent() != group) {
             throw new ChannelException(
                     getClass().getSimpleName() + " must be registered to the " +
-                    AioEventLoop.class.getSimpleName() + " which was specified in the constructor.");
+                    AioEventLoopGroup.class.getSimpleName() + " which was specified in the constructor.");
         }
         return null;
     }

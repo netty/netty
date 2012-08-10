@@ -15,10 +15,10 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ScheduledExecutorService;
+public interface EventLoopGroup extends EventExecutorGroup {
+    @Override
+    EventLoop next();
 
-public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
-    EventExecutorGroup parent();
-    boolean inEventLoop();
-    boolean inEventLoop(Thread thread);
+    ChannelFuture register(Channel channel);
+    ChannelFuture register(Channel channel, ChannelFuture future);
 }

@@ -15,273 +15,92 @@
  */
 package io.netty.channel.socket.oio;
 
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventExecutor;
-import io.netty.channel.EventLoop;
-import io.netty.channel.SingleThreadEventExecutor;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.SingleThreadEventLoop;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-public class OioEventLoop implements EventLoop {
+class OioEventLoop extends SingleThreadEventLoop {
 
-    private final int maxChannels;
-    final ThreadFactory threadFactory;
-    final Set<OioChildEventLoop> activeChildren = Collections.newSetFromMap(
-            new ConcurrentHashMap<OioChildEventLoop, Boolean>());
-    final Queue<OioChildEventLoop> idleChildren = new ConcurrentLinkedQueue<OioChildEventLoop>();
-    private final ChannelException tooManyChannels;
-    private final Unsafe unsafe = new Unsafe() {
-        @Override
-        public EventExecutor nextChild() {
-            throw new UnsupportedOperationException();
-        }
-    };
+    private final OioEventLoopGroup parent;
+    private AbstractOioChannel ch;
 
-    public OioEventLoop() {
-        this(0);
-    }
-
-    public OioEventLoop(int maxChannels) {
-        this(maxChannels, Executors.defaultThreadFactory());
-    }
-
-    public OioEventLoop(int maxChannels, ThreadFactory threadFactory) {
-        if (maxChannels < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "maxChannels: %d (expected: >= 0)", maxChannels));
-        }
-        if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
-        }
-
-        this.maxChannels = maxChannels;
-        this.threadFactory = threadFactory;
-
-        tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
-        tooManyChannels.setStackTrace(new StackTraceElement[0]);
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return unsafe;
-    }
-
-    @Override
-    public void shutdown() {
-        for (EventLoop l: activeChildren) {
-            l.shutdown();
-        }
-        for (EventLoop l: idleChildren) {
-            l.shutdown();
-        }
-    }
-
-    @Override
-    public List<Runnable> shutdownNow() {
-        for (EventLoop l: activeChildren) {
-            l.shutdownNow();
-        }
-        for (EventLoop l: idleChildren) {
-            l.shutdownNow();
-        }
-        return Collections.emptyList();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        for (EventLoop l: activeChildren) {
-            if (!l.isShutdown()) {
-                return false;
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            if (!l.isShutdown()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        for (EventLoop l: activeChildren) {
-            if (!l.isTerminated()) {
-                return false;
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            if (!l.isTerminated()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit)
-            throws InterruptedException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
-        for (EventLoop l: activeChildren) {
-            for (;;) {
-                long timeLeft = deadline - System.nanoTime();
-                if (timeLeft <= 0) {
-                    return isTerminated();
-                }
-                if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                    break;
-                }
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            for (;;) {
-                long timeLeft = deadline - System.nanoTime();
-                if (timeLeft <= 0) {
-                    return isTerminated();
-                }
-                if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                    break;
-                }
-            }
-        }
-        return isTerminated();
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> task) {
-        return currentEventLoop().submit(task);
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable task, T result) {
-        return currentEventLoop().submit(task, result);
-    }
-
-    @Override
-    public Future<?> submit(Runnable task) {
-        return currentEventLoop().submit(task);
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException {
-        return currentEventLoop().invokeAll(tasks);
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException {
-        return currentEventLoop().invokeAll(tasks, timeout, unit);
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException, ExecutionException {
-        return currentEventLoop().invokeAny(tasks);
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks,
-            long timeout, TimeUnit unit) throws InterruptedException,
-            ExecutionException, TimeoutException {
-        return currentEventLoop().invokeAny(tasks, timeout, unit);
-    }
-
-    @Override
-    public void execute(Runnable command) {
-        currentEventLoop().execute(command);
-    }
-
-    @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay,
-            TimeUnit unit) {
-        return currentEventLoop().schedule(command, delay, unit);
-    }
-
-    @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return currentEventLoop().schedule(callable, delay, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return currentEventLoop().scheduleAtFixedRate(command, initialDelay, period, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return currentEventLoop().scheduleWithFixedDelay(command, initialDelay, delay, unit);
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
+    OioEventLoop(OioEventLoopGroup parent) {
+        super(parent, parent.threadFactory);
+        this.parent = parent;
     }
 
     @Override
     public ChannelFuture register(Channel channel, ChannelFuture future) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel, future);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
-    }
-
-    @Override
-    public boolean inEventLoop() {
-        return SingleThreadEventExecutor.currentEventLoop() != null;
-    }
-
-    @Override
-    public boolean inEventLoop(Thread thread) {
-        throw new UnsupportedOperationException();
-    }
-
-    private EventLoop nextChild() {
-        OioChildEventLoop loop = idleChildren.poll();
-        if (loop == null) {
-            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
-                throw tooManyChannels;
+        return super.register(channel, future).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    ch = (AbstractOioChannel) future.channel();
+                } else {
+                    deregister();
+                }
             }
-            loop = new OioChildEventLoop(this);
-        }
-        activeChildren.add(loop);
-        return loop;
+        });
     }
 
-    private static OioChildEventLoop currentEventLoop() {
-        OioChildEventLoop loop =
-                (OioChildEventLoop) SingleThreadEventExecutor.currentEventLoop();
-        if (loop == null) {
-            throw new IllegalStateException("not called from an event loop thread");
+    @Override
+    protected void run() {
+        for (;;) {
+            AbstractOioChannel ch = this.ch;
+            if (ch == null || !ch.isActive()) {
+                Runnable task;
+                try {
+                    task = takeTask();
+                    task.run();
+                } catch (InterruptedException e) {
+                    // Waken up by interruptThread()
+                }
+            } else {
+                long startTime = System.nanoTime();
+                for (;;) {
+                    final Runnable task = pollTask();
+                    if (task == null) {
+                        break;
+                    }
+
+                    task.run();
+
+                    // Ensure running tasks doesn't take too much time.
+                    if (System.nanoTime() - startTime > AbstractOioChannel.SO_TIMEOUT * 1000000L) {
+                        break;
+                    }
+                }
+
+                ch.unsafe().read();
+
+                // Handle deregistration
+                if (!ch.isRegistered()) {
+                    runAllTasks();
+                    deregister();
+                }
+            }
+
+            if (isShutdown()) {
+                if (ch != null) {
+                    ch.unsafe().close(ch.unsafe().voidFuture());
+                }
+                if (peekTask() == null) {
+                    break;
+                }
+            }
         }
-        return loop;
+    }
+
+    @Override
+    protected void wakeup(boolean inEventLoop) {
+        interruptThread();
+    }
+
+    private void deregister() {
+        ch = null;
+        parent.activeChildren.remove(this);
+        parent.idleChildren.add(this);
     }
 }

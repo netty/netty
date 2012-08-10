@@ -64,13 +64,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return nanoTime() + delay;
     }
 
-    private final Unsafe unsafe = new Unsafe() {
-        @Override
-        public EventExecutor nextChild() {
-            return SingleThreadEventExecutor.this;
-        }
-    };
-
+    private final EventExecutorGroup parent;
     private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
     private final Thread thread;
     private final Object stateLock = new Object();
@@ -83,7 +77,13 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private long lastCheckTimeNanos;
     private long lastPurgeTimeNanos;
 
-    protected SingleThreadEventExecutor(ThreadFactory threadFactory) {
+    protected SingleThreadEventExecutor(EventExecutorGroup parent, ThreadFactory threadFactory) {
+        if (threadFactory == null) {
+            throw new NullPointerException("threadFactory");
+        }
+
+        this.parent = parent;
+
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
@@ -127,8 +127,13 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    public EventExecutorGroup parent() {
+        return parent;
+    }
+
+    @Override
+    public EventExecutor next() {
+        return this;
     }
 
     protected void interruptThread() {
