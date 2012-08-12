@@ -528,17 +528,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         buf.append(getClass().getSimpleName());
         buf.append('{');
         DefaultChannelHandlerContext ctx = head;
-        for (;;) {
-            buf.append('(');
-            buf.append(ctx.getName());
-            buf.append(" = ");
-            buf.append(ctx.getHandler().getClass().getName());
-            buf.append(')');
-            ctx = ctx.next;
-            if (ctx == null) {
-                break;
+        if (ctx != null) {
+            for (;;) {
+                buf.append('(');
+                buf.append(ctx.getName());
+                buf.append(" = ");
+                buf.append(ctx.getHandler().getClass().getName());
+                buf.append(')');
+                ctx = ctx.next;
+                if (ctx == null) {
+                    break;
+                }
+                buf.append(", ");
             }
-            buf.append(", ");
         }
         buf.append('}');
         return buf.toString();

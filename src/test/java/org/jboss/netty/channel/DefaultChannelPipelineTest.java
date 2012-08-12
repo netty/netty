@@ -44,4 +44,11 @@ public class DefaultChannelPipelineTest {
         pipeline.replace("handler2", "handler2", newHandler2);
         assertTrue(pipeline.get("handler2") == newHandler2);
     }
+
+    // Test for #505
+    @Test
+    public void testToString() {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
+        assertNotNull(pipeline.toString());
+    }
 }
