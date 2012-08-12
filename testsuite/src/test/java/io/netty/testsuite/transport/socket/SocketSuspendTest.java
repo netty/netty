@@ -34,6 +34,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SocketSuspendTest extends AbstractSocketTest {
@@ -45,6 +46,7 @@ public class SocketSuspendTest extends AbstractSocketTest {
         random.nextBytes(data);
     }
 
+    @Ignore
     @Test
     public void testSuspendAccept() throws Throwable {
         run();
