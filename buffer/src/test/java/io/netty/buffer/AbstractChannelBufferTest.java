@@ -51,7 +51,6 @@ public abstract class AbstractChannelBufferTest {
         return true;
     }
 
-
     @Before
     public void init() {
         buffer = newBuffer(CAPACITY);

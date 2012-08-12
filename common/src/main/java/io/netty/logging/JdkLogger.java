@@ -33,6 +33,16 @@ class JdkLogger extends AbstractInternalLogger {
     }
 
     @Override
+    public void trace(String msg) {
+        logger.logp(Level.FINEST, loggerName, null, msg);
+    }
+
+    @Override
+    public void trace(String msg, Throwable cause) {
+        logger.logp(Level.FINEST, loggerName, null, msg, cause);
+    }
+
+    @Override
     public void debug(String msg) {
         logger.logp(Level.FINE, loggerName, null, msg);
     }
@@ -60,6 +70,11 @@ class JdkLogger extends AbstractInternalLogger {
     @Override
     public void info(String msg, Throwable cause) {
         logger.logp(Level.INFO, loggerName, null, msg, cause);
+    }
+
+    @Override
+    public boolean isTraceEnabled() {
+        return logger.isLoggable(Level.FINEST);
     }
 
     @Override

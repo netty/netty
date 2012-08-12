@@ -35,7 +35,7 @@ public class HttpContentCompressorTest {
             "gzip; q=0.5, identity", "gzip",
             "gzip ; q=0.1", "gzip",
             "gzip; q=0, deflate", "deflate",
-            " defalte ; q=0 , *;q=0.5", "gzip",
+            " deflate ; q=0 , *;q=0.5", "gzip",
         };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];

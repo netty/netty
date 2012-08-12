@@ -206,7 +206,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
             ByteBuf spdyDataFrameData = spdyDataFrame.getData();
             int spdyDataFrameDataLen = spdyDataFrameData.readableBytes();
             if (content == Unpooled.EMPTY_BUFFER) {
-                content = Unpooled.dynamicBuffer(spdyDataFrameDataLen);
+                content = Unpooled.buffer(spdyDataFrameDataLen);
                 content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
                 httpMessage.setContent(content);
             } else {

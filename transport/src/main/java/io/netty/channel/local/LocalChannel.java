@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventExecutor;
@@ -37,6 +38,8 @@ import java.nio.channels.NotYetConnectedException;
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
 
     private final ChannelConfig config = new DefaultChannelConfig();
     private final Runnable shutdownHook = new Runnable() {
@@ -68,8 +71,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.MESSAGE;
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
@@ -291,6 +294,16 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
+        }
+
+        @Override
+        public void suspendRead() {
+            // TODO: Implement me
+        }
+
+        @Override
+        public void resumeRead() {
+            // TODO: Implement me
         }
     }
 }

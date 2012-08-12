@@ -17,12 +17,8 @@ package io.netty.channel;
 
 import java.util.concurrent.ScheduledExecutorService;
 
-public interface EventExecutor extends ScheduledExecutorService {
+public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
+    EventExecutorGroup parent();
     boolean inEventLoop();
     boolean inEventLoop(Thread thread);
-    Unsafe unsafe();
-
-    interface Unsafe {
-        EventExecutor nextChild();
-    }
 }

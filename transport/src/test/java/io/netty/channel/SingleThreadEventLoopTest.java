@@ -63,31 +63,24 @@ public class SingleThreadEventLoopTest {
     @Test
     public void shutdownAfterStart() throws Exception {
         final AtomicBoolean interrupted = new AtomicBoolean();
-        final CountDownLatch latch = new CountDownLatch(2);
+        final CountDownLatch latch = new CountDownLatch(1);
         loop.execute(new Runnable() {
             @Override
             public void run() {
                 latch.countDown();
-                while (latch.getCount() > 0) {
-                    try {
-                        latch.await();
-                    } catch (InterruptedException ignored) {
-                        interrupted.set(true);
-                    }
+                try {
+                    Thread.sleep(Integer.MAX_VALUE);
+                } catch (InterruptedException ignored) {
+                    interrupted.set(true);
                 }
             }
         });
 
         // Wait for the event loop thread to start.
-        while (latch.getCount() >= 2) {
-            Thread.yield();
-        }
+        latch.await();
 
         // Request the event loop thread to stop - it will call wakeup(false) to interrupt the thread.
         loop.shutdown();
-
-        // Make the task terminate by itself.
-        latch.countDown();
 
         // Wait until the event loop is terminated.
         while (!loop.isTerminated()) {
@@ -263,7 +256,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopImpl() {
-            super(Executors.defaultThreadFactory());
+            super(null, Executors.defaultThreadFactory());
         }
 
         @Override
@@ -290,7 +283,7 @@ public class SingleThreadEventLoopTest {
 
         @Override
         protected void wakeup(boolean inEventLoop) {
-            if (!inEventLoop) {
+            if (!inEventLoop && isShutdown()) {
                 interruptThread();
             }
         }

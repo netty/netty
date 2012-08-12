@@ -29,14 +29,14 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
-import io.netty.channel.DefaultEventExecutor;
-import io.netty.channel.EventExecutor;
-import io.netty.channel.EventLoop;
-import io.netty.util.internal.QueueFactory;
+import io.netty.channel.DefaultEventExecutorGroup;
+import io.netty.channel.EventExecutorGroup;
+import io.netty.channel.EventLoopGroup;
 
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -57,7 +57,7 @@ public class LocalTransportThreadModelTest {
     public static void init() {
         // Configure a test server
         sb = new ServerBootstrap();
-        sb.eventLoop(new LocalEventLoop(), new LocalEventLoop())
+        sb.group(new LocalEventLoopGroup())
           .channel(new LocalServerChannel())
           .localAddress(LocalAddress.ANY)
           .childHandler(new ChannelInitializer<LocalChannel>() {
@@ -89,9 +89,9 @@ public class LocalTransportThreadModelTest {
 
     @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
-        EventLoop l = new LocalEventLoop(4, new PrefixThreadFactory("l"));
-        EventExecutor e1 = new DefaultEventExecutor(4, new PrefixThreadFactory("e1"));
-        EventExecutor e2 = new DefaultEventExecutor(4, new PrefixThreadFactory("e2"));
+        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
         ThreadNameAuditor h2 = new ThreadNameAuditor();
         ThreadNameAuditor h3 = new ThreadNameAuditor();
@@ -204,14 +204,14 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testConcurrentMessageBufferAccess() throws Throwable {
-        EventLoop l = new LocalEventLoop(4, new PrefixThreadFactory("l"));
-        EventExecutor e1 = new DefaultEventExecutor(4, new PrefixThreadFactory("e1"));
-        EventExecutor e2 = new DefaultEventExecutor(4, new PrefixThreadFactory("e2"));
-        EventExecutor e3 = new DefaultEventExecutor(4, new PrefixThreadFactory("e3"));
-        EventExecutor e4 = new DefaultEventExecutor(4, new PrefixThreadFactory("e4"));
-        EventExecutor e5 = new DefaultEventExecutor(4, new PrefixThreadFactory("e5"));
+        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
+        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e3"));
+        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e4"));
+        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e5"));
 
         try {
             final MessageForwarder1 h1 = new MessageForwarder1();
@@ -337,8 +337,8 @@ public class LocalTransportThreadModelTest {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
-        private final Queue<String> inboundThreadNames = QueueFactory.createQueue();
-        private final Queue<String> outboundThreadNames = QueueFactory.createQueue();
+        private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
+        private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -394,7 +394,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.dynamicBuffer();
+            return Unpooled.buffer();
         }
 
         @Override
@@ -441,7 +441,7 @@ public class LocalTransportThreadModelTest {
                     out.add(msg);
                 }
             }
-            in.discardReadBytes();
+            in.unsafe().discardSomeReadBytes();
             if (swallow) {
                 future.setSuccess();
             } else {
@@ -473,7 +473,7 @@ public class LocalTransportThreadModelTest {
         @Override
         public ByteBuf newInboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.dynamicBuffer();
+            return Unpooled.buffer();
         }
 
         @Override

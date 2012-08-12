@@ -27,7 +27,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
-import io.netty.handler.codec.http.CookieEncoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpChunkTrailer;
@@ -35,6 +34,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.util.CharsetUtil;
 
 import java.util.List;
@@ -137,16 +137,17 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         // Encode the cookie.
         String cookieString = request.getHeader(COOKIE);
         if (cookieString != null) {
-            CookieDecoder cookieDecoder = new CookieDecoder();
-            Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+            Set<Cookie> cookies = CookieDecoder.decode(cookieString);
             if (!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
-                CookieEncoder cookieEncoder = new CookieEncoder(true);
-                for (Cookie cookie : cookies) {
-                    cookieEncoder.addCookie(cookie);
+                for (Cookie cookie: cookies) {
+                    response.addHeader(SET_COOKIE, ServerCookieEncoder.encode(cookie));
                 }
-                response.addHeader(SET_COOKIE, cookieEncoder.encode());
             }
+        } else {
+            // Browser sent no cookie.  Add some.
+            response.addHeader(SET_COOKIE, ServerCookieEncoder.encode("key1", "value1"));
+            response.addHeader(SET_COOKIE, ServerCookieEncoder.encode("key2", "value2"));
         }
 
         // Write the response.

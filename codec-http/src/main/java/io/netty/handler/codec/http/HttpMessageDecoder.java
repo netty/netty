@@ -272,6 +272,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
+
+            // Check if the buffer is readable first as we use the readable byte count
+            // to create the HttpChunk. This is needed as otherwise we may end up with
+            // create a HttpChunk instance that contains an empty buffer and so is
+            // handled like it is the last HttpChunk.
+            //
+            // See https://github.com/netty/netty/issues/433
+            if (readLimit == 0) {
+                return null;
+            }
+
             int toRead = chunkSize;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
@@ -325,6 +336,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
             int readLimit = actualReadableBytes();
+
+            // Check if the buffer is readable first as we use the readable byte count
+            // to create the HttpChunk. This is needed as otherwise we may end up with
+            // create a HttpChunk instance that contains an empty buffer and so is
+            // handled like it is the last HttpChunk.
+            //
+            // See https://github.com/netty/netty/issues/433
+            if (readLimit == 0) {
+                return null;
+            }
+
             int toRead = chunkSize;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
@@ -444,17 +466,38 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         if (length < contentRead) {
             if (!message.isChunked()) {
                 message.setChunked(true);
-                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
+                return new Object[] {message, new DefaultHttpChunk(read(buffer, toRead))};
             } else {
-                return new DefaultHttpChunk(buffer.readBytes(toRead));
+                return new DefaultHttpChunk(read(buffer, toRead));
             }
         }
         if (content == null) {
-            content = buffer.readBytes((int) length);
+            content = read(buffer, (int) length);
         } else {
             content.writeBytes(buffer.readBytes((int) length));
         }
         return reset();
+    }
+
+
+    /**
+     * Try to do an optimized "read" of len from the given {@link ByteBuf}.
+     *
+     * This is part of #412 to safe byte copies
+     *
+     */
+    private ByteBuf read(ByteBuf buffer, int len) {
+        ByteBuf internal = internalBuffer();
+        if (internal.readableBytes() >= len) {
+            int index = internal.readerIndex();
+            ByteBuf buf = internal.slice(index, len);
+
+            // update the readerindex so an the next read its on the correct position
+            buffer.readerIndex(index + len);
+            return buf;
+        } else {
+            return buffer.readBytes(len);
+        }
     }
 
     private State readHeaders(ByteBuf buffer) throws TooLongFrameException {

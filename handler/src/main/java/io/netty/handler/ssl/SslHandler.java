@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -28,10 +29,13 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -148,6 +152,8 @@ public class SslHandler
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SslHandler.class);
 
+    private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
+            "^.*(Socket|DatagramChannel|SctpChannel).*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
             Pattern.CASE_INSENSITIVE);
@@ -304,12 +310,12 @@ public class SslHandler
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.dynamicBuffer();
+        return Unpooled.buffer();
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.dynamicBuffer();
+        return Unpooled.buffer();
     }
 
     @Override
@@ -330,7 +336,7 @@ public class SslHandler
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        out.discardReadBytes();
+        out.unsafe().discardSomeReadBytes();
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -392,10 +398,8 @@ public class SslHandler
             setHandshakeFailure(e);
             throw e;
         } finally {
-            if (bytesProduced > 0) {
-                in.discardReadBytes();
-                ctx.flush(future);
-            }
+            in.unsafe().discardSomeReadBytes();
+            ctx.flush(future);
         }
     }
 
@@ -437,32 +441,166 @@ public class SslHandler
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause instanceof IOException && engine.isOutboundDone()) {
-            String message = String.valueOf(cause.getMessage()).toLowerCase();
-            if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
-                // It is safe to ignore the 'connection reset by peer' or
-                // 'broken pipe' error after sending closure_notify.
-                if (logger.isDebugEnabled()) {
-                    logger.debug(
-                            "Swallowing a 'connection reset by peer / " +
-                            "broken pipe' error occurred while writing " +
-                            "'closure_notify'", cause);
-                }
-
-                // Close the connection explicitly just in case the transport
-                // did not close the connection automatically.
-                if (ctx.channel().isActive()) {
-                    ctx.close();
-                }
-                return;
+        if (ignoreException(cause)) {
+            // It is safe to ignore the 'connection reset by peer' or
+            // 'broken pipe' error after sending closure_notify.
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Swallowing a 'connection reset by peer / " +
+                        "broken pipe' error occurred while writing " +
+                        "'closure_notify'", cause);
             }
+
+            // Close the connection explicitly just in case the transport
+            // did not close the connection automatically.
+            if (ctx.channel().isActive()) {
+                ctx.close();
+            }
+            return;
+
         }
         super.exceptionCaught(ctx, cause);
+    }
+
+    /**
+     * Checks if the given {@link Throwable} can be ignore and just "swallowed"
+     *
+     * When an ssl connection is closed a close_notify message is sent.
+     * After that the peer also sends close_notify however, it's not mandatory to receive
+     * the close_notify. The party who sent the initial close_notify can close the connection immediately
+     * then the peer will get connection reset error.
+     *
+     */
+    private boolean ignoreException(Throwable t) {
+        if (!(t instanceof SSLException) && t instanceof IOException && engine.isOutboundDone()) {
+            String message = String.valueOf(t.getMessage()).toLowerCase();
+
+            // first try to match connection reset / broke peer based on the regex. This is the fastest way
+            // but may fail on different jdk impls or OS's
+            if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+                return true;
+            }
+
+
+            // Inspect the StackTraceElements to see if it was a connection reset / broken pipe or not
+            StackTraceElement[] elements = t.getStackTrace();
+            for (StackTraceElement element: elements) {
+                String classname = element.getClassName();
+                String methodname = element.getMethodName();
+
+                // skip all classes that belong to the io.netty package
+                if (classname.startsWith("io.netty.")) {
+                    continue;
+                }
+
+                // check if the method name is read if not skip it
+                if (!methodname.equals("read")) {
+                    continue;
+                }
+
+                // This will also match against SocketInputStream which is used by openjdk 7 and maybe
+                // also others
+                if (IGNORABLE_CLASS_IN_STACK.matcher(classname).matches()) {
+                    return true;
+                }
+
+                try {
+                    // No match by now.. Try to load the class via classloader and inspect it.
+                    // This is mainly done as other JDK implementations may differ in name of
+                    // the impl.
+                    Class<?> clazz = getClass().getClassLoader().loadClass(classname);
+
+                    if (SocketChannel.class.isAssignableFrom(clazz)
+                            || DatagramChannel.class.isAssignableFrom(clazz)) {
+                        return true;
+                    }
+
+                    // also match against SctpChannel via String matching as it may not present.
+                    if (DetectionUtil.javaVersion() >= 7
+                            && "com.sun.nio.sctp.SctpChannel".equals(clazz.getSuperclass().getName())) {
+                        return true;
+                    }
+                } catch (ClassNotFoundException e) {
+                    // This should not happen just ignore
+                }
+
+            }
+        }
+
+        return false;
     }
 
     @Override
     public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
         final ByteBuf in = ctx.inboundByteBuffer();
+
+        if (in.readableBytes() < 5) {
+            return;
+        }
+
+        // SSLv3 or TLS - Check ContentType
+        boolean tls;
+        switch (in.getUnsignedByte(in.readerIndex())) {
+        case 20:  // change_cipher_spec
+        case 21:  // alert
+        case 22:  // handshake
+        case 23:  // application_data
+            tls = true;
+            break;
+        default:
+            // SSLv2 or bad data
+            tls = false;
+        }
+
+        int packetLength = -1;
+        if (tls) {
+            // SSLv3 or TLS - Check ProtocolVersion
+            int majorVersion = in.getUnsignedByte(in.readerIndex() + 1);
+            if (majorVersion == 3) {
+                // SSLv3 or TLS
+                packetLength = (getShort(in, in.readerIndex() + 3) & 0xFFFF) + 5;
+                if (packetLength <= 5) {
+                    // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
+                    tls = false;
+                }
+            } else {
+                // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
+                tls = false;
+            }
+        }
+
+        if (!tls) {
+            // SSLv2 or bad data - Check the version
+            boolean sslv2 = true;
+            int headerLength = (in.getUnsignedByte(
+                    in.readerIndex()) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = in.getUnsignedByte(
+                    in.readerIndex() + headerLength + 1);
+            if (majorVersion == 2 || majorVersion == 3) {
+                // SSLv2
+                if (headerLength == 2) {
+                    packetLength = (getShort(in, in.readerIndex()) & 0x7FFF) + 2;
+                } else {
+                    packetLength = (getShort(in, in.readerIndex()) & 0x3FFF) + 3;
+                }
+                if (packetLength <= headerLength) {
+                    sslv2 = false;
+                }
+            } else {
+                sslv2 = false;
+            }
+
+            if (!sslv2) {
+                // Bad data - discard the buffer and raise an exception.
+                NotSslRecordException e = new NotSslRecordException(
+                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                in.skipBytes(in.readableBytes());
+                throw e;
+            }
+        }
+
+        assert packetLength > 0;
+
         final ByteBuf out = ctx.nextInboundByteBuffer();
         out.discardReadBytes();
 
@@ -521,6 +659,14 @@ public class SslHandler
         }
     }
 
+    /**
+     * Reads a big-endian short integer from the buffer.  Please note that we do not use
+     * {@link ByteBuf#getShort(int)} because it might be a little-endian buffer.
+     */
+    private static short getShort(ByteBuf buf, int offset) {
+        return (short) (buf.getByte(offset) << 8 | buf.getByte(offset + 1) & 0xFF);
+    }
+
     private static SSLEngineResult unwrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
         ByteBuffer in0 = in.nioBuffer();
         for (;;) {
@@ -571,7 +717,6 @@ public class SslHandler
                         "SSLEngine.closeInbound() raised an exception after " +
                         "a handshake failure.", e);
             }
-
         }
 
         for (;;) {
@@ -606,10 +751,8 @@ public class SslHandler
         final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (future.setSuccess()) {
-                    logger.debug("close_notify write attempt timed out. Force-closing the connection.");
-                    ctx.close(ctx.newFuture());
-                }
+                logger.warn(ctx.channel() + "close_notify write attempt timed out. Force-closing the connection.");
+                ctx.close(future);
             }
         }, 3, TimeUnit.SECONDS); // FIXME: Magic value
 
@@ -618,8 +761,9 @@ public class SslHandler
             @Override
             public void operationComplete(ChannelFuture f)
                     throws Exception {
-                timeoutFuture.cancel(false);
-                ctx.close(future);
+                if (timeoutFuture.cancel(false)) {
+                    ctx.close(future);
+                }
             }
         });
     }

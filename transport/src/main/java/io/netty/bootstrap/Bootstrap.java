@@ -22,7 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -39,20 +39,20 @@ public class Bootstrap {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private EventLoop eventLoop;
+    private EventLoopGroup group;
     private Channel channel;
     private ChannelHandler handler;
     private SocketAddress localAddress;
     private SocketAddress remoteAddress;
 
-    public Bootstrap eventLoop(EventLoop eventLoop) {
-        if (eventLoop == null) {
-            throw new NullPointerException("eventLoop");
+    public Bootstrap group(EventLoopGroup group) {
+        if (group == null) {
+            throw new NullPointerException("group");
         }
-        if (this.eventLoop != null) {
-            throw new IllegalStateException("eventLoop set already");
+        if (this.group != null) {
+            throw new IllegalStateException("group set already");
         }
-        this.eventLoop = eventLoop;
+        this.group = group;
         return this;
     }
 
@@ -201,7 +201,7 @@ public class Bootstrap {
             }
         }
 
-        eventLoop.register(channel).syncUninterruptibly();
+        group.register(channel).syncUninterruptibly();
     }
 
     private static boolean ensureOpen(ChannelFuture future) {
@@ -215,14 +215,14 @@ public class Bootstrap {
     }
 
     public void shutdown() {
-        if (eventLoop != null) {
-            eventLoop.shutdown();
+        if (group != null) {
+            group.shutdown();
         }
     }
 
     private void validate() {
-        if (eventLoop == null) {
-            throw new IllegalStateException("eventLoop not set");
+        if (group == null) {
+            throw new IllegalStateException("group not set");
         }
         if (channel == null) {
             throw new IllegalStateException("channel not set");

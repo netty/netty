@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Alpha1-SNAPSHOT</version>
+    <version>4.0.0.Alpha2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-tarball</artifactId>
@@ -62,83 +62,6 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.4</version>
-        <executions>
-          <execution>
-            <id>copy-jars</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/jars</outputDirectory>
-              <includeGroupIds>${project.groupId}</includeGroupIds>
-              <excludeArtifactIds>netty</excludeArtifactIds>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-sources</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <classifier>sources</classifier>
-              <outputDirectory>${project.build.directory}/jars</outputDirectory>
-              <includeGroupIds>${project.groupId}</includeGroupIds>
-              <excludeArtifactIds>netty</excludeArtifactIds>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-jars-all-in-one</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
-              <includeGroupIds>${project.groupId}</includeGroupIds>
-              <includeArtifactIds>netty</includeArtifactIds>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-sources-all-in-one</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <classifier>sources</classifier>
-              <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
-              <includeGroupIds>${project.groupId}</includeGroupIds>
-              <includeArtifactIds>netty</includeArtifactIds>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.3</version>
-        <executions>
-          <execution>
-            <id>build-tarball</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <finalName>netty-${project.version}</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
-              <attach>false</attach>
-              <descriptors>
-                <descriptor>${project.basedir}/assembly.xml</descriptor>
-              </descriptors>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
 
       <!-- Disable animal sniffer -->
       <plugin>
@@ -171,5 +94,94 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>full</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.4</version>
+            <executions>
+              <execution>
+                <id>copy-jars</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/jars</outputDirectory>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <excludeArtifactIds>netty</excludeArtifactIds>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-sources</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <classifier>sources</classifier>
+                  <outputDirectory>${project.build.directory}/jars</outputDirectory>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <excludeArtifactIds>netty</excludeArtifactIds>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-jars-all-in-one</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <includeArtifactIds>netty</includeArtifactIds>
+                </configuration>
+              </execution>
+              <execution>
+                <id>copy-sources-all-in-one</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <classifier>sources</classifier>
+                  <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <includeArtifactIds>netty</includeArtifactIds>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>2.3</version>
+            <executions>
+              <execution>
+                <id>build-tarball</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <finalName>netty-${project.version}</finalName>
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <attach>false</attach>
+                  <descriptors>
+                    <descriptor>${project.basedir}/assembly.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>
 

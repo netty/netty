@@ -30,28 +30,26 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
-    private final ByteBuf buffer;
+    private final Unsafe unsafe = new DuplicatedUnsafe();
+    final ByteBuf buffer;
 
     public DuplicatedByteBuf(ByteBuf buffer) {
-        super(buffer.order());
-        this.buffer = buffer;
-        setIndex(buffer.readerIndex(), buffer.writerIndex());
-    }
+        super(buffer.order(), buffer.maxCapacity());
 
-    private DuplicatedByteBuf(DuplicatedByteBuf buffer) {
-        super(buffer.buffer.order());
-        this.buffer = buffer.buffer;
+        if (buffer instanceof DuplicatedByteBuf) {
+            this.buffer = ((DuplicatedByteBuf) buffer).buffer;
+        } else {
+            this.buffer = buffer;
+        }
+
         setIndex(buffer.readerIndex(), buffer.writerIndex());
+
+        buffer.unsafe().acquire();
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return buffer.factory();
     }
 
     @Override
@@ -62,6 +60,11 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     @Override
     public int capacity() {
         return buffer.capacity();
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        buffer.capacity(newCapacity);
     }
 
     @Override
@@ -206,5 +209,38 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         return buffer.nioBuffer(index, length);
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
+    }
+
+    private final class DuplicatedUnsafe implements Unsafe {
+
+        @Override
+        public ByteBuffer nioBuffer() {
+            return buffer.unsafe().nioBuffer();
+        }
+
+        @Override
+        public ByteBuf newBuffer(int initialCapacity) {
+            return buffer.unsafe().newBuffer(initialCapacity);
+        }
+
+        @Override
+        public void discardSomeReadBytes() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void acquire() {
+            buffer.unsafe().acquire();
+        }
+
+        @Override
+        public void release() {
+            buffer.unsafe().release();
+        }
     }
 }

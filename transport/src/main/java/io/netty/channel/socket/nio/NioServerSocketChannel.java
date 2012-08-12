@@ -15,8 +15,10 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
@@ -30,6 +32,8 @@ import java.nio.channels.SocketChannel;
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
+
     private static ServerSocketChannel newSocket() {
         try {
             return ServerSocketChannel.open();
@@ -42,8 +46,13 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     public NioServerSocketChannel() {
-        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, null, newSocket(), 0);
         config = new DefaultServerSocketChannelConfig(javaChannel().socket());
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
@@ -118,5 +127,27 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected AbstractNioMessageUnsafe newUnsafe() {
+        return new NioServerSocketUnsafe();
+    }
+
+    private final class NioServerSocketUnsafe extends AbstractNioMessageUnsafe {
+        @Override
+        public void suspendRead() {
+            selectionKey().cancel();
+        }
+
+        @Override
+        public void resumeRead() {
+            try {
+                doRegister();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
     }
 }

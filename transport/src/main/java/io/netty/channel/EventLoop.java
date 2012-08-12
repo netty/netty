@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-public interface EventLoop extends EventExecutor {
-    ChannelFuture register(Channel channel);
-    ChannelFuture register(Channel channel, ChannelFuture future);
+public interface EventLoop extends EventExecutor, EventLoopGroup {
+    @Override
+    EventLoopGroup parent();
 }

@@ -16,8 +16,10 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -29,6 +31,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
@@ -69,6 +73,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         config = new DefaultSocketChannelConfig(socket.socket());
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
@@ -181,5 +190,23 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         return writtenBytes;
+    }
+
+    @Override
+    protected AbstractNioByteUnsafe newUnsafe() {
+        return new NioSocketChannelUnsafe();
+    }
+
+    private final class NioSocketChannelUnsafe extends AbstractNioByteUnsafe {
+
+        @Override
+        public void suspendRead() {
+            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
+        }
+
+        @Override
+        public void resumeRead() {
+            selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_READ);
+        }
     }
 }

@@ -21,8 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Decodes an HTTP header value into {@link Cookie}s.  This decoder can decode
@@ -34,46 +32,22 @@ import java.util.regex.Pattern;
  * Set&lt;{@link Cookie}&gt; cookies = new {@link CookieDecoder}().decode(value);
  * </pre>
  *
- * @see CookieEncoder
+ * @see ClientCookieEncoder
+ * @see ServerCookieEncoder
  *
  * @apiviz.stereotype utility
  * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - decodes
  */
-public class CookieDecoder {
-
-    private static final Pattern PATTERN =
-        Pattern.compile(
-                // See: https://github.com/netty/netty/pull/96
-                //"(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))"
-                "(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;]*)))?(\\s*(?:[;,]+\\s*|$))"
-        );
+public final class CookieDecoder {
 
     private static final String COMMA = ",";
-
-    private final boolean lenient;
-
-    /**
-     * Creates a new decoder with strict parsing.
-     */
-    public CookieDecoder() {
-        this(false);
-    }
-
-    /**
-     * Creates a new decoder.
-     *
-     * @param lenient ignores cookies with the name 'HTTPOnly' instead of throwing an exception
-     */
-    public CookieDecoder(boolean lenient) {
-        this.lenient = lenient;
-    }
 
     /**
      * Decodes the specified HTTP header value into {@link Cookie}s.
      *
      * @return the decoded {@link Cookie}s
      */
-    public Set<Cookie> decode(String header) {
+    public static Set<Cookie> decode(String header) {
         List<String> names = new ArrayList<String>(8);
         List<String> values = new ArrayList<String>(8);
         extractKeyValuePairs(header, names, values);
@@ -106,11 +80,6 @@ public class CookieDecoder {
         Set<Cookie> cookies = new TreeSet<Cookie>();
         for (; i < names.size(); i ++) {
             String name = names.get(i);
-            // Not all user agents understand the HttpOnly attribute
-            if (lenient && CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
-                continue;
-            }
-
             String value = values.get(i);
             if (value == null) {
                 value = "";
@@ -199,58 +168,130 @@ public class CookieDecoder {
     }
 
     private static void extractKeyValuePairs(
-            String header, List<String> names, List<String> values) {
-        Matcher m = PATTERN.matcher(header);
-        int pos = 0;
-        String name = null;
-        String value = null;
-        String separator = null;
-        while (m.find(pos)) {
-            pos = m.end();
+            final String header, final List<String> names, final List<String> values) {
 
-            // Extract name and value pair from the match.
-            String newName = m.group(1);
-            String newValue = m.group(3);
-            if (newValue == null) {
-                newValue = decodeValue(m.group(2));
-            }
-            String newSeparator = m.group(4);
+        final int headerLen  = header.length();
+        loop: for (int i = 0;;) {
 
-            if (name == null) {
-                name = newName;
-                value = newValue == null? "" : newValue;
-                separator = newSeparator;
-                continue;
+            // Skip spaces and separators.
+            for (;;) {
+                if (i == headerLen) {
+                    break loop;
+                }
+                switch (header.charAt(i)) {
+                case '\t': case '\n': case 0x0b: case '\f': case '\r':
+                case ' ':  case ',':  case ';':
+                    i ++;
+                    continue;
+                }
+                break;
             }
 
-            if (newValue == null &&
-                !CookieHeaderNames.DISCARD.equalsIgnoreCase(newName) &&
-                !CookieHeaderNames.SECURE.equalsIgnoreCase(newName) &&
-                !CookieHeaderNames.HTTPONLY.equalsIgnoreCase(newName)) {
-                value = value + separator + newName;
-                separator = newSeparator;
-                continue;
+            // Skip '$'.
+            for (;;) {
+                if (i == headerLen) {
+                    break loop;
+                }
+                if (header.charAt(i) == '$') {
+                    i ++;
+                    continue;
+                }
+                break;
             }
 
-            names.add(name);
-            values.add(value);
+            String name;
+            String value;
 
-            name = newName;
-            value = newValue;
-            separator = newSeparator;
-        }
+            if (i == headerLen) {
+                name = null;
+                value = null;
+            } else {
+                int newNameStart = i;
+                keyValLoop: for (;;) {
+                    switch (header.charAt(i)) {
+                    case ';':
+                        // NAME; (no value till ';')
+                        name = header.substring(newNameStart, i);
+                        value = null;
+                        break keyValLoop;
+                    case '=':
+                        // NAME=VALUE
+                        name = header.substring(newNameStart, i);
+                        i ++;
+                        if (i == headerLen) {
+                            // NAME= (empty value, i.e. nothing after '=')
+                            value = "";
+                            break keyValLoop;
+                        }
 
-        // The last entry
-        if (name != null) {
+                        int newValueStart = i;
+                        char c = header.charAt(i);
+                        if (c == '"' || c == '\'') {
+                            // NAME="VALUE" or NAME='VALUE'
+                            StringBuilder newValueBuf = new StringBuilder(header.length() - i);
+                            final char q = c;
+                            boolean hadBackslash = false;
+                            i ++;
+                            for (;;) {
+                                if (i == headerLen) {
+                                    value = newValueBuf.toString();
+                                    break keyValLoop;
+                                }
+                                if (hadBackslash) {
+                                    hadBackslash = false;
+                                    c = header.charAt(i ++);
+                                    switch (c) {
+                                    case '\\': case '"': case '\'':
+                                        // Escape last backslash.
+                                        newValueBuf.setCharAt(newValueBuf.length() - 1, c);
+                                        break;
+                                    default:
+                                        // Do not escape last backslash.
+                                        newValueBuf.append(c);
+                                    }
+                                } else {
+                                    c = header.charAt(i ++);
+                                    if (c == q) {
+                                        value = newValueBuf.toString();
+                                        break keyValLoop;
+                                    }
+                                    newValueBuf.append(c);
+                                    if (c == '\\') {
+                                        hadBackslash = true;
+                                    }
+                                }
+                            }
+                        } else {
+                            // NAME=VALUE;
+                            int semiPos = header.indexOf(';', i);
+                            if (semiPos > 0) {
+                                value = header.substring(newValueStart, semiPos);
+                                i = semiPos;
+                            } else {
+                                value = header.substring(newValueStart);
+                                i = headerLen;
+                            }
+                        }
+                        break keyValLoop;
+                    default:
+                        i ++;
+                    }
+
+                    if (i == headerLen) {
+                        // NAME (no value till the end of string)
+                        name = header.substring(newNameStart);
+                        value = null;
+                        break;
+                    }
+                }
+            }
+
             names.add(name);
             values.add(value);
         }
     }
 
-    private static String decodeValue(String value) {
-        if (value == null) {
-            return value;
-        }
-        return value.replace("\\\"", "\"").replace("\\\\", "\\");
+    private CookieDecoder() {
+        // Unused
     }
 }

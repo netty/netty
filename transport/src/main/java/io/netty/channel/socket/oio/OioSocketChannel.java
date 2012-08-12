@@ -16,8 +16,10 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -38,10 +40,13 @@ public class OioSocketChannel extends AbstractOioByteChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSocketChannel.class);
 
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
+
     private final Socket socket;
     private final SocketChannelConfig config;
     private InputStream is;
     private OutputStream os;
+    private volatile boolean readSuspended;
 
     public OioSocketChannel() {
         this(new Socket());
@@ -75,6 +80,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
                 }
             }
         }
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
@@ -151,8 +161,24 @@ public class OioSocketChannel extends AbstractOioByteChannel
         if (socket.isClosed()) {
             return -1;
         }
+
+        if (readSuspended) {
+            try {
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            return 0;
+        }
+
         try {
-            return buf.writeBytes(is, buf.writableBytes());
+            int read = buf.writeBytes(is, buf.writableBytes());
+            if (read > 0 && !readSuspended) {
+                return read;
+            } else {
+                // so the read bytes were 0 or the read was suspend
+                return 0;
+            }
         } catch (SocketTimeoutException e) {
             return 0;
         }
@@ -165,5 +191,24 @@ public class OioSocketChannel extends AbstractOioByteChannel
             throw new NotYetConnectedException();
         }
         buf.readBytes(os, buf.readableBytes());
+    }
+
+
+    @Override
+    protected AbstractOioByteUnsafe newUnsafe() {
+        return new OioSocketChannelUnsafe();
+    }
+
+    private final class OioSocketChannelUnsafe extends AbstractOioByteUnsafe {
+
+        @Override
+        public void suspendRead() {
+            readSuspended = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            readSuspended = false;
+        }
     }
 }

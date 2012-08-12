@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -54,9 +55,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private boolean firedChannelActive;
     private boolean fireInboundBufferUpdatedOnActivation;
 
-    final Map<EventExecutor, EventExecutor> childExecutors =
-            new IdentityHashMap<EventExecutor, EventExecutor>();
-
+    final Map<EventExecutorGroup, EventExecutor> childExecutors =
+            new IdentityHashMap<EventExecutorGroup, EventExecutor>();
+    private final AtomicInteger suspendRead = new AtomicInteger();
 
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
@@ -83,7 +84,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutor executor, final String name, final ChannelHandler handler) {
+    public ChannelPipeline addFirst(EventExecutorGroup group, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
@@ -91,7 +92,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext nextCtx = head.next;
                 final DefaultChannelHandlerContext newCtx =
-                        new DefaultChannelHandlerContext(this, executor, head, nextCtx, name, handler);
+                        new DefaultChannelHandlerContext(this, group, head, nextCtx, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addFirst0(name, nextCtx, newCtx);
@@ -142,7 +143,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutor executor, final String name, final ChannelHandler handler) {
+    public ChannelPipeline addLast(EventExecutorGroup group, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
@@ -151,7 +152,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
                 final DefaultChannelHandlerContext oldTail = tail;
                 final DefaultChannelHandlerContext newTail =
-                        new DefaultChannelHandlerContext(this, executor, oldTail, null, name, handler);
+                        new DefaultChannelHandlerContext(this, group, oldTail, null, name, handler);
 
                 if (!newTail.channel().isRegistered() || newTail.executor().inEventLoop()) {
                     addLast0(name, oldTail, newTail);
@@ -202,7 +203,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addBefore(
-            EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
+            EventExecutorGroup group, String baseName, final String name, final ChannelHandler handler) {
         try {
             Future<Throwable> future;
 
@@ -210,7 +211,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 final DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext newCtx =
-                        new DefaultChannelHandlerContext(this, executor, ctx.prev, ctx, name, handler);
+                        new DefaultChannelHandlerContext(this, group, ctx.prev, ctx, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addBefore0(name, ctx, newCtx);
@@ -261,7 +262,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addAfter(
-            EventExecutor executor, String baseName, final String name, final ChannelHandler handler) {
+            EventExecutorGroup group, String baseName, final String name, final ChannelHandler handler) {
 
         try {
             Future<Throwable> future;
@@ -273,7 +274,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
                 checkDuplicateName(name);
                 final DefaultChannelHandlerContext newCtx =
-                        new DefaultChannelHandlerContext(this, executor, ctx, ctx.next, name, handler);
+                        new DefaultChannelHandlerContext(this, group, ctx, ctx.next, name, handler);
 
                 if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                     addAfter0(name, ctx, newCtx);
@@ -324,7 +325,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers) {
+    public ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -353,7 +354,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers) {
+    public ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -465,6 +466,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         name2ctx.remove(ctx.name());
 
         callAfterRemove(ctx);
+
+        // make sure the it's set back to readable
+        ctx.readable(true);
     }
 
     @Override
@@ -524,6 +528,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         name2ctx.remove(oldTail.name());
 
         callBeforeRemove(oldTail);
+
+        // make sure the it's set back to readable
+        oldTail.readable(true);
     }
 
     @Override
@@ -640,6 +647,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         boolean removed = false;
         try {
             callAfterRemove(ctx);
+
+            // clear readable suspend if necessary
+            ctx.readable(true);
+
             removed = true;
         } catch (ChannelHandlerLifeCycleException e) {
             removeException = e;
@@ -887,7 +898,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public MessageBuf<Object> inboundMessageBuffer() {
-        if (channel.bufferType() != ChannelBufType.MESSAGE) {
+        if (channel.metadata().bufferType() != ChannelBufType.MESSAGE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a message buffer.");
         }
@@ -896,7 +907,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ByteBuf inboundByteBuffer() {
-        if (channel.bufferType() != ChannelBufType.BYTE) {
+        if (channel.metadata().bufferType() != ChannelBufType.BYTE) {
             throw new NoSuchBufferException(
                     "The first inbound buffer of this channel must be a byte buffer.");
         }
@@ -1150,6 +1161,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
+        // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+        // So far, UDP/IP is the only transport that has such behavior.
+        if (!ctx.channel().metadata().hasDisconnect()) {
+            return close(ctx, future);
+        }
+
         validateFuture(future);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -1432,12 +1449,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    void readable(DefaultChannelHandlerContext ctx, boolean readable) {
+        if (ctx.readable.compareAndSet(!readable, readable)) {
+            if (!readable) {
+                if (suspendRead.incrementAndGet() == 1) {
+                    unsafe.suspendRead();
+                }
+            } else {
+                if (suspendRead.decrementAndGet() == 0) {
+                    unsafe.resumeRead();
+                }
+            }
+        }
+    }
+
     private final class HeadHandler implements ChannelOutboundHandler {
         @Override
         public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            switch (channel.bufferType()) {
+            switch (channel.metadata().bufferType()) {
             case BYTE:
-                return Unpooled.dynamicBuffer();
+                // TODO: Use a direct buffer once buffer pooling is implemented.
+                return Unpooled.buffer();
             case MESSAGE:
                 return Unpooled.messageBuffer();
             default:

@@ -19,16 +19,19 @@ import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelMetadata;
 
 public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
 
     public EmbeddedMessageChannel(ChannelHandler... handlers) {
         super(Unpooled.messageBuffer(), handlers);
     }
 
     @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.MESSAGE;
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     public MessageBuf<Object> inboundBuffer() {

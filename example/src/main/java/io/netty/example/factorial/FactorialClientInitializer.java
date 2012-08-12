@@ -18,8 +18,7 @@ package io.netty.example.factorial;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.compression.ZlibDecoder;
-import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
@@ -38,8 +37,8 @@ public class FactorialClientInitializer extends ChannelInitializer<SocketChannel
         ChannelPipeline pipeline = ch.pipeline();
 
         // Enable stream compression (you can remove these two if unnecessary)
-        pipeline.addLast("deflater", new ZlibEncoder(ZlibWrapper.GZIP));
-        pipeline.addLast("inflater", new ZlibDecoder(ZlibWrapper.GZIP));
+        pipeline.addLast("deflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
+        pipeline.addLast("inflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
 
         // Add the number codec first,
         pipeline.addLast("decoder", new BigIntegerDecoder());

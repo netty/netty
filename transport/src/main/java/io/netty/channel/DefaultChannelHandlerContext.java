@@ -21,13 +21,14 @@ import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.internal.QueueFactory;
 
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
@@ -61,6 +62,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     final AtomicReference<MessageBridge> outMsgBridge;
     final AtomicReference<ByteBridge> inByteBridge;
     final AtomicReference<ByteBridge> outByteBridge;
+
+    final AtomicBoolean readable = new AtomicBoolean(true);
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {
@@ -145,7 +148,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
-            DefaultChannelPipeline pipeline, EventExecutor executor,
+            DefaultChannelPipeline pipeline, EventExecutorGroup group,
             DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
             String name, ChannelHandler handler) {
 
@@ -184,19 +187,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.name = name;
         this.handler = handler;
 
-        if (executor != null) {
+        if (group != null) {
             // Pin one of the child executors once and remember it so that the same child executor
             // is used to fire events for the same channel.
-            EventExecutor childExecutor = pipeline.childExecutors.get(executor);
+            EventExecutor childExecutor = pipeline.childExecutors.get(group);
             if (childExecutor == null) {
-                childExecutor = executor.unsafe().nextChild();
-                pipeline.childExecutors.put(executor, childExecutor);
+                childExecutor = group.next();
+                pipeline.childExecutors.put(group, childExecutor);
             }
-            this.executor = childExecutor;
+            executor = childExecutor;
         } else if (channel.isRegistered()) {
-            this.executor = channel.eventLoop();
+            executor = channel.eventLoop();
         } else {
-            this.executor = null;
+            executor = null;
         }
 
         if (type.contains(ChannelHandlerType.INBOUND)) {
@@ -240,7 +243,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
 
             if (buf == null) {
-                throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
+                throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
             }
 
             if (buf instanceof ByteBuf) {
@@ -746,7 +749,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     static final class MessageBridge {
         final MessageBuf<Object> msgBuf = Unpooled.messageBuffer();
-        final BlockingQueue<Object[]> exchangeBuf = QueueFactory.createQueue();
+        final Queue<Object[]> exchangeBuf = new ConcurrentLinkedQueue<Object[]>();
 
         void fill() {
             if (msgBuf.isEmpty()) {
@@ -770,8 +773,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class ByteBridge {
-        final ByteBuf byteBuf = Unpooled.dynamicBuffer();
-        final BlockingQueue<ByteBuf> exchangeBuf = QueueFactory.createQueue();
+        final ByteBuf byteBuf = Unpooled.buffer();
+        final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
 
         void fill() {
             if (!byteBuf.readable()) {
@@ -792,5 +795,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 out.writeBytes(data);
             }
         }
+    }
+
+    @Override
+    public boolean isReadable() {
+        return readable.get();
+    }
+
+    @Override
+    public void readable(boolean readable) {
+        pipeline.readable(this, readable);
     }
 }

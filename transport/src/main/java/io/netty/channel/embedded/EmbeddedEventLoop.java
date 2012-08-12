@@ -17,8 +17,8 @@ package io.netty.channel.embedded;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,8 +27,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-class EmbeddedEventLoop extends AbstractExecutorService implements
-        EventLoop, EventExecutor.Unsafe {
+class EmbeddedEventLoop extends AbstractExecutorService implements EventLoop {
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay,
@@ -108,12 +107,12 @@ class EmbeddedEventLoop extends AbstractExecutorService implements
     }
 
     @Override
-    public Unsafe unsafe() {
+    public EventLoop next() {
         return this;
     }
 
     @Override
-    public EventExecutor nextChild() {
+    public EventLoopGroup parent() {
         return this;
     }
 }

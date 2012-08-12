@@ -36,7 +36,6 @@ import java.util.Queue;
  *
  * {@link ByteBuf} heapBuffer    = buffer(128);
  * {@link ByteBuf} directBuffer  = directBuffer(256);
- * {@link ByteBuf} dynamicBuffer = dynamicBuffer(512);
  * {@link ByteBuf} wrappedBuffer = wrappedBuffer(new byte[128], new byte[256]);
  * {@link ByteBuf} copiedBuffe r = copiedBuffer({@link ByteBuffer}.allocate(128));
  * </pre>
@@ -48,9 +47,6 @@ import java.util.Queue;
  * <ul>
  * <li>{@link #buffer(int)} allocates a new fixed-capacity heap buffer.</li>
  * <li>{@link #directBuffer(int)} allocates a new fixed-capacity direct buffer.</li>
- * <li>{@link #dynamicBuffer(int)} allocates a new dynamic-capacity heap
- *     buffer, whose capacity increases automatically as needed by a write
- *     operation.</li>
  * </ul>
  *
  * <h3>Creating a wrapped buffer</h3>
@@ -94,7 +90,7 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = new HeapByteBuf(0) {
+    public static final ByteBuf EMPTY_BUFFER = new HeapByteBuf(0, 0) {
         @Override
         public ByteBuf order(ByteOrder endianness) {
             if (endianness == null) {
@@ -120,15 +116,49 @@ public final class Unpooled {
     }
 
     /**
+     * Creates a new big-endian Java heap buffer with reasonably small initial capacity, which
+     * expands its capacity boundlessly on demand.
+     */
+    public static ByteBuf buffer() {
+        return buffer(256, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new big-endian direct buffer with resaonably small initial capacity, which
+     * expands its capacity boundlessly on demand.
+     */
+    public static ByteBuf directBuffer() {
+        return directBuffer(256, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new big-endian Java heap buffer with the specified {@code capacity}, which
+     * expands its capacity boundlessly on demand.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
+    public static ByteBuf buffer(int initialCapacity) {
+        return buffer(initialCapacity, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new big-endian direct buffer with the specified {@code capacity}, which
+     * expands its capacity boundlessly on demand.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
+    public static ByteBuf directBuffer(int initialCapacity) {
+        return directBuffer(initialCapacity, Integer.MAX_VALUE);
+    }
+
+    /**
      * Creates a new big-endian Java heap buffer with the specified
      * {@code capacity}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ByteBuf buffer(int capacity) {
-        if (capacity == 0) {
+    public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
+        if (initialCapacity == 0 && maxCapacity == 0) {
             return EMPTY_BUFFER;
         }
-        return new HeapByteBuf(capacity);
+        return new HeapByteBuf(initialCapacity, maxCapacity);
     }
 
     /**
@@ -136,60 +166,11 @@ public final class Unpooled {
      * {@code capacity}.  The new buffer's {@code readerIndex} and
      * {@code writerIndex} are {@code 0}.
      */
-    public static ByteBuf directBuffer(int capacity) {
-        if (capacity == 0) {
+    public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
+        if (initialCapacity == 0 && maxCapacity == 0) {
             return EMPTY_BUFFER;
         }
-
-        ByteBuf buffer = new NioBufferBackedByteBuf(ByteBuffer.allocateDirect(capacity));
-        buffer.clear();
-        return buffer;
-    }
-
-    /**
-     * Creates a new big-endian dynamic buffer whose estimated data length is
-     * {@code 256} bytes.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf dynamicBuffer() {
-        return dynamicBuffer(256);
-    }
-
-    /**
-     * Creates a new big-endian dynamic buffer whose estimated data length is
-     * {@code 256} bytes.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf dynamicBuffer(ByteBufFactory factory) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-
-        return new DynamicByteBuf(256, factory);
-    }
-
-    /**
-     * Creates a new big-endian dynamic buffer with the specified estimated
-     * data length.  More accurate estimation yields less unexpected
-     * reallocation overhead.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf dynamicBuffer(int estimatedLength) {
-        return new DynamicByteBuf(estimatedLength);
-    }
-
-    /**
-     * Creates a new big-endian dynamic buffer with the specified estimated
-     * data length using the specified factory.  More accurate estimation yields
-     * less unexpected reallocation overhead.  The new buffer's {@code readerIndex}
-     * and {@code writerIndex} are {@code 0}.
-     */
-    public static ByteBuf dynamicBuffer(int estimatedLength, ByteBufFactory factory) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-
-        return new DynamicByteBuf(estimatedLength, factory);
+        return new DirectByteBuf(initialCapacity, maxCapacity);
     }
 
     /**
@@ -201,7 +182,7 @@ public final class Unpooled {
         if (array.length == 0) {
             return EMPTY_BUFFER;
         }
-        return new HeapByteBuf(array);
+        return new HeapByteBuf(array, array.length);
     }
 
     /**
@@ -210,23 +191,15 @@ public final class Unpooled {
      * content will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[] array, int offset, int length) {
-        if (offset == 0) {
-            if (length == array.length) {
-                return wrappedBuffer(array);
-            } else {
-                if (length == 0) {
-                    return EMPTY_BUFFER;
-                } else {
-                    return new TruncatedByteBuf(wrappedBuffer(array), length);
-                }
-            }
-        } else {
-            if (length == 0) {
-                return EMPTY_BUFFER;
-            } else {
-                return new SlicedByteBuf(wrappedBuffer(array), offset, length);
-            }
+        if (length == 0) {
+            return EMPTY_BUFFER;
         }
+
+        if (offset == 0 && length == array.length) {
+            return wrappedBuffer(array);
+        }
+
+        return new SlicedByteBuf(wrappedBuffer(array), offset, length);
     }
 
     /**
@@ -244,7 +217,7 @@ public final class Unpooled {
                     buffer.arrayOffset() + buffer.position(),
                     buffer.remaining()).order(buffer.order());
         } else {
-            return new NioBufferBackedByteBuf(buffer);
+            return new DirectByteBuf(buffer, buffer.remaining());
         }
     }
 
@@ -267,6 +240,33 @@ public final class Unpooled {
      * content will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[]... arrays) {
+        return wrappedBuffer(16, arrays);
+    }
+
+    /**
+     * Creates a new big-endian composite buffer which wraps the readable bytes of the
+     * specified buffers without copying them.  A modification on the content
+     * of the specified buffers will be visible to the returned buffer.
+     */
+    public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
+        return wrappedBuffer(16, buffers);
+    }
+
+    /**
+     * Creates a new big-endian composite buffer which wraps the slices of the specified
+     * NIO buffers without copying them.  A modification on the content of the
+     * specified buffers will be visible to the returned buffer.
+     */
+    public static ByteBuf wrappedBuffer(ByteBuffer... buffers) {
+        return wrappedBuffer(16, buffers);
+    }
+
+    /**
+     * Creates a new big-endian composite buffer which wraps the specified
+     * arrays without copying them.  A modification on the specified arrays'
+     * content will be visible to the returned buffer.
+     */
+    public static ByteBuf wrappedBuffer(int maxNumComponents, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
             break;
@@ -286,117 +286,85 @@ public final class Unpooled {
                     components.add(wrappedBuffer(a));
                 }
             }
-            return compositeBuffer(BIG_ENDIAN, components);
+
+            if (!components.isEmpty()) {
+                return new DefaultCompositeByteBuf(maxNumComponents, components);
+            }
         }
 
         return EMPTY_BUFFER;
     }
 
     /**
-     * Creates a new composite buffer which wraps the specified
-     * components without copying them.  A modification on the specified components'
-     * content will be visible to the returned buffer.
-     */
-    private static ByteBuf compositeBuffer(ByteOrder endianness, List<ByteBuf> components) {
-        switch (components.size()) {
-        case 0:
-            return EMPTY_BUFFER;
-        case 1:
-            return components.get(0);
-        default:
-            return new CompositeByteBuf(endianness, components);
-        }
-    }
-
-    /**
-     * Creates a new composite buffer which wraps the readable bytes of the
+     * Creates a new big-endian composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
-     *
-     * @throws IllegalArgumentException
-     *         if the specified buffers' endianness are different from each
-     *         other
      */
-    public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
+    public static ByteBuf wrappedBuffer(int maxNumComponents, ByteBuf... buffers) {
         switch (buffers.length) {
         case 0:
             break;
         case 1:
             if (buffers[0].readable()) {
-                return wrappedBuffer(buffers[0]);
+                return wrappedBuffer(buffers[0].order(BIG_ENDIAN));
             }
             break;
         default:
-            ByteOrder order = null;
-            final List<ByteBuf> components = new ArrayList<ByteBuf>(buffers.length);
-            for (ByteBuf c: buffers) {
-                if (c == null) {
-                    break;
-                }
-                if (c.readable()) {
-                    if (order != null) {
-                        if (!order.equals(c.order())) {
-                            throw new IllegalArgumentException("inconsistent byte order");
-                        }
-                    } else {
-                        order = c.order();
-                    }
-                    if (c instanceof CompositeByteBuf) {
-                        // Expand nested composition.
-                        components.addAll(
-                                ((CompositeByteBuf) c).decompose(
-                                        c.readerIndex(), c.readableBytes()));
-                    } else {
-                        // An ordinary buffer (non-composite)
-                        components.add(c.slice());
-                    }
+            for (ByteBuf b: buffers) {
+                if (b.readable()) {
+                    return new DefaultCompositeByteBuf(maxNumComponents, buffers);
                 }
             }
-            return compositeBuffer(order, components);
         }
         return EMPTY_BUFFER;
     }
 
     /**
-     * Creates a new composite buffer which wraps the slices of the specified
+     * Creates a new big-endian composite buffer which wraps the slices of the specified
      * NIO buffers without copying them.  A modification on the content of the
      * specified buffers will be visible to the returned buffer.
-     *
-     * @throws IllegalArgumentException
-     *         if the specified buffers' endianness are different from each
-     *         other
      */
-    public static ByteBuf wrappedBuffer(ByteBuffer... buffers) {
+    public static ByteBuf wrappedBuffer(int maxNumComponents, ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
             break;
         case 1:
             if (buffers[0].hasRemaining()) {
-                return wrappedBuffer(buffers[0]);
+                return wrappedBuffer(buffers[0].order(BIG_ENDIAN));
             }
             break;
         default:
-            ByteOrder order = null;
+            // Get the list of the component, while guessing the byte order.
             final List<ByteBuf> components = new ArrayList<ByteBuf>(buffers.length);
             for (ByteBuffer b: buffers) {
                 if (b == null) {
                     break;
                 }
-                if (b.hasRemaining()) {
-                    if (order != null) {
-                        if (!order.equals(b.order())) {
-                            throw new IllegalArgumentException("inconsistent byte order");
-                        }
-                    } else {
-                        order = b.order();
-                    }
-                    components.add(wrappedBuffer(b));
+                if (b.remaining() > 0) {
+                    components.add(wrappedBuffer(b.order(BIG_ENDIAN)));
                 }
             }
-            return compositeBuffer(order, components);
+
+            if (!components.isEmpty()) {
+                return new DefaultCompositeByteBuf(maxNumComponents, components);
+            }
         }
 
         return EMPTY_BUFFER;
+    }
+
+    /**
+     * Returns a new big-endian composite buffer with no components.
+     */
+    public static CompositeByteBuf compositeBuffer() {
+        return compositeBuffer(16);
+    }
+
+    /**
+     * Returns a new big-endian composite buffer with no components.
+     */
+    public static CompositeByteBuf compositeBuffer(int maxNumComponents) {
+        return new DefaultCompositeByteBuf(maxNumComponents);
     }
 
     /**
@@ -408,7 +376,7 @@ public final class Unpooled {
         if (array.length == 0) {
             return EMPTY_BUFFER;
         }
-        return new HeapByteBuf(array.clone());
+        return wrappedBuffer(array.clone());
     }
 
     /**

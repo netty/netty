@@ -100,7 +100,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
                     oos.reset();
 
                     // Also discard the byproduct to avoid OOM on the sending side.
-                    out.discardReadBytes();
+                    out.unsafe().discardSomeReadBytes();
                 }
             }
 

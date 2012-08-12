@@ -23,7 +23,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        callDecode(ctx, in, ctx.nextOutboundByteBuffer());
+        callDecode(ctx, in, ctx.nextInboundByteBuffer());
     }
 
     @Override
@@ -46,7 +46,6 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         }
 
         if (out.readableBytes() > oldOutSize) {
-            in.discardReadBytes();
             ctx.fireInboundBufferUpdated();
         }
 
@@ -71,8 +70,8 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
             }
         }
 
+        in.unsafe().discardSomeReadBytes();
         if (out.readableBytes() > oldOutSize) {
-            in.discardReadBytes();
             ctx.fireInboundBufferUpdated();
         }
     }

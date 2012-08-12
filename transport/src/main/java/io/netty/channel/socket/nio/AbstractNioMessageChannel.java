@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -31,16 +30,9 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.MESSAGE;
-    }
+    protected abstract AbstractNioMessageUnsafe newUnsafe();
 
-    @Override
-    protected Unsafe newUnsafe() {
-        return new NioMessageUnsafe();
-    }
-
-    private class NioMessageUnsafe extends AbstractNioUnsafe {
+    abstract class AbstractNioMessageUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

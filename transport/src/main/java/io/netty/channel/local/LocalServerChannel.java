@@ -138,4 +138,22 @@ public class LocalServerChannel extends AbstractServerChannel {
             });
         }
     }
+
+    @Override
+    protected Unsafe newUnsafe() {
+        return new LocalServerUnsafe();
+    }
+
+    private final class LocalServerUnsafe extends AbstractServerUnsafe {
+
+        @Override
+        public void suspendRead() {
+            // TODO: Implement me
+        }
+
+        @Override
+        public void resumeRead() {
+            // TODO: Implement me
+        }
+    }
 }

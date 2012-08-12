@@ -16,7 +16,6 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
@@ -29,16 +28,9 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    public ChannelBufType bufferType() {
-        return ChannelBufType.BYTE;
-    }
+    protected abstract AbstractOioByteUnsafe newUnsafe();
 
-    @Override
-    protected Unsafe newUnsafe() {
-        return new OioByteUnsafe();
-    }
-
-    private class OioByteUnsafe extends AbstractOioUnsafe {
+    abstract class AbstractOioByteUnsafe extends AbstractOioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

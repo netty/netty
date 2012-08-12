@@ -15,27 +15,41 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.EventExecutor;
-import io.netty.channel.MultithreadEventLoop;
+import io.netty.channel.SingleThreadEventLoop;
 
 import java.util.concurrent.ThreadFactory;
 
-public class LocalEventLoop extends MultithreadEventLoop {
+final class LocalEventLoop extends SingleThreadEventLoop {
 
-    public LocalEventLoop() {
-        this(0);
-    }
-
-    public LocalEventLoop(int nThreads) {
-        this(nThreads, null);
-    }
-
-    public LocalEventLoop(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+    LocalEventLoop(LocalEventLoopGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory);
     }
 
     @Override
-    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new LocalChildEventLoop(threadFactory);
+    protected void run() {
+        for (;;) {
+            Runnable task;
+            try {
+                task = takeTask();
+                task.run();
+            } catch (InterruptedException e) {
+                // Waken up by interruptThread()
+            }
+
+            if (isShutdown()) {
+                task = pollTask();
+                if (task == null) {
+                    break;
+                }
+                task.run();
+            }
+        }
+    }
+
+    @Override
+    protected void wakeup(boolean inEventLoop) {
+        if (!inEventLoop && isShutdown()) {
+            interruptThread();
+        }
     }
 }

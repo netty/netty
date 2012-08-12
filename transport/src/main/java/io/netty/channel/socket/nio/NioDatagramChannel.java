@@ -16,10 +16,12 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -46,6 +48,8 @@ import java.util.Map;
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, true);
 
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
@@ -93,6 +97,11 @@ public final class NioDatagramChannel
     }
 
     @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
+    }
+
+    @Override
     public DatagramChannelConfig config() {
         return config;
     }
@@ -101,6 +110,11 @@ public final class NioDatagramChannel
     public boolean isActive() {
         DatagramChannel ch = javaChannel();
         return ch.isOpen() && ch.socket().isBound();
+    }
+
+    @Override
+    public boolean isConnected() {
+        return javaChannel().isConnected();
     }
 
     @Override
@@ -442,5 +456,23 @@ public final class NioDatagramChannel
             future.setFailure(e);
         }
         return future;
+    }
+
+    @Override
+    protected AbstractNioMessageUnsafe newUnsafe() {
+        return new NioDatagramChannelUnsafe();
+    }
+
+    private final class NioDatagramChannelUnsafe extends AbstractNioMessageUnsafe {
+
+        @Override
+        public void suspendRead() {
+            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
+        }
+
+        @Override
+        public void resumeRead() {
+            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
+        }
     }
 }

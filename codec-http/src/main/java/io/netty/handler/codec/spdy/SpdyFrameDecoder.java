@@ -554,7 +554,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
             // Initialize header block decoding fields
             headerSize = 0;
             numHeaders = -1;
-            decompressed = Unpooled.dynamicBuffer(8192);
+            decompressed = Unpooled.buffer(8192);
         }
 
         // Accumulate decompressed data

@@ -18,7 +18,7 @@ package io.netty.example.portunification;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
@@ -39,7 +39,7 @@ public class PortUnificationServer {
     public void run() throws Exception {
         ServerBootstrap b = new ServerBootstrap();
         try {
-            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
              .childHandler(new ChannelInitializer<SocketChannel>() {

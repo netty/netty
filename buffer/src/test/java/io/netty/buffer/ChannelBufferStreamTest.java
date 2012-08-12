@@ -29,7 +29,7 @@ public class ChannelBufferStreamTest {
 
     @Test
     public void testAll() throws Exception {
-        ByteBuf buf = Unpooled.dynamicBuffer();
+        ByteBuf buf = Unpooled.buffer(0, 65536);
 
         try {
             new ByteBufOutputStream(null);

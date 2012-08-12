@@ -35,6 +35,8 @@ public interface DatagramChannel extends Channel {
     @Override
     InetSocketAddress remoteAddress();
 
+    boolean isConnected();
+
     /**
      * Joins a multicast group.
      */

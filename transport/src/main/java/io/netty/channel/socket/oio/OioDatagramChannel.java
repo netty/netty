@@ -16,10 +16,12 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -42,11 +44,15 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, true);
+
     private static final byte[] EMPTY_DATA = new byte[0];
 
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
+
+    private volatile boolean readSuspended;
 
     private static MulticastSocket newSocket() {
         try {
@@ -86,6 +92,11 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
+    }
+
+    @Override
     public DatagramChannelConfig config() {
         return config;
     }
@@ -98,6 +109,11 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public boolean isActive() {
         return isOpen() && socket.isBound();
+    }
+
+    @Override
+    public boolean isConnected() {
+        return socket.isConnected();
     }
 
     @Override
@@ -149,6 +165,15 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+        if (readSuspended) {
+            try {
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore;
+            }
+            return 0;
+        }
+
         int packetSize = config().getReceivePacketSize();
         byte[] data = new byte[packetSize];
         tmpPacket.setData(data);
@@ -160,7 +185,12 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             }
             buf.add(new DatagramPacket(Unpooled.wrappedBuffer(
                     data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
-            return 1;
+
+            if (readSuspended) {
+                return 0;
+            } else {
+                return 1;
+            }
         } catch (SocketTimeoutException e) {
             // Expected
             return 0;
@@ -321,5 +351,23 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             InetAddress sourceToBlock, ChannelFuture future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
+    }
+
+    @Override
+    protected AbstractOioMessageUnsafe newUnsafe() {
+        return new OioDatagramChannelUnsafe();
+    }
+
+    private final class OioDatagramChannelUnsafe extends AbstractOioMessageUnsafe {
+
+        @Override
+        public void suspendRead() {
+            readSuspended = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            readSuspended = false;
+        }
     }
 }

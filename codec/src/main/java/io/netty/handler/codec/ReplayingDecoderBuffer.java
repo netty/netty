@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufFactory;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
@@ -62,6 +61,16 @@ class ReplayingDecoderBuffer implements ByteBuf {
         } else {
             return Integer.MAX_VALUE;
         }
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public int maxCapacity() {
+        return capacity();
     }
 
     @Override
@@ -137,19 +146,19 @@ class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public boolean getBoolean(int index) {
-        checkIndex(index);
+        checkIndex(index, 1);
         return buffer.getBoolean(index);
     }
 
     @Override
     public byte getByte(int index) {
-        checkIndex(index);
+        checkIndex(index, 1);
         return buffer.getByte(index);
     }
 
     @Override
     public short getUnsignedByte(int index) {
-        checkIndex(index);
+        checkIndex(index, 1);
         return buffer.getUnsignedByte(index);
     }
 
@@ -347,11 +356,6 @@ class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public void markWriterIndex() {
         throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return buffer.factory();
     }
 
     @Override
@@ -801,12 +805,6 @@ class ReplayingDecoderBuffer implements ByteBuf {
         throw new UnreplayableOperationException();
     }
 
-    private void checkIndex(int index) {
-        if (index > buffer.writerIndex()) {
-            throw REPLAY;
-        }
-    }
-
     private void checkIndex(int index, int length) {
         if (index + length > buffer.writerIndex()) {
             throw REPLAY;
@@ -817,5 +815,10 @@ class ReplayingDecoderBuffer implements ByteBuf {
         if (buffer.readableBytes() < readableBytes) {
             throw REPLAY;
         }
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        throw new UnreplayableOperationException();
     }
 }

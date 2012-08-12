@@ -17,57 +17,84 @@ package io.netty.handler.codec.http;
 
 import java.util.List;
 
+/**
+ * A utility class mainly for use with HTTP codec classes
+ */
 final class HttpCodecUtil {
 
-    static void validateHeaderName(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
+    /**
+     * Validates the name of a header
+     *
+     * @param headerName The header name being validated
+     */
+    static void validateHeaderName(String headerName) {
+        //Check to see if the name is null
+        if (headerName == null) {
+            throw new NullPointerException("Header names cannot be null");
         }
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c > 127) {
+        //Go through each of the characters in the name
+        for (int index = 0; index < headerName.length(); index ++) {
+            //Actually get the character
+            char character = headerName.charAt(index);
+
+            //Check to see if the character is not an ASCII character
+            if (character > 127) {
                 throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
+                    "Header name cannot contain non-ASCII characters: " + headerName);
             }
 
-            // Check prohibited characters.
-            switch (c) {
+            //Check for prohibited characters.
+            switch (character) {
             case '\t': case '\n': case 0x0b: case '\f': case '\r':
             case ' ':  case ',':  case ':':  case ';':  case '=':
                 throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,;: \\t\\r\\n\\v\\f: " + name);
+                        "Header name cannot contain the following prohibited characters: " +
+                        "=,;: \\t\\r\\n\\v\\f: " + headerName);
             }
         }
     }
 
-    static void validateHeaderValue(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
+    /**
+     * Validates the specified header value
+     *
+     * @param value The value being validated
+     */
+    static void validateHeaderValue(String headerValue) {
+        //Check to see if the value is null
+        if (headerValue == null) {
+            throw new NullPointerException("Header values cannot be null");
         }
 
-        // 0 - the previous character was neither CR nor LF
-        // 1 - the previous character was CR
-        // 2 - the previous character was LF
+        /*
+         * Set up the state of the validation
+         *
+         * States are as follows:
+         *
+         * 0: Previous character was neither CR nor LF
+         * 1: The previous character was CR
+         * 2: The previous character was LF
+         */
         int state = 0;
 
-        for (int i = 0; i < value.length(); i ++) {
-            char c = value.charAt(i);
+        //Start looping through each of the character
 
-            // Check the absolutely prohibited characters.
-            switch (c) {
+        for (int index = 0; index < headerValue.length(); index ++) {
+            char character = headerValue.charAt(index);
+
+            //Check the absolutely prohibited characters.
+            switch (character) {
             case 0x0b: // Vertical tab
                 throw new IllegalArgumentException(
-                        "value contains a prohibited character '\\v': " + value);
+                        "Header value contains a prohibited character '\\v': " + headerValue);
             case '\f':
                 throw new IllegalArgumentException(
-                        "value contains a prohibited character '\\f': " + value);
+                        "Header value contains a prohibited character '\\f': " + headerValue);
             }
 
             // Check the CRLF (HT | SP) pattern
             switch (state) {
             case 0:
-                switch (c) {
+                switch (character) {
                 case '\r':
                     state = 1;
                     break;
@@ -77,47 +104,56 @@ final class HttpCodecUtil {
                 }
                 break;
             case 1:
-                switch (c) {
+                switch (character) {
                 case '\n':
                     state = 2;
                     break;
                 default:
                     throw new IllegalArgumentException(
-                            "Only '\\n' is allowed after '\\r': " + value);
+                            "Only '\\n' is allowed after '\\r': " + headerValue);
                 }
                 break;
             case 2:
-                switch (c) {
+                switch (character) {
                 case '\t': case ' ':
                     state = 0;
                     break;
                 default:
                     throw new IllegalArgumentException(
-                            "Only ' ' and '\\t' are allowed after '\\n': " + value);
+                            "Only ' ' and '\\t' are allowed after '\\n': " + headerValue);
                 }
             }
         }
 
         if (state != 0) {
             throw new IllegalArgumentException(
-                    "value must not end with '\\r' or '\\n':" + value);
+                    "Header value must not end with '\\r' or '\\n':" + headerValue);
         }
     }
 
-    static boolean isTransferEncodingChunked(HttpMessage m) {
-        List<String> chunked = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-        if (chunked.isEmpty()) {
+    /**
+     * Checks to see if the transfer encoding in a specified {@link HttpMessage} is chunked
+     *
+     * @param message The message to check
+     * @return True if transfer encoding is chunked, otherwise false
+     */
+    static boolean isTransferEncodingChunked(HttpMessage message) {
+        List<String> transferEncodingHeaders = message.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        if (transferEncodingHeaders.isEmpty()) {
             return false;
         }
 
-        for (String v: chunked) {
-            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
+        for (String value: transferEncodingHeaders) {
+            if (value.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
                 return true;
             }
         }
         return false;
     }
 
+    /**
+     * A constructor to ensure that instances of this class are never made
+     */
     private HttpCodecUtil() {
     }
 }

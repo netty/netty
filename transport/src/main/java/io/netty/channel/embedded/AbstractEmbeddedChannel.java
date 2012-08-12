@@ -35,7 +35,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.Queue;
 
 public abstract class AbstractEmbeddedChannel extends AbstractChannel {
 
@@ -45,7 +44,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer();
-    private final ByteBuf lastInboundByteBuffer = Unpooled.dynamicBuffer();
+    private final ByteBuf lastInboundByteBuffer = Unpooled.buffer();
     protected final Object lastOutboundBuffer;
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
@@ -193,6 +192,16 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         public void connect(SocketAddress remoteAddress,
                 SocketAddress localAddress, ChannelFuture future) {
             future.setSuccess();
+        }
+
+        @Override
+        public void suspendRead() {
+            // NOOP
+        }
+
+        @Override
+        public void resumeRead() {
+            // NOOP
         }
     }
 

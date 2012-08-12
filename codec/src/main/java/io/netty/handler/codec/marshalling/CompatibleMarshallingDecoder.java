@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.VoidEnum;
 
 import java.io.ObjectStreamConstants;
 
@@ -32,7 +31,7 @@ import org.jboss.marshalling.Unmarshaller;
  *
  * If you can you should use {@link MarshallingDecoder}.
  */
-public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, VoidEnum> {
+public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void> {
     protected final UnmarshallerProvider provider;
     protected final int maxObjectSize;
 

@@ -15,8 +15,10 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -38,6 +40,8 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketChannel.class);
 
+    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
+
     private static ServerSocket newServerSocket() {
         try {
             return new ServerSocket();
@@ -49,6 +53,8 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     final ServerSocket socket;
     final Lock shutdownLock = new ReentrantLock();
     private final ServerSocketChannelConfig config;
+
+    private volatile boolean readSuspended;
 
     public OioServerSocketChannel() {
         this(newServerSocket());
@@ -86,6 +92,11 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
         this.socket = socket;
         config = new DefaultServerSocketChannelConfig(socket);
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
@@ -129,11 +140,23 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             return -1;
         }
 
+        if (readSuspended) {
+            try {
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            return 0;
+        }
+
         Socket s = null;
         try {
             s = socket.accept();
             if (s != null) {
                 buf.add(new OioSocketChannel(this, null, s));
+                if (readSuspended) {
+                    return 0;
+                }
                 return 1;
             }
         } catch (SocketTimeoutException e) {
@@ -171,5 +194,23 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     @Override
     protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected AbstractOioMessageUnsafe newUnsafe() {
+        return new OioServerSocketUnsafe();
+    }
+
+    private final class OioServerSocketUnsafe extends AbstractOioMessageUnsafe {
+
+        @Override
+        public void suspendRead() {
+            readSuspended = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            readSuspended = false;
+        }
     }
 }

@@ -42,7 +42,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -83,7 +83,7 @@ public class WebSocketClient {
                     new WebSocketClientHandshakerFactory().newHandshaker(
                             uri, WebSocketVersion.V13, null, false, customHeaders);
 
-            b.eventLoop(new NioEventLoop())
+            b.group(new NioEventLoopGroup())
              .channel(new NioSocketChannel())
              .remoteAddress(uri.getHost(), uri.getPort())
              .handler(new ChannelInitializer<SocketChannel>() {

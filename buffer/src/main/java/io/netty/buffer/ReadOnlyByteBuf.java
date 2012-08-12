@@ -33,13 +33,13 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     private final ByteBuf buffer;
 
     public ReadOnlyByteBuf(ByteBuf buffer) {
-        super(buffer.order());
+        super(buffer.order(), buffer.maxCapacity());
         this.buffer = buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     private ReadOnlyByteBuf(ReadOnlyByteBuf buffer) {
-        super(buffer.buffer.order());
+        super(buffer.buffer.order(), buffer.maxCapacity());
         this.buffer = buffer.buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
@@ -47,11 +47,6 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     @Override
     public ByteBuf unwrap() {
         return buffer;
-    }
-
-    @Override
-    public ByteBufFactory factory() {
-        return buffer.factory();
     }
 
     @Override
@@ -211,5 +206,15 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     @Override
     public int capacity() {
         return buffer.capacity();
+    }
+
+    @Override
+    public void capacity(int newCapacity) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return buffer.unsafe();
     }
 }

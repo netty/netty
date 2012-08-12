@@ -18,7 +18,7 @@ package io.netty.example.objectecho;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.echo.EchoClient;
 import io.netty.handler.codec.serialization.ClassResolvers;
@@ -43,7 +43,7 @@ public class ObjectEchoClient {
     public void run() throws Exception {
         Bootstrap b = new Bootstrap();
         try {
-            b.eventLoop(new NioEventLoop())
+            b.group(new NioEventLoopGroup())
              .channel(new NioSocketChannel())
              .remoteAddress(host, port)
              .handler(new ChannelInitializer<SocketChannel>() {

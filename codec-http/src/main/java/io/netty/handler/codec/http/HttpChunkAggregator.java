@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -47,12 +48,15 @@ import java.util.Map.Entry;
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
-
+    public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
     private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
     private HttpMessage currentMessage;
+
+    private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
+    private ChannelHandlerContext ctx;
 
     /**
      * Creates a new instance.
@@ -69,6 +73,38 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                     maxContentLength);
         }
         this.maxContentLength = maxContentLength;
+    }
+
+    /**
+     * Returns the maximum number of components in the cumulation buffer.  If the number of
+     * the components in the cumulation buffer exceeds this value, the components of the
+     * cumulation buffer are consolidated into a single component, involving memory copies.
+     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
+     */
+    public final int getMaxCumulationBufferComponents() {
+        return maxCumulationBufferComponents;
+    }
+
+    /**
+     * Sets the maximum number of components in the cumulation buffer.  If the number of
+     * the components in the cumulation buffer exceeds this value, the components of the
+     * cumulation buffer are consolidated into a single component, involving memory copies.
+     * The default value of this property is {@link #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}
+     * and its minimum allowed value is {@code 2}.
+     */
+    public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
+        if (maxCumulationBufferComponents < 2) {
+            throw new IllegalArgumentException(
+                    "maxCumulationBufferComponents: " + maxCumulationBufferComponents +
+                    " (expected: >= 2)");
+        }
+
+        if (ctx == null) {
+            this.maxCumulationBufferComponents = maxCumulationBufferComponents;
+        } else {
+            throw new IllegalStateException(
+                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
+        }
     }
 
     @Override
@@ -101,7 +137,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(Unpooled.dynamicBuffer());
+                m.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
                 this.currentMessage = m;
                 return null;
             } else {
@@ -131,7 +167,9 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                         " bytes.");
             }
 
-            content.writeBytes(chunk.getContent());
+            // Append the content of the chunk
+            appendToCumulation(chunk.getContent());
+
             if (chunk.isLast()) {
                 this.currentMessage = null;
 
@@ -159,4 +197,16 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                     HttpChunk.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
         }
     }
+
+    private void appendToCumulation(ByteBuf input) {
+        CompositeByteBuf cumulation = (CompositeByteBuf) currentMessage.getContent();
+        cumulation.addComponent(input);
+        cumulation.writerIndex(cumulation.capacity());
+    }
+
+    @Override
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
 }

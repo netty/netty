@@ -24,6 +24,19 @@ public class Slf4JLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
+    public void testIsTraceEnabled() {
+        org.slf4j.Logger mock =
+            createStrictMock(org.slf4j.Logger.class);
+
+        expect(mock.isTraceEnabled()).andReturn(true);
+        replay(mock);
+
+        InternalLogger logger = new Slf4JLogger(mock);
+        assertTrue(logger.isTraceEnabled());
+        verify(mock);
+    }
+
+    @Test
     public void testIsDebugEnabled() {
         org.slf4j.Logger mock =
             createStrictMock(org.slf4j.Logger.class);
@@ -72,6 +85,32 @@ public class Slf4JLoggerTest {
 
         InternalLogger logger = new Slf4JLogger(mock);
         assertTrue(logger.isErrorEnabled());
+        verify(mock);
+    }
+
+    @Test
+    public void testTrace() {
+        org.slf4j.Logger mock =
+            createStrictMock(org.slf4j.Logger.class);
+
+        mock.trace("a");
+        replay(mock);
+
+        InternalLogger logger = new Slf4JLogger(mock);
+        logger.trace("a");
+        verify(mock);
+    }
+
+    @Test
+    public void testTraceWithException() {
+        org.slf4j.Logger mock =
+            createStrictMock(org.slf4j.Logger.class);
+
+        mock.trace("a", e);
+        replay(mock);
+
+        InternalLogger logger = new Slf4JLogger(mock);
+        logger.trace("a", e);
         verify(mock);
     }
 

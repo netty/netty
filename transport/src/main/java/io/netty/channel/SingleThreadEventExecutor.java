@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.QueueFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
@@ -64,14 +64,8 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return nanoTime() + delay;
     }
 
-    private final Unsafe unsafe = new Unsafe() {
-        @Override
-        public EventExecutor nextChild() {
-            return SingleThreadEventExecutor.this;
-        }
-    };
-
-    private final BlockingQueue<Runnable> taskQueue = QueueFactory.createQueue();
+    private final EventExecutorGroup parent;
+    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
@@ -83,7 +77,13 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private long lastCheckTimeNanos;
     private long lastPurgeTimeNanos;
 
-    protected SingleThreadEventExecutor(ThreadFactory threadFactory) {
+    protected SingleThreadEventExecutor(EventExecutorGroup parent, ThreadFactory threadFactory) {
+        if (threadFactory == null) {
+            throw new NullPointerException("threadFactory");
+        }
+
+        this.parent = parent;
+
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
@@ -127,8 +127,13 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    public EventExecutorGroup parent() {
+        return parent;
+    }
+
+    @Override
+    public EventExecutor next() {
+        return this;
     }
 
     protected void interruptThread() {

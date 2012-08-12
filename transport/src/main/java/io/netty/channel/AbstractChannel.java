@@ -437,7 +437,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 future.setFailure(t);
                 pipeline.fireExceptionCaught(t);
-                closeFuture().setSuccess();
+                closeFuture.setClosed();
             }
         }
 
@@ -641,9 +641,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         cause = t;
                     } finally {
                         final int newSize = out.readableBytes();
-                        writeCounter += oldSize - newSize;
-                        if (newSize == 0) {
-                            out.discardReadBytes();
+                        final int writtenBytes = oldSize - newSize;
+                        if (writtenBytes > 0) {
+                            writeCounter += writtenBytes;
+                            if (newSize == 0) {
+                                out.discardReadBytes();
+                            }
                         }
                     }
                 } else {
@@ -722,7 +725,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected abstract boolean isFlushPending();
 
-    private void notifyFlushFutures() {
+    protected void notifyFlushFutures() {
+        notifyFlushFutures(0);
+    }
+
+    protected void notifyFlushFutures(long writtenBytes) {
+        writeCounter += writtenBytes;
+
         if (flushCheckpoints.isEmpty()) {
             return;
         }
@@ -760,7 +769,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    private void notifyFlushFutures(Throwable cause) {
+    protected void notifyFlushFutures(Throwable cause) {
         notifyFlushFutures();
         for (;;) {
             FlushCheckpoint cp = flushCheckpoints.poll();

@@ -17,7 +17,7 @@ package io.netty.example.http.websocketx.autobahn;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
@@ -35,7 +35,7 @@ public class AutobahnServer {
     public void run() throws Exception {
         ServerBootstrap b = new ServerBootstrap();
         try {
-            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(new NioServerSocketChannel())
              .localAddress(port)
              .childHandler(new AutobahnServerInitializer());

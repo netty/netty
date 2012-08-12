@@ -18,8 +18,6 @@ package io.netty.channel;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 
-import java.util.Queue;
-
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 

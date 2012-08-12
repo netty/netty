@@ -37,8 +37,8 @@ public class ChannelBuffersTest {
 
     @Test
     public void testCompositeWrappedBuffer() {
-        ByteBuf header = dynamicBuffer(12);
-        ByteBuf payload = dynamicBuffer(512);
+        ByteBuf header = buffer(12);
+        ByteBuf payload = buffer(512);
 
         header.writeBytes(new byte[12]);
         payload.writeBytes(new byte[512]);
@@ -156,10 +156,6 @@ public class ChannelBuffersTest {
 
     @Test
     public void shouldReturnEmptyBufferWhenLengthIsZero() {
-        assertSame(EMPTY_BUFFER, buffer(0));
-        assertSame(EMPTY_BUFFER, buffer(0).order(LITTLE_ENDIAN));
-        assertSame(EMPTY_BUFFER, directBuffer(0));
-
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0));

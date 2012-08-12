@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -42,7 +42,7 @@ public class EchoServer {
         // Configure the server.
         ServerBootstrap b = new ServerBootstrap();
         try {
-            b.eventLoop(new NioEventLoop(), new NioEventLoop())
+            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(new NioServerSocketChannel())
              .option(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))

@@ -44,7 +44,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
 
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
-        b.eventLoop(inboundChannel.eventLoop())
+        b.group(inboundChannel.eventLoop())
          .channel(new NioSocketChannel())
          .remoteAddress(remoteHost, remotePort)
          .handler(new HexDumpProxyBackendHandler(inboundChannel));

@@ -18,7 +18,7 @@ package io.netty.example.qotm;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioEventLoop;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 
 import java.net.InetSocketAddress;
 
@@ -39,7 +39,7 @@ public class QuoteOfTheMomentServer {
     public void run() throws Exception {
         Bootstrap b = new Bootstrap();
         try {
-            b.eventLoop(new NioEventLoop())
+            b.group(new NioEventLoopGroup())
              .channel(new NioDatagramChannel())
              .localAddress(new InetSocketAddress(port))
              .option(ChannelOption.SO_BROADCAST, true)
