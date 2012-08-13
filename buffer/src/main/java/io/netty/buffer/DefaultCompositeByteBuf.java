@@ -1001,6 +1001,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
         return false;
     }
+
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         if (components.size() == 1) {
@@ -1021,6 +1022,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
         merged.flip();
         return merged;
+    }
+
+    @Override
+    public boolean hasNioBuffers() {
+        return true;
     }
 
     @Override
@@ -1204,6 +1210,16 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 return components.get(0).buf.unsafe().nioBuffer();
             }
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ByteBuffer[] nioBuffers() {
+            ByteBuffer[] nioBuffers = new ByteBuffer[components.size()];
+            int index = 0;
+            for (Component component : components) {
+                nioBuffers[index++] = component.buf.unsafe().nioBuffer();
+            }
+            return nioBuffers;
         }
 
         @Override
