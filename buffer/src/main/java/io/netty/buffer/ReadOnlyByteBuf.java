@@ -204,6 +204,16 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
+    public boolean hasNioBuffers() {
+        return buffer.hasNioBuffers();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int offset, int length) {
+        return buffer.nioBuffers(offset, length);
+    }
+
+    @Override
     public int capacity() {
         return buffer.capacity();
     }

@@ -673,6 +673,22 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    public boolean hasNioBuffers() {
+        return buffer.hasNioBuffers();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        checkIndex(index, length);
+        return buffer.nioBuffers(index, length);
+    }
+
+    @Override
     public String toString(int index, int length, Charset charset) {
         checkIndex(index, length);
         return buffer.toString(index, length, charset);

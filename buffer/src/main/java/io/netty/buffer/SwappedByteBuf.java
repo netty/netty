@@ -658,6 +658,29 @@ public class SwappedByteBuf implements WrappedByteBuf {
     }
 
     @Override
+    public boolean hasNioBuffers() {
+        return buf.hasNioBuffers();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers() {
+        ByteBuffer[] nioBuffers = buf.nioBuffers();
+        for (int i = 0; i < nioBuffers.length; i++) {
+            nioBuffers[i] = nioBuffers[i].order(order);
+        }
+        return nioBuffers;
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int offset, int length) {
+        ByteBuffer[] nioBuffers = buf.nioBuffers(offset, length);
+        for (int i = 0; i < nioBuffers.length; i++) {
+            nioBuffers[i] = nioBuffers[i].order(order);
+        }
+        return nioBuffers;
+    }
+
+    @Override
     public boolean hasArray() {
         return buf.hasArray();
     }
