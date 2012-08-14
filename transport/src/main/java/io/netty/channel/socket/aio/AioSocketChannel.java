@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.aio;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelException;
@@ -39,8 +40,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
 
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
-    private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler();
-    private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler();
+    private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler<Integer>();
+    private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler<Integer>();
+    private static final CompletionHandler<Long, AioSocketChannel> GATHERING_WRITE_HANDLER = new WriteHandler<Long>();
+    private static final CompletionHandler<Long, AioSocketChannel> SCATTERING_READ_HANDLER = new ReadHandler<Long>();
 
     private static AsynchronousSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
@@ -180,7 +183,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         buf.discardReadBytes();
 
         if (buf.readable()) {
-            javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
+            if (buf.hasNioBuffers()) {
+                ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
+                javaChannel().write(buffers, 0, buffers.length, 0L, SECONDS, AioSocketChannel.this,
+                        GATHERING_WRITE_HANDLER);
+            } else {
+                javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
+            }
         } else {
             notifyFlushFutures();
             flushing = false;
@@ -204,17 +213,23 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             expandReadBuffer(byteBuf);
         }
 
-        // Get a ByteBuffer view on the ByteBuf
-        ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-        javaChannel().read(buffer, AioSocketChannel.this, READ_HANDLER);
+        if (byteBuf.hasNioBuffers()) {
+            ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());
+            javaChannel().read(buffers, 0, buffers.length, 0L, SECONDS, AioSocketChannel.this,
+                    SCATTERING_READ_HANDLER);
+        } else {
+            // Get a ByteBuffer view on the ByteBuf
+            ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
+            javaChannel().read(buffer, AioSocketChannel.this, READ_HANDLER);
+        }
     }
 
-    private static final class WriteHandler extends AioCompletionHandler<Integer, AioSocketChannel> {
+    private static final class WriteHandler<T extends Number> extends AioCompletionHandler<T, AioSocketChannel> {
 
         @Override
-        protected void completed0(Integer result, AioSocketChannel channel) {
+        protected void completed0(T result, AioSocketChannel channel) {
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-            int writtenBytes = result;
+            int writtenBytes = result.intValue();
             if (writtenBytes > 0) {
                 // Update the readerIndex with the amount of read bytes
                 buf.readerIndex(buf.readerIndex() + writtenBytes);
@@ -263,10 +278,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private static final class ReadHandler extends AioCompletionHandler<Integer, AioSocketChannel> {
+    private static final class ReadHandler<T extends Number> extends AioCompletionHandler<T, AioSocketChannel> {
 
         @Override
-        protected void completed0(Integer result, AioSocketChannel channel) {
+        protected void completed0(T result, AioSocketChannel channel) {
             final ChannelPipeline pipeline = channel.pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
 

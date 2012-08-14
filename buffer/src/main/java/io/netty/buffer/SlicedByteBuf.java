@@ -257,6 +257,17 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
         return buffer.nioBuffer(index + adjustment, length);
     }
 
+    @Override
+    public boolean hasNioBuffers() {
+        return buffer.hasNioBuffers();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        checkIndex(index, length);
+        return buffer.nioBuffers(index, length);
+    }
+
     private void checkIndex(int index) {
         if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
@@ -288,6 +299,11 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
         @Override
         public ByteBuffer nioBuffer() {
             return buffer.nioBuffer(adjustment, length);
+        }
+
+        @Override
+        public ByteBuffer[] nioBuffers() {
+            return buffer.nioBuffers(adjustment, length);
         }
 
         @Override
