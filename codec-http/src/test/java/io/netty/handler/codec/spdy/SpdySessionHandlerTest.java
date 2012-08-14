@@ -54,6 +54,7 @@ public class SpdySessionHandlerTest {
     private static void assertDataFrame(Object msg, int streamID, boolean last) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyDataFrame);
+        Assert.assertTrue(msg instanceof SpdyFrame);
         SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
         Assert.assertTrue(spdyDataFrame.getStreamId() == streamID);
         Assert.assertTrue(spdyDataFrame.isLast() == last);
@@ -62,6 +63,7 @@ public class SpdySessionHandlerTest {
     private static void assertSynReply(Object msg, int streamID, boolean last, SpdyHeaderBlock headers) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdySynReplyFrame);
+        Assert.assertTrue(msg instanceof SpdyFrame);
         SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
         Assert.assertTrue(spdySynReplyFrame.getStreamId() == streamID);
         Assert.assertTrue(spdySynReplyFrame.isLast() == last);
@@ -71,6 +73,7 @@ public class SpdySessionHandlerTest {
     private static void assertRstStream(Object msg, int streamID, SpdyStreamStatus status) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyRstStreamFrame);
+        Assert.assertTrue(msg instanceof SpdyFrame);
         SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
         Assert.assertTrue(spdyRstStreamFrame.getStreamId() == streamID);
         Assert.assertTrue(spdyRstStreamFrame.getStatus().equals(status));
@@ -79,6 +82,7 @@ public class SpdySessionHandlerTest {
     private static void assertPing(Object msg, int ID) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyPingFrame);
+        Assert.assertTrue(msg instanceof SpdyFrame);
         SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
         Assert.assertTrue(spdyPingFrame.getId() == ID);
     }
@@ -86,6 +90,7 @@ public class SpdySessionHandlerTest {
     private static void assertGoAway(Object msg, int lastGoodStreamID) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyGoAwayFrame);
+        Assert.assertTrue(msg instanceof SpdyFrame);
         SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
         Assert.assertTrue(spdyGoAwayFrame.getLastGoodStreamId() == lastGoodStreamID);
     }
@@ -93,6 +98,7 @@ public class SpdySessionHandlerTest {
     private static void assertHeaders(Object msg, int streamID, SpdyHeaderBlock headers) {
         Assert.assertNotNull(msg);
         Assert.assertTrue(msg instanceof SpdyHeadersFrame);
+        Assert.assertTrue(msg instanceof SpdyFrame);
         SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
         Assert.assertTrue(spdyHeadersFrame.getStreamId() == streamID);
         assertHeaderBlock(spdyHeadersFrame, headers);
