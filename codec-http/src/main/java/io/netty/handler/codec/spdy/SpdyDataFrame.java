@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 /**
  * A SPDY Protocol Data Frame
  */
-public interface SpdyDataFrame {
+public interface SpdyDataFrame extends SpdyFrame {
 
     /**
      * Returns the Stream-ID of this frame.
