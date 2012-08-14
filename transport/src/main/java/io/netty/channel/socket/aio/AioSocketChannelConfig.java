@@ -23,6 +23,7 @@ import io.netty.channel.socket.SocketChannelConfig;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;
+import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.channels.NetworkChannel;
 import java.util.Map;
 
@@ -33,6 +34,8 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
     private final NetworkChannel channel;
+    private volatile long readTimeoutInMillis;
+    private volatile long writeTimeoutInMillis;
 
     /**
      * Creates a new instance.
@@ -49,7 +52,8 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
-                SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS);
+                SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
+                AIO_READ_TIMEOUT, AIO_WRITE_TIMEOUT);
     }
 
     @Override
@@ -75,6 +79,12 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
         if (option == IP_TOS) {
             return (T) Integer.valueOf(getTrafficClass());
         }
+        if (option == AIO_READ_TIMEOUT) {
+            return (T) Long.valueOf(getReadTimeout());
+        }
+        if (option == AIO_WRITE_TIMEOUT) {
+            return (T) Long.valueOf(getWriteTimeout());
+        }
 
         return super.getOption(option);
     }
@@ -97,6 +107,10 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
             setSoLinger((Integer) value);
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
+        } else if (option == AIO_READ_TIMEOUT) {
+            setReadTimeout((Long) value);
+        } else if (option == AIO_WRITE_TIMEOUT) {
+            setWriteTimeout((Long) value);
         } else {
             return super.setOption(option, value);
         }
@@ -234,5 +248,51 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    /**
+     * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     * Once such an exception was detected it will get propagated to the handlers first. After that the channel
+     * will get closed as it may be in an unknown state.
+     *
+     * To disable it just use <code>0</code>.
+     */
+    public void setReadTimeout(long readTimeoutInMillis) {
+        if (readTimeoutInMillis < 0) {
+            throw new IllegalArgumentException("readTimeoutInMillis: " + readTimeoutInMillis);
+        }
+        this.readTimeoutInMillis = readTimeoutInMillis;
+    }
+
+    /**
+     * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     * Once such an exception was detected it will get propagated to the handlers first. After that the channel
+     * will get closed as it may be in an unknown state.
+     *
+     * To disable it just use <code>0</code>.
+     */
+    public void setWriteTimeout(long writeTimeoutInMillis) {
+        if (writeTimeoutInMillis < 0) {
+            throw new IllegalArgumentException("writeTimeoutInMillis: " + writeTimeoutInMillis);
+        }
+        this.writeTimeoutInMillis = writeTimeoutInMillis;
+    }
+
+    /**
+     * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     *
+     * The default is <code>0</code>
+     */
+    public long getReadTimeout() {
+        return readTimeoutInMillis;
+    }
+
+    /**
+     * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     *
+     * The default is <code>0</code>
+     */
+    public long getWriteTimeout() {
+        return writeTimeoutInMillis;
     }
 }

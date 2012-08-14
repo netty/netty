@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.aio;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelException;
@@ -32,6 +31,8 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
+import java.nio.channels.InterruptedByTimeoutException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -185,10 +186,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         if (buf.readable()) {
             if (buf.hasNioBuffers()) {
                 ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
-                javaChannel().write(buffers, 0, buffers.length, 0L, SECONDS, AioSocketChannel.this,
-                        GATHERING_WRITE_HANDLER);
+                javaChannel().write(buffers, 0, buffers.length, config.getReadTimeout(),
+                        TimeUnit.MILLISECONDS, AioSocketChannel.this, GATHERING_WRITE_HANDLER);
             } else {
-                javaChannel().write(buf.nioBuffer(), this, WRITE_HANDLER);
+                javaChannel().write(buf.nioBuffer(), config.getReadTimeout(), TimeUnit.MILLISECONDS,
+                        this, WRITE_HANDLER);
             }
         } else {
             notifyFlushFutures();
@@ -215,12 +217,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         if (byteBuf.hasNioBuffers()) {
             ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());
-            javaChannel().read(buffers, 0, buffers.length, 0L, SECONDS, AioSocketChannel.this,
-                    SCATTERING_READ_HANDLER);
+            javaChannel().read(buffers, 0, buffers.length, config.getWriteTimeout(),
+                    TimeUnit.MILLISECONDS, AioSocketChannel.this, SCATTERING_READ_HANDLER);
         } else {
             // Get a ByteBuffer view on the ByteBuf
             ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-            javaChannel().read(buffer, AioSocketChannel.this, READ_HANDLER);
+            javaChannel().read(buffer, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                    AioSocketChannel.this, READ_HANDLER);
         }
     }
 
@@ -267,6 +270,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         protected void failed0(Throwable cause, AioSocketChannel channel) {
             channel.notifyFlushFutures(cause);
             channel.pipeline().fireExceptionCaught(cause);
+
+            // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
+            // write timeout was hit. In that case we should close the channel as it may be unusable anyway.
+            //
+            // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
+            if (cause instanceof InterruptedByTimeoutException) {
+                channel.unsafe().close(channel.unsafe().voidFuture());
+                return;
+            }
 
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
             if (!buf.readable()) {
@@ -343,7 +355,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             channel.pipeline().fireExceptionCaught(t);
 
-            if (t instanceof IOException) {
+            // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
+            // write timeout was hit. In that case we should close the channel as it may be unusable anyway.
+            //
+            // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
+            if (t instanceof IOException || t instanceof InterruptedByTimeoutException) {
                 channel.unsafe().close(channel.unsafe().voidFuture());
             } else {
                 // start the next read
