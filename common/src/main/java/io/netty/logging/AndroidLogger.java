@@ -191,4 +191,15 @@ public class AndroidLogger extends AbstractInternalLogger {
         Log.e(loggerName, msg, cause);
     }
 
+    /**
+     * Returns a {@link String}-based representation of this {@link AndroidLogger}
+     * In this case, it is simply the logger's name.
+     *
+     * @return the logger's name
+     */
+    @Override
+    public String toString() {
+        return loggerName;
+    }
+
 }
