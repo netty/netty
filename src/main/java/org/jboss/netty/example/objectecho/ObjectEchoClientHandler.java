@@ -80,7 +80,7 @@ public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
-        // Echo back the received object to the client.
+        // Echo back the received object to the server.
         transferredMessages.incrementAndGet();
         e.getChannel().write(e.getMessage());
     }
