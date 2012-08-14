@@ -55,6 +55,10 @@ public class UniqueName implements Comparable<UniqueName> {
         return name;
     }
 
+    public final int id() {
+        return id;
+    }
+
     @Override
     public final int hashCode() {
         return super.hashCode();
