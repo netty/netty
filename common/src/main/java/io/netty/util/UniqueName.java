@@ -18,13 +18,24 @@ package io.netty.util;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Defines a name that must be unique in the map that is provided during construction.
+ */
 public class UniqueName implements Comparable<UniqueName> {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
     private final int id;
+
     private final String name;
 
+    /**
+     * Constructs a new {@link UniqueName}
+     *
+     * @param map the map of names to compare with
+     * @param name the name of this {@link UniqueName}
+     * @param args the arguments to process
+     */
     public UniqueName(ConcurrentMap<String, Boolean> map, String name, Object... args) {
         if (map == null) {
             throw new NullPointerException("map");
@@ -37,7 +48,7 @@ public class UniqueName implements Comparable<UniqueName> {
         }
 
         if (map.putIfAbsent(name, Boolean.TRUE) != null) {
-            throw new IllegalArgumentException(String.format("'%s' already in use", name));
+            throw new IllegalArgumentException(String.format("'%s' is already in use", name));
         }
 
         id = nextId.incrementAndGet();
@@ -45,14 +56,31 @@ public class UniqueName implements Comparable<UniqueName> {
     }
 
     /**
-     * @param args arguments to validate
+     * Validates the given arguments.
+     * This does not do anything on its own, but must be overridden by subclasses
+     *
+     * @param args the arguments to validate
      */
     protected void validateArgs(Object... args) {
         // Subclasses will override.
     }
 
+    /**
+     * Returns this {@link UniqueName}'s name
+     *
+     * @return the name
+     */
     public final String name() {
         return name;
+    }
+
+    /**
+     * Returns this {@link UniqueName}'s ID
+     *
+     * @return the id
+     */
+    public final int id() {
+        return id;
     }
 
     @Override
@@ -66,19 +94,19 @@ public class UniqueName implements Comparable<UniqueName> {
     }
 
     @Override
-    public int compareTo(UniqueName o) {
-        if (this == o) {
+    public int compareTo(UniqueName other) {
+        if (this == other) {
             return 0;
         }
 
-        int ret = name.compareTo(o.name);
-        if (ret != 0) {
-            return ret;
+        int returnCode = name.compareTo(other.name);
+        if (returnCode != 0) {
+            return returnCode;
         }
 
-        if (id < o.id) {
+        if (id < other.id) {
             return -1;
-        } else if (id > o.id) {
+        } else if (id > other.id) {
             return 1;
         } else {
             return 0;
