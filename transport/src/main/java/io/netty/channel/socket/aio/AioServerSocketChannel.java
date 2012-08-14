@@ -40,6 +40,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
+    private final AioEventLoopGroup childGroup;
     private final AioServerSocketChannelConfig config;
     private boolean closed;
     private AtomicBoolean readSuspended = new AtomicBoolean();
@@ -60,9 +61,14 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
     }
 
-    public AioServerSocketChannel(AioEventLoopGroup eventLoop) {
-        super(null, null, eventLoop, newSocket(eventLoop.group));
-        config = new AioServerSocketChannelConfig(javaChannel());
+    public AioServerSocketChannel(AioEventLoopGroup group) {
+        this(group, group);
+    }
+
+    public AioServerSocketChannel(AioEventLoopGroup parentGroup, AioEventLoopGroup childGroup) {
+        super(null, null, parentGroup, newSocket(parentGroup.group));
+        this.childGroup = childGroup;
+        this.config = new AioServerSocketChannelConfig(javaChannel());
     }
 
     @Override
@@ -147,7 +153,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
-                    new AioSocketChannel(channel, null, channel.group, ch));
+                    new AioSocketChannel(channel, null, channel.childGroup, ch));
             if (!channel.readSuspended.get()) {
                 channel.pipeline().fireInboundBufferUpdated();
             }
