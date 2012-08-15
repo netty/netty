@@ -74,8 +74,14 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             try {
                 cont = process();
             } catch (Throwable t) {
-                if (!channel.isSocketClosed() && !(t instanceof SocketTimeoutException)) {
+                boolean readTimeout = t instanceof SocketTimeoutException;
+                if (!readTimeout && !channel.isSocketClosed()) {
                     fireExceptionCaught(channel, t);
+                }
+                if (readTimeout) {
+                    // the readTimeout was triggered because of the SO_TIMEOUT,
+                    // so  just continue with the loop here
+                    cont = true;
                 }
             } finally {
                 processEventQueue();
