@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -165,6 +166,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
     private final Queue<MessageEvent> queue;
     private final boolean consolidateOnFlush;
     private volatile ChannelHandlerContext ctx;
+    private final AtomicBoolean flush = new AtomicBoolean(false);
 
     /**
      * Creates a new instance with the default unbounded {@link BlockingQueue}
@@ -244,15 +246,18 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
             // No write request was made.
             return;
         }
+        Channel channel = ctx.getChannel();
+        boolean acquired;
 
-        final Queue<MessageEvent> queue = getQueue();
-        if (consolidateOnFlush) {
-            if (queue.isEmpty()) {
-                return;
-            }
+        // use CAS to see if the have flush already running, if so we don't need to take further actions
+        if (acquired = flush.compareAndSet(false, true)) {
+            final Queue<MessageEvent> queue = getQueue();
+            if (consolidateOnFlush) {
+                if (queue.isEmpty()) {
+                    return;
+                }
 
-            List<MessageEvent> pendingWrites = new ArrayList<MessageEvent>();
-            synchronized (this) {
+                List<MessageEvent> pendingWrites = new ArrayList<MessageEvent>();
                 for (;;) {
                     MessageEvent e = queue.poll();
                     if (e == null) {
@@ -268,9 +273,8 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
                     }
                 }
                 consolidatedWrite(pendingWrites);
-            }
-        } else {
-            synchronized (this) {
+
+            } else {
                 for (;;) {
                     MessageEvent e = queue.poll();
                     if (e == null) {
@@ -279,6 +283,10 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
                     ctx.sendDownstream(e);
                 }
             }
+        }
+
+        if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty())) {
+            flush(consolidateOnFlush);
         }
     }
 
