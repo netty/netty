@@ -18,7 +18,7 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol RST_STREAM Control Frame
  */
-public interface SpdyRstStreamFrame {
+public interface SpdyRstStreamFrame extends SpdyControlFrame {
 
     /**
      * Returns the Stream-ID of this frame.

@@ -18,7 +18,7 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol SYN_STREAM Control Frame
  */
-public interface SpdySynStreamFrame extends SpdyHeaderBlock {
+public interface SpdySynStreamFrame extends SpdyHeaderBlock, SpdyControlFrame {
 
     /**
      * Returns the Stream-ID of this frame.

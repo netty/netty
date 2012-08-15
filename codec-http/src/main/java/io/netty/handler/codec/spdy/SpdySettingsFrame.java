@@ -20,7 +20,7 @@ import java.util.Set;
 /**
  * A SPDY Protocol SETTINGS Control Frame
  */
-public interface SpdySettingsFrame {
+public interface SpdySettingsFrame extends SpdyControlFrame {
 
     int SETTINGS_UPLOAD_BANDWIDTH               = 1;
     int SETTINGS_DOWNLOAD_BANDWIDTH             = 2;
