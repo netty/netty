@@ -75,17 +75,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {
-        // FIXME: Introduce supertype
-        return msg instanceof SpdyDataFrame ||
-                msg instanceof SpdySynStreamFrame ||
-                msg instanceof SpdySynReplyFrame ||
-                msg instanceof SpdyRstStreamFrame ||
-                msg instanceof SpdySettingsFrame ||
-                msg instanceof SpdyNoOpFrame ||
-                msg instanceof SpdyPingFrame ||
-                msg instanceof SpdyGoAwayFrame ||
-                msg instanceof SpdyHeadersFrame ||
-                msg instanceof SpdyWindowUpdateFrame;
+        return msg instanceof SpdyDataFrame || msg instanceof SpdyControlFrame;
     }
 
     @Override
