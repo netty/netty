@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
 
 final class SpdyCodecUtil {
 
@@ -251,7 +252,7 @@ final class SpdyCodecUtil {
         byte[] SPDY2_DICT_;
 
         try {
-            SPDY2_DICT_ = SPDY2_DICT_S.getBytes("US-ASCII");
+            SPDY2_DICT_ = SPDY2_DICT_S.getBytes(CharsetUtil.US_ASCII);
             // dictionary is null terminated
             SPDY2_DICT_[SPDY2_DICT_.length - 1] = (byte) 0;
         } catch (Exception e) {
