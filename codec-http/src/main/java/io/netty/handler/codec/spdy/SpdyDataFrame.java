@@ -45,18 +45,6 @@ public interface SpdyDataFrame {
     void setLast(boolean last);
 
     /**
-     * @deprecated Removed from SPDY specification.
-     */
-    @Deprecated
-    boolean isCompressed();
-
-    /**
-     * @deprecated Removed from SPDY specification.
-     */
-    @Deprecated
-    void setCompressed(boolean compressed);
-
-    /**
      * Returns the data payload of this frame.  If there is no data payload
      * {@link Unpooled#EMPTY_BUFFER} is returned.
      */

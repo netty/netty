@@ -16,8 +16,8 @@
 package io.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol NOOP Control Frame
+ * A SPDY Protocol Control Frame
  */
-public interface SpdyNoOpFrame extends SpdyControlFrame {
+public interface SpdyControlFrame {
     // Tag interface
 }

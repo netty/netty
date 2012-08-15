@@ -18,7 +18,7 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol GOAWAY Control Frame
  */
-public interface SpdyGoAwayFrame {
+public interface SpdyGoAwayFrame extends SpdyControlFrame {
 
     /**
      * Returns the Last-good-stream-ID of this frame.
