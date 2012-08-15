@@ -18,6 +18,7 @@ package org.jboss.netty.channel.socket.oio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -73,7 +74,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             try {
                 cont = process();
             } catch (Throwable t) {
-                if (!channel.isSocketClosed()) {
+                if (!channel.isSocketClosed() && !(t instanceof SocketTimeoutException)) {
                     fireExceptionCaught(channel, t);
                 }
             } finally {
