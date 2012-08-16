@@ -65,12 +65,18 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             HttpMessage m = (HttpMessage) msg;
             boolean chunked;
             if (m.isChunked()) {
-                // check if the Transfer-Encoding is set to chunked already.
-                // if not add the header to the message
-                if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
-                    m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
+                // if Content-Length is set then the message can't be HTTP chunked
+                if (HttpCodecUtil.isContentLengthSet(m)) {
+                    chunked = this.chunked = false;
+                    HttpCodecUtil.removeTransferEncodingChunked(m);
+                } else {
+                    // check if the Transfer-Encoding is set to chunked already.
+                    // if not add the header to the message
+                    if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
+                        m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
+                    }
+                    chunked = this.chunked = true;
                 }
-                chunked = this.chunked = true;
             } else {
                 chunked = this.chunked = HttpCodecUtil.isTransferEncodingChunked(m);
             }
