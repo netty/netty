@@ -128,7 +128,13 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
-                this.localAddress = localAddress = getLocalSocketAddress();
+                localAddress = getLocalSocketAddress();
+                if (localAddress.getAddress().isAnyLocalAddress()) {
+                    // Don't cache on a wildcard address so the correct one
+                    // will be cached once the channel is connected/bound
+                    return localAddress;
+                }
+                this.localAddress = localAddress;
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
