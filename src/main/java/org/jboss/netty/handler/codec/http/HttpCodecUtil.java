@@ -118,6 +118,17 @@ final class HttpCodecUtil {
         return false;
     }
 
+    static void removeTransferEncodingChunked(HttpMessage m) {
+        List<String> values = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        values.remove(HttpHeaders.Values.CHUNKED);
+        m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+    }
+
+    static boolean isContentLengthSet(HttpMessage m) {
+        List<String> contentLength = m.getHeaders(HttpHeaders.Names.CONTENT_LENGTH);
+        return !contentLength.isEmpty();
+    }
+
     private HttpCodecUtil() {
         super();
     }
