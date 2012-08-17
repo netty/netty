@@ -43,7 +43,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private final AioEventLoopGroup childGroup;
     private final AioServerSocketChannelConfig config;
     private boolean closed;
-    private AtomicBoolean readSuspended = new AtomicBoolean();
+    private final AtomicBoolean readSuspended = new AtomicBoolean();
 
     private final Runnable acceptTask = new Runnable() {
 
@@ -68,7 +68,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     public AioServerSocketChannel(AioEventLoopGroup parentGroup, AioEventLoopGroup childGroup) {
         super(null, null, parentGroup, newSocket(parentGroup.group));
         this.childGroup = childGroup;
-        this.config = new AioServerSocketChannelConfig(javaChannel());
+        config = new AioServerSocketChannelConfig(javaChannel());
     }
 
     @Override

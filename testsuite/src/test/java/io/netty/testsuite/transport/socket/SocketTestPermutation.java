@@ -54,10 +54,11 @@ final class SocketTestPermutation {
         sbfs.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                AioEventLoopGroup loop = new AioEventLoopGroup();
+                AioEventLoopGroup parentGroup = new AioEventLoopGroup();
+                AioEventLoopGroup childGroup = new AioEventLoopGroup();
                 return new ServerBootstrap().
-                                group(loop).
-                                channel(new AioServerSocketChannel(loop));
+                                group(parentGroup, childGroup).
+                                channel(new AioServerSocketChannel(parentGroup, childGroup));
             }
         });
         sbfs.add(new Factory<ServerBootstrap>() {
