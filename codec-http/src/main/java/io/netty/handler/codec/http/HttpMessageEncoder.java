@@ -70,6 +70,7 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
                 if (HttpCodecUtil.isContentLengthSet(m)) {
                     contentMustBeEmpty = false;
                     transferEncodingChunked = false;
+                    HttpCodecUtil.removeTransferEncodingChunked(m);
                 } else {
                     // check if the Transfer-Encoding is set to chunked already.
                     // if not add the header to the message
