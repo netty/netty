@@ -62,14 +62,14 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
     public int getUnsignedMedium(int index) {
         return  (array[index]     & 0xff) << 16 |
                 (array[index + 1] & 0xff) <<  8 |
-                (array[index + 2] & 0xff) <<  0;
+                (array[index + 2] & 0xff);
     }
 
     public int getInt(int index) {
         return  (array[index]     & 0xff) << 24 |
                 (array[index + 1] & 0xff) << 16 |
                 (array[index + 2] & 0xff) <<  8 |
-                (array[index + 3] & 0xff) <<  0;
+                (array[index + 3] & 0xff);
     }
 
     public long getLong(int index) {
@@ -80,25 +80,25 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
                 ((long) array[index + 4] & 0xff) << 24 |
                 ((long) array[index + 5] & 0xff) << 16 |
                 ((long) array[index + 6] & 0xff) <<  8 |
-                ((long) array[index + 7] & 0xff) <<  0;
+                ((long) array[index + 7] & 0xff);
     }
 
     public void setShort(int index, int value) {
         array[index]     = (byte) (value >>> 8);
-        array[index + 1] = (byte) (value >>> 0);
+        array[index + 1] = (byte) value;
     }
 
     public void setMedium(int index, int   value) {
         array[index]     = (byte) (value >>> 16);
         array[index + 1] = (byte) (value >>> 8);
-        array[index + 2] = (byte) (value >>> 0);
+        array[index + 2] = (byte) value;
     }
 
     public void setInt(int index, int   value) {
         array[index]     = (byte) (value >>> 24);
         array[index + 1] = (byte) (value >>> 16);
         array[index + 2] = (byte) (value >>> 8);
-        array[index + 3] = (byte) (value >>> 0);
+        array[index + 3] = (byte) value;
     }
 
     public void setLong(int index, long  value) {
@@ -109,7 +109,7 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
         array[index + 4] = (byte) (value >>> 24);
         array[index + 5] = (byte) (value >>> 16);
         array[index + 6] = (byte) (value >>> 8);
-        array[index + 7] = (byte) (value >>> 0);
+        array[index + 7] = (byte) value;
     }
 
     public ChannelBuffer duplicate() {
