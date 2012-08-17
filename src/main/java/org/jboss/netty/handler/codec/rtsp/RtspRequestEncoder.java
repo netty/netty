@@ -32,7 +32,7 @@ public class RtspRequestEncoder extends RtspMessageEncoder {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().toString().getBytes("ASCII"));
         buf.writeByte((byte) ' ');
-        buf.writeBytes(request.getUri().getBytes("ASCII"));
+        buf.writeBytes(request.getUri().getBytes("UTF-8"));
         buf.writeByte((byte) ' ');
         buf.writeBytes(request.getProtocolVersion().toString().getBytes("ASCII"));
         buf.writeByte((byte) '\r');
