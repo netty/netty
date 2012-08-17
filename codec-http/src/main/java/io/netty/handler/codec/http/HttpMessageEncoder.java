@@ -158,10 +158,10 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
 
     private static void encodeHeader(ByteBuf buf, String header, String value)
             throws UnsupportedEncodingException {
-        buf.writeBytes(header.getBytes("ASCII"));
+        buf.writeBytes(header.getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(COLON);
         buf.writeByte(SP);
-        buf.writeBytes(value.getBytes("ASCII"));
+        buf.writeBytes(value.getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(CR);
         buf.writeByte(LF);
     }
