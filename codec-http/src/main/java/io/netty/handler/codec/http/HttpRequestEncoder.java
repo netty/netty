@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
 
 /**
  * Encodes an {@link HttpRequest} or an {@link HttpChunk} into
@@ -33,11 +34,11 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception {
         HttpRequest request = (HttpRequest) message;
-        buf.writeBytes(request.getMethod().toString().getBytes("ASCII"));
+        buf.writeBytes(request.getMethod().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
-        buf.writeBytes(request.getUri().getBytes("ASCII"));
+        buf.writeBytes(request.getUri().getBytes(CharsetUtil.UTF_8));
         buf.writeByte(SP);
-        buf.writeBytes(request.getProtocolVersion().toString().getBytes("ASCII"));
+        buf.writeBytes(request.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(CR);
         buf.writeByte(LF);
     }
