@@ -50,7 +50,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
     private static final ChannelBuffer LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
 
-    private volatile boolean chunked;
+    private volatile boolean transferEncodingChunked;
 
     /**
      * Creates a new instance.
@@ -63,11 +63,12 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
-            boolean chunked;
+            boolean contentMustBeEmpty;
             if (m.isChunked()) {
                 // if Content-Length is set then the message can't be HTTP chunked
                 if (HttpCodecUtil.isContentLengthSet(m)) {
-                    chunked = this.chunked = false;
+                    contentMustBeEmpty = false;
+                    transferEncodingChunked = false;
                     HttpCodecUtil.removeTransferEncodingChunked(m);
                 } else {
                     // check if the Transfer-Encoding is set to chunked already.
@@ -75,11 +76,13 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                     if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
                         m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
                     }
-                    chunked = this.chunked = true;
+                    contentMustBeEmpty = true;
+                    transferEncodingChunked = true;
                 }
             } else {
-                chunked = this.chunked = HttpCodecUtil.isTransferEncodingChunked(m);
+                transferEncodingChunked = contentMustBeEmpty = HttpCodecUtil.isTransferEncodingChunked(m);
             }
+
             ChannelBuffer header = ChannelBuffers.dynamicBuffer(
                     channel.getConfig().getBufferFactory());
             encodeInitialLine(header, m);
@@ -90,7 +93,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             ChannelBuffer content = m.getContent();
             if (!content.readable()) {
                 return header; // no content
-            } else if (chunked) {
+            } else if (contentMustBeEmpty) {
                 throw new IllegalArgumentException(
                         "HttpMessage.content must be empty " +
                         "if Transfer-Encoding is chunked.");
@@ -101,9 +104,9 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
         if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
-            if (chunked) {
+            if (transferEncodingChunked) {
                 if (chunk.isLast()) {
-                    chunked = false;
+                    transferEncodingChunked = false;
                     if (chunk instanceof HttpChunkTrailer) {
                         ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
                                 channel.getConfig().getBufferFactory());
