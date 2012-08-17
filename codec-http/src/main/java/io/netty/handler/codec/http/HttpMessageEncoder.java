@@ -64,11 +64,11 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
     public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
-            boolean contentMustBeEmmpty;
+            boolean contentMustBeEmpty;
             if (m.isChunked()) {
                 // if Content-Length is set then the message can't be HTTP chunked
                 if (HttpCodecUtil.isContentLengthSet(m)) {
-                    contentMustBeEmmpty = false;
+                    contentMustBeEmpty = false;
                     transferEncodingChunked = false;
                 } else {
                     // check if the Transfer-Encoding is set to chunked already.
@@ -76,11 +76,11 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
                     if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
                         m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
                     }
-                    contentMustBeEmmpty = true;
+                    contentMustBeEmpty = true;
                     transferEncodingChunked = true;
                 }
             } else {
-                transferEncodingChunked = contentMustBeEmmpty = HttpCodecUtil.isTransferEncodingChunked(m);
+                transferEncodingChunked = contentMustBeEmpty = HttpCodecUtil.isTransferEncodingChunked(m);
             }
 
             out.markWriterIndex();
@@ -91,7 +91,7 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
 
             ByteBuf content = m.getContent();
             if (content.readable()) {
-                if (contentMustBeEmmpty) {
+                if (contentMustBeEmpty) {
                     out.resetWriterIndex();
                     throw new IllegalArgumentException(
                             "HttpMessage.content must be empty if Transfer-Encoding is chunked.");
