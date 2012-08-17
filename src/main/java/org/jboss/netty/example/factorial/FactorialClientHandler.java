@@ -116,7 +116,7 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
         Channel channel = e.getChannel();
         while (channel.isWritable()) {
             if (i <= count) {
-                channel.write(Integer.valueOf(i));
+                channel.write(i);
                 i ++;
             } else {
                 break;

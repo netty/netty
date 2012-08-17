@@ -30,7 +30,7 @@ import org.jboss.netty.channel.DefaultChannelConfig;
  */
 class EmbeddedChannel extends AbstractChannel {
 
-    private static final Integer DUMMY_ID = Integer.valueOf(0);
+    private static final Integer DUMMY_ID = 0;
 
     private final ChannelConfig config;
     private final SocketAddress localAddress = new EmbeddedSocketAddress();

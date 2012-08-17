@@ -195,7 +195,7 @@ public abstract class CIDR implements Comparable<CIDR> {
         try {
             res = Integer.decode(intstr);
         } catch (Exception e) {
-            res = new Integer(def);
+            res = def;
         }
         return res.intValue();
     }

@@ -751,7 +751,7 @@ public final class Channels {
 
         ChannelFuture future = future(channel);
         channel.getPipeline().sendDownstream(new DownstreamChannelStateEvent(
-                channel, future, ChannelState.INTEREST_OPS, Integer.valueOf(interestOps)));
+                channel, future, ChannelState.INTEREST_OPS, interestOps));
         return future;
     }
 
@@ -772,8 +772,7 @@ public final class Channels {
 
         ctx.sendDownstream(
                 new DownstreamChannelStateEvent(
-                        ctx.getChannel(), future, ChannelState.INTEREST_OPS,
-                        Integer.valueOf(interestOps)));
+                        ctx.getChannel(), future, ChannelState.INTEREST_OPS, interestOps));
     }
 
     /**
