@@ -31,7 +31,9 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -77,6 +79,12 @@ final class NioEventLoop extends SingleThreadEventLoop {
         } catch (IOException e) {
             throw new ChannelException("failed to open a new selector", e);
         }
+    }
+
+    @Override
+    protected Queue<Runnable> newTaskQueue() {
+        // This event loop never calls takeTask()
+        return new ConcurrentLinkedQueue<Runnable>();
     }
 
     @Override

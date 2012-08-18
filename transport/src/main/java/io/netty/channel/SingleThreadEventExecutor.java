@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
@@ -46,7 +47,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     private final EventExecutorGroup parent;
-    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
+    private final Queue<Runnable> taskQueue;
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
@@ -106,6 +107,12 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                 }
             }
         });
+
+        taskQueue = newTaskQueue();
+    }
+
+    protected Queue<Runnable> newTaskQueue() {
+        return new LinkedBlockingQueue<Runnable>();
     }
 
     @Override
@@ -129,7 +136,11 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
     protected Runnable takeTask() throws InterruptedException {
         assert inEventLoop();
-        return taskQueue.take();
+        if (taskQueue instanceof BlockingQueue) {
+            return ((BlockingQueue<Runnable>) taskQueue).take();
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     protected Runnable peekTask() {
