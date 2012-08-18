@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.Signal;
+import io.netty.util.internal.Signal;
 
 /**
  * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
