@@ -18,7 +18,7 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol PING Control Frame
  */
-public interface SpdyPingFrame {
+public interface SpdyPingFrame extends SpdyControlFrame {
 
     /**
      * Returns the ID of this frame.

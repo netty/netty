@@ -283,6 +283,7 @@
             <ignore>java.nio.channels.AsynchronousServerSocketChannel</ignore>
             <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
             <ignore>java.nio.channels.NetworkChannel</ignore>
+            <ignore>java.nio.channels.InterruptedByTimeoutException</ignore>
           </ignores>
         </configuration>
         <executions>

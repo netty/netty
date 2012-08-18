@@ -18,6 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.TaskScheduler;
 import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -30,7 +31,9 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -60,8 +63,10 @@ final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean cleanedCancelledKeys;
 
-    NioEventLoop(NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
-        super(parent, threadFactory);
+    NioEventLoop(
+            NioEventLoopGroup parent, ThreadFactory threadFactory,
+            TaskScheduler scheduler, SelectorProvider selectorProvider) {
+        super(parent, threadFactory, scheduler);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -74,6 +79,12 @@ final class NioEventLoop extends SingleThreadEventLoop {
         } catch (IOException e) {
             throw new ChannelException("failed to open a new selector", e);
         }
+    }
+
+    @Override
+    protected Queue<Runnable> newTaskQueue() {
+        // This event loop never calls takeTask()
+        return new ConcurrentLinkedQueue<Runnable>();
     }
 
     @Override

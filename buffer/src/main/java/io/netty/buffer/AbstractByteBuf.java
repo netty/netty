@@ -180,27 +180,25 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return;
         }
 
-        if (minWritableBytes > maxCapacity - writerIndex) {
+        if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
-                    "minWritableBytes(%d) + writerIndex(%d) > maxCapacity(%d)",
-                    minWritableBytes, writerIndex, maxCapacity));
+                    "minWritableBytes: %d (expected: 0+)", minWritableBytes));
         }
 
-        int minNewCapacity = writerIndex + minWritableBytes;
-
-        if (minNewCapacity > maxCapacity) {
+        if (minWritableBytes > maxCapacity - writerIndex) {
             throw new IllegalArgumentException(String.format(
                     "minWritableBytes: %d (exceeds maxCapacity(%d))", minWritableBytes, maxCapacity));
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = calculateNewCapacity(minNewCapacity);
+        int newCapacity = calculateNewCapacity(writerIndex + minWritableBytes);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
     }
 
     private int calculateNewCapacity(int minNewCapacity) {
+        final int maxCapacity = this.maxCapacity;
         final int threshold = 1048576 * 4; // 4 MiB page
 
         if (minNewCapacity == threshold) {
@@ -223,7 +221,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
         while (newCapacity < minNewCapacity) {
             newCapacity <<= 1;
         }
-        return newCapacity;
+
+        return Math.min(newCapacity, maxCapacity);
     }
 
     @Override
@@ -724,6 +723,11 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuffer nioBuffer() {
         return nioBuffer(readerIndex, readableBytes());
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers() {
+        return nioBuffers(readerIndex, readableBytes());
     }
 
     @Override

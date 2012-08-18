@@ -18,6 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.TaskScheduler;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -57,8 +58,9 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new AioChildEventLoop(this, threadFactory);
+    protected EventExecutor newChild(
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
+        return new AioEventLoop(this, threadFactory, scheduler);
     }
 
     private void executeAioTask(Runnable command) {

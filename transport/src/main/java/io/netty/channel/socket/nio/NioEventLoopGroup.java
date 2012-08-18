@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.EventExecutor;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.TaskScheduler;
 
 import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.ThreadFactory;
@@ -35,18 +36,20 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
         super(nThreads, threadFactory);
     }
 
-    public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
+    public NioEventLoopGroup(
+            int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
         super(nThreads, threadFactory, selectorProvider);
     }
 
     @Override
-    protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
+    protected EventExecutor newChild(
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
         SelectorProvider selectorProvider;
         if (args == null || args.length == 0 || args[0] == null) {
             selectorProvider = SelectorProvider.provider();
         } else {
             selectorProvider = (SelectorProvider) args[0];
         }
-        return new NioEventLoop(this, threadFactory, selectorProvider);
+        return new NioEventLoop(this, threadFactory, scheduler, selectorProvider);
     }
 }

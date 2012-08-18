@@ -13,23 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.handler.codec.spdy;
 
-import java.util.concurrent.ThreadFactory;
-
-public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
-
-    public DefaultEventExecutorGroup(int nThreads) {
-        this(nThreads, null);
-    }
-
-    public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
-    }
-
-    @Override
-    protected EventExecutor newChild(
-            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
-        return new DefaultEventExecutor(this, threadFactory, scheduler);
-    }
+/**
+ * A SPDY Protocol Control Frame
+ */
+public interface SpdyControlFrame {
+    // Tag interface
 }

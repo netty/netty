@@ -21,6 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.TaskScheduler;
 
 import java.util.Collections;
 import java.util.Queue;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class OioEventLoopGroup implements EventLoopGroup {
 
     private final int maxChannels;
+    final TaskScheduler scheduler;
     final ThreadFactory threadFactory;
     final Set<OioEventLoop> activeChildren = Collections.newSetFromMap(
             new ConcurrentHashMap<OioEventLoop, Boolean>());
@@ -60,6 +62,8 @@ public class OioEventLoopGroup implements EventLoopGroup {
         this.maxChannels = maxChannels;
         this.threadFactory = threadFactory;
 
+        scheduler = new TaskScheduler(threadFactory);
+
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
         tooManyChannels.setStackTrace(new StackTraceElement[0]);
     }
@@ -71,6 +75,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
 
     @Override
     public void shutdown() {
+        scheduler.shutdown();
         for (EventLoop l: activeChildren) {
             l.shutdown();
         }
@@ -81,6 +86,9 @@ public class OioEventLoopGroup implements EventLoopGroup {
 
     @Override
     public boolean isShutdown() {
+        if (!scheduler.isShutdown()) {
+            return false;
+        }
         for (EventLoop l: activeChildren) {
             if (!l.isShutdown()) {
                 return false;
@@ -96,6 +104,9 @@ public class OioEventLoopGroup implements EventLoopGroup {
 
     @Override
     public boolean isTerminated() {
+        if (!scheduler.isTerminated()) {
+            return false;
+        }
         for (EventLoop l: activeChildren) {
             if (!l.isTerminated()) {
                 return false;
@@ -113,6 +124,15 @@ public class OioEventLoopGroup implements EventLoopGroup {
     public boolean awaitTermination(long timeout, TimeUnit unit)
             throws InterruptedException {
         long deadline = System.nanoTime() + unit.toNanos(timeout);
+        for (;;) {
+            long timeLeft = deadline - System.nanoTime();
+            if (timeLeft <= 0) {
+                return isTerminated();
+            }
+            if (scheduler.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
+                break;
+            }
+        }
         for (EventLoop l: activeChildren) {
             for (;;) {
                 long timeLeft = deadline - System.nanoTime();

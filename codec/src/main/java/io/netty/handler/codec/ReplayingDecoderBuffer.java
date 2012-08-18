@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.Signal;
+import io.netty.util.internal.Signal;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -670,6 +670,22 @@ class ReplayingDecoderBuffer implements ByteBuf {
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
         return buffer.nioBuffer(index, length);
+    }
+
+    @Override
+    public boolean hasNioBuffers() {
+        return buffer.hasNioBuffers();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        checkIndex(index, length);
+        return buffer.nioBuffers(index, length);
     }
 
     @Override

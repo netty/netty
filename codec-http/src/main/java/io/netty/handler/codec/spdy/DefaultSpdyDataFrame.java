@@ -26,7 +26,6 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
 
     private int streamId;
     private boolean last;
-    private boolean compressed;
     private ByteBuf data = Unpooled.EMPTY_BUFFER;
 
     /**
@@ -63,18 +62,6 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     }
 
     @Override
-    @Deprecated
-    public boolean isCompressed() {
-        return compressed;
-    }
-
-    @Override
-    @Deprecated
-    public void setCompressed(boolean compressed) {
-        this.compressed = compressed;
-    }
-
-    @Override
     public ByteBuf getData() {
         return data;
     }
@@ -97,8 +84,6 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
         buf.append(getClass().getSimpleName());
         buf.append("(last: ");
         buf.append(isLast());
-        buf.append("; compressed: ");
-        buf.append(isCompressed());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");

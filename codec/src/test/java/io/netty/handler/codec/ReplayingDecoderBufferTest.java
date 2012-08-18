@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
-import io.netty.util.Signal;
+import io.netty.util.internal.Signal;
 
 import org.junit.Test;
 

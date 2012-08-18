@@ -47,7 +47,7 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
     private static final ByteBuf LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
 
-    private volatile boolean chunked;
+    private boolean transferEncodingChunked;
 
     /**
      * Creates a new instance.
@@ -64,17 +64,26 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
     public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
-            boolean chunked;
+            boolean contentMustBeEmpty;
             if (m.isChunked()) {
-                // check if the Transfer-Encoding is set to chunked already.
-                // if not add the header to the message
-                if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
-                    m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
+                // if Content-Length is set then the message can't be HTTP chunked
+                if (HttpCodecUtil.isContentLengthSet(m)) {
+                    contentMustBeEmpty = false;
+                    transferEncodingChunked = false;
+                    HttpCodecUtil.removeTransferEncodingChunked(m);
+                } else {
+                    // check if the Transfer-Encoding is set to chunked already.
+                    // if not add the header to the message
+                    if (!HttpCodecUtil.isTransferEncodingChunked(m)) {
+                        m.addHeader(Names.TRANSFER_ENCODING, Values.CHUNKED);
+                    }
+                    contentMustBeEmpty = true;
+                    transferEncodingChunked = true;
                 }
-                chunked = this.chunked = true;
             } else {
-                chunked = this.chunked = HttpCodecUtil.isTransferEncodingChunked(m);
+                transferEncodingChunked = contentMustBeEmpty = HttpCodecUtil.isTransferEncodingChunked(m);
             }
+
             out.markWriterIndex();
             encodeInitialLine(out, m);
             encodeHeaders(out, m);
@@ -83,20 +92,19 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
 
             ByteBuf content = m.getContent();
             if (content.readable()) {
-                if (chunked) {
+                if (contentMustBeEmpty) {
                     out.resetWriterIndex();
                     throw new IllegalArgumentException(
-                            "HttpMessage.content must be empty " +
-                            "if Transfer-Encoding is chunked.");
+                            "HttpMessage.content must be empty if Transfer-Encoding is chunked.");
                 } else {
                     out.writeBytes(content, content.readerIndex(), content.readableBytes());
                 }
             }
         } else if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
-            if (chunked) {
+            if (transferEncodingChunked) {
                 if (chunk.isLast()) {
-                    chunked = false;
+                    transferEncodingChunked = false;
                     if (chunk instanceof HttpChunkTrailer) {
                         out.writeByte((byte) '0');
                         out.writeByte(CR);
@@ -150,10 +158,10 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
 
     private static void encodeHeader(ByteBuf buf, String header, String value)
             throws UnsupportedEncodingException {
-        buf.writeBytes(header.getBytes("ASCII"));
+        buf.writeBytes(header.getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(COLON);
         buf.writeByte(SP);
-        buf.writeBytes(value.getBytes("ASCII"));
+        buf.writeBytes(value.getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(CR);
         buf.writeByte(LF);
     }

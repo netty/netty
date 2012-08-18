@@ -210,6 +210,16 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean hasNioBuffers() {
+        return false;
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int offset, int length) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public short getShort(int index) {
         return (short) (array[index] << 8 | array[index + 1] & 0xFF);
     }
@@ -295,6 +305,11 @@ public class HeapByteBuf extends AbstractByteBuf {
         @Override
         public ByteBuffer nioBuffer() {
             return nioBuf;
+        }
+
+        @Override
+        public ByteBuffer[] nioBuffers() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

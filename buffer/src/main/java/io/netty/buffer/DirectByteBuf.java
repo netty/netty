@@ -381,6 +381,16 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean hasNioBuffers() {
+        return false;
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int offset, int length) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ByteBuf copy(int index, int length) {
         ByteBuffer src;
         try {
@@ -406,6 +416,11 @@ public class DirectByteBuf extends AbstractByteBuf {
         @Override
         public ByteBuffer nioBuffer() {
             return tmpBuf;
+        }
+
+        @Override
+        public ByteBuffer[] nioBuffers() {
+            throw new UnsupportedOperationException();
         }
 
         @Override
