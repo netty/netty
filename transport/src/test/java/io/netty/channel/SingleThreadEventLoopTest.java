@@ -256,7 +256,8 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopImpl() {
-            super(null, Executors.defaultThreadFactory());
+            super(null, Executors.defaultThreadFactory(),
+                  new TaskScheduler(Executors.defaultThreadFactory()));
         }
 
         @Override

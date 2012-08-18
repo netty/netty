@@ -24,6 +24,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     private static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
 
+    final TaskScheduler scheduler;
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
@@ -40,11 +41,13 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
             threadFactory = new DefaultThreadFactory();
         }
 
+        scheduler = new TaskScheduler(threadFactory);
+
         children = new SingleThreadEventExecutor[nThreads];
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = newChild(threadFactory, args);
+                children[i] = newChild(threadFactory, scheduler, args);
                 success = true;
             } catch (Exception e) {
                 throw new EventLoopException("failed to create a child event loop", e);
@@ -63,10 +66,12 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         return children[Math.abs(childIndex.getAndIncrement() % children.length)];
     }
 
-    protected abstract EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception;
+    protected abstract EventExecutor newChild(
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception;
 
     @Override
     public void shutdown() {
+        scheduler.shutdown();
         for (EventExecutor l: children) {
             l.shutdown();
         }
@@ -74,6 +79,9 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     @Override
     public boolean isShutdown() {
+        if (!scheduler.isShutdown()) {
+            return false;
+        }
         for (EventExecutor l: children) {
             if (!l.isShutdown()) {
                 return false;
@@ -84,6 +92,9 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     @Override
     public boolean isTerminated() {
+        if (!scheduler.isTerminated()) {
+            return false;
+        }
         for (EventExecutor l: children) {
             if (!l.isTerminated()) {
                 return false;
@@ -96,6 +107,15 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     public boolean awaitTermination(long timeout, TimeUnit unit)
             throws InterruptedException {
         long deadline = System.nanoTime() + unit.toNanos(timeout);
+        for (;;) {
+            long timeLeft = deadline - System.nanoTime();
+            if (timeLeft <= 0) {
+                return isTerminated();
+            }
+            if (scheduler.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
+                break;
+            }
+        }
         loop: for (EventExecutor l: children) {
             for (;;) {
                 long timeLeft = deadline - System.nanoTime();
