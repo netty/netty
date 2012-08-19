@@ -142,12 +142,30 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private static boolean expandReadBuffer(ByteBuf byteBuf) {
-        if (!byteBuf.writable()) {
-            // FIXME: Magic number
-            byteBuf.ensureWritableBytes(4096);
+        final int maxCapacity = byteBuf.maxCapacity();
+        final int capacity = byteBuf.capacity();
+        if (capacity == maxCapacity) {
+            return false;
+        }
+
+        // FIXME: Magic number
+        final int increment = 4096;
+
+        final int writerIndex = byteBuf.writerIndex();
+        if (writerIndex != capacity) {
+            // No need to expand because there's a room in the buffer.
+            return false;
+        }
+
+        // Expand to maximum capacity.
+        if (writerIndex + increment > maxCapacity) {
+            byteBuf.capacity(maxCapacity);
             return true;
         }
-        return false;
+
+        // Expand by the increment.
+        byteBuf.ensureWritableBytes(increment);
+        return true;
     }
 
     @Override
@@ -211,9 +229,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         ByteBuf byteBuf = pipeline().inboundByteBuffer();
         if (!byteBuf.readable()) {
             byteBuf.discardReadBytes();
-        } else {
-            expandReadBuffer(byteBuf);
         }
+
+        expandReadBuffer(byteBuf);
 
         if (byteBuf.hasNioBuffers()) {
             ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());

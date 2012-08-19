@@ -66,14 +66,36 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
             }
         }
 
-        private void expandReadBuffer(ByteBuf byteBuf) {
-            int available = available();
-            if (available > 0) {
-                byteBuf.ensureWritableBytes(available);
-            } else if (!byteBuf.writable()) {
-                // FIXME: Magic number
-                byteBuf.ensureWritableBytes(4096);
+        private boolean expandReadBuffer(ByteBuf byteBuf) {
+            final int maxCapacity = byteBuf.maxCapacity();
+            final int capacity = byteBuf.capacity();
+            if (capacity == maxCapacity) {
+                return false;
             }
+
+            final int available = available();
+            final int writerIndex = byteBuf.writerIndex();
+            if (available > 0) {
+                if (writerIndex + available > maxCapacity) {
+                    byteBuf.capacity(maxCapacity);
+                } else {
+                    byteBuf.ensureWritableBytes(available);
+                }
+                return true;
+            }
+
+            if (writerIndex != capacity) {
+                return false;
+            }
+
+            // FIXME: magic number
+            final int increment = 4096;
+            if (writerIndex + increment > maxCapacity) {
+                byteBuf.capacity(maxCapacity);
+            } else {
+                byteBuf.ensureWritableBytes(increment);
+            }
+            return true;
         }
     }
 
