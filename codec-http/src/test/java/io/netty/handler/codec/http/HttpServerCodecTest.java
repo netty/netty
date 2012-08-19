@@ -24,7 +24,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class HttpServerCodecTest {
-    
+
     /**
      * Testcase for https://github.com/netty/netty/issues/433
      */
@@ -45,8 +45,7 @@ public class HttpServerCodecTest {
         decoderEmbedder.finish();
 
         HttpMessage httpMessage = (HttpMessage) decoderEmbedder.readInbound();
-        Assert.assertTrue(httpMessage.isChunked());
-
+        Assert.assertSame(HttpTransferEncoding.STREAMED, httpMessage.getTransferEncoding());
 
         boolean empty = true;
         int totalBytesPolled = 0;

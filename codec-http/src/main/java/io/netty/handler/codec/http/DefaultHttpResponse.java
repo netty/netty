@@ -52,8 +52,8 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
-        buf.append("(chunked: ");
-        buf.append(isChunked());
+        buf.append("(transferEncoding: ");
+        buf.append(getTransferEncoding());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append(getProtocolVersion().getText());

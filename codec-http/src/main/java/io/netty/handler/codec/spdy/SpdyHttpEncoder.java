@@ -218,7 +218,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
 
     private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage)
             throws Exception {
-        boolean chunked = httpMessage.isChunked();
+        boolean chunked = httpMessage.getTransferEncoding().isMultiple();
 
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
         int streamID = SpdyHttpHeaders.getStreamId(httpMessage);
@@ -286,7 +286,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
 
     private SpdySynReplyFrame createSynReplyFrame(HttpResponse httpResponse)
             throws Exception {
-        boolean chunked = httpResponse.isChunked();
+        boolean chunked = httpResponse.getTransferEncoding().isMultiple();
 
         // Get the Stream-ID from the headers
         int streamID = SpdyHttpHeaders.getStreamId(httpResponse);

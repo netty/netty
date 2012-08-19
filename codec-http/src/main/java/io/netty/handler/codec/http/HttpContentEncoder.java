@@ -96,7 +96,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 throw new IllegalStateException("cannot send more responses than requests");
             }
 
-            boolean hasContent = m.isChunked() || m.getContent().readable();
+            boolean hasContent = m.getTransferEncoding().isMultiple() || m.getContent().readable();
             if (!hasContent) {
                 return m;
             }
@@ -114,7 +114,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                     HttpHeaders.Names.CONTENT_ENCODING,
                     result.getTargetContentEncoding());
 
-            if (!m.isChunked()) {
+            if (m.getTransferEncoding().isSingle()) {
                 ByteBuf content = m.getContent();
                 // Encode the content.
                 ByteBuf newContent = Unpooled.buffer();
