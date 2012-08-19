@@ -18,6 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
@@ -208,7 +209,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         this, WRITE_HANDLER);
             }
         } else {
-            notifyFlushFutures();
+            flushFutureNotifier.notifyFlushFutures();
             flushing = false;
         }
     }
@@ -260,7 +261,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 buf.discardReadBytes();
             }
 
-            channel.notifyFlushFutures(writtenBytes);
+            ChannelFlushFutureNotifier notifier = channel.flushFutureNotifier;
+            notifier.increaseWriteCounter(writtenBytes);
+            notifier.notifyFlushFutures();
 
             // Allow to have the next write pending
             channel.flushing = false;
@@ -283,7 +286,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void failed0(Throwable cause, AioSocketChannel channel) {
-            channel.notifyFlushFutures(cause);
+            channel.flushFutureNotifier.notifyFlushFutures(cause);
             channel.pipeline().fireExceptionCaught(cause);
 
             // Check if the exception was raised because of an InterruptedByTimeoutException which means that the

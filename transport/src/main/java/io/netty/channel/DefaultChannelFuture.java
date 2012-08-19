@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import static java.util.concurrent.TimeUnit.*;
-import io.netty.channel.AbstractChannel.FlushCheckpoint;
+import io.netty.channel.ChannelFlushFutureNotifier.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
