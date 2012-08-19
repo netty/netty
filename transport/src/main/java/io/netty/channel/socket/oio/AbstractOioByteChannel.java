@@ -40,12 +40,43 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
             boolean closed = false;
             boolean read = false;
             try {
-                expandReadBuffer(byteBuf);
-                int localReadAmount = doReadBytes(byteBuf);
-                if (localReadAmount > 0) {
-                    read = true;
-                } else if (localReadAmount < 0) {
-                    closed = true;
+                for (;;) {
+                    int localReadAmount = doReadBytes(byteBuf);
+                    if (localReadAmount > 0) {
+                        read = true;
+                    } else if (localReadAmount < 0) {
+                        closed = true;
+                    }
+
+                    final int available = available();
+                    if (available <= 0) {
+                        break;
+                    }
+
+                    if (byteBuf.writable()) {
+                        continue;
+                    }
+
+                    final int capacity = byteBuf.capacity();
+                    final int maxCapacity = byteBuf.maxCapacity();
+                    if (capacity == maxCapacity) {
+                        if (read) {
+                            read = false;
+                            pipeline.fireInboundBufferUpdated();
+                            if (!byteBuf.writable()) {
+                                throw new IllegalStateException(
+                                        "an inbound handler whose buffer is full must consume at " +
+                                        "least one byte.");
+                            }
+                        }
+                    } else {
+                        final int writerIndex = byteBuf.writerIndex();
+                        if (writerIndex + available > maxCapacity) {
+                            byteBuf.capacity(maxCapacity);
+                        } else {
+                            byteBuf.ensureWritableBytes(available);
+                        }
+                    }
                 }
             } catch (Throwable t) {
                 if (read) {
@@ -64,38 +95,6 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     close(voidFuture());
                 }
             }
-        }
-
-        private boolean expandReadBuffer(ByteBuf byteBuf) {
-            final int maxCapacity = byteBuf.maxCapacity();
-            final int capacity = byteBuf.capacity();
-            if (capacity == maxCapacity) {
-                return false;
-            }
-
-            final int available = available();
-            final int writerIndex = byteBuf.writerIndex();
-            if (available > 0) {
-                if (writerIndex + available > maxCapacity) {
-                    byteBuf.capacity(maxCapacity);
-                } else {
-                    byteBuf.ensureWritableBytes(available);
-                }
-                return true;
-            }
-
-            if (writerIndex != capacity) {
-                return false;
-            }
-
-            // FIXME: magic number
-            final int increment = 4096;
-            if (writerIndex + increment > maxCapacity) {
-                byteBuf.capacity(maxCapacity);
-            } else {
-                byteBuf.ensureWritableBytes(increment);
-            }
-            return true;
         }
     }
 

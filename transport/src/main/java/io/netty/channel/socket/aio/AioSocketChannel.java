@@ -141,31 +141,28 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         };
     }
 
-    private static boolean expandReadBuffer(ByteBuf byteBuf) {
-        final int maxCapacity = byteBuf.maxCapacity();
+    private static void expandReadBuffer(ByteBuf byteBuf) {
+        final int writerIndex = byteBuf.writerIndex();
         final int capacity = byteBuf.capacity();
+        if (capacity != writerIndex) {
+            return;
+        }
+
+        final int maxCapacity = byteBuf.maxCapacity();
         if (capacity == maxCapacity) {
-            return false;
+            return;
         }
 
         // FIXME: Magic number
         final int increment = 4096;
 
-        final int writerIndex = byteBuf.writerIndex();
-        if (writerIndex != capacity) {
-            // No need to expand because there's a room in the buffer.
-            return false;
-        }
-
-        // Expand to maximum capacity.
         if (writerIndex + increment > maxCapacity) {
+            // Expand to maximum capacity.
             byteBuf.capacity(maxCapacity);
-            return true;
+        } else {
+            // Expand by the increment.
+            byteBuf.ensureWritableBytes(increment);
         }
-
-        // Expand by the increment.
-        byteBuf.ensureWritableBytes(increment);
-        return true;
     }
 
     @Override
