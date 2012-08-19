@@ -18,7 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.TaskScheduler;
+import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -65,7 +65,7 @@ final class NioEventLoop extends SingleThreadEventLoop {
 
     NioEventLoop(
             NioEventLoopGroup parent, ThreadFactory threadFactory,
-            TaskScheduler scheduler, SelectorProvider selectorProvider) {
+            ChannelTaskScheduler scheduler, SelectorProvider selectorProvider) {
         super(parent, threadFactory, scheduler);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");

@@ -51,13 +51,13 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
-    private final TaskScheduler scheduler;
+    private final ChannelTaskScheduler scheduler;
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
     private volatile int state;
 
     protected SingleThreadEventExecutor(
-            EventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+            EventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }

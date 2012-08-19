@@ -16,14 +16,14 @@
 package io.netty.channel.local;
 
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.TaskScheduler;
+import io.netty.channel.ChannelTaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 
 final class LocalEventLoop extends SingleThreadEventLoop {
 
     LocalEventLoop(
-            LocalEventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+            LocalEventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
     }
 

@@ -21,7 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.TaskScheduler;
+import io.netty.channel.ChannelTaskScheduler;
 
 import java.util.Collections;
 import java.util.Queue;
@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class OioEventLoopGroup implements EventLoopGroup {
 
     private final int maxChannels;
-    final TaskScheduler scheduler;
+    final ChannelTaskScheduler scheduler;
     final ThreadFactory threadFactory;
     final Set<OioEventLoop> activeChildren = Collections.newSetFromMap(
             new ConcurrentHashMap<OioEventLoop, Boolean>());
@@ -62,7 +62,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
         this.maxChannels = maxChannels;
         this.threadFactory = threadFactory;
 
-        scheduler = new TaskScheduler(threadFactory);
+        scheduler = new ChannelTaskScheduler(threadFactory);
 
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
         tooManyChannels.setStackTrace(new StackTraceElement[0]);

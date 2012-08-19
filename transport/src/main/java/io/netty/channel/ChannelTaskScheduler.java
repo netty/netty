@@ -31,10 +31,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class TaskScheduler {
+public final class ChannelTaskScheduler {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(TaskScheduler.class);
+            InternalLoggerFactory.getInstance(ChannelTaskScheduler.class);
 
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
     private static final long START_TIME = System.nanoTime();
@@ -55,7 +55,7 @@ public final class TaskScheduler {
     /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
     private volatile int state;
 
-    public TaskScheduler(ThreadFactory threadFactory) {
+    public ChannelTaskScheduler(ThreadFactory threadFactory) {
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }

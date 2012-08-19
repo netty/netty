@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadFactory;
 class DefaultEventExecutor extends SingleThreadEventExecutor {
 
     DefaultEventExecutor(
-            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
     }
 

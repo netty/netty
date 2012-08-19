@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     protected SingleThreadEventLoop(
-            EventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+            EventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
     }
 

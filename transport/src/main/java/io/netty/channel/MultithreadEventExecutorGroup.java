@@ -24,7 +24,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     private static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
 
-    final TaskScheduler scheduler;
+    final ChannelTaskScheduler scheduler;
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
@@ -41,7 +41,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
             threadFactory = new DefaultThreadFactory();
         }
 
-        scheduler = new TaskScheduler(threadFactory);
+        scheduler = new ChannelTaskScheduler(threadFactory);
 
         children = new SingleThreadEventExecutor[nThreads];
         for (int i = 0; i < nThreads; i ++) {
@@ -67,7 +67,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     }
 
     protected abstract EventExecutor newChild(
-            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception;
+            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception;
 
     @Override
     public void shutdown() {
