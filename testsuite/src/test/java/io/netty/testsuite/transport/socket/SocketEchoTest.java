@@ -54,7 +54,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 4);
+        testSimpleEcho0(sb, cb, 32);
     }
 
     private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize) throws Throwable {
