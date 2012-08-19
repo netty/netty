@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -161,6 +162,22 @@ public class SslHandler
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final Executor delegatedTaskExecutor;
+    private final ChannelFlushFutureNotifier flushFutureNotifier = new ChannelFlushFutureNotifier() {
+        @Override
+        public synchronized void increaseWriteCounter(long delta) {
+            super.increaseWriteCounter(delta);
+        }
+
+        @Override
+        public synchronized void notifyFlushFutures() {
+            super.notifyFlushFutures();
+        }
+
+        @Override
+        public synchronized void notifyFlushFutures(Throwable cause) {
+            super.notifyFlushFutures(cause);
+        }
+    };
 
     private final boolean startTls;
     private boolean sentFirstMessage;
@@ -330,7 +347,6 @@ public class SslHandler
         closeOutboundAndChannel(ctx, future, false);
     }
 
-
     @Override
     public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         final ByteBuf in = ctx.outboundByteBuffer();
@@ -346,6 +362,8 @@ public class SslHandler
             ctx.flush(future);
             return;
         }
+
+        flushFutureNotifier.addFlushFuture(future, in.readableBytes());
 
         boolean unwrapLater = false;
         int bytesProduced = 0;
@@ -399,7 +417,8 @@ public class SslHandler
             throw e;
         } finally {
             in.unsafe().discardSomeReadBytes();
-            ctx.flush(future);
+            flushFutureNotifier.increaseWriteCounter(bytesProduced);
+            ctx.flush(ctx.newFuture().addListener(flushFutureNotifier));
         }
     }
 

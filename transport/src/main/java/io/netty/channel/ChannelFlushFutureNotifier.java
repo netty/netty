@@ -18,13 +18,13 @@ package io.netty.channel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-public final class ChannelFlushFutureNotifier {
+public class ChannelFlushFutureNotifier implements ChannelFutureListener {
 
     private long writeCounter;
     private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
 
-    public void addFlushFuture(ChannelFuture future, int size) {
-        long checkpoint = writeCounter + size;
+    public void addFlushFuture(ChannelFuture future, int pendingDataSize) {
+        long checkpoint = writeCounter + pendingDataSize;
         if (future instanceof FlushCheckpoint) {
             FlushCheckpoint cp = (FlushCheckpoint) future;
             cp.flushCheckpoint(checkpoint);
@@ -32,10 +32,6 @@ public final class ChannelFlushFutureNotifier {
         } else {
             flushCheckpoints.add(new DefaultFlushCheckpoint(checkpoint, future));
         }
-    }
-
-    public long writeCounter() {
-        return writeCounter;
     }
 
     public void increaseWriteCounter(long delta) {
@@ -88,6 +84,15 @@ public final class ChannelFlushFutureNotifier {
                 break;
             }
             cp.future().setFailure(cause);
+        }
+    }
+
+    @Override
+    public void operationComplete(ChannelFuture future) throws Exception {
+        if (future.isSuccess()) {
+            notifyFlushFutures();
+        } else {
+            notifyFlushFutures(future.cause());
         }
     }
 
