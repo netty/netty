@@ -199,11 +199,6 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public void setMaxAge(long maxAge) {
-        if (maxAge < -1) {
-            throw new IllegalArgumentException(
-                    "maxAge must be either -1, 0, or a positive integer: " +
-                    maxAge);
-        }
         this.maxAge = maxAge;
     }
 
