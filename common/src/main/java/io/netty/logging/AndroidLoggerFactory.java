@@ -24,12 +24,12 @@ public class AndroidLoggerFactory extends InternalLoggerFactory {
     /**
      * Creates a new {@link AndroidLogger}
      *
-     * @param name the name of the new {@link AndroidLogger} instance
+     * @param tag the tag of the new {@link AndroidLogger} instance
      * @return the new {@link AndroidLogger}
      */
     @Override
-    public InternalLogger newInstance(String name) {
-        return new AndroidLogger(name);
+    public InternalLogger newInstance(String tag) {
+        return new AndroidLogger(tag);
     }
 
 }

@@ -23,17 +23,17 @@ import android.util.Log;
 public class AndroidLogger extends AbstractInternalLogger {
 
     /**
-     * The name of this {@link AndroidLogger}
+     * The tag of this {@link AndroidLogger}
      */
-    private final String loggerName;
+    private final String tag;
 
     /**
      * Creates a new {@link AndroidLogger}
      *
-     * @param loggerName the name of this {@link AndroidLogger}
+     * @param tag the tag of this {@link AndroidLogger}
      */
-    public AndroidLogger(String loggerName) {
-        this.loggerName = loggerName;
+    public AndroidLogger(String tag) {
+        this.tag = tag;
     }
 
     /**
@@ -93,7 +93,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String msg) {
-        Log.v(loggerName, msg);
+        Log.v(tag, msg);
     }
 
     /**
@@ -104,7 +104,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String msg, Throwable cause) {
-        Log.v(loggerName, msg, cause);
+        Log.v(tag, msg, cause);
     }
 
     /**
@@ -114,7 +114,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String msg) {
-        Log.d(loggerName, msg);
+        Log.d(tag, msg);
     }
 
     /**
@@ -125,7 +125,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String msg, Throwable cause) {
-        Log.d(loggerName, msg, cause);
+        Log.d(tag, msg, cause);
     }
 
     /**
@@ -135,7 +135,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg) {
-        Log.i(loggerName, msg);
+        Log.i(tag, msg);
     }
 
     /**
@@ -146,7 +146,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg, Throwable cause) {
-        Log.i(loggerName, msg, cause);
+        Log.i(tag, msg, cause);
     }
 
     /**
@@ -156,7 +156,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String msg) {
-        Log.w(loggerName, msg);
+        Log.w(tag, msg);
     }
 
     /**
@@ -167,7 +167,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String msg, Throwable cause) {
-        Log.w(loggerName, msg, cause);
+        Log.w(tag, msg, cause);
     }
 
     /**
@@ -177,7 +177,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String msg) {
-        Log.e(loggerName, msg);
+        Log.e(tag, msg);
     }
 
     /**
@@ -188,7 +188,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String msg, Throwable cause) {
-        Log.e(loggerName, msg, cause);
+        Log.e(tag, msg, cause);
     }
 
     /**
@@ -199,7 +199,7 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public String toString() {
-        return loggerName;
+        return tag;
     }
 
 }
