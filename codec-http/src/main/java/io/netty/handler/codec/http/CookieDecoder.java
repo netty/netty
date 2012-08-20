@@ -94,7 +94,7 @@ public final class CookieDecoder {
             String commentURL = null;
             String domain = null;
             String path = null;
-            long maxAge = Integer.MIN_VALUE;
+            long maxAge = Long.MIN_VALUE;
             List<Integer> ports = new ArrayList<Integer>(2);
 
             for (int j = i + 1; j < names.size(); j++, i++) {
