@@ -98,7 +98,6 @@ public class UniqueNameTest {
                     assertNotSame(currentName, otherName);
                     assertNotSame(currentName.hashCode(), otherName.hashCode());
                     assertFalse(currentName.equals(otherName));
-                    assertNotSame(currentName.compareTo(otherName), 0);
                     assertNotSame(currentName.toString(), otherName.toString());
                 }
             }
