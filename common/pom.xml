@@ -66,6 +66,14 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
+    <!-- Not quite a logging library, but it's still used for logging -->
+    <dependency>
+      <groupId>com.google.android</groupId>
+      <artifactId>android</artifactId>
+      <version>4.0.1.2</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 </project>
 
