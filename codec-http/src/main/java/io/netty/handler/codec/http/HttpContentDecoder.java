@@ -63,10 +63,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            if (decoder != null) {
-                // Clean-up the previous decoder if not cleaned up correctly.
-                finishDecode(Unpooled.buffer());
-            }
+            cleanup();
 
             // Determine the content encoding.
             String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
@@ -153,6 +150,25 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
      */
     protected String getTargetContentEncoding(String contentEncoding) throws Exception {
         return HttpHeaders.Values.IDENTITY;
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.afterRemove(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.channelInactive(ctx);
+    }
+
+    private void cleanup() {
+        if (decoder != null) {
+            // Clean-up the previous decoder if not cleaned up correctly.
+            finishDecode(Unpooled.buffer());
+        }
     }
 
     private void decode(ByteBuf in, ByteBuf out) {

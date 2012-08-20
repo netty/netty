@@ -88,10 +88,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            if (encoder != null) {
-                // Clean-up the previous encoder if not cleaned up correctly.
-                finishEncode(Unpooled.buffer());
-            }
+            cleanup();
 
             // Determine the content encoding.
             String acceptEncoding = acceptEncodingQueue.poll();
@@ -178,6 +175,26 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
     protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
+
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.afterRemove(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.channelInactive(ctx);
+    }
+
+    private void cleanup() {
+        if (encoder != null) {
+            // Clean-up the previous encoder if not cleaned up correctly.
+            finishEncode(Unpooled.buffer());
+        }
+    }
 
     private void encode(ByteBuf in, ByteBuf out) {
         encoder.writeOutbound(in);
