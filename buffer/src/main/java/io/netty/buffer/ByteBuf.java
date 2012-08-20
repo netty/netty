@@ -443,23 +443,35 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * Makes sure the number of {@linkplain #writableBytes() the writable bytes}
      * is equal to or greater than the specified value.  If there is enough
      * writable bytes in this buffer, this method returns with no side effect.
-     * Otherwise:
-     * <ul>
-     * <li>a non-dynamic buffer will throw an {@link IndexOutOfBoundsException}.</li>
-     * <li>a dynamic buffer will expand its capacity so that the number of the
-     *     {@link #writableBytes() writable bytes} becomes equal to or greater
-     *     than the specified value. The expansion involves the reallocation of
-     *     the internal buffer and consequently memory copy.</li>
-     * </ul>
+     * Otherwise, it raises an {@link IllegalArgumentException}.
      *
-     * @param writableBytes
+     * @param minWritableBytes
      *        the expected minimum number of writable bytes
      * @throws IndexOutOfBoundsException
-     *         if {@linkplain #writableBytes() the writable bytes} of this
-     *         buffer is less than the specified value and if this buffer is
-     *         not a dynamic buffer
+     *         if {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}
      */
-    void ensureWritableBytes(int writableBytes);
+    void ensureWritableBytes(int minWritableBytes);
+
+    /**
+     * Tries to make sure the number of {@linkplain #writableBytes() the writable bytes}
+     * is equal to or greater than the specified value.  Unlike {@link #ensureWritableBytes(int)},
+     * this method does not raise an exception but returns a code.
+     *
+     * @param minWritableBytes
+     *        the expected minimum number of writable bytes
+     * @param force
+     *        When {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}:
+     *        <ul>
+     *        <li>{@code true} - the capacity of the buffer is expanded to {@link #maxCapacity()}</li>
+     *        <li>{@code false} - the capacity of the buffer is unchanged</li>
+     *        </ul>
+     * @return {@code 0} if the buffer has enough writable bytes, and its capacity is unchanged.
+     *         {@code 1} if the buffer does not have enough bytes, and its capacity is unchanged.
+     *         {@code 2} if the buffer has enough writable bytes, and its capacity has been increased.
+     *         {@code 3} if the buffer does not have enough bytes, but its capacity has been
+     *                   increased to its maximum.
+     */
+    int ensureWritableBytes(int minWritableBytes, boolean force);
 
     /**
      * Gets a boolean at the specified absolute (@code index) in this buffer.
