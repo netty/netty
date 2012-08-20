@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.http;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -130,6 +131,14 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
         } else {
             ctx.sendUpstream(e);
         }
+    }
+
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        // Clean-up the previous decoder if not cleaned up correctly.
+        finishDecode();
+
+        super.channelClosed(ctx, e);
     }
 
     /**

@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -164,6 +165,14 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         } else {
             ctx.sendDownstream(e);
         }
+    }
+
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        // Clean-up the previous encoder if not cleaned up correctly.
+        finishEncode();
+
+        super.channelClosed(ctx, e);
     }
 
     /**
