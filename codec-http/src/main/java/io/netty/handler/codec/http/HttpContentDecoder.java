@@ -63,7 +63,10 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            decoder = null;
+            if (decoder != null) {
+                // Clean-up the previous decoder if not cleaned up correctly.
+                finishDecode(Unpooled.buffer());
+            }
 
             // Determine the content encoding.
             String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);

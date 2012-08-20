@@ -88,7 +88,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            encoder = null;
+            if (encoder != null) {
+                // Clean-up the previous encoder if not cleaned up correctly.
+                finishEncode(Unpooled.buffer());
+            }
 
             // Determine the content encoding.
             String acceptEncoding = acceptEncodingQueue.poll();
