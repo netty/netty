@@ -90,7 +90,8 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            encoder = null;
+            // Clean-up the previous encoder if not cleaned up correctly.
+            finishEncode();
 
             String acceptEncoding = acceptEncodingQueue.poll();
             if (acceptEncoding == null) {
@@ -192,6 +193,10 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
     }
 
     private ChannelBuffer finishEncode() {
+        if (encoder == null) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+
         ChannelBuffer result;
         if (encoder.finish()) {
             result = ChannelBuffers.wrappedBuffer(encoder.pollAll(new ChannelBuffer[encoder.size()]));

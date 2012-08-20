@@ -62,7 +62,8 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            decoder = null;
+            // Clean-up the previous encoder if not cleaned up correctly.
+            finishDecode();
 
             // Determine the content encoding.
             String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
@@ -160,6 +161,10 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
     }
 
     private ChannelBuffer finishDecode() {
+        if (decoder == null) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+
         ChannelBuffer result;
         if (decoder.finish()) {
             result = ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
