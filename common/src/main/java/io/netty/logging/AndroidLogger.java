@@ -93,7 +93,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String msg) {
-        Log.v(tag, msg);
+        if (isTraceEnabled()) {
+            Log.v(tag, msg);
+        }
     }
 
     /**
@@ -104,7 +106,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String msg, Throwable cause) {
-        Log.v(tag, msg, cause);
+        if (isTraceEnabled()) {
+            Log.v(tag, msg, cause);
+        }
     }
 
     /**
@@ -114,7 +118,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String msg) {
-        Log.d(tag, msg);
+        if (isDebugEnabled()) {
+            Log.d(tag, msg);
+        }
     }
 
     /**
@@ -125,7 +131,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String msg, Throwable cause) {
-        Log.d(tag, msg, cause);
+        if (isDebugEnabled()) {
+            Log.d(tag, msg, cause);
+        }
     }
 
     /**
@@ -135,7 +143,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg) {
-        Log.i(tag, msg);
+        if (isInfoEnabled()) {
+            Log.i(tag, msg);
+        }
     }
 
     /**
@@ -146,7 +156,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg, Throwable cause) {
-        Log.i(tag, msg, cause);
+        if (isInfoEnabled()) {
+            Log.i(tag, msg, cause);
+        }
     }
 
     /**
@@ -156,7 +168,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String msg) {
-        Log.w(tag, msg);
+        if (isWarnEnabled()) {
+            Log.w(tag, msg);
+        }
     }
 
     /**
@@ -167,7 +181,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String msg, Throwable cause) {
-        Log.w(tag, msg, cause);
+        if (isWarnEnabled()) {
+            Log.w(tag, msg, cause);
+        }
     }
 
     /**
@@ -177,7 +193,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String msg) {
-        Log.e(tag, msg);
+        if (isErrorEnabled()) {
+            Log.e(tag, msg);
+        }
     }
 
     /**
@@ -188,7 +206,9 @@ public class AndroidLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String msg, Throwable cause) {
-        Log.e(tag, msg, cause);
+        if (isErrorEnabled()) {
+            Log.e(tag, msg, cause);
+        }
     }
 
     /**
