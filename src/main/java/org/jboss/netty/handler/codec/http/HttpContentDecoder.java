@@ -62,7 +62,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            // Clean-up the previous encoder if not cleaned up correctly.
+            // Clean-up the previous decoder if not cleaned up correctly.
             finishDecode();
 
             // Determine the content encoding.
