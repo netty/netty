@@ -173,6 +173,11 @@ public class SwappedByteBuf implements WrappedByteBuf {
     }
 
     @Override
+    public int ensureWritableBytes(int minWritableBytes, boolean force) {
+        return buf.ensureWritableBytes(minWritableBytes, force);
+    }
+
+    @Override
     public boolean getBoolean(int index) {
         return buf.getBoolean(index);
     }
