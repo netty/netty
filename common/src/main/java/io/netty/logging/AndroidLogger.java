@@ -39,51 +39,51 @@ public class AndroidLogger extends AbstractInternalLogger {
     /**
      * Checks to see if trace messages can be logged
      *
-     * @return {@code true}
+     * @return {@code true} if messages can be logged, otherwise {@code false}
      */
     @Override
     public boolean isTraceEnabled() {
-        return true;
+        return Log.isLoggable(tag, Log.VERBOSE);
     }
 
     /**
      * Checks to see if debugging messages can be logged
      *
-     * @return {@code true}
+     * @return {@code true} if messages can be logged, otherwise {@code false}
      */
     @Override
     public boolean isDebugEnabled() {
-        return true;
+        return Log.isLoggable(tag, Log.DEBUG);
     }
 
     /**
      * Checks to see if informational messages can be logged
      *
-     * @return {@code true}
+     * @return {@code true} if messages can be logged, otherwise {@code false}
      */
     @Override
     public boolean isInfoEnabled() {
-        return true;
+        return Log.isLoggable(tag, Log.INFO);
     }
 
     /**
      * Checks to see if warning messages can be logged
      *
-     * @return {@code true}
+     * @return {@code true} if messages can be logged, otherwise {@code false}
      */
     @Override
     public boolean isWarnEnabled() {
-        return true;
+        return Log.isLoggable(tag, Log.WARN);
     }
 
     /**
      * Checks to see if error messages can be logged
      *
-     * @return {@code true}
+     * @return {@code true} if messages can be logged, otherwise {@code false}
      */
     @Override
     public boolean isErrorEnabled() {
-        return true;
+        return Log.isLoggable(tag, Log.ERROR);
     }
 
     /**

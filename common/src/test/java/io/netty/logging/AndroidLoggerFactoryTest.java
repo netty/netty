@@ -16,7 +16,6 @@
 package io.netty.logging;
 
 import static org.junit.Assert.*;
-
 import org.junit.Test;
 
 public class AndroidLoggerFactoryTest {
