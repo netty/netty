@@ -20,6 +20,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
@@ -43,7 +44,8 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
  * converts {@link ChannelBuffer}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
+public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler
+                                         implements LifeCycleAwareChannelHandler {
 
     private DecoderEmbedder<ChannelBuffer> decoder;
 
@@ -182,5 +184,21 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
         }
         decoder = null;
         return result;
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        finishDecode();
     }
 }

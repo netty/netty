@@ -23,6 +23,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
@@ -48,7 +49,8 @@ import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
  * converts them into {@link ChannelBuffer}s.
  */
-public abstract class HttpContentEncoder extends SimpleChannelHandler {
+public abstract class HttpContentEncoder extends SimpleChannelHandler
+                                         implements LifeCycleAwareChannelHandler {
 
     private final Queue<String> acceptEncodingQueue = new ConcurrentLinkedQueue<String>();
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
@@ -214,5 +216,21 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         }
         encoder = null;
         return result;
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        finishEncode();
     }
 }
