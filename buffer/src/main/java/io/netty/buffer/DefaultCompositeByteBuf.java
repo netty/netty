@@ -1166,12 +1166,17 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
         components.subList(0, firstComponentId).clear();
 
-        // Replace the first readable component with a new slice.
+        // Remove or replace the first readable component with a new slice.
         Component c = components.get(0);
         int adjustment = readerIndex - c.offset;
-        Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
-        c.buf.unsafe().release();
-        components.set(0, newC);
+        if (adjustment == c.length) {
+            // new slice would be empty, so remove instead
+            components.remove(0);
+        } else {
+            Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
+            c.buf.unsafe().release();
+            components.set(0, newC);
+        }
 
         // Update indexes and markers.
         updateComponentOffsets(0);
