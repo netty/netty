@@ -366,7 +366,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf inboundByteBuffer() {
         if (inByteBuf == null) {
-            throw new NoSuchBufferException();
+            if (handler instanceof ChannelInboundHandler) {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no inbound byte buffer; it implements %s, but " +
+                        "its newInboundBuffer() method created a %s.",
+                        name, ChannelInboundHandler.class.getSimpleName(),
+                        MessageBuf.class.getSimpleName()));
+            } else {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no inbound byte buffer; it does not implement %s.",
+                        name, ChannelInboundHandler.class.getSimpleName()));
+            }
         }
         return inByteBuf;
     }
@@ -375,7 +385,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> inboundMessageBuffer() {
         if (inMsgBuf == null) {
-            throw new NoSuchBufferException();
+            if (handler instanceof ChannelInboundHandler) {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no inbound message buffer; it implements %s, but " +
+                        "its newInboundBuffer() method created a %s.",
+                        name, ChannelInboundHandler.class.getSimpleName(),
+                        ByteBuf.class.getSimpleName()));
+            } else {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no inbound message buffer; it does not implement %s.",
+                        name, ChannelInboundHandler.class.getSimpleName()));
+            }
         }
         return (MessageBuf<T>) inMsgBuf;
     }
@@ -393,7 +413,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf outboundByteBuffer() {
         if (outByteBuf == null) {
-            throw new NoSuchBufferException();
+            if (handler instanceof ChannelOutboundHandler) {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no outbound byte buffer; it implements %s, but " +
+                        "its newOutboundBuffer() method created a %s.",
+                        name, ChannelOutboundHandler.class.getSimpleName(),
+                        MessageBuf.class.getSimpleName()));
+            } else {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no outbound byte buffer; it does not implement %s.",
+                        name, ChannelOutboundHandler.class.getSimpleName()));
+            }
         }
         return outByteBuf;
     }
@@ -402,7 +432,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> outboundMessageBuffer() {
         if (outMsgBuf == null) {
-            throw new NoSuchBufferException();
+            if (handler instanceof ChannelOutboundHandler) {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no outbound message buffer; it implements %s, but " +
+                        "its newOutboundBuffer() method created a %s.",
+                        name, ChannelOutboundHandler.class.getSimpleName(),
+                        ByteBuf.class.getSimpleName()));
+            } else {
+                throw new NoSuchBufferException(String.format(
+                        "the handler '%s' has no outbound message buffer; it does not implement %s.",
+                        name, ChannelOutboundHandler.class.getSimpleName()));
+            }
         }
         return (MessageBuf<T>) outMsgBuf;
     }
@@ -451,7 +491,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
-                throw new NoSuchBufferException();
+                if (prev != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s whose inbound buffer is %s.",
+                            name, ChannelInboundHandler.class.getSimpleName(),
+                            ByteBuf.class.getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s whose inbound buffer is %s.",
+                            ChannelInboundHandler.class.getSimpleName(),
+                            ByteBuf.class.getSimpleName()));
+                }
             }
             if (ctx.inByteBuf != null) {
                 if (ctx.executor().inEventLoop(currentThread)) {
@@ -477,7 +527,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
-                throw new NoSuchBufferException();
+                if (prev != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s whose inbound buffer is %s.",
+                            name, ChannelInboundHandler.class.getSimpleName(),
+                            MessageBuf.class.getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s whose inbound buffer is %s.",
+                            ChannelInboundHandler.class.getSimpleName(),
+                            MessageBuf.class.getSimpleName()));
+                }
             }
 
             if (ctx.inMsgBuf != null) {

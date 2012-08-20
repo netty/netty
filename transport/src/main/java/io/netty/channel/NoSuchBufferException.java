@@ -22,14 +22,9 @@ package io.netty.channel;
  */
 public class NoSuchBufferException extends ChannelPipelineException {
 
-    private static final String DEFAULT_MESSAGE =
-            "Could not find a suitable destination buffer.  Double-check if the pipeline is " +
-            "configured correctly and its handlers works as expected.";
-
     private static final long serialVersionUID = -131650785896627090L;
 
     public NoSuchBufferException() {
-        this(DEFAULT_MESSAGE);
     }
 
     public NoSuchBufferException(String message, Throwable cause) {
