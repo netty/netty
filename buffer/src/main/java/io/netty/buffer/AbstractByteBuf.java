@@ -182,12 +182,13 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
         if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
-                    "minWritableBytes: %d (expected: 0+)", minWritableBytes));
+                    "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
         }
 
         if (minWritableBytes > maxCapacity - writerIndex) {
             throw new IllegalArgumentException(String.format(
-                    "minWritableBytes: %d (exceeds maxCapacity(%d))", minWritableBytes, maxCapacity));
+                    "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d)",
+                    writerIndex, minWritableBytes, maxCapacity));
         }
 
         // Normalize the current capacity to the power of 2.
