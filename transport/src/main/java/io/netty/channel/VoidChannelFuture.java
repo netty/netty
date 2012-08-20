@@ -15,7 +15,9 @@
  */
 package io.netty.channel;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class VoidChannelFuture implements ChannelFuture.Unsafe {
 
@@ -121,6 +123,19 @@ public class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
+    public Void get() throws InterruptedException, ExecutionException {
+        fail();
+        return null;
+    }
+
+    @Override
+    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
+            TimeoutException {
+        fail();
+        return null;
+    }
+
+    @Override
     public boolean setProgress(long amount, long current, long total) {
         return false;
     }
@@ -137,6 +152,11 @@ public class VoidChannelFuture implements ChannelFuture.Unsafe {
 
     @Override
     public boolean cancel() {
+        return false;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
     }
 

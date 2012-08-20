@@ -73,7 +73,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                 contentEncoding = HttpHeaders.Values.IDENTITY;
             }
 
-            boolean hasContent = m.isChunked() || m.getContent().readable();
+            boolean hasContent =
+                    m.getTransferEncoding().isMultiple() || m.getContent().readable();
             if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
@@ -81,7 +82,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                         HttpHeaders.Names.CONTENT_ENCODING,
                         getTargetContentEncoding(contentEncoding));
 
-                if (!m.isChunked()) {
+                if (m.getTransferEncoding().isSingle()) {
                     ByteBuf content = m.getContent();
                     // Decode the content
                     ByteBuf newContent = Unpooled.buffer();

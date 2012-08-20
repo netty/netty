@@ -18,7 +18,7 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol WINDOW_UPDATE Control Frame
  */
-public interface SpdyWindowUpdateFrame {
+public interface SpdyWindowUpdateFrame extends SpdyControlFrame {
 
     /**
      * Returns the Stream-ID of this frame.

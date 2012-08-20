@@ -68,7 +68,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        if (((AioChildEventLoop) eventLoop()).parent() != group) {
+        if (((AioEventLoop) eventLoop()).parent() != group) {
             throw new ChannelException(
                     getClass().getSimpleName() + " must be registered to the " +
                     AioEventLoopGroup.class.getSimpleName() + " which was specified in the constructor.");
@@ -83,7 +83,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof AioChildEventLoop;
+        return loop instanceof AioEventLoop;
     }
 
     protected abstract class AbstractAioUnsafe extends AbstractUnsafe {

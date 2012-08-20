@@ -94,6 +94,11 @@ public class ChannelOption<T> extends UniqueName {
     public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
             new ChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR");
 
+    public static final ChannelOption<Long> AIO_READ_TIMEOUT =
+            new ChannelOption<Long>("AIO_READ_TIMEOUT");
+    public static final ChannelOption<Long> AIO_WRITE_TIMEOUT =
+            new ChannelOption<Long>("AIO_WRITE_TIMEOUT");
+
     public ChannelOption(String name) {
         super(names, name);
     }

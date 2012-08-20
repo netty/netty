@@ -13,11 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.spdy;
+package io.netty.handler.codec.http;
 
-/**
- * A SPDY Protocol NOOP Control Frame
- */
-public interface SpdyNoOpFrame extends SpdyControlFrame {
-    // Tag interface
+public enum HttpTransferEncoding {
+    CHUNKED(false),
+    STREAMED(false),
+    SINGLE(true);
+
+    private final boolean single;
+
+    private HttpTransferEncoding(boolean single) {
+        this.single = single;
+    }
+
+    public boolean isMultiple() {
+        return !single;
+    }
+
+    public boolean isSingle() {
+        return single;
+    }
 }

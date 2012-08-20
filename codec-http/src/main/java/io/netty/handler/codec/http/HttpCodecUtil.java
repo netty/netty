@@ -151,6 +151,21 @@ final class HttpCodecUtil {
         return false;
     }
 
+    static void removeTransferEncodingChunked(HttpMessage m) {
+        List<String> values = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        values.remove(HttpHeaders.Values.CHUNKED);
+        if (values.isEmpty()) {
+            m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        } else {
+            m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+        }
+    }
+
+    static boolean isContentLengthSet(HttpMessage m) {
+        List<String> contentLength = m.getHeaders(HttpHeaders.Names.CONTENT_LENGTH);
+        return !contentLength.isEmpty();
+    }
+
     /**
      * A constructor to ensure that instances of this class are never made
      */

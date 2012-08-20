@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.util.CharsetUtil;
 
 import java.util.Set;
 
@@ -75,17 +76,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
     @Override
     public boolean isEncodable(Object msg) throws Exception {
-        // FIXME: Introduce supertype
-        return msg instanceof SpdyDataFrame ||
-                msg instanceof SpdySynStreamFrame ||
-                msg instanceof SpdySynReplyFrame ||
-                msg instanceof SpdyRstStreamFrame ||
-                msg instanceof SpdySettingsFrame ||
-                msg instanceof SpdyNoOpFrame ||
-                msg instanceof SpdyPingFrame ||
-                msg instanceof SpdyGoAwayFrame ||
-                msg instanceof SpdyHeadersFrame ||
-                msg instanceof SpdyWindowUpdateFrame;
+        return msg instanceof SpdyDataFrame || msg instanceof SpdyControlFrame;
     }
 
     @Override
@@ -312,14 +303,14 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         ByteBuf headerBlock = Unpooled.buffer();
         writeLengthField(version, headerBlock, numHeaders);
         for (String name: names) {
-            byte[] nameBytes = name.getBytes("UTF-8");
+            byte[] nameBytes = name.getBytes(CharsetUtil.UTF_8);
             writeLengthField(version, headerBlock, nameBytes.length);
             headerBlock.writeBytes(nameBytes);
             int savedIndex = headerBlock.writerIndex();
             int valueLength = 0;
             writeLengthField(version, headerBlock, valueLength);
             for (String value: headerFrame.getHeaders(name)) {
-                byte[] valueBytes = value.getBytes("UTF-8");
+                byte[] valueBytes = value.getBytes(CharsetUtil.UTF_8);
                 headerBlock.writeBytes(valueBytes);
                 headerBlock.writeByte(0);
                 valueLength += valueBytes.length + 1;

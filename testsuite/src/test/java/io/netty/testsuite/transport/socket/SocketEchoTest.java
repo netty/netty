@@ -45,8 +45,21 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        EchoHandler sh = new EchoHandler();
-        EchoHandler ch = new EchoHandler();
+        testSimpleEcho0(sb, cb, Integer.MAX_VALUE);
+    }
+
+    @Test
+    public void testSimpleEchoWithBoundedBuffer() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, 32);
+    }
+
+    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize) throws Throwable {
+        EchoHandler sh = new EchoHandler(maxInboundBufferSize);
+        EchoHandler ch = new EchoHandler(maxInboundBufferSize);
 
         sb.childHandler(sh);
         cb.handler(ch);
@@ -109,11 +122,18 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     private static class EchoHandler extends ChannelInboundByteHandlerAdapter {
+        private final int maxInboundBufferSize;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
-        EchoHandler() {
+        EchoHandler(int maxInboundBufferSize) {
+            this.maxInboundBufferSize = maxInboundBufferSize;
+        }
+
+        @Override
+        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return Unpooled.buffer(0, maxInboundBufferSize);
         }
 
         @Override

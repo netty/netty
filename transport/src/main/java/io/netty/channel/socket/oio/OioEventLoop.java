@@ -27,7 +27,7 @@ class OioEventLoop extends SingleThreadEventLoop {
     private AbstractOioChannel ch;
 
     OioEventLoop(OioEventLoopGroup parent) {
-        super(parent, parent.threadFactory);
+        super(parent, parent.threadFactory, parent.scheduler);
         this.parent = parent;
     }
 

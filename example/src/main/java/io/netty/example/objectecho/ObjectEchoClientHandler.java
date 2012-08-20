@@ -57,7 +57,7 @@ public class ObjectEchoClientHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, List<Integer> msg) throws Exception {
-        // Echo back the received object to the client.
+        // Echo back the received object to the server.
         ctx.write(msg);
     }
 

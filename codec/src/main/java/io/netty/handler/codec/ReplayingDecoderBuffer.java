@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.Signal;
+import io.netty.util.internal.Signal;
 
 import java.io.IOException;
 import java.io.InputStream;
