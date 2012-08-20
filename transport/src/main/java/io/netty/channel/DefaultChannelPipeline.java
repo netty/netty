@@ -18,7 +18,6 @@ package io.netty.channel;
 import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
@@ -898,19 +897,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public MessageBuf<Object> inboundMessageBuffer() {
-        if (channel.metadata().bufferType() != ChannelBufType.MESSAGE) {
-            throw new NoSuchBufferException(
-                    "The first inbound buffer of this channel must be a message buffer.");
-        }
         return head.nextInboundMessageBuffer();
     }
 
     @Override
     public ByteBuf inboundByteBuffer() {
-        if (channel.metadata().bufferType() != ChannelBufType.BYTE) {
-            throw new NoSuchBufferException(
-                    "The first inbound buffer of this channel must be a byte buffer.");
-        }
         return head.nextInboundByteBuffer();
     }
 
@@ -951,10 +942,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     ByteBuf nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+        final DefaultChannelHandlerContext initialCtx = ctx;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
-                throw new NoSuchBufferException();
+                if (initialCtx.next != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
+                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
+                            ByteBuf.class.getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s whose outbound buffer is %s.",
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            ByteBuf.class.getSimpleName()));
+                }
             }
 
             if (ctx.outByteBuf != null) {
@@ -976,10 +978,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     MessageBuf<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+        final DefaultChannelHandlerContext initialCtx = ctx;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
-                throw new NoSuchBufferException();
+                if (initialCtx.next != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
+                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
+                            MessageBuf.class.getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s whose outbound buffer is %s.",
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            MessageBuf.class.getSimpleName()));
+                }
             }
 
             if (ctx.outMsgBuf != null) {
@@ -1288,11 +1301,25 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         validateFuture(future);
 
+        final DefaultChannelHandlerContext initialCtx = ctx;
         EventExecutor executor;
         boolean msgBuf = false;
         for (;;) {
             if (ctx == null) {
-                throw new NoSuchBufferException();
+                if (initialCtx.next != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s which accepts a %s, and " +
+                            "the transport does not accept it as-is.",
+                            initialCtx.next.name(),
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            message.getClass().getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s which accepts a %s, and " +
+                            "the transport does not accept it as-is.",
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            message.getClass().getSimpleName()));
+                }
             }
 
             if (ctx.hasOutboundMessageBuffer()) {

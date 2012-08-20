@@ -17,6 +17,8 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.NoSuchBufferException;
 
 final class CodecUtil {
@@ -72,7 +74,12 @@ final class CodecUtil {
             }
         }
 
-        throw new NoSuchBufferException();
+        throw new NoSuchBufferException(String.format(
+                "the handler '%s' could not find a %s which accepts a %s.",
+                ctx.name(),
+                inbound? ChannelInboundHandler.class.getSimpleName()
+                       : ChannelOutboundHandler.class.getSimpleName(),
+                msg.getClass().getSimpleName()));
     }
 
     private CodecUtil() {
