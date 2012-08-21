@@ -53,6 +53,20 @@ public class InternalLoggerFactoryTest {
     public void shouldReturnWrappedLogger() {
         assertNotSame(mock, InternalLoggerFactory.getInstance("mock"));
     }
+    
+    @Test
+    public void shouldGetInstance() {
+        InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
+        
+        String helloWorld = "Hello, world!";
+        
+        InternalLogger one = InternalLoggerFactory.getInstance("helloWorld");
+        InternalLogger two = InternalLoggerFactory.getInstance(helloWorld.getClass());
+        
+        assertNotNull(one);
+        assertNotNull(two);
+        assertNotSame(one, two);
+    }
 
     @Test
     public void testIsTraceEnabled() {
