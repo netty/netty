@@ -361,7 +361,6 @@
           <arguments>-P release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
-          <localCheckout>true</localCheckout>
         </configuration>
       </plugin>
     </plugins>
