@@ -17,8 +17,10 @@ package io.netty.util;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,6 +45,21 @@ public class UniqueNameTest {
     @Before
     public void initializeTest() {
         this.names = new ConcurrentHashMap<String, Boolean>();
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void testCannnotProvideNullMap() {
+        UniqueName nullName = new UniqueName(null, "Nothing");
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void testCannotProvideNullName() {
+        UniqueName nullName = new UniqueName(this.names, null);
+    }
+
+    @Test
+    public void testArgsCanBePassed() {
+        UniqueName nullName = new UniqueName(this.names, "Argh, matey!", 2, 5, new Object());
     }
 
     @Test
@@ -78,10 +95,28 @@ public class UniqueNameTest {
             nameList.add(currentName);
             for (UniqueName otherName : nameList) {
                 if (!currentName.name().equals(otherName.name())) {
-                    assertNotSame(currentName.id(), otherName.name());
+                    assertNotSame(currentName, otherName);
+                    assertNotSame(currentName.hashCode(), otherName.hashCode());
+                    assertFalse(currentName.equals(otherName));
+                    assertNotSame(currentName.toString(), otherName.toString());
                 }
             }
         }
+    }
+    
+    @Test
+    public void testCompareNames() {
+        UniqueName one = registerName("One");
+        UniqueName two = registerName("Two");
+
+        ConcurrentHashMap<String, Boolean> mapTwo = new ConcurrentHashMap<String, Boolean>();
+
+        UniqueName three = new UniqueName(mapTwo, "One");
+
+        assertSame(one.compareTo(one), 0);
+        assertSame(one.compareTo(two), -5);
+        assertSame(one.compareTo(three), -1);
+        assertSame(three.compareTo(one), 1);
     }
 
 }
