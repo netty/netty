@@ -309,8 +309,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        if (state.destroyed) {
-            return;
+        synchronized (state) {
+            switch (state.state) {
+            case 1:
+            case 2:
+                return;
+            }
+            state.state = 1;
         }
 
         state.lastReadTime = state.lastWriteTime = System.currentTimeMillis();
@@ -332,11 +337,12 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     private static void destroy(ChannelHandlerContext ctx) {
-        State state;
-
-        synchronized (ctx) {
-            state = state(ctx);
-            state.destroyed = true;
+        State state = state(ctx);
+        synchronized (state) {
+            if (state.state != 1) {
+                return;
+            }
+            state.state = 2;
         }
 
         if (state.readerIdleTimeout != null) {
@@ -478,9 +484,8 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     private static final class State {
-        State() {
-            super();
-        }
+        // 0 - none, 1 - initialized, 2 - destroyed
+        int state;
 
         volatile Timeout readerIdleTimeout;
         volatile long lastReadTime;
@@ -490,6 +495,8 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
         volatile Timeout allIdleTimeout;
 
-        volatile boolean destroyed;
+        State() {
+            super();
+        }
     }
 }
