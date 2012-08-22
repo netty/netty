@@ -372,9 +372,11 @@ public class SslHandler extends FrameDecoder
                 handshakeFuture.setFailure(e);
 
                 fireExceptionCaught(ctx, e);
+                Channels.close(ctx, future(channel));
             }
         } else { // Failed to initiate handshake.
             fireExceptionCaught(ctx, exception);
+            Channels.close(ctx, future(channel));
         }
 
         return handshakeFuture;
@@ -400,6 +402,7 @@ public class SslHandler extends FrameDecoder
             return wrapNonAppData(ctx, channel);
         } catch (SSLException e) {
             fireExceptionCaught(ctx, e);
+            Channels.close(ctx, future(channel));
             return failedFuture(channel, e);
         }
     }
@@ -696,6 +699,7 @@ public class SslHandler extends FrameDecoder
                 NotSslRecordException e = new NotSslRecordException(
                         "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
                 buffer.skipBytes(buffer.readableBytes());
+                Channels.close(ctx, future(channel));
                 throw e;
             }
         }
@@ -1208,6 +1212,7 @@ public class SslHandler extends FrameDecoder
         }
 
         handshakeFuture.setFailure(cause);
+        Channels.close(ctx, future(channel));
     }
 
     private void closeOutboundAndChannel(
