@@ -658,8 +658,9 @@ public class SslHandler
                 NotSslRecordException e = new NotSslRecordException(
                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                 in.skipBytes(in.readableBytes());
+                ctx.fireExceptionCaught(e);
                 setHandshakeFailure(e);
-                throw e;
+                return;
             }
         }
 
