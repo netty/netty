@@ -16,12 +16,12 @@
 package io.netty.channel;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Queue;
 
-public class ChannelFlushFutureNotifier implements ChannelFutureListener {
+public class ChannelFlushFutureNotifier {
 
     private long writeCounter;
-    private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
+    private final Queue<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
 
     public void addFlushFuture(ChannelFuture future, int pendingDataSize) {
         long checkpoint = writeCounter + pendingDataSize;
@@ -39,7 +39,34 @@ public class ChannelFlushFutureNotifier implements ChannelFutureListener {
     }
 
     public void notifyFlushFutures() {
+        notifyFlushFutures0(null);
+    }
+
+    public void notifyFlushFutures(Throwable cause) {
+        notifyFlushFutures();
+        for (;;) {
+            FlushCheckpoint cp = flushCheckpoints.poll();
+            if (cp == null) {
+                break;
+            }
+            cp.future().setFailure(cause);
+        }
+    }
+
+    public void notifyFlushFutures(Throwable cause1, Throwable cause2) {
+        notifyFlushFutures0(cause1);
+        for (;;) {
+            FlushCheckpoint cp = flushCheckpoints.poll();
+            if (cp == null) {
+                break;
+            }
+            cp.future().setFailure(cause2);
+        }
+    }
+
+    private void notifyFlushFutures0(Throwable cause) {
         if (flushCheckpoints.isEmpty()) {
+            writeCounter = 0;
             return;
         }
 
@@ -61,7 +88,11 @@ public class ChannelFlushFutureNotifier implements ChannelFutureListener {
             }
 
             flushCheckpoints.remove();
-            cp.future().setSuccess();
+            if (cause == null) {
+                cp.future().setSuccess();
+            } else {
+                cp.future().setFailure(cause);
+            }
         }
 
         // Avoid overflow
@@ -73,26 +104,6 @@ public class ChannelFlushFutureNotifier implements ChannelFutureListener {
             for (FlushCheckpoint cp: flushCheckpoints) {
                 cp.flushCheckpoint(cp.flushCheckpoint() - newWriteCounter);
             }
-        }
-    }
-
-    public void notifyFlushFutures(Throwable cause) {
-        notifyFlushFutures();
-        for (;;) {
-            FlushCheckpoint cp = flushCheckpoints.poll();
-            if (cp == null) {
-                break;
-            }
-            cp.future().setFailure(cause);
-        }
-    }
-
-    @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
-        if (future.isSuccess()) {
-            notifyFlushFutures();
-        } else {
-            notifyFlushFutures(future.cause());
         }
     }
 
