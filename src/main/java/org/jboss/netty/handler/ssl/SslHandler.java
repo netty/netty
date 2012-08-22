@@ -206,6 +206,8 @@ public class SslHandler extends FrameDecoder
 
     private final SSLEngineInboundCloseFuture sslEngineCloseFuture = new SSLEngineInboundCloseFuture();
 
+    private boolean closeOnSSLException;
+
     /**
      * Creates a new instance.
      *
@@ -372,9 +374,15 @@ public class SslHandler extends FrameDecoder
                 handshakeFuture.setFailure(e);
 
                 fireExceptionCaught(ctx, e);
+                if (closeOnSSLException) {
+                    Channels.close(ctx, future(channel));
+                }
             }
         } else { // Failed to initiate handshake.
             fireExceptionCaught(ctx, exception);
+            if (closeOnSSLException) {
+                Channels.close(ctx, future(channel));
+            }
         }
 
         return handshakeFuture;
@@ -400,6 +408,9 @@ public class SslHandler extends FrameDecoder
             return wrapNonAppData(ctx, channel);
         } catch (SSLException e) {
             fireExceptionCaught(ctx, e);
+            if (closeOnSSLException) {
+                Channels.close(ctx, future(channel));
+            }
             return failedFuture(channel, e);
         }
     }
@@ -455,6 +466,25 @@ public class SslHandler extends FrameDecoder
 
     }
 
+    /**
+     * If set to <code>true</code>, the {@link Channel} will automatically get closed
+     * one a {@link SSLException} was caught. This is most times what you want, as after this
+     * its almost impossible to recover.
+     *
+     * Anyway the default is <code>false</code> to not break compatibility with older releases. This
+     * will be changed to <code>true</code> in the next major release.
+     *
+     */
+    public void setCloseOnSSLException(boolean closeOnSslException) {
+        if (ctx != null) {
+            throw new IllegalStateException("Can only get changed before attached to ChannelPipeline");
+        }
+        this.closeOnSSLException = closeOnSslException;
+    }
+
+    public boolean getCloseOnSSLException() {
+        return closeOnSSLException;
+    }
 
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
@@ -696,7 +726,17 @@ public class SslHandler extends FrameDecoder
                 NotSslRecordException e = new NotSslRecordException(
                         "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
                 buffer.skipBytes(buffer.readableBytes());
-                throw e;
+                if (closeOnSSLException) {
+                    // first trigger the exception and then close the channel
+                    fireExceptionCaught(ctx, e);
+                    Channels.close(ctx, future(channel));
+
+                    // just return null as we closed the channel before, that
+                    // will take care of cleanup etc
+                    return null;
+                } else {
+                    throw e;
+                }
             }
         }
 
@@ -1208,6 +1248,9 @@ public class SslHandler extends FrameDecoder
         }
 
         handshakeFuture.setFailure(cause);
+        if (closeOnSSLException) {
+            Channels.close(ctx, future(channel));
+        }
     }
 
     private void closeOutboundAndChannel(
