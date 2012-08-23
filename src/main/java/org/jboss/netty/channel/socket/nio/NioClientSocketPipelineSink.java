@@ -20,7 +20,6 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
-import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -367,8 +366,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     if (k.isConnectable()) {
                         connect(k);
                     }
-                } catch (CancelledKeyException t) {
-                    // Catch CancelledKeyException which may get thrown.
+                } catch (Throwable t) {
                     NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
                     ch.connectFuture.setFailure(t);
                     fireExceptionCaught(ch, t);
@@ -408,18 +406,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             }
         }
 
-        private void connect(SelectionKey k) {
+        private void connect(SelectionKey k) throws IOException {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
-            try {
-                if (ch.channel.finishConnect()) {
-                    k.cancel();
-                    ch.worker.register(ch, ch.connectFuture);
-                }
-            } catch (Throwable t) {
-                ch.connectFuture.setFailure(t);
-                fireExceptionCaught(ch, t);
-                k.cancel(); // Some JDK implementations run into an infinite loop without this.
-                ch.worker.close(ch, succeededFuture(ch));
+            if (ch.channel.finishConnect()) {
+                k.cancel();
+                ch.worker.register(ch, ch.connectFuture);
             }
         }
 
