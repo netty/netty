@@ -362,8 +362,16 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     continue;
                 }
 
-                if (k.isConnectable()) {
-                    connect(k);
+                try {
+                    if (k.isConnectable()) {
+                        connect(k);
+                    }
+                } catch (Throwable t) {
+                    NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+                    ch.connectFuture.setFailure(t);
+                    fireExceptionCaught(ch, t);
+                    k.cancel(); // Some JDK implementations run into an infinite loop without this.
+                    ch.worker.close(ch, succeededFuture(ch));
                 }
             }
         }
@@ -398,18 +406,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             }
         }
 
-        private void connect(SelectionKey k) {
+        private void connect(SelectionKey k) throws IOException {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
-            try {
-                if (ch.channel.finishConnect()) {
-                    k.cancel();
-                    ch.worker.register(ch, ch.connectFuture);
-                }
-            } catch (Throwable t) {
-                ch.connectFuture.setFailure(t);
-                fireExceptionCaught(ch, t);
-                k.cancel(); // Some JDK implementations run into an infinite loop without this.
-                ch.worker.close(ch, succeededFuture(ch));
+            if (ch.channel.finishConnect()) {
+                k.cancel();
+                ch.worker.register(ch, ch.connectFuture);
             }
         }
 
