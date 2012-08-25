@@ -326,7 +326,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // This is needed as the ByteBuffer and the ByteBuf does not share
                     // each others index
                     byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
-                    expandReadBuffer(byteBuf);
 
                     read = true;
                 } else if (localReadAmount < 0) {
@@ -390,9 +389,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
-            channel.beginRead();
             ((AbstractAioUnsafe) channel.unsafe()).connectSuccess();
             channel.pipeline().fireChannelActive();
+            channel.beginRead();
         }
 
         @Override
