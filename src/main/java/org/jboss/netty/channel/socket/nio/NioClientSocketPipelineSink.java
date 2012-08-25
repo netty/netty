@@ -242,7 +242,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                 wakenUp.set(false);
 
                 try {
-                    int selectedKeyCount = selector.select(10);
+                    SelectorUtil.select(selector);
 
                     // 'wakenUp.compareAndSet(false, true)' is always evaluated
                     // before calling 'selector.wakeup()' to reduce the wake-up
@@ -277,10 +277,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     }
 
                     processRegisterTaskQueue();
-
-                    if (selectedKeyCount > 0) {
-                        processSelectedKeys(selector.selectedKeys());
-                    }
+                    processSelectedKeys(selector.selectedKeys());
 
                     // Handle connection timeout every 10 milliseconds approximately.
                     long currentTimeNanos = System.nanoTime();
