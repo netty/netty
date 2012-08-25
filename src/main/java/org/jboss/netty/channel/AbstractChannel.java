@@ -16,6 +16,7 @@
 package org.jboss.netty.channel;
 
 import java.net.SocketAddress;
+import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.util.internal.ConcurrentHashMap;
@@ -27,8 +28,14 @@ public abstract class AbstractChannel implements Channel {
 
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
 
+    private static final Random random = new Random();
+
+    public static Random getRandom() {
+        return random;
+    }
+
     private static Integer allocateId(Channel channel) {
-        Integer id = System.identityHashCode(channel);
+        Integer id = random.nextInt();
         for (;;) {
             // Loop until a unique ID is acquired.
             // It should be found in one loop practically.
@@ -139,12 +146,11 @@ public abstract class AbstractChannel implements Channel {
     }
 
     /**
-     * Returns the {@linkplain System#identityHashCode(Object) identity hash code}
-     * of this channel.
+     * Returns the ID of this channel.
      */
     @Override
     public final int hashCode() {
-        return System.identityHashCode(this);
+        return this.id;
     }
 
     /**
