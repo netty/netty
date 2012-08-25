@@ -39,10 +39,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final Random random = new Random();
 
-    public static Random getRandom() {
-        return random;
-    }
-
     /**
      * Generates a negative unique integer ID.  This method generates only
      * negative integers to avoid conflicts with user-specified IDs where only
