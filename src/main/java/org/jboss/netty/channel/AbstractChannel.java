@@ -30,10 +30,6 @@ public abstract class AbstractChannel implements Channel {
 
     private static final Random random = new Random();
 
-    public static Random getRandom() {
-        return random;
-    }
-
     private static Integer allocateId(Channel channel) {
         Integer id = random.nextInt();
         for (;;) {
