@@ -34,7 +34,7 @@ public abstract class ChannelInboundByteHandlerAdapter
             inboundBufferUpdated(ctx, in);
         } finally {
             if (!in.readable()) {
-                in.discardReadBytes();
+                in.unsafe().discardSomeReadBytes();
             }
         }
     }
