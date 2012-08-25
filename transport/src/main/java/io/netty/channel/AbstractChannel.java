@@ -316,12 +316,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract Unsafe newUnsafe();
 
     /**
-     * Returns the {@linkplain System#identityHashCode(Object) identity hash code}
-     * of this channel.
+     * Returns the ID of this channel.
      */
     @Override
     public final int hashCode() {
-        return System.identityHashCode(this);
+        return this.id;
     }
 
     /**
