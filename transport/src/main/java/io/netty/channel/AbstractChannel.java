@@ -24,6 +24,7 @@ import io.netty.util.DefaultAttributeMap;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -36,13 +37,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
 
+    private static final Random random = new Random();
+
     /**
      * Generates a negative unique integer ID.  This method generates only
      * negative integers to avoid conflicts with user-specified IDs where only
      * non-negative integers are allowed.
      */
     private static Integer allocateId(Channel channel) {
-        int idVal = System.identityHashCode(channel);
+        int idVal = random.nextInt();
         if (idVal > 0) {
             idVal = -idVal;
         } else if (idVal == 0) {
@@ -309,12 +312,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract Unsafe newUnsafe();
 
     /**
-     * Returns the {@linkplain System#identityHashCode(Object) identity hash code}
-     * of this channel.
+     * Returns the ID of this channel.
      */
     @Override
     public final int hashCode() {
-        return System.identityHashCode(this);
+        return this.id;
     }
 
     /**
