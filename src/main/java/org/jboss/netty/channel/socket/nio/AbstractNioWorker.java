@@ -253,10 +253,10 @@ abstract class AbstractNioWorker implements Worker {
             }
 
             try {
-                long beforeSelect = System.currentTimeMillis();
+                long beforeSelect = System.nanoTime();
                 int selected = SelectorUtil.select(selector);
                 if (selected == 0) {
-                    long timeBlocked = System.currentTimeMillis()  - beforeSelect;
+                    long timeBlocked = System.nanoTime()  - beforeSelect;
                     if (timeBlocked < SelectorUtil.SELECT_WAIT_TIME) {
                         // returned before the SELECT_WAIT_TIME elapsed with nothing select.
                         // this may be the cause of the jdk epoll(..) bug, so increment the counter
