@@ -22,9 +22,11 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.SelectionKey;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.Selector;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
+
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -145,7 +147,6 @@ abstract class AbstractNioWorker implements Worker {
         synchronized (startStopLock) {
             Selector selector = start();
 
-
             boolean offered = registerTaskQueue.offer(registerTask);
             assert offered;
 
@@ -161,6 +162,37 @@ abstract class AbstractNioWorker implements Worker {
             }
 
         }
+    }
+
+    // Create a new selector and "transfer" all channels from the old
+    // selector to the new one
+    private Selector recreateSelector() throws IOException {
+        Selector newSelector = Selector.open();
+        Selector selector = this.selector;
+        this.selector = newSelector;
+
+        // loop over all the keys that are registered with the old Selector
+        // and register them with the new one
+        for (SelectionKey key: selector.keys()) {
+            SelectableChannel ch = key.channel();
+            int ops = key.interestOps();
+            Object att = key.attachment();
+            // cancel the old key
+            key.cancel();
+
+            // register the channel with the new selector now
+            ch.register(newSelector, ops, att);
+            key.cancel();
+
+        }
+        try {
+            // time to close the old selector as everything else is registered to the new one
+            selector.close();
+        } catch (Throwable t) {
+            logger.warn("Failed to close a selector.", t);
+        }
+        logger.debug("Recreated Selector because of possible jdk epoll(..) bug");
+        return newSelector;
     }
 
     /**
@@ -208,6 +240,7 @@ abstract class AbstractNioWorker implements Worker {
         thread = Thread.currentThread();
 
         boolean shutdown = false;
+        int selectReturnsImmediately = 0;
         Selector selector = this.selector;
         for (;;) {
             wakenUp.set(false);
@@ -220,7 +253,32 @@ abstract class AbstractNioWorker implements Worker {
             }
 
             try {
-                SelectorUtil.select(selector);
+                long beforeSelect = System.currentTimeMillis();
+                int selected = SelectorUtil.select(selector);
+                if (selected == 0) {
+                    long timeBlocked = System.currentTimeMillis()  - beforeSelect;
+                    if (timeBlocked < SelectorUtil.SELECT_WAIT_TIME) {
+                        // returned before the SELECT_WAIT_TIME elapsed with nothing select.
+                        // this may be the cause of the jdk epoll(..) bug, so increment the counter
+                        // which we use later to see if its really the jdk bug.
+                        selectReturnsImmediately++;
+                    } else {
+                        selectReturnsImmediately = 0;
+                    }
+                    if (selectReturnsImmediately == 10) {
+                        // The selector returned immediately for 10 times in a row,
+                        // so recreate one selector as it seems like we hit the
+                        // famous epoll(..) jdk bug.
+                        selector = recreateSelector();
+                        selectReturnsImmediately = 0;
+
+                        // try to select again
+                        continue;
+                    }
+                } else {
+                    // reset counter
+                    selectReturnsImmediately = 0;
+                }
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
                 // before calling 'selector.wakeup()' to reduce the wake-up

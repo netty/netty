@@ -28,6 +28,8 @@ final class SelectorUtil {
 
     static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
 
+    static final int SELECT_WAIT_TIME = 10;
+
     // Workaround for JDK NIO bug.
     //
     // See:
@@ -47,9 +49,9 @@ final class SelectorUtil {
         }
     }
 
-    static void select(Selector selector) throws IOException {
+    static int select(Selector selector) throws IOException {
         try {
-            selector.select(10);
+            return selector.select(SELECT_WAIT_TIME);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -58,6 +60,7 @@ final class SelectorUtil {
             }
             // Harmless exception - log anyway
         }
+        return -1;
     }
 
     private SelectorUtil() {
