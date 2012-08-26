@@ -25,6 +25,8 @@ import java.nio.channels.Selector;
 final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
+    static final long DEFAULT_SELECT_TIMEOUT = 10;
+    static final long SELECT_TIMEOUT;
 
     // Workaround for JDK NIO bug.
     //
@@ -43,11 +45,20 @@ final class SelectorUtil {
                 logger.debug("Unable to get/set System Property '" + key + "'", e);
             }
         }
+        long selectTimeout;
+        try {
+            selectTimeout = Long.parseLong(System.getProperty("io.netty.selectTimeout",
+                    String.valueOf(DEFAULT_SELECT_TIMEOUT)));
+        } catch (NumberFormatException e) {
+            selectTimeout = DEFAULT_SELECT_TIMEOUT;
+        }
+        SELECT_TIMEOUT = selectTimeout;
+        logger.debug("Using select timeout of " + SELECT_TIMEOUT);
     }
 
     static void select(Selector selector) throws IOException {
         try {
-            selector.select(10);
+            selector.select(SELECT_TIMEOUT);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
