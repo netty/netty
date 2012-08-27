@@ -15,6 +15,10 @@
  */
 package io.netty.channel;
 
+/**
+ * Define the type of a {@link ChannelHandler}
+ *
+ */
 public enum ChannelHandlerType {
     STATE(0),
     INBOUND(0),
@@ -24,6 +28,9 @@ public enum ChannelHandlerType {
     final int direction; // 0 - up (inbound), 1 - down (outbound)
 
     ChannelHandlerType(int direction) {
+        if (direction != 0 && direction != 1) {
+            throw new IllegalArgumentException("direction must be either 0 or 1");
+        }
         this.direction = direction;
     }
 }

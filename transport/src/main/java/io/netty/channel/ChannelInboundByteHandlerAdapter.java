@@ -19,9 +19,19 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 
+/**
+ * Abstract base class for {@link ChannelInboundHandlerAdapter} which should be extended by the user to
+ * get notified once more data is ready to get consumed from the inbound {@link ByteBuf}.
+ *
+ * This implementation is a good starting point for must users.
+ */
 public abstract class ChannelInboundByteHandlerAdapter
         extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
+    /**
+     * Create a new unpooled {@link ByteBuf} by default. Sub-classes may override this to offer a more
+     * optimized implementation.
+     */
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.buffer();
@@ -39,5 +49,10 @@ public abstract class ChannelInboundByteHandlerAdapter
         }
     }
 
+    /**
+     * Callback which will get notifed once the given {@link ByteBuf} received more data to read. What will be done
+     * with the data at this point is up to the implementation.
+     * Implementations may choose to read it or just let it in the buffer to read it later.
+     */
     public abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

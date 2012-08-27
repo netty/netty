@@ -60,6 +60,9 @@ import java.util.Map;
  */
 public interface ChannelConfig {
 
+    /**
+     * Return all set {@link ChannelOption}'s.
+     */
     Map<ChannelOption<?>, Object> getOptions();
 
     /**
@@ -67,6 +70,9 @@ public interface ChannelConfig {
      */
     boolean setOptions(Map<ChannelOption<?>, ?> options);
 
+    /**
+     * Return the value of the given {@link ChannelOption}
+     */
     <T> T getOption(ChannelOption<T> option);
 
     /**
