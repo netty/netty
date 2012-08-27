@@ -469,12 +469,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     ch.register(newSelector, ops, att);
                 } catch (ClosedChannelException e) {
                     // close the Channel if we can't register it
-                    AbstractNioChannel<?> channel = (AbstractNioChannel<?>) att;
-                    channel.worker.close(channel, succeededFuture(channel));
+                    close(key);
                 }
                 key.cancel();
-
             }
+
             try {
                 // time to close the old selector as everything else is registered to the new one
                 selector.close();
