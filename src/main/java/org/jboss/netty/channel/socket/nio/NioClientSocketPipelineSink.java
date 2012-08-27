@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -236,13 +237,44 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
         public void run() {
             boolean shutdown = false;
+            int selectReturnsImmediately = 0;
+
             Selector selector = this.selector;
             long lastConnectTimeoutCheckTimeNanos = System.nanoTime();
+
+            // use 80% of the timeout for measure
+            long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
+
             for (;;) {
                 wakenUp.set(false);
 
                 try {
-                    SelectorUtil.select(selector);
+                    long beforeSelect = System.nanoTime();
+                    int selected = SelectorUtil.select(selector);
+                    if (selected == 0) {
+                        long timeBlocked = System.nanoTime()  - beforeSelect;
+                        if (timeBlocked < minSelectTimeout) {
+                            // returned before the minSelectTimeout elapsed with nothing select.
+                            // this may be the cause of the jdk epoll(..) bug, so increment the counter
+                            // which we use later to see if its really the jdk bug.
+                            selectReturnsImmediately++;
+                        } else {
+                            selectReturnsImmediately = 0;
+                        }
+                        if (selectReturnsImmediately == 10) {
+                            // The selector returned immediately for 10 times in a row,
+                            // so recreate one selector as it seems like we hit the
+                            // famous epoll(..) jdk bug.
+                            selector = recreateSelector();
+                            selectReturnsImmediately = 0;
+
+                            // try to select again
+                            continue;
+                        }
+                    } else {
+                        // reset counter
+                        selectReturnsImmediately = 0;
+                    }
 
                     // 'wakenUp.compareAndSet(false, true)' is always evaluated
                     // before calling 'selector.wakeup()' to reduce the wake-up
@@ -415,6 +447,44 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
             ch.worker.close(ch, succeededFuture(ch));
         }
+
+        // Create a new selector and "transfer" all channels from the old
+        // selector to the new one
+        private Selector recreateSelector() throws IOException {
+            Selector newSelector = Selector.open();
+            Selector selector = this.selector;
+            this.selector = newSelector;
+
+            // loop over all the keys that are registered with the old Selector
+            // and register them with the new one
+            for (SelectionKey key: selector.keys()) {
+                SelectableChannel ch = key.channel();
+                int ops = key.interestOps();
+                Object att = key.attachment();
+                // cancel the old key
+                key.cancel();
+
+                try {
+                    // register the channel with the new selector now
+                    ch.register(newSelector, ops, att);
+                } catch (ClosedChannelException e) {
+                    // close the Channel if we can't register it
+                    AbstractNioChannel<?> channel = (AbstractNioChannel<?>) att;
+                    channel.worker.close(channel, succeededFuture(channel));
+                }
+                key.cancel();
+
+            }
+            try {
+                // time to close the old selector as everything else is registered to the new one
+                selector.close();
+            } catch (Throwable t) {
+                logger.warn("Failed to close a selector.", t);
+            }
+            logger.debug("Recreated Selector because of possible jdk epoll(..) bug");
+            return newSelector;
+        }
+
     }
 
     private static final class RegisterTask implements Runnable {
