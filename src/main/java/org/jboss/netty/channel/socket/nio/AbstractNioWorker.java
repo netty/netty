@@ -242,6 +242,10 @@ abstract class AbstractNioWorker implements Worker {
         boolean shutdown = false;
         int selectReturnsImmediately = 0;
         Selector selector = this.selector;
+
+        // use 80% of the timeout for measure
+        long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
+
         for (;;) {
             wakenUp.set(false);
 
@@ -257,8 +261,8 @@ abstract class AbstractNioWorker implements Worker {
                 int selected = SelectorUtil.select(selector);
                 if (selected == 0) {
                     long timeBlocked = System.nanoTime()  - beforeSelect;
-                    if (timeBlocked < SelectorUtil.SELECT_WAIT_TIME) {
-                        // returned before the SELECT_WAIT_TIME elapsed with nothing select.
+                    if (timeBlocked < minSelectTimeout) {
+                        // returned before the minSelectTimeout elapsed with nothing select.
                         // this may be the cause of the jdk epoll(..) bug, so increment the counter
                         // which we use later to see if its really the jdk bug.
                         selectReturnsImmediately++;
