@@ -157,7 +157,7 @@ public interface ChannelHandlerContext
      * The {@link ChannelHandler} that is bound this {@link ChannelHandlerContext}.
      */
     ChannelHandler handler();
-    Set<ChannelHandlerType> type();
+    Set<ChannelHandlerType> types();
 
     /**
      * Return <code>true</code> if the {@link ChannelHandlerContext} has an {@link ByteBuf} bound for inbound

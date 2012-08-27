@@ -349,7 +349,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public Set<ChannelHandlerType> type() {
+    public Set<ChannelHandlerType> types() {
         return type;
     }
 
