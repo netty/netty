@@ -180,8 +180,14 @@ abstract class AbstractNioWorker implements Worker {
             // cancel the old key
             key.cancel();
 
-            // register the channel with the new selector now
-            ch.register(newSelector, ops, att);
+            try {
+                // register the channel with the new selector now
+                ch.register(newSelector, ops, att);
+            } catch (ClosedChannelException e) {
+                // close channel
+                AbstractNioChannel<?> channel = (AbstractNioChannel<?>) att;
+                close(channel, succeededFuture(channel));
+            }
             key.cancel();
 
         }
