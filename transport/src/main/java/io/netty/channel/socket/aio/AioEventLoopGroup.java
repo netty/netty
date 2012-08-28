@@ -45,7 +45,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
             }
         } catch (Throwable t) {
             LOGGER.debug(String.format(
-                    "Unable to instance the optimal %s implementation - falling back to %s.",
+                    "Failed to instantiate the optimal %s implementation - falling back to %s.",
                     AioChannelFinder.class.getSimpleName(), DefaultAioChannelFinder.class.getSimpleName()), t);
             finder = new DefaultAioChannelFinder();
         }
