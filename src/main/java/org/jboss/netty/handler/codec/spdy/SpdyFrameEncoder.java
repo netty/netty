@@ -159,11 +159,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 }
                 // Writes of compressed data must occur in order
                 final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(frame, data);
-                e.getChannel().getPipeline().execute(new Runnable() {
-                    public void run() {
-                        Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
-                    }
-                });
+                Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
             }
             return;
 
@@ -197,11 +193,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 }
                 // Writes of compressed data must occur in order
                 final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(frame, data);
-                e.getChannel().getPipeline().execute(new Runnable() {
-                    public void run() {
-                        Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
-                    }
-                });
+                Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
             }
             return;
 
@@ -323,11 +315,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 }
                 // Writes of compressed data must occur in order
                 final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(frame, data);
-                e.getChannel().getPipeline().execute(new Runnable() {
-                    public void run() {
-                        Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
-                    }
-                });
+                Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
             }
             return;
 
