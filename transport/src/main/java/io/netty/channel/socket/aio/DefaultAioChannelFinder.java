@@ -19,7 +19,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-class DefaultAioChannelFinder implements AioChannelFinder {
+final class DefaultAioChannelFinder implements AioChannelFinder {
     private static volatile Map<Class<?>, Field> fieldCache = new HashMap<Class<?>, Field>();
 
     @Override

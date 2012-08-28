@@ -22,7 +22,7 @@ import java.util.Map;
 import sun.misc.Unsafe;
 
 @SuppressWarnings("restriction")
-class UnsafeAioChannelFinder implements AioChannelFinder {
+final class UnsafeAioChannelFinder implements AioChannelFinder {
     private static final Unsafe UNSAFE = getUnsafe();
 
     private static volatile Map<Class<?>, Long> offsetCache = new HashMap<Class<?>, Long>();
