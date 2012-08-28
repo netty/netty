@@ -130,15 +130,10 @@ final class HttpPostBodyUtil {
     */
     static class SeekAheadOptimize {
         byte[] bytes;
-
         int readerIndex;
-
         int pos;
-        
         int origPos;
-
         int limit;
-
         ChannelBuffer buffer;
 
         /**

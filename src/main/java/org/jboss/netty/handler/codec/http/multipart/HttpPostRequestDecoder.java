@@ -857,7 +857,7 @@ public class HttpPostRequestDecoder {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e) {
             try {
-                skipControlCharactersStandard(undecodedChunk);
+                skipControlCharactersStandard();
             } catch (IndexOutOfBoundsException e1) {
                 throw new NotEnoughDataDecoderException(e1);
             }
