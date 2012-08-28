@@ -21,6 +21,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.SingleThreadEventLoop;
 
 
+/**
+ * {@link SingleThreadEventLoop} which is used to handle OIO {@link Channel}'s. So in general there will be
+ * one {@link OioEventLoop} per {@link Channel}.
+ *
+ */
 class OioEventLoop extends SingleThreadEventLoop {
 
     private final OioEventLoopGroup parent;
