@@ -126,7 +126,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        socket.bind(localAddress);
+        socket.bind(localAddress, config.getBacklog());
     }
 
     @Override
@@ -154,9 +154,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             s = socket.accept();
             if (s != null) {
                 buf.add(new OioSocketChannel(this, null, s));
-                if (readSuspended) {
-                    return 0;
-                }
                 return 1;
             }
         } catch (SocketTimeoutException e) {

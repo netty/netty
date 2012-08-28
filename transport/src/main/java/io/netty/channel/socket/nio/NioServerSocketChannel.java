@@ -46,7 +46,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     public NioServerSocketChannel() {
-        super(null, null, newSocket(), 0);
+        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultServerSocketChannelConfig(javaChannel().socket());
     }
 
@@ -82,7 +82,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().socket().bind(localAddress);
+        javaChannel().socket().bind(localAddress, config.getBacklog());
         SelectionKey selectionKey = selectionKey();
         selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
     }
@@ -127,27 +127,5 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected AbstractNioMessageUnsafe newUnsafe() {
-        return new NioServerSocketUnsafe();
-    }
-
-    private final class NioServerSocketUnsafe extends AbstractNioMessageUnsafe {
-        @Override
-        public void suspendRead() {
-            selectionKey().cancel();
-        }
-
-        @Override
-        public void resumeRead() {
-            try {
-                doRegister();
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
     }
 }

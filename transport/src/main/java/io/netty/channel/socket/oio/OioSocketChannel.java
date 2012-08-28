@@ -172,13 +172,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
         }
 
         try {
-            int read = buf.writeBytes(is, buf.writableBytes());
-            if (read > 0 && !readSuspended) {
-                return read;
-            } else {
-                // so the read bytes were 0 or the read was suspend
-                return 0;
-            }
+            return buf.writeBytes(is, buf.writableBytes());
         } catch (SocketTimeoutException e) {
             return 0;
         }

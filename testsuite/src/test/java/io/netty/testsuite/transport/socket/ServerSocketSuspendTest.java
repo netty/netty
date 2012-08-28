@@ -1,0 +1,111 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.testsuite.transport.socket;
+
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelOption;
+import io.netty.util.NetworkConstants;
+
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import junit.framework.Assert;
+
+import org.junit.Test;
+
+public class ServerSocketSuspendTest extends AbstractServerSocketTest {
+
+    private static final int NUM_CHANNELS = 10;
+    private static final long TIMEOUT = 3000000000L;
+
+    @Test
+    public void testSuspendAndResumeAccept() throws Throwable {
+        run();
+    }
+
+    public void testSuspendAndResumeAccept(ServerBootstrap sb) throws Throwable {
+        AcceptedChannelCounter counter = new AcceptedChannelCounter(NUM_CHANNELS);
+
+        sb.option(ChannelOption.SO_BACKLOG, 1);
+        sb.childHandler(counter);
+
+        Channel sc = sb.bind().sync().channel();
+        sc.pipeline().firstContext().readable(false);
+
+        List<Socket> sockets = new ArrayList<Socket>();
+
+        try {
+            long startTime = System.nanoTime();
+            for (int i = 0; i < NUM_CHANNELS; i ++) {
+                sockets.add(new Socket(
+                        NetworkConstants.LOCALHOST, ((InetSocketAddress) sc.localAddress()).getPort()));
+            }
+
+            sc.pipeline().firstContext().readable(true);
+            counter.latch.await();
+
+            long endTime = System.nanoTime();
+            Assert.assertTrue(endTime - startTime > TIMEOUT);
+        } finally {
+            for (Socket s: sockets) {
+                s.close();
+            }
+        }
+
+        try {
+            long startTime = System.nanoTime();
+            for (int i = 0; i < NUM_CHANNELS; i ++) {
+                sockets.add(new Socket(
+                        NetworkConstants.LOCALHOST, ((InetSocketAddress) sc.localAddress()).getPort()));
+            }
+            long endTime = System.nanoTime();
+
+            Assert.assertTrue(endTime - startTime < TIMEOUT);
+        } finally {
+            for (Socket s: sockets) {
+                s.close();
+            }
+        }
+    }
+
+    @ChannelHandler.Sharable
+    private final class AcceptedChannelCounter extends ChannelInboundByteHandlerAdapter {
+
+        final CountDownLatch latch;
+
+        AcceptedChannelCounter(int nChannels) {
+            latch = new CountDownLatch(nChannels);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            latch.countDown();
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            // Unused
+        }
+    }
+}

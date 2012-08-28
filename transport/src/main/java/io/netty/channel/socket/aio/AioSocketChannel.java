@@ -334,9 +334,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             } catch (Throwable t) {
                 if (read) {
                     read = false;
-                    if (!channel.readSuspended.get()) {
-                        pipeline.fireInboundBufferUpdated();
-                    }
+                    pipeline.fireInboundBufferUpdated();
                 }
 
                 if (!(t instanceof ClosedChannelException)) {
@@ -351,9 +349,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 channel.readInProgress.set(false);
 
                 if (read) {
-                    if (!channel.readSuspended.get()) {
-                        pipeline.fireInboundBufferUpdated();
-                    }
+                    pipeline.fireInboundBufferUpdated();
                 }
                 if (closed && channel.isOpen()) {
                     channel.unsafe().close(channel.unsafe().voidFuture());

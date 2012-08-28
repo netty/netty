@@ -191,22 +191,4 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         return writtenBytes;
     }
-
-    @Override
-    protected AbstractNioByteUnsafe newUnsafe() {
-        return new NioSocketChannelUnsafe();
-    }
-
-    private final class NioSocketChannelUnsafe extends AbstractNioByteUnsafe {
-
-        @Override
-        public void suspendRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-        }
-
-        @Override
-        public void resumeRead() {
-            selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_READ);
-        }
-    }
 }

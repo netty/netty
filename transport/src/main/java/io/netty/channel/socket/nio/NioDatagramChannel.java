@@ -457,22 +457,4 @@ public final class NioDatagramChannel
         }
         return future;
     }
-
-    @Override
-    protected AbstractNioMessageUnsafe newUnsafe() {
-        return new NioDatagramChannelUnsafe();
-    }
-
-    private final class NioDatagramChannelUnsafe extends AbstractNioMessageUnsafe {
-
-        @Override
-        public void suspendRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-        }
-
-        @Override
-        public void resumeRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-        }
-    }
 }
