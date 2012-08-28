@@ -18,6 +18,7 @@ package org.jboss.netty.channel.socket.nio;
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
+import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -28,8 +29,8 @@ final class SelectorUtil {
 
     static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
 
-    static final int SELECT_TIMEOUT = 10;
-    static final int SELECT_TIMEOUT_NANOS = SELECT_TIMEOUT * 1000;
+    static final long SELECT_TIMEOUT = 10;
+    static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
 
     // Workaround for JDK NIO bug.
     //
