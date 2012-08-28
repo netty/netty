@@ -1,79 +1,59 @@
 package io.netty.channel.socket.aio;
 
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.HashMap;
+import java.util.Map;
 
 class DefaultAioChannelFinder implements AioChannelFinder {
-    private static final ConcurrentMap<Class<?>, Field[]> fieldCache = new ConcurrentHashMap<Class<?>, Field[]>();
-    private static final Field[] FAILURE = new Field[0];
+    private static volatile Map<Class<?>, Field> fieldCache = new HashMap<Class<?>, Field>();
 
     @Override
     public AbstractAioChannel findChannel(Runnable command) throws Exception {
-        Class<?> commandType = command.getClass();
-        Field[] fields = fieldCache.get(commandType);
-        if (fields == null) {
-            try {
-                fields = findFieldSequence(command, new ArrayDeque<Field>(2));
-            } catch (Throwable t) {
-                // Failed to get the field list
+        Field f;
+        for (;;) {
+            f = findField(command);
+            if (f == null) {
+                return null;
             }
-
-            if (fields == null) {
-                fields = FAILURE;
+            Object next = f.get(command);
+            if (next instanceof AbstractAioChannel) {
+                return (AbstractAioChannel) next;
             }
-
-            fieldCache.put(commandType, fields); // No need to use putIfAbsent()
+            command = (Runnable) next;
         }
-
-        if (fields == FAILURE) {
-            return null;
-        }
-
-        final int lastIndex = fields.length - 1;
-        for (int i = 0; i < lastIndex; i ++) {
-            command = (Runnable) get(fields[i], command);
-        }
-
-        return (AbstractAioChannel) get(fields[lastIndex], command);
     }
 
-    private Field[] findFieldSequence(Runnable command, Deque<Field> fields) throws Exception {
+    private static Field findField(Object command) throws Exception {
+        Map<Class<?>, Field> fieldCache = DefaultAioChannelFinder.fieldCache;
         Class<?> commandType = command.getClass();
+        Field res = fieldCache.get(commandType);
+        if (res != null) {
+            return res;
+        }
+
         for (Field f: commandType.getDeclaredFields()) {
             if (f.getType() == Runnable.class) {
                 f.setAccessible(true);
-                fields.addLast(f);
-                try {
-                    Field[] ret = findFieldSequence((Runnable) get(f, command), fields);
-                    if (ret != null) {
-                        return ret;
-                    }
-                } finally {
-                    fields.removeLast();
-                }
+                put(fieldCache, commandType, f);
+                return f;
             }
 
             if (f.getType() == Object.class) {
                 f.setAccessible(true);
-                fields.addLast(f);
-                try {
-                    Object candidate = get(f, command);
-                    if (candidate instanceof AbstractAioChannel) {
-                        return fields.toArray(new Field[fields.size()]);
-                    }
-                } finally {
-                    fields.removeLast();
+                Object candidate = f.get(command);
+                if (candidate instanceof AbstractAioChannel) {
+                    put(fieldCache, commandType, f);
+                    return f;
                 }
             }
         }
-
         return null;
     }
 
-    protected Object get(Field f, Object command) throws Exception {
-        return f.get(command);
+    private static void put(Map<Class<?>, Field> oldCache, Class<?> key, Field value) {
+        Map<Class<?>, Field> newCache = new HashMap<Class<?>, Field>(oldCache.size());
+        newCache.putAll(oldCache);
+        newCache.put(key, value);
+        fieldCache = newCache;
     }
 }
