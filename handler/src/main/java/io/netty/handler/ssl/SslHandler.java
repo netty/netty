@@ -444,16 +444,15 @@ public class SslHandler
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (ctx.executor() == ctx.channel().eventLoop()) {
-                    notifyFlushFutures(ctx, bytesConsumed, cause, future);
+                    notifyFlushFutures(bytesConsumed, cause, future);
                 } else {
                     synchronized (flushFutureNotifier) {
-                        notifyFlushFutures(ctx, bytesConsumed, cause, future);
+                        notifyFlushFutures(bytesConsumed, cause, future);
                     }
                 }
             }
 
-            private void notifyFlushFutures(final ChannelHandlerContext ctx,
-                    final int bytesConsumed, final Throwable cause, ChannelFuture future) {
+            private void notifyFlushFutures(int bytesConsumed, Throwable cause, ChannelFuture future) {
                 flushFutureNotifier.increaseWriteCounter(bytesConsumed);
                 if (future.isSuccess()) {
                     flushFutureNotifier.notifyFlushFutures(cause);
