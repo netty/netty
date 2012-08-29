@@ -24,9 +24,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
+import java.nio.channels.*;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,8 +53,10 @@ final class NioEventLoop extends SingleThreadEventLoop {
     /**
      * The NIO {@link Selector}.
      */
-    protected final Selector selector;
+    protected Selector selector;
 
+    protected final SelectorProvider provider;
+    
     /**
      * Boolean that controls determines if a blocked Selector.select should
      * break out of its selection process. In our case we use a timeone for
@@ -75,10 +75,11 @@ final class NioEventLoop extends SingleThreadEventLoop {
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
-        selector = openSelector(selectorProvider);
+        provider = selectorProvider;
+        selector = openSelector();
     }
 
-    private static Selector openSelector(SelectorProvider provider) {
+    private Selector openSelector() {
         try {
             return provider.openSelector();
         } catch (IOException e) {
@@ -92,15 +93,79 @@ final class NioEventLoop extends SingleThreadEventLoop {
         return new ConcurrentLinkedQueue<Runnable>();
     }
 
+    // Create a new selector and "transfer" all channels from the old
+    // selector to the new one
+    private Selector recreateSelector() {
+        Selector newSelector = openSelector();
+        Selector selector = this.selector;
+        this.selector = newSelector;
+
+        // loop over all the keys that are registered with the old Selector
+        // and register them with the new one
+        for (SelectionKey key: selector.keys()) {
+            SelectableChannel ch = key.channel();
+            int ops = key.interestOps();
+            Object att = key.attachment();
+            // cancel the old key
+            cancel(key);
+
+            try {
+                // register the channel with the new selector now
+                ch.register(newSelector, ops, att);
+            } catch (ClosedChannelException e) {
+                // close channel
+                AbstractNioChannel channel = (AbstractNioChannel) att;
+                channel.unsafe().close(channel.unsafe().voidFuture());
+            }
+        }
+        try {
+            // time to close the old selector as everything else is registered to the new one
+            selector.close();
+        } catch (Throwable t) {
+            logger.warn("Failed to close a selector.", t);
+        }
+        logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
+        return newSelector;
+    }
     @Override
     protected void run() {
         Selector selector = this.selector;
+        int selectReturnsImmediately = 0;
+
+        // use 80% of the timeout for measure
+        long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
+
         for (;;) {
 
             wakenUp.set(false);
 
             try {
-                SelectorUtil.select(selector);
+                long beforeSelect = System.nanoTime();
+                int selected = SelectorUtil.select(selector);
+                if (selected == 0) {
+                    long timeBlocked = System.nanoTime()  - beforeSelect;
+                    if (timeBlocked < minSelectTimeout) {
+                        // returned before the minSelectTimeout elapsed with nothing select.
+                        // this may be the cause of the jdk epoll(..) bug, so increment the counter
+                        // which we use later to see if its really the jdk bug.
+                        selectReturnsImmediately ++;
+                    } else {
+                        selectReturnsImmediately = 0;
+                    }
+                    if (selectReturnsImmediately == 10) {
+                        // The selector returned immediately for 10 times in a row,
+                        // so recreate one selector as it seems like we hit the
+                        // famous epoll(..) jdk bug.
+                        selector = recreateSelector();
+                        selectReturnsImmediately = 0;
+
+                        // try to select again
+                        continue;
+                    }
+                } else {
+                    // reset counter
+                    selectReturnsImmediately = 0;
+                }
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
                 // before calling 'selector.wakeup()' to reduce the wake-up
