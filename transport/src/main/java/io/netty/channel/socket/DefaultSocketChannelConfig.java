@@ -31,6 +31,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
     private final Socket socket;
+    private volatile boolean allowHalfClosure;
 
     /**
      * Creates a new instance.
@@ -46,7 +47,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
-                SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS);
+                SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
+                ALLOW_HALF_CLOSURE);
     }
 
     @Override
@@ -72,6 +74,9 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         if (option == IP_TOS) {
             return (T) Integer.valueOf(getTrafficClass());
         }
+        if (option == ALLOW_HALF_CLOSURE) {
+            return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
 
         return super.getOption(option);
     }
@@ -94,6 +99,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
             setSoLinger((Integer) value);
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
+        } else if (option == ALLOW_HALF_CLOSURE) {
+            setAllowHalfClosure((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -235,5 +242,15 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+    }
+
+    @Override
+    public boolean isAllowHalfClosure() {
+        return allowHalfClosure;
+    }
+
+    @Override
+    public void setAllowHalfClosure(boolean allowHalfClosure) {
+        this.allowHalfClosure = allowHalfClosure;
     }
 }

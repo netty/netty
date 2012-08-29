@@ -30,7 +30,7 @@ import java.util.concurrent.SynchronousQueue;
 
 import org.junit.Test;
 
-public class SocketShutdownOutputTest extends AbstractClientSocketTest {
+public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
     @Test(timeout = 30000)
     public void testShutdownOutput() throws Throwable {
@@ -51,9 +51,19 @@ public class SocketShutdownOutputTest extends AbstractClientSocketTest {
             ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
             assertEquals(1, s.getInputStream().read());
 
+            assertTrue(h.ch.isOpen());
+            assertTrue(h.ch.isActive());
+            assertFalse(h.ch.isInputShutdown());
+            assertFalse(h.ch.isOutputShutdown());
+
             // Make the connection half-closed and ensure read() returns -1.
             ch.shutdownOutput();
             assertEquals(-1, s.getInputStream().read());
+
+            assertTrue(h.ch.isOpen());
+            assertTrue(h.ch.isActive());
+            assertFalse(h.ch.isInputShutdown());
+            assertTrue(h.ch.isOutputShutdown());
 
             // If half-closed, the peer should be able to write something.
             s.getOutputStream().write(1);
@@ -68,7 +78,13 @@ public class SocketShutdownOutputTest extends AbstractClientSocketTest {
     }
 
     private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+        volatile SocketChannel ch;
         final BlockingQueue<Byte> queue = new SynchronousQueue<Byte>();
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ch = (SocketChannel) ctx.channel();
+        }
 
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {

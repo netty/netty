@@ -17,6 +17,8 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -88,8 +90,16 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
                 }
-                if (closed && isOpen()) {
-                    close(voidFuture());
+                if (closed) {
+                    setInputShutdown();
+                    if (isOpen()) {
+                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                            suspendReadTask.run();
+                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } else {
+                            close(voidFuture());
+                        }
+                    }
                 }
             }
         }

@@ -40,6 +40,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final SelectableChannel ch;
     private final int readInterestOp;
     private volatile SelectionKey selectionKey;
+    private volatile boolean inputShutdown;
 
     final Runnable suspendReadTask = new Runnable() {
         @Override
@@ -54,9 +55,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         public void run() {
             selectionKey().interestOps(selectionKey().interestOps() | readInterestOp);
         }
-
     };
-
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -115,6 +114,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected SelectionKey selectionKey() {
         assert selectionKey != null;
         return selectionKey;
+    }
+
+    boolean isInputShutdown() {
+        return inputShutdown;
+    }
+
+    void setInputShutdown() {
+        inputShutdown = true;
     }
 
     public interface NioUnsafe extends Unsafe {
@@ -218,6 +225,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public void resumeRead() {
+            if (inputShutdown) {
+                return;
+            }
+
             EventLoop loop = eventLoop();
             if (loop.inEventLoop()) {
                 resumeReadTask.run();
@@ -242,7 +253,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected Runnable doRegister() throws Exception {
         NioEventLoop loop = (NioEventLoop) eventLoop();
         selectionKey = javaChannel().register(
-                loop.selector, isActive()? readInterestOp : 0, this);
+                loop.selector, isActive() && !inputShutdown ? readInterestOp : 0, this);
         return null;
     }
 

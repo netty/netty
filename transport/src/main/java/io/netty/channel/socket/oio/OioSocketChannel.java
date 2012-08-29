@@ -104,8 +104,13 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
+    public boolean isInputShutdown() {
+        return super.isInputShutdown();
+    }
+
+    @Override
     public boolean isOutputShutdown() {
-        return socket.isOutputShutdown();
+        return socket.isOutputShutdown() || !isActive();
     }
 
     @Override

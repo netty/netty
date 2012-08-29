@@ -36,6 +36,13 @@ public interface SocketChannel extends Channel {
     InetSocketAddress remoteAddress();
 
     /**
+     * Returns {@code true} if and only if the remote peer shut down its output so that no more
+     * data is received from this channel.  Note that the semantic of this method is different from
+     * that of {@link Socket#shutdownInput()} and {@link Socket#isInputShutdown()}.
+     */
+    boolean isInputShutdown();
+
+    /**
      * @see Socket#isOutputShutdown()
      */
     boolean isOutputShutdown();

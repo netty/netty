@@ -17,14 +17,22 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 
 abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
+    private volatile boolean inputShutdown;
+
     protected AbstractOioByteChannel(Channel parent, Integer id) {
         super(parent, id);
+    }
+
+    boolean isInputShutdown() {
+        return inputShutdown;
     }
 
     @Override
@@ -36,6 +44,15 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
+
+            if (inputShutdown) {
+                try {
+                    Thread.sleep(SO_TIMEOUT);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+                return;
+            }
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
@@ -93,8 +110,15 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
                 }
-                if (closed && isOpen()) {
-                    close(voidFuture());
+                if (closed) {
+                    inputShutdown = true;
+                    if (isOpen()) {
+                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } else {
+                            close(voidFuture());
+                        }
+                    }
                 }
             }
         }

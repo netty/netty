@@ -99,8 +99,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
+    public boolean isInputShutdown() {
+        return super.isInputShutdown();
+    }
+
+    @Override
     public boolean isOutputShutdown() {
-        return javaChannel().socket().isOutputShutdown();
+        return javaChannel().socket().isOutputShutdown() || !isActive();
     }
 
     @Override
