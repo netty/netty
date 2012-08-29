@@ -257,7 +257,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                             // returned before the minSelectTimeout elapsed with nothing select.
                             // this may be the cause of the jdk epoll(..) bug, so increment the counter
                             // which we use later to see if its really the jdk bug.
-                            selectReturnsImmediately++;
+                            selectReturnsImmediately ++;
                         } else {
                             selectReturnsImmediately = 0;
                         }
@@ -471,7 +471,6 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     // close the Channel if we can't register it
                     close(key);
                 }
-                key.cancel();
             }
 
             try {
@@ -480,7 +479,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             } catch (Throwable t) {
                 logger.warn("Failed to close a selector.", t);
             }
-            logger.debug("Recreated Selector because of possible jdk epoll(..) bug");
+            logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
             return newSelector;
         }
 

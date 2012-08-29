@@ -188,8 +188,6 @@ abstract class AbstractNioWorker implements Worker {
                 AbstractNioChannel<?> channel = (AbstractNioChannel<?>) att;
                 close(channel, succeededFuture(channel));
             }
-            key.cancel();
-
         }
         try {
             // time to close the old selector as everything else is registered to the new one
@@ -197,7 +195,7 @@ abstract class AbstractNioWorker implements Worker {
         } catch (Throwable t) {
             logger.warn("Failed to close a selector.", t);
         }
-        logger.debug("Recreated Selector because of possible jdk epoll(..) bug");
+        logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
         return newSelector;
     }
 
@@ -271,7 +269,7 @@ abstract class AbstractNioWorker implements Worker {
                         // returned before the minSelectTimeout elapsed with nothing select.
                         // this may be the cause of the jdk epoll(..) bug, so increment the counter
                         // which we use later to see if its really the jdk bug.
-                        selectReturnsImmediately++;
+                        selectReturnsImmediately ++;
                     } else {
                         selectReturnsImmediately = 0;
                     }
