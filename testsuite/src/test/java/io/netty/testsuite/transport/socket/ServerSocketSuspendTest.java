@@ -22,9 +22,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.util.NetworkConstants;
 
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,8 +56,9 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         try {
             long startTime = System.nanoTime();
             for (int i = 0; i < NUM_CHANNELS; i ++) {
-                sockets.add(new Socket(
-                        NetworkConstants.LOCALHOST, ((InetSocketAddress) sc.localAddress()).getPort()));
+                Socket s = new Socket();
+                s.connect(addr, 10000);
+                sockets.add(s);
             }
 
             sc.pipeline().firstContext().readable(true);
@@ -76,8 +75,9 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         try {
             long startTime = System.nanoTime();
             for (int i = 0; i < NUM_CHANNELS; i ++) {
-                sockets.add(new Socket(
-                        NetworkConstants.LOCALHOST, ((InetSocketAddress) sc.localAddress()).getPort()));
+                Socket s = new Socket();
+                s.connect(addr, 10000);
+                sockets.add(s);
             }
             long endTime = System.nanoTime();
 
