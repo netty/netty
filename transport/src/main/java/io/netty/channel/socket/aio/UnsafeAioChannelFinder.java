@@ -31,7 +31,7 @@ final class UnsafeAioChannelFinder implements AioChannelFinder {
     public AbstractAioChannel findChannel(Runnable command) throws Exception {
         Long offset;
         for (;;) {
-            offset = findField(command);
+            offset = findFieldOffset(command);
             if (offset == null) {
                 return null;
             }
@@ -43,7 +43,7 @@ final class UnsafeAioChannelFinder implements AioChannelFinder {
         }
     }
 
-    private static Long findField(Object command) throws Exception {
+    private static Long findFieldOffset(Object command) throws Exception {
         Map<Class<?>, Long> offsetCache = UnsafeAioChannelFinder.offsetCache;
         Class<?> commandType = command.getClass();
         Long res = offsetCache.get(commandType);
