@@ -17,28 +17,33 @@ package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.ByteLoggingHandler;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 
 import org.junit.Test;
 
 public class SocketShutdownOutputTest extends AbstractClientSocketTest {
 
-    @Test
+    @Test(timeout = 30000)
     public void testShutdownOutput() throws Throwable {
         run();
     }
 
     public void testShutdownOutput(Bootstrap cb) throws Throwable {
+        TestHandler h = new TestHandler();
         ServerSocket ss = new ServerSocket();
         Socket s = null;
         try {
             ss.bind(addr);
-            SocketChannel ch = (SocketChannel) cb.handler(new ByteLoggingHandler()).connect().sync().channel();
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect().sync().channel();
             assertTrue(ch.isActive());
             assertFalse(ch.isOutputShutdown());
 
@@ -46,15 +51,28 @@ public class SocketShutdownOutputTest extends AbstractClientSocketTest {
             ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
             assertEquals(1, s.getInputStream().read());
 
+            // Make the connection half-closed and ensure read() returns -1.
             ch.shutdownOutput();
-
             assertEquals(-1, s.getInputStream().read());
-            assertTrue(s.isConnected());
+
+            // If half-closed, the peer should be able to write something.
+            s.getOutputStream().write(1);
+            assertEquals(1, (int) h.queue.take());
+
         } finally {
             if (s != null) {
                 s.close();
             }
             ss.close();
+        }
+    }
+
+    private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+        final BlockingQueue<Byte> queue = new SynchronousQueue<Byte>();
+
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            queue.offer(in.readByte());
         }
     }
 }
