@@ -19,7 +19,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-final class DefaultAioChannelFinder implements AioChannelFinder {
+final class ReflectiveAioChannelFinder implements AioChannelFinder {
     private static volatile Map<Class<?>, Field> fieldCache = new HashMap<Class<?>, Field>();
 
     @Override
@@ -39,7 +39,7 @@ final class DefaultAioChannelFinder implements AioChannelFinder {
     }
 
     private static Field findField(Object command) throws Exception {
-        Map<Class<?>, Field> fieldCache = DefaultAioChannelFinder.fieldCache;
+        Map<Class<?>, Field> fieldCache = ReflectiveAioChannelFinder.fieldCache;
         Class<?> commandType = command.getClass();
         Field res = fieldCache.get(commandType);
         if (res != null) {

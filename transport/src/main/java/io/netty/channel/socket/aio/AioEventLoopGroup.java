@@ -41,13 +41,13 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
             if (DetectionUtil.hasUnsafe()) {
                 finder = new UnsafeAioChannelFinder();
             } else {
-                finder = new DefaultAioChannelFinder();
+                finder = new ReflectiveAioChannelFinder();
             }
         } catch (Throwable t) {
             LOGGER.debug(String.format(
                     "Failed to instantiate the optimal %s implementation - falling back to %s.",
-                    AioChannelFinder.class.getSimpleName(), DefaultAioChannelFinder.class.getSimpleName()), t);
-            finder = new DefaultAioChannelFinder();
+                    AioChannelFinder.class.getSimpleName(), ReflectiveAioChannelFinder.class.getSimpleName()), t);
+            finder = new ReflectiveAioChannelFinder();
         }
         CHANNEL_FINDER = finder;
     }
