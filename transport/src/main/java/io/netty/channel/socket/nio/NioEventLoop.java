@@ -24,7 +24,11 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.*;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,7 +60,7 @@ final class NioEventLoop extends SingleThreadEventLoop {
     protected Selector selector;
 
     protected final SelectorProvider provider;
-    
+
     /**
      * Boolean that controls determines if a blocked Selector.select should
      * break out of its selection process. In our case we use a timeone for
@@ -127,6 +131,7 @@ final class NioEventLoop extends SingleThreadEventLoop {
         logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
         return newSelector;
     }
+
     @Override
     protected void run() {
         Selector selector = this.selector;
