@@ -130,13 +130,10 @@ final class HttpPostBodyUtil {
     */
     static class SeekAheadOptimize {
         byte[] bytes;
-
         int readerIndex;
-
         int pos;
-
+        int origPos;
         int limit;
-
         ChannelBuffer buffer;
 
         /**
@@ -148,7 +145,8 @@ final class HttpPostBodyUtil {
             }
             this.buffer = buffer;
             bytes = buffer.array();
-            pos = readerIndex = buffer.arrayOffset() + buffer.readerIndex();
+            readerIndex = buffer.readerIndex();
+            origPos = pos = buffer.arrayOffset() + readerIndex;
             limit = buffer.arrayOffset() + buffer.writerIndex();
         }
 
@@ -159,8 +157,17 @@ final class HttpPostBodyUtil {
         */
         void setReadPosition(int minus) {
             pos -= minus;
-            readerIndex = pos;
+            readerIndex = getReadPosition(pos);
             buffer.readerIndex(readerIndex);
+        }
+
+        /**
+        *
+        * @param index raw index of the array (pos in general)
+        * @return the value equivalent of raw index to be used in readerIndex(value)
+        */
+        int getReadPosition(int index) {
+            return index - origPos + readerIndex;
         }
 
         void clear() {

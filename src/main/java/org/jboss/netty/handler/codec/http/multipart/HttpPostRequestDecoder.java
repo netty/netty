@@ -849,13 +849,18 @@ public class HttpPostRequestDecoder {
 
     /**
      * Skip control Characters
+     * @throws NotEnoughDataDecoderException
      */
-    void skipControlCharacters() {
+    void skipControlCharacters() throws NotEnoughDataDecoderException {
         SeekAheadOptimize sao = null;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e) {
-            skipControlCharactersStandard(undecodedChunk);
+            try {
+                skipControlCharactersStandard();
+            } catch (IndexOutOfBoundsException e1) {
+                throw new NotEnoughDataDecoderException(e1);
+            }
             return;
         }
 
@@ -866,13 +871,13 @@ public class HttpPostRequestDecoder {
                 return;
             }
         }
-        sao.setReadPosition(0);
+        throw new NotEnoughDataDecoderException("Access out of bounds");
     }
-    static void skipControlCharactersStandard(ChannelBuffer buffer) {
+    void skipControlCharactersStandard() {
         for (;;) {
-            char c = (char) buffer.readUnsignedByte();
+            char c = (char) undecodedChunk.readUnsignedByte();
             if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
-                buffer.readerIndex(buffer.readerIndex() - 1);
+                undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
                 break;
             }
         }
@@ -892,7 +897,12 @@ public class HttpPostRequestDecoder {
             throws ErrorDataDecoderException {
         // --AaB03x or --AaB03x--
         int readerIndex = undecodedChunk.readerIndex();
-        skipControlCharacters();
+        try {
+            skipControlCharacters();
+        } catch (NotEnoughDataDecoderException e1) {
+            undecodedChunk.readerIndex(readerIndex);
+            return null;
+        }
         skipOneLine();
         String newline;
         try {
@@ -933,9 +943,9 @@ public class HttpPostRequestDecoder {
         }
         // read many lines until empty line with newline found! Store all data
         while (!skipOneLine()) {
-            skipControlCharacters();
             String newline;
             try {
+                skipControlCharacters();
                 newline = readLine();
             } catch (NotEnoughDataDecoderException e) {
                 undecodedChunk.readerIndex(readerIndex);
@@ -1594,8 +1604,8 @@ public class HttpPostRequestDecoder {
         // found the decoder limit
         boolean newLine = true;
         int index = 0;
+        int lastrealpos = sao.pos;
         int lastPosition = undecodedChunk.readerIndex();
-        int setReadPosition = -1;
         boolean found = false;
 
         while (sao.pos < sao.limit) {
@@ -1606,7 +1616,6 @@ public class HttpPostRequestDecoder {
                     index ++;
                     if (delimiter.length() == index) {
                         found = true;
-                        sao.setReadPosition(0);
                         break;
                     }
                     continue;
@@ -1620,23 +1629,16 @@ public class HttpPostRequestDecoder {
                             if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
-                                setReadPosition = sao.pos;
-                                lastPosition = sao.pos - 2;
+                                lastrealpos = sao.pos - 2;
                             }
-                        } else {
-                            // save last valid position
-                            setReadPosition = sao.pos;
-                            lastPosition = sao.pos;
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
-                        setReadPosition = sao.pos;
-                        lastPosition = sao.pos - 1;
+                        lastrealpos = sao.pos - 1;
                     } else {
                         // save last valid position
-                        setReadPosition = sao.pos;
-                        lastPosition = sao.pos;
+                        lastrealpos = sao.pos;
                     }
                 }
             } else {
@@ -1647,30 +1649,20 @@ public class HttpPostRequestDecoder {
                         if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
-                            setReadPosition = sao.pos;
-                            lastPosition = sao.pos - 2;
+                            lastrealpos = sao.pos - 2;
                         }
-                    } else {
-                        // save last valid position
-                        setReadPosition = sao.pos;
-                        lastPosition = sao.pos;
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
                     index = 0;
-                    setReadPosition = sao.pos;
-                    lastPosition = sao.pos - 1;
+                    lastrealpos = sao.pos - 1;
                 } else {
                     // save last valid position
-                    setReadPosition = sao.pos;
-                    lastPosition = sao.pos;
+                    lastrealpos = sao.pos;
                 }
             }
         }
-        if (setReadPosition > 0) {
-            sao.pos = setReadPosition;
-            sao.setReadPosition(0);
-        }
+        lastPosition = sao.getReadPosition(lastrealpos);
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex);
         if (found) {
             // found so lastPosition is correct and final
@@ -1809,7 +1801,7 @@ public class HttpPostRequestDecoder {
             boolean newLine = true;
             int index = 0;
             int lastPosition = undecodedChunk.readerIndex();
-            int setReadPosition = -1;
+            int lastrealpos = sao.pos;
             boolean found = false;
 
             while (sao.pos < sao.limit) {
@@ -1820,7 +1812,6 @@ public class HttpPostRequestDecoder {
                         index ++;
                         if (delimiter.length() == index) {
                             found = true;
-                            sao.setReadPosition(0);
                             break;
                         }
                         continue;
@@ -1834,21 +1825,15 @@ public class HttpPostRequestDecoder {
                                 if (nextByte == HttpConstants.LF) {
                                     newLine = true;
                                     index = 0;
-                                    lastPosition = sao.pos - 2;
-                                    setReadPosition = sao.pos;
+                                    lastrealpos = sao.pos - 2;
                                 }
-                            } else {
-                                lastPosition = sao.pos;
-                                setReadPosition = sao.pos;
                             }
                         } else if (nextByte == HttpConstants.LF) {
                             newLine = true;
                             index = 0;
-                            lastPosition = sao.pos - 1;
-                            setReadPosition = sao.pos;
+                            lastrealpos = sao.pos - 1;
                         } else {
-                            lastPosition = sao.pos;
-                            setReadPosition = sao.pos;
+                            lastrealpos = sao.pos;
                         }
                     }
                 } else {
@@ -1859,28 +1844,19 @@ public class HttpPostRequestDecoder {
                             if (nextByte == HttpConstants.LF) {
                                 newLine = true;
                                 index = 0;
-                                lastPosition = sao.pos - 2;
-                                setReadPosition = sao.pos;
+                                lastrealpos = sao.pos - 2;
                             }
-                        } else {
-                            lastPosition = sao.pos;
-                            setReadPosition = sao.pos;
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
-                        lastPosition = sao.pos - 1;
-                        setReadPosition = sao.pos;
+                        lastrealpos = sao.pos - 1;
                     } else {
-                        lastPosition = sao.pos;
-                        setReadPosition = sao.pos;
+                        lastrealpos = sao.pos;
                     }
                 }
             }
-            if (setReadPosition > 0) {
-                sao.pos = setReadPosition;
-                sao.setReadPosition(0);
-            }
+            lastPosition = sao.getReadPosition(lastrealpos);
             if (found) {
                 // found so lastPosition is correct
                 // but position is just after the delimiter (either close delimiter or simple one)

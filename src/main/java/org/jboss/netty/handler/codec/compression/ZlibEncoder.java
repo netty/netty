@@ -27,7 +27,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import org.jboss.netty.handler.codec.oneone.OneToOneStrictEncoder;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
 
@@ -37,7 +37,7 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
  */
-public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
+public class ZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAwareChannelHandler {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
 

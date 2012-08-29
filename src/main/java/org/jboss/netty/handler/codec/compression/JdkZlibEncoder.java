@@ -29,7 +29,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import org.jboss.netty.handler.codec.oneone.OneToOneStrictEncoder;
 
 
 /**
@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
  */
-public class JdkZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
+public class JdkZlibEncoder extends OneToOneStrictEncoder implements LifeCycleAwareChannelHandler {
 
     private final byte[] out = new byte[8192];
     private final Deflater deflater;
