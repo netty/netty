@@ -16,8 +16,10 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 
 import java.net.InetSocketAddress;
+import java.net.Socket;
 
 /**
  * A TCP/IP socket {@link Channel} which was either accepted by
@@ -32,4 +34,14 @@ public interface SocketChannel extends Channel {
     InetSocketAddress localAddress();
     @Override
     InetSocketAddress remoteAddress();
+
+    /**
+     * @see Socket#isOutputShutdown()
+     */
+    boolean isOutputShutdown();
+
+    /**
+     * @see Socket#shutdownOutput()
+     */
+    ChannelFuture shutdownOutput();
 }

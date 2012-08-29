@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -99,6 +101,33 @@ public class OioSocketChannel extends AbstractOioByteChannel
     @Override
     public boolean isActive() {
         return !socket.isClosed() && socket.isConnected();
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return socket.isOutputShutdown();
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput() {
+        ChannelFuture future = newFuture();
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            try {
+                socket.shutdownOutput();
+                future.setSuccess();
+            } catch (Throwable t) {
+                future.setFailure(t);
+            }
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownOutput();
+                }
+            });
+        }
+        return future;
     }
 
     @Override

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
@@ -56,8 +57,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private final AioSocketChannelConfig config;
-    private boolean flushing;
+    private volatile boolean outputShutdown;
 
+    private boolean flushing;
     private final AtomicBoolean readSuspended = new AtomicBoolean();
     private final AtomicBoolean readInProgress = new AtomicBoolean();
 
@@ -92,6 +94,34 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return outputShutdown;
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput() {
+        ChannelFuture future = newFuture();
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            try {
+                javaChannel().shutdownOutput();
+                outputShutdown = true;
+                future.setSuccess();
+            } catch (Throwable t) {
+                future.setFailure(t);
+            }
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownOutput();
+                }
+            });
+        }
+        return future;
     }
 
     @Override
