@@ -46,7 +46,6 @@ public class OioSocketChannel extends AbstractOioByteChannel
     private final SocketChannelConfig config;
     private InputStream is;
     private OutputStream os;
-    private volatile boolean readSuspended;
 
     public OioSocketChannel() {
         this(new Socket());
@@ -185,24 +184,5 @@ public class OioSocketChannel extends AbstractOioByteChannel
             throw new NotYetConnectedException();
         }
         buf.readBytes(os, buf.readableBytes());
-    }
-
-
-    @Override
-    protected AbstractOioByteUnsafe newUnsafe() {
-        return new OioSocketChannelUnsafe();
-    }
-
-    private final class OioSocketChannelUnsafe extends AbstractOioByteUnsafe {
-
-        @Override
-        public void suspendRead() {
-            readSuspended = true;
-        }
-
-        @Override
-        public void resumeRead() {
-            readSuspended = false;
-        }
     }
 }

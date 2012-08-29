@@ -34,7 +34,7 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         return new NioMessageUnsafe();
     }
 
-    final class NioMessageUnsafe extends AbstractNioUnsafe {
+    private final class NioMessageUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

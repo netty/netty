@@ -28,9 +28,11 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected abstract AbstractOioByteUnsafe newUnsafe();
+    protected OioByteUnsafe newUnsafe() {
+        return new OioByteUnsafe();
+    }
 
-    abstract class AbstractOioByteUnsafe extends AbstractOioUnsafe {
+    private final class OioByteUnsafe extends AbstractOioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
