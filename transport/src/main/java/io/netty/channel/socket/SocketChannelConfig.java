@@ -139,7 +139,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets whether the channel should not close itself when its remote peer shuts down output to
      * make the connection half-closed.  If {@code true} the connection is not closed when the
-     * remote peer shuts down output.  Instead, {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * remote peer shuts down output. Instead, {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}
      * is invoked with a {@link ChannelInputShutdownEvent} object. If {@code false}, the connection
      * is closed automatically.
      */
