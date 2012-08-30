@@ -57,7 +57,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(h.ch.isOutputShutdown());
 
             // Make the connection half-closed and ensure read() returns -1.
-            ch.shutdownOutput();
+            ch.shutdownOutput().sync();
             assertEquals(-1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());

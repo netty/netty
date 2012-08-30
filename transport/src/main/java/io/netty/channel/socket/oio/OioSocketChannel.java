@@ -115,24 +115,28 @@ public class OioSocketChannel extends AbstractOioByteChannel
 
     @Override
     public ChannelFuture shutdownOutput() {
-        ChannelFuture future = newFuture();
+        final ChannelFuture future = newFuture();
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
-            try {
-                socket.shutdownOutput();
-                future.setSuccess();
-            } catch (Throwable t) {
-                future.setFailure(t);
-            }
+            shutdownOutput(future);
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput();
+                    shutdownOutput(future);
                 }
             });
         }
         return future;
+    }
+
+    private void shutdownOutput(ChannelFuture future) {
+        try {
+            socket.shutdownOutput();
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+        }
     }
 
     @Override
