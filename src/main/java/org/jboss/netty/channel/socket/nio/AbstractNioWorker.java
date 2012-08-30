@@ -398,11 +398,14 @@ abstract class AbstractNioWorker implements Worker {
 
                 assert added;
                 if (added) {
-                    // wake up the selector to speed things
-                    Selector selector = this.selector;
-                    if (selector != null) {
-                        selector.wakeup();
+                    if (wakenUp.compareAndSet(false, true))  {
+                        // wake up the selector to speed things
+                        Selector selector = this.selector;
+                        if (selector != null) {
+                            selector.wakeup();
+                        }
                     }
+
                 }
             }
 
