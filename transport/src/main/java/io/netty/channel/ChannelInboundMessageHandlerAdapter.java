@@ -28,7 +28,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        firstMessageReceived(ctx);
+        beginMessageReceived(ctx);
 
         MessageBuf<I> in = ctx.inboundMessageBuffer();
         for (;;) {
@@ -43,10 +43,10 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
             }
         }
 
-        lastMessageReceived(ctx);
+        endMessageReceived(ctx);
     }
 
-    public void firstMessageReceived(ChannelHandlerContext ctx) throws Exception { }
+    public void beginMessageReceived(ChannelHandlerContext ctx) throws Exception { }
     public abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
-    public void lastMessageReceived(ChannelHandlerContext ctx) throws Exception { }
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception { }
 }
