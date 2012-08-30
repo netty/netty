@@ -28,6 +28,7 @@ import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 
@@ -63,6 +64,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
             assertTrue(h.ch.isInputShutdown());
             assertFalse(h.ch.isOutputShutdown());
             assertEquals(1, h.closure.getCount());
+            assertEquals(1, h.halfClosureCount.intValue());
         } finally {
             s.close();
         }
@@ -99,6 +101,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
             assertTrue(h.ch.isOutputShutdown());
 
             assertEquals(1, h.halfClosure.getCount());
+            assertEquals(0, h.halfClosureCount.intValue());
         } finally {
             s.close();
         }
@@ -109,6 +112,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         final BlockingQueue<Byte> queue = new SynchronousQueue<Byte>();
         final CountDownLatch halfClosure = new CountDownLatch(1);
         final CountDownLatch closure = new CountDownLatch(1);
+        final AtomicInteger halfClosureCount = new AtomicInteger();
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -128,6 +132,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof ChannelInputShutdownEvent) {
+                halfClosureCount.incrementAndGet();
                 halfClosure.countDown();
             }
         }
