@@ -55,7 +55,7 @@ final class SelectorUtil {
             selectTimeout = DEFAULT_SELECT_TIMEOUT;
         }
         SELECT_TIMEOUT = selectTimeout;
-        SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toMicros(SELECT_TIMEOUT);
+        SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
         logger.debug("Using select timeout of " + SELECT_TIMEOUT);
     }
 
