@@ -20,8 +20,10 @@ import io.netty.buffer.MessageBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Random;
@@ -316,7 +318,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     @Override
     public final int hashCode() {
-        return this.id;
+        return id;
     }
 
     /**
@@ -450,6 +452,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 try {
                     boolean wasActive = isActive();
+
+                    // See: https://github.com/netty/netty/issues/576
+                    if (!DetectionUtil.isWindows() && !DetectionUtil.isRoot() &&
+                        Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
+                        localAddress instanceof InetSocketAddress &&
+                        !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
+                        // Warn a user about the fact that a non-root user can't receive a
+                        // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                        logger.warn(
+                                "A non-root user can't receive a broadcast packet if the socket " +
+                                "is not bound to a wildcard address; binding to a non-wildcard " +
+                                "address (" + localAddress + ") anyway as requested.");
+                    }
+
                     doBind(localAddress);
                     future.setSuccess();
                     if (!wasActive && isActive()) {
