@@ -20,7 +20,9 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -243,31 +245,53 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             long lastConnectTimeoutCheckTimeNanos = System.nanoTime();
 
             // use 80% of the timeout for measure
-            long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
-
+            final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
+            boolean wakenupFromLoop = false;
             for (;;) {
                 wakenUp.set(false);
 
                 try {
                     long beforeSelect = System.nanoTime();
                     int selected = SelectorUtil.select(selector);
-                    if (selected == 0) {
-                        long timeBlocked = System.nanoTime()  - beforeSelect;
+                    if (selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
+                        long timeBlocked = System.nanoTime() - beforeSelect;
+
                         if (timeBlocked < minSelectTimeout) {
-                            // returned before the minSelectTimeout elapsed with nothing select.
-                            // this may be the cause of the jdk epoll(..) bug, so increment the counter
-                            // which we use later to see if its really the jdk bug.
-                            selectReturnsImmediately ++;
+                            boolean notConnected = false;
+                            // loop over all keys as the selector may was unblocked because of a closed channel
+                            for (SelectionKey key: selector.keys()) {
+                                SelectableChannel ch = key.channel();
+                                try {
+                                    if (ch instanceof SocketChannel && !((SocketChannel) ch).isConnected()) {
+                                        notConnected = true;
+                                        // cancel the key just to be on the safe side
+                                        key.cancel();
+                                    }
+                                } catch (CancelledKeyException e) {
+                                    // ignore
+                                }
+                            }
+                            if (notConnected) {
+                                selectReturnsImmediately = 0;
+                            } else {
+                                // returned before the minSelectTimeout elapsed with nothing select.
+                                // this may be the cause of the jdk epoll(..) bug, so increment the counter
+                                // which we use later to see if its really the jdk bug.
+                                selectReturnsImmediately ++;
+
+                            }
+
                         } else {
                             selectReturnsImmediately = 0;
                         }
-                        if (selectReturnsImmediately == 10) {
+
+                        if (selectReturnsImmediately == 1024) {
                             // The selector returned immediately for 10 times in a row,
                             // so recreate one selector as it seems like we hit the
                             // famous epoll(..) jdk bug.
                             selector = recreateSelector();
                             selectReturnsImmediately = 0;
-
+                            wakenupFromLoop = false;
                             // try to select again
                             continue;
                         }
@@ -305,9 +329,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     // (OK - no wake-up required).
 
                     if (wakenUp.get()) {
+                        wakenupFromLoop = true;
                         selector.wakeup();
+                    } else {
+                        wakenupFromLoop = false;
                     }
-
                     processRegisterTaskQueue();
                     processSelectedKeys(selector.selectedKeys());
 
