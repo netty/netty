@@ -265,7 +265,7 @@ abstract class AbstractNioWorker implements Worker {
             try {
                 long beforeSelect = System.nanoTime();
                 int selected = SelectorUtil.select(selector);
-                if (selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
+                if (SelectorUtil.EPOOL_BUG_WORKAROUND && selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
                     long timeBlocked = System.nanoTime() - beforeSelect;
 
                     if (timeBlocked < minSelectTimeout) {
