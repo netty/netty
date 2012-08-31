@@ -28,6 +28,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 public final class QueueFactory {
 
     private static final boolean useUnsafe = DetectionUtil.hasUnsafe();
+    private static final boolean useJava7LinkedTransferQueue = DetectionUtil.hasJava7LinkedTransferQueue();
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QueueFactory.class);
 
     private QueueFactory() {
@@ -44,7 +45,7 @@ public final class QueueFactory {
     public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
         // if we run in java >=7 its the best to just use the LinkedTransferQueue which
         // comes with java bundled. See #273
-        if (DetectionUtil.javaVersion() >= 7)  {
+        if (DetectionUtil.hasJava7LinkedTransferQueue()) {
             return new java.util.concurrent.LinkedTransferQueue<T>();
         }
 
