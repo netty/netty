@@ -60,8 +60,9 @@ final class SelectorUtil {
         }
         SELECT_TIMEOUT = selectTimeout;
         SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
-        logger.debug("Using select timeout of " + SELECT_TIMEOUT);
-
+        if (logger.isDebugEnabled()) {
+            logger.debug("Using select timeout of " + SELECT_TIMEOUT);
+        }
         EPOOL_BUG_WORKAROUND = Boolean.valueOf(System.getProperty("org.jboss.netty.epollBugWorkaround", "false"));
         if (logger.isDebugEnabled()) {
             logger.debug("Epoll-bug workaround enabled = " + EPOOL_BUG_WORKAROUND);

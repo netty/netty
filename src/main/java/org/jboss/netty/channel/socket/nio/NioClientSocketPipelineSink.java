@@ -503,9 +503,13 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                 // time to close the old selector as everything else is registered to the new one
                 selector.close();
             } catch (Throwable t) {
-                logger.warn("Failed to close a selector.", t);
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to close a selector.", t);
+                }
             }
-            logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
+            if (logger.isWarnEnabled()) {
+                logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
+            }
             return newSelector;
         }
 
