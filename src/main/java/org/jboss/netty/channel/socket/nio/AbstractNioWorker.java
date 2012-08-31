@@ -273,11 +273,15 @@ abstract class AbstractNioWorker implements Worker {
                         // loop over all keys as the selector may was unblocked because of a closed channel
                         for (SelectionKey key: selector.keys()) {
                             SelectableChannel ch = key.channel();
-                            if ((ch instanceof DatagramChannel && !((DatagramChannel) ch).isConnected()) ||
-                                    ch instanceof SocketChannel && !((SocketChannel) ch).isConnected()) {
-                                notConnected = true;
-                                // cancel the key just to be on the safe side
-                                key.cancel();
+                            try {
+                                if ((ch instanceof DatagramChannel && !((DatagramChannel) ch).isConnected()) ||
+                                        ch instanceof SocketChannel && !((SocketChannel) ch).isConnected()) {
+                                    notConnected = true;
+                                    // cancel the key just to be on the safe side
+                                    key.cancel();
+                                }
+                            } catch (CancelledKeyException e) {
+                                // ignore
                             }
                         }
                         if (notConnected) {
