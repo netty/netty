@@ -250,8 +250,8 @@ abstract class AbstractNioWorker implements Worker {
         Selector selector = this.selector;
 
         // use 80% of the timeout for measure
-        long minSelectTimeout = (long) (SelectorUtil.SELECT_TIMEOUT_NANOS * 0.8);
-        boolean wakupFromLoop = false;
+        final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
+        boolean wakenupFromLoop = false;
         for (;;) {
             wakenUp.set(false);
 
@@ -265,7 +265,7 @@ abstract class AbstractNioWorker implements Worker {
             try {
                 long beforeSelect = System.nanoTime();
                 int selected = SelectorUtil.select(selector);
-                if (selected == 0 && !wakupFromLoop && !wakenUp.get()) {
+                if (selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
                     long timeBlocked = System.nanoTime() - beforeSelect;
 
                     if (timeBlocked < minSelectTimeout) {
@@ -294,13 +294,13 @@ abstract class AbstractNioWorker implements Worker {
                         selectReturnsImmediately = 0;
                     }
 
-                    if (selectReturnsImmediately == 50) {
+                    if (selectReturnsImmediately == 1024) {
                         // The selector returned immediately for 10 times in a row,
                         // so recreate one selector as it seems like we hit the
                         // famous epoll(..) jdk bug.
                         selector = recreateSelector();
                         selectReturnsImmediately = 0;
-                        wakupFromLoop = false;
+                        wakenupFromLoop = false;
                         // try to select again
                         continue;
                     }
@@ -338,10 +338,10 @@ abstract class AbstractNioWorker implements Worker {
                 // (OK - no wake-up required).
 
                 if (wakenUp.get()) {
-                    wakupFromLoop = true;
+                    wakenupFromLoop = true;
                     selector.wakeup();
                 } else {
-                    wakupFromLoop = false;
+                    wakenupFromLoop = false;
                 }
 
                 cancelledKeys = 0;
