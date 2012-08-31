@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -94,6 +96,42 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     public boolean isActive() {
         SocketChannel ch = javaChannel();
         return ch.isOpen() && ch.isConnected();
+    }
+
+    @Override
+    public boolean isInputShutdown() {
+        return super.isInputShutdown();
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return javaChannel().socket().isOutputShutdown() || !isActive();
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput() {
+        final ChannelFuture future = newFuture();
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            shutdownOutput(future);
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownOutput(future);
+                }
+            });
+        }
+        return future;
+    }
+
+    private void shutdownOutput(ChannelFuture future) {
+        try {
+            javaChannel().socket().shutdownOutput();
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+        }
     }
 
     @Override
@@ -190,23 +228,5 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         return writtenBytes;
-    }
-
-    @Override
-    protected AbstractNioByteUnsafe newUnsafe() {
-        return new NioSocketChannelUnsafe();
-    }
-
-    private final class NioSocketChannelUnsafe extends AbstractNioByteUnsafe {
-
-        @Override
-        public void suspendRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-        }
-
-        @Override
-        public void resumeRead() {
-            selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_READ);
-        }
     }
 }

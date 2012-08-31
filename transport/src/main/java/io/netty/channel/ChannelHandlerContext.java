@@ -128,34 +128,152 @@ import java.util.Set;
 public interface ChannelHandlerContext
          extends AttributeMap, ChannelFutureFactory,
                  ChannelInboundInvoker, ChannelOutboundInvoker {
+
+    /**
+     * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
+     */
     Channel channel();
+
+    /**
+     * Return the {@link ChannelPipeline} which belongs this {@link ChannelHandlerContext}.
+     */
     ChannelPipeline pipeline();
+
+    /**
+     * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
+     * submit tasks that get executed in the event loop. For more informations please refer to the
+     * {@link EventExecutor} javadocs.
+     */
     EventExecutor executor();
 
+    /**
+     * The unique name of the {@link ChannelHandlerContext}.The name was used when then {@link ChannelHandler}
+     * was added to the {@link ChannelPipeline}. This name can also be used to access the registered
+     * {@link ChannelHandler} from the {@link ChannelPipeline}.
+     */
     String name();
-    ChannelHandler handler();
-    Set<ChannelHandlerType> type();
 
+    /**
+     * The {@link ChannelHandler} that is bound this {@link ChannelHandlerContext}.
+     */
+    ChannelHandler handler();
+    Set<ChannelHandlerType> types();
+
+    /**
+     * Return <code>true</code> if the {@link ChannelHandlerContext} has an {@link ByteBuf} bound for inbound
+     * which can be used.
+     */
     boolean hasInboundByteBuffer();
+
+    /**
+     * Return <code>true</code> if the {@link ChannelHandlerContext} has a {@link MessageBuf} bound for inbound
+     * which can be used.
+     */
     boolean hasInboundMessageBuffer();
+
+    /**
+     * Return the bound {@link ByteBuf} for inbound data if {@link #hasInboundByteBuffer()} returned
+     * <code>true</code>. If {@link #hasInboundByteBuffer()} returned <code>false</code> it will throw a
+     * {@link UnsupportedOperationException}
+     */
     ByteBuf inboundByteBuffer();
+
+    /**
+     * Return the bound {@link MessageBuf} for inbound data if {@link #hasInboundMessageBuffer()} returned
+     * <code>true</code>. If {@link #hasInboundMessageBuffer()} returned <code>false</code> it will throw a
+     * {@link UnsupportedOperationException}.
+     */
     <T> MessageBuf<T> inboundMessageBuffer();
 
+    /**
+     * Return <code>true</code> if the {@link ChannelHandlerContext} has an {@link ByteBuf} bound for outbound
+     * data which can be used.
+     *
+     */
     boolean hasOutboundByteBuffer();
+
+    /**
+     * Return <code>true</code> if the {@link ChannelHandlerContext} has a {@link MessageBuf} bound for outbound
+     * which can be used.
+     */
     boolean hasOutboundMessageBuffer();
+
+    /**
+     * Return the bound {@link ByteBuf} for outbound data if {@link #hasOutboundByteBuffer()} returned
+     * <code>true</code>. If {@link #hasOutboundByteBuffer()} returned <code>false</code> it will throw
+     * a {@link UnsupportedOperationException}.
+     */
     ByteBuf outboundByteBuffer();
+
+    /**
+     * Return the bound {@link MessageBuf} for outbound data if {@link #hasOutboundMessageBuffer()} returned
+     * <code>true</code>. If {@link #hasOutboundMessageBuffer()} returned <code>false</code> it will throw a
+     * {@link UnsupportedOperationException}
+     */
     <T> MessageBuf<T> outboundMessageBuffer();
 
+    /**
+     * Return <code>true</code> if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling
+     * inbound data.
+     */
     boolean hasNextInboundByteBuffer();
+
+    /**
+     * Return <code>true</code> if the next {@link ChannelHandlerContext} has a {@link MessageBuf} for handling
+     * inbound data.
+     */
     boolean hasNextInboundMessageBuffer();
+
+    /**
+     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextInboundByteBuffer()}
+     * returned <code>true</code>, otherwise a {@link UnsupportedOperationException} is thrown.
+     */
     ByteBuf nextInboundByteBuffer();
+
+    /**
+     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext} if
+     * {@link #hasNextInboundMessageBuffer()} returned <code>true</code>, otherwise a
+     * {@link UnsupportedOperationException} is thrown.
+     */
     MessageBuf<Object> nextInboundMessageBuffer();
 
+    /**
+     * Return <code>true</code> if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling outbound
+     * data.
+     */
     boolean hasNextOutboundByteBuffer();
+
+    /**
+     * Return <code>true</code> if the next {@link ChannelHandlerContext} has a {@link MessageBuf} for handling
+     * outbound data.
+     */
     boolean hasNextOutboundMessageBuffer();
+
+    /**
+     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextOutboundByteBuffer()}
+     * returned <code>true</code>, otherwise a {@link UnsupportedOperationException} is thrown.
+     */
     ByteBuf nextOutboundByteBuffer();
+
+    /**
+     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext} if
+     * {@link #hasNextOutboundMessageBuffer()} returned <code>true</code>, otherwise a
+     * {@link UnsupportedOperationException} is thrown.
+     */
     MessageBuf<Object> nextOutboundMessageBuffer();
 
+    /**
+     * Return <code>true</code> if the {@link ChannelHandlerContext} was marked as readable. This basically means
+     * that once its not readable anymore no new data will be read from the transport and passed down the
+     * {@link ChannelPipeline}.
+     *
+     * Only if all {@link ChannelHandlerContext}'s {@link #isReadable()} return <code>true</code>, the data is
+     * passed again down the {@link ChannelPipeline}.
+     */
     boolean isReadable();
+
+    /**
+     * Mark the {@link ChannelHandlerContext} as readable or suspend it. See {@link #isReadable()}
+     */
     void readable(boolean readable);
 }

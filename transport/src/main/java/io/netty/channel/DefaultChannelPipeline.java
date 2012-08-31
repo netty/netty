@@ -743,7 +743,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelHandler first() {
+    public ChannelHandler first() {
         DefaultChannelHandlerContext first = head.next;
         if (first == null) {
             return null;
@@ -752,7 +752,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelHandler last() {
+    public ChannelHandlerContext firstContext() {
+        return head.next;
+    }
+
+    @Override
+    public ChannelHandler last() {
         DefaultChannelHandlerContext last = tail;
         if (last == head || last == null) {
             return null;
@@ -761,8 +766,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelHandler get(String name) {
-        DefaultChannelHandlerContext ctx = name2ctx.get(name);
+    public ChannelHandlerContext lastContext() {
+        DefaultChannelHandlerContext last = tail;
+        if (last == head || last == null) {
+            return null;
+        }
+        return last;
+    }
+
+    @Override
+    public ChannelHandler get(String name) {
+        ChannelHandlerContext ctx = context(name);
         if (ctx == null) {
             return null;
         } else {
@@ -771,7 +785,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized <T extends ChannelHandler> T get(Class<T> handlerType) {
+    public <T extends ChannelHandler> T get(Class<T> handlerType) {
         ChannelHandlerContext ctx = context(handlerType);
         if (ctx == null) {
             return null;
@@ -781,93 +795,78 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public synchronized ChannelHandlerContext context(String name) {
+    public ChannelHandlerContext context(String name) {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        return name2ctx.get(name);
+
+        synchronized (this) {
+            return name2ctx.get(name);
+        }
     }
 
     @Override
-    public synchronized ChannelHandlerContext context(ChannelHandler handler) {
+    public ChannelHandlerContext context(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
         }
-        if (name2ctx.isEmpty()) {
-            return null;
-        }
-        DefaultChannelHandlerContext ctx = head;
+
+        DefaultChannelHandlerContext ctx = head.next;
         for (;;) {
+            if (ctx == null) {
+                return null;
+            }
+
             if (ctx.handler() == handler) {
                 return ctx;
             }
 
             ctx = ctx.next;
-            if (ctx == null) {
-                break;
-            }
         }
-        return null;
     }
 
     @Override
-    public synchronized ChannelHandlerContext context(
-            Class<? extends ChannelHandler> handlerType) {
+    public ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType) {
         if (handlerType == null) {
             throw new NullPointerException("handlerType");
         }
 
-        if (name2ctx.isEmpty()) {
-            return null;
-        }
         DefaultChannelHandlerContext ctx = head.next;
         for (;;) {
+            if (ctx == null) {
+                return null;
+            }
             if (handlerType.isAssignableFrom(ctx.handler().getClass())) {
                 return ctx;
             }
-
             ctx = ctx.next;
-            if (ctx == null) {
-                break;
-            }
         }
-        return null;
     }
 
     @Override
     public List<String> names() {
         List<String> list = new ArrayList<String>();
-        if (name2ctx.isEmpty()) {
-            return list;
-        }
-
         DefaultChannelHandlerContext ctx = head.next;
         for (;;) {
+            if (ctx == null) {
+                return list;
+            }
             list.add(ctx.name());
             ctx = ctx.next;
-            if (ctx == null) {
-                break;
-            }
         }
-        return list;
     }
 
     @Override
     public Map<String, ChannelHandler> toMap() {
         Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
-        if (name2ctx.isEmpty()) {
-            return map;
-        }
-
         DefaultChannelHandlerContext ctx = head.next;
         for (;;) {
+            if (ctx == null) {
+                return map;
+            }
             map.put(ctx.name(), ctx.handler());
             ctx = ctx.next;
-            if (ctx == null) {
-                break;
-            }
         }
-        return map;
     }
 
     /**
@@ -880,15 +879,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         buf.append('{');
         DefaultChannelHandlerContext ctx = head.next;
         for (;;) {
+            if (ctx == null) {
+                break;
+            }
+
             buf.append('(');
             buf.append(ctx.name());
             buf.append(" = ");
             buf.append(ctx.handler().getClass().getName());
             buf.append(')');
+
             ctx = ctx.next;
             if (ctx == null) {
                 break;
             }
+
             buf.append(", ");
         }
         buf.append('}');

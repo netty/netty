@@ -13,16 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.socket.aio;
 
-import io.netty.buffer.ChannelBuf;
-
-/**
- * {@link ChannelStateHandler} which handles inbound data.
- */
-public interface ChannelInboundHandler extends ChannelStateHandler {
-    /**
-     * Return the {@link ChannelBuf} which will be used for inbound data for the given {@link ChannelHandlerContext}.
-     */
-    ChannelBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
+interface AioChannelFinder {
+    AbstractAioChannel findChannel(Runnable command) throws Exception;
 }

@@ -208,12 +208,34 @@ import java.nio.channels.Channels;
  */
 public interface ChannelHandler {
 
+    /**
+     * Gets called before the {@link ChannelHandler} is added to the actual context.
+     */
     void beforeAdd(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called after the {@link ChannelHandler} was added to the actual context.
+     */
     void afterAdd(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called before the {@link ChannelHandler} is removed from the actual context.
+     */
     void beforeRemove(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called after the {@link ChannelHandler} was removed from the actual context.
+     */
     void afterRemove(ChannelHandlerContext ctx) throws Exception;
 
+    /**
+     * Gets called if a {@link Throwable} was thrown.
+     */
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
+
+    /**
+     * Gets called if an user event was triggered.
+     */
     void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 
     /**

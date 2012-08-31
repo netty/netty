@@ -17,8 +17,36 @@ package io.netty.channel;
 
 import java.util.concurrent.ScheduledExecutorService;
 
+/**
+ * The {@link EventExecutor} is a special {@link ScheduledExecutorService} which comes
+ * with some handy methods to see if a {@link Thread} is executed in a event loop.
+ * Beside this it also extends the {@link EventExecutorGroup} to allow a generic way to
+ * access methods.
+ *
+ */
 public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
+
+    /**
+     * Returns a reference to itself.
+     */
+    @Override
+    EventExecutor next();
+
+    /**
+     * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
+     * or <code>null</code> if it has no parent
+
+     */
     EventExecutorGroup parent();
+
+    /**
+     * Calls {@link #inEventLoop(Thread)} with {@link Thread#currentThread()} as argument
+     */
     boolean inEventLoop();
+
+    /**
+     * Return <code>true</code> if the given {@link Thread} is executed in the event loop,
+     * <code>false</code> otherwise.
+     */
     boolean inEventLoop(Thread thread);
 }

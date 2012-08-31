@@ -21,10 +21,14 @@ import io.netty.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
+import java.util.concurrent.TimeUnit;
 
 final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
+    static final long DEFAULT_SELECT_TIMEOUT = 10;
+    static final long SELECT_TIMEOUT;
+    static final long SELECT_TIMEOUT_NANOS;
 
     // Workaround for JDK NIO bug.
     //
@@ -43,11 +47,21 @@ final class SelectorUtil {
                 logger.debug("Unable to get/set System Property '" + key + "'", e);
             }
         }
+        long selectTimeout;
+        try {
+            selectTimeout = Long.parseLong(System.getProperty("io.netty.selectTimeout",
+                    String.valueOf(DEFAULT_SELECT_TIMEOUT)));
+        } catch (NumberFormatException e) {
+            selectTimeout = DEFAULT_SELECT_TIMEOUT;
+        }
+        SELECT_TIMEOUT = selectTimeout;
+        SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
+        logger.debug("Using select timeout of " + SELECT_TIMEOUT);
     }
 
-    static void select(Selector selector) throws IOException {
+    static int select(Selector selector) throws IOException {
         try {
-            selector.select(10);
+            return selector.select(SELECT_TIMEOUT);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -56,6 +70,7 @@ final class SelectorUtil {
             }
             // Harmless exception - log anyway
         }
+        return -1;
     }
 
     static void cleanupKeys(Selector selector) {

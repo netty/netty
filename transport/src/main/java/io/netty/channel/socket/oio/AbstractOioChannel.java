@@ -27,6 +27,8 @@ abstract class AbstractOioChannel extends AbstractChannel {
 
     static final int SO_TIMEOUT = 1000;
 
+    protected volatile boolean readSuspended;
+
     protected AbstractOioChannel(Channel parent, Integer id) {
         super(parent, id);
     }
@@ -51,7 +53,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     abstract class AbstractOioUnsafe extends AbstractUnsafe implements OioUnsafe {
-
         @Override
         public void connect(
                 final SocketAddress remoteAddress,
@@ -81,6 +82,16 @@ abstract class AbstractOioChannel extends AbstractChannel {
                     }
                 });
             }
+        }
+
+        @Override
+        public void suspendRead() {
+            readSuspended = true;
+        }
+
+        @Override
+        public void resumeRead() {
+            readSuspended = false;
         }
     }
 

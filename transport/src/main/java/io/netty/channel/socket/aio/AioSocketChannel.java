@@ -20,8 +20,10 @@ import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
@@ -56,8 +58,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private final AioSocketChannelConfig config;
-    private boolean flushing;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
 
+    private boolean flushing;
     private final AtomicBoolean readSuspended = new AtomicBoolean();
     private final AtomicBoolean readInProgress = new AtomicBoolean();
 
@@ -92,6 +96,43 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
+    }
+
+    @Override
+    public boolean isInputShutdown() {
+        return inputShutdown;
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return outputShutdown;
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput() {
+        final ChannelFuture future = newFuture();
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            shutdownOutput(future);
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownOutput(future);
+                }
+            });
+        }
+        return future;
+    }
+
+    private void shutdownOutput(ChannelFuture future) {
+        try {
+            javaChannel().shutdownOutput();
+            outputShutdown = true;
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+        }
     }
 
     @Override
@@ -179,6 +220,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     protected void doClose() throws Exception {
         javaChannel().close();
+        outputShutdown = true;
     }
 
     @Override
@@ -215,7 +257,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private void beginRead() {
-        if (readSuspended.get()) {
+        if (readSuspended.get() || inputShutdown) {
             return;
         }
 
@@ -334,9 +376,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             } catch (Throwable t) {
                 if (read) {
                     read = false;
-                    if (!channel.readSuspended.get()) {
-                        pipeline.fireInboundBufferUpdated();
-                    }
+                    pipeline.fireInboundBufferUpdated();
                 }
 
                 if (!(t instanceof ClosedChannelException)) {
@@ -351,12 +391,18 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 channel.readInProgress.set(false);
 
                 if (read) {
-                    if (!channel.readSuspended.get()) {
-                        pipeline.fireInboundBufferUpdated();
-                    }
+                    pipeline.fireInboundBufferUpdated();
                 }
-                if (closed && channel.isOpen()) {
-                    channel.unsafe().close(channel.unsafe().voidFuture());
+
+                if (closed) {
+                    channel.inputShutdown = true;
+                    if (channel.isOpen()) {
+                        if (channel.config().isAllowHalfClosure()) {
+                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } else {
+                            channel.unsafe().close(channel.unsafe().voidFuture());
+                        }
+                    }
                 } else {
                     // start the next read
                     channel.beginRead();
@@ -420,6 +466,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         public void resumeRead() {
             if (readSuspended.compareAndSet(true, false)) {
+                if (inputShutdown) {
+                    return;
+                }
+
                 if (eventLoop().inEventLoop()) {
                     beginRead();
                 } else {

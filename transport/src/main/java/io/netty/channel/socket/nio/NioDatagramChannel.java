@@ -191,11 +191,12 @@ public final class NioDatagramChannel
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         DatagramPacket packet = (DatagramPacket) buf.peek();
         ByteBuf data = packet.data();
+        int dataLen = data.readableBytes();
         ByteBuffer nioData;
         if (data.hasNioBuffer()) {
             nioData = data.nioBuffer();
         } else {
-            nioData = ByteBuffer.allocate(data.readableBytes());
+            nioData = ByteBuffer.allocate(dataLen);
             data.getBytes(data.readerIndex(), nioData);
             nioData.flip();
         }
@@ -204,7 +205,7 @@ public final class NioDatagramChannel
 
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
-        if (writtenBytes <= 0) {
+        if (writtenBytes <= 0 && dataLen > 0) {
             // Did not write a packet.
             // 1) If 'lastSpin' is false, the caller will call this method again real soon.
             //    - Do not update OP_WRITE.
@@ -456,23 +457,5 @@ public final class NioDatagramChannel
             future.setFailure(e);
         }
         return future;
-    }
-
-    @Override
-    protected AbstractNioMessageUnsafe newUnsafe() {
-        return new NioDatagramChannelUnsafe();
-    }
-
-    private final class NioDatagramChannelUnsafe extends AbstractNioMessageUnsafe {
-
-        @Override
-        public void suspendRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-        }
-
-        @Override
-        public void resumeRead() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~ SelectionKey.OP_READ);
-        }
     }
 }

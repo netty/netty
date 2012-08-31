@@ -103,7 +103,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         AsynchronousServerSocketChannel ch = javaChannel();
-        ch.bind(localAddress);
+        ch.bind(localAddress, config.getBacklog());
         doAccept();
     }
 
@@ -154,9 +154,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, channel.childGroup, ch));
-            if (!channel.readSuspended.get()) {
-                channel.pipeline().fireInboundBufferUpdated();
-            }
+            channel.pipeline().fireInboundBufferUpdated();
         }
 
         @Override

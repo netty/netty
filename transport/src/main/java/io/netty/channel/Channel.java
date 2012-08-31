@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 
+import sun.awt.windows.ThemeReader;
+
 
 /**
  * A nexus to a network socket or a component which is capable of I/O
@@ -113,6 +115,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      */
     Integer id();
 
+    /**
+     * Return the {@link EventLoop} this {@link Channel} was registered too.
+     */
     EventLoop eventLoop();
 
     /**
@@ -138,6 +143,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
     boolean isRegistered();
     boolean isActive();
 
+    /**
+     * Return the {@link ChannelMetadata} of the {@link Channel} which describe the nature of the {@link Channel}.
+     */
     ChannelMetadata metadata();
 
     ByteBuf outboundByteBuffer();
@@ -176,25 +184,99 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      */
     ChannelFuture closeFuture();
 
+    /**
+     * <strong>Caution</strong> for transport implementations use only!
+     */
     Unsafe unsafe();
 
+    /**
+     * <strong>Unsafe</strong> operations that should <strong>never</strong> be called
+     * from user-code. These methods are only provided to implement the actual transport.
+     */
     interface Unsafe {
+        /**
+         * Return the {@link ChannelHandlerContext} which is directly connected to the outbound of the
+         * underlying transport.
+         */
         ChannelHandlerContext directOutboundContext();
+
+        /**
+         * Return a {@link VoidChannelFuture}. This method always return the same instance.
+         */
         ChannelFuture voidFuture();
 
+        /**
+         * Return the {@link SocketAddress} to which is bound local or
+         * <code>null</code> if none.
+         */
         SocketAddress localAddress();
+
+        /**
+         * Return the {@link SocketAddress} to which is bound remote or
+         * <code>null</code> if none is bound yet.
+         */
         SocketAddress remoteAddress();
 
+        /**
+         * Register the {@link Channel} of the {@link ChannelFuture} with the {@link EventLoop} and notify
+         * the {@link ChannelFuture} once the registration was complete.
+         */
         void register(EventLoop eventLoop, ChannelFuture future);
+
+        /**
+         * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelFuture} and notify
+         * it once its done.
+         */
         void bind(SocketAddress localAddress, ChannelFuture future);
+
+        /**
+         * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
+         * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
+         * pass <code>null</code> to it.
+         *
+         * The {@link ChannelFuture} will get notified once the connect operation was complete.
+         */
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
+
+        /**
+         * Disconnect the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelFuture} once the
+         * operation was complete.
+         */
         void disconnect(ChannelFuture future);
+
+        /**
+         * Close the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelFuture} once the
+         * operation was complete.
+         */
         void close(ChannelFuture future);
+
+        /**
+         * Deregister the {@link Channel} of the {@link ChannelFuture} from {@link EventLoop} and notify the
+         * {@link ChannelFuture} once the operation was complete.
+         */
         void deregister(ChannelFuture future);
 
+        /**
+         * Flush out all data that was buffered in the buffer of the {@link #directOutboundContext()} and was not
+         * flushed out yet. After that is done the {@link ChannelFuture} will get notified
+         */
         void flush(ChannelFuture future);
+
+        /**
+         * Flush out all data now.
+         */
         void flushNow();
+
+        /**
+         * Suspend reads from the underlying transport, which basicly has the effect of no new data that will
+         * get dispatched.
+         */
         void suspendRead();
+
+        /**
+         * Resume reads from the underlying transport. If {@link #suspendRead()} was not called before, this
+         * has no effect.
+         */
         void resumeRead();
     }
 }

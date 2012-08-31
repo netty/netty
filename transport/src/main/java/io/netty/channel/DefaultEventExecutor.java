@@ -17,6 +17,11 @@ package io.netty.channel;
 
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * Default {@link SingleThreadEventExecutor} implementation which just execute all submitted task in a
+ * serial fashion
+ *
+ */
 class DefaultEventExecutor extends SingleThreadEventExecutor {
 
     DefaultEventExecutor(

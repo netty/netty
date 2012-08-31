@@ -34,6 +34,10 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
+ *
+ */
 public abstract class SingleThreadEventExecutor extends AbstractExecutorService implements EventExecutor {
 
     private static final InternalLogger logger =

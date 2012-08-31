@@ -19,6 +19,9 @@ import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -32,6 +35,8 @@ import java.util.Map;
  * The default {@link DatagramChannelConfig} implementation.
  */
 public class DefaultDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultDatagramChannelConfig.class);
 
     private static final int DEFAULT_RECEIVE_PACKET_SIZE = 2048;
 
@@ -137,6 +142,19 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     @Override
     public void setBroadcast(boolean broadcast) {
         try {
+            // See: https://github.com/netty/netty/issues/576
+            if (broadcast &&
+                !DetectionUtil.isWindows() && !DetectionUtil.isRoot() &&
+                !socket.getLocalAddress().isAnyLocalAddress()) {
+                // Warn a user about the fact that a non-root user can't receive a
+                // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                logger.warn(
+                        "A non-root user can't receive a broadcast packet if the socket " +
+                        "is not bound to a wildcard address; setting the SO_BROADCAST flag " +
+                        "anyway as requested on the socket which is bound to " +
+                        socket.getLocalSocketAddress() + ".");
+            }
+
             socket.setBroadcast(broadcast);
         } catch (SocketException e) {
             throw new ChannelException(e);

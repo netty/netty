@@ -25,14 +25,16 @@ import java.nio.channels.SelectableChannel;
 abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     protected AbstractNioMessageChannel(
-            Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
-        super(parent, id, ch, defaultInterestOps);
+            Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
+        super(parent, id, ch, readInterestOp);
     }
 
     @Override
-    protected abstract AbstractNioMessageUnsafe newUnsafe();
+    protected NioMessageUnsafe newUnsafe() {
+        return new NioMessageUnsafe();
+    }
 
-    abstract class AbstractNioMessageUnsafe extends AbstractNioUnsafe {
+    private final class NioMessageUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

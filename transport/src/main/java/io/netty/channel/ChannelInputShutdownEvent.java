@@ -15,14 +15,9 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuf;
+public final class ChannelInputShutdownEvent {
 
-/**
- * {@link ChannelStateHandler} which handles inbound data.
- */
-public interface ChannelInboundHandler extends ChannelStateHandler {
-    /**
-     * Return the {@link ChannelBuf} which will be used for inbound data for the given {@link ChannelHandlerContext}.
-     */
-    ChannelBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
+    public static final ChannelInputShutdownEvent INSTANCE = new ChannelInputShutdownEvent();
+
+    private ChannelInputShutdownEvent() { }
 }

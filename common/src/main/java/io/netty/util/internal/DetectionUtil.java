@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal;
 
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -35,11 +37,47 @@ public final class DetectionUtil {
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
     private static final boolean IS_WINDOWS;
+    private static final boolean IS_ROOT;
 
     static {
         String os = System.getProperty("os.name").toLowerCase();
         // windows
         IS_WINDOWS = os.contains("win");
+
+        boolean root = false;
+        if (!IS_WINDOWS) {
+            for (int i = 1023; i > 0; i --) {
+                ServerSocket ss = null;
+                try {
+                    ss = new ServerSocket();
+                    ss.setReuseAddress(true);
+                    ss.bind(new InetSocketAddress(i));
+                    root = true;
+                    break;
+                } catch (Exception e) {
+                    // Failed to bind.
+                    // Check the error message so that we don't always need to bind 1023 times.
+                    String message = e.getMessage();
+                    if (message == null) {
+                        message = "";
+                    }
+                    message = message.toLowerCase();
+                    if (message.matches(".*permission.*denied.*")) {
+                        break;
+                    }
+                } finally {
+                    if (ss != null) {
+                        try {
+                            ss.close();
+                        } catch (Exception e) {
+                            // Ignore.
+                        }
+                    }
+                }
+            }
+        }
+
+        IS_ROOT = root;
     }
 
     /**
@@ -47,6 +85,14 @@ public final class DetectionUtil {
      */
     public static boolean isWindows() {
         return IS_WINDOWS;
+    }
+
+    /**
+     * Return {@code true} if the current user is root.  Note that this method returns
+     * {@code false} if on Windows.
+     */
+    public static boolean isRoot() {
+        return IS_ROOT;
     }
 
     public static boolean hasUnsafe() {

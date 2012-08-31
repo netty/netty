@@ -52,8 +52,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
 
-    private volatile boolean readSuspended;
-
     private static MulticastSocket newSocket() {
         try {
             return new MulticastSocket(null);
@@ -351,23 +349,5 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             InetAddress sourceToBlock, ChannelFuture future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
-    }
-
-    @Override
-    protected AbstractOioMessageUnsafe newUnsafe() {
-        return new OioDatagramChannelUnsafe();
-    }
-
-    private final class OioDatagramChannelUnsafe extends AbstractOioMessageUnsafe {
-
-        @Override
-        public void suspendRead() {
-            readSuspended = true;
-        }
-
-        @Override
-        public void resumeRead() {
-            readSuspended = false;
-        }
     }
 }
