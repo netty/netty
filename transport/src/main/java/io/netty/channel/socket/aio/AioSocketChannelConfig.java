@@ -58,7 +58,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_RCVBUF) {
             return (T) Integer.valueOf(getReceiveBufferSize());
