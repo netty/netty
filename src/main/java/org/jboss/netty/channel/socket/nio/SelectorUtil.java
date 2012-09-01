@@ -32,7 +32,7 @@ final class SelectorUtil {
     static final long DEFAULT_SELECT_TIMEOUT = 10;
     static final long SELECT_TIMEOUT = SystemPropertyUtil.getLong("org.jboss.netty.selectTimeout", DEFAULT_SELECT_TIMEOUT);
     static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
-    static final boolean EPOOL_BUG_WORKAROUND = SystemPropertyUtil.getBoolean("org.jboss.netty.epollBugWorkaround", false);
+    static final boolean EPOLL_BUG_WORKAROUND = SystemPropertyUtil.getBoolean("org.jboss.netty.epollBugWorkaround", false);
 
     // Workaround for JDK NIO bug.
     //
@@ -53,7 +53,7 @@ final class SelectorUtil {
         }
         if (logger.isDebugEnabled()) {
             logger.debug("Using select timeout of " + SELECT_TIMEOUT);
-            logger.debug("Epoll-bug workaround enabled = " + EPOOL_BUG_WORKAROUND);
+            logger.debug("Epoll-bug workaround enabled = " + EPOLL_BUG_WORKAROUND);
         }
     }
 
