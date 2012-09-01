@@ -31,6 +31,8 @@ final class SelectorUtil {
     static final long SELECT_TIMEOUT =
             SystemPropertyUtil.getLong("io.netty.selectTimeout", DEFAULT_SELECT_TIMEOUT);
     static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
+    static final boolean EPOLL_BUG_WORKAROUND =
+            SystemPropertyUtil.getBoolean("io.netty.epollBugWorkaround", false);
 
     // Workaround for JDK NIO bug.
     //
@@ -49,8 +51,10 @@ final class SelectorUtil {
                 logger.debug("Unable to get/set System Property '" + key + "'", e);
             }
         }
-
-        logger.debug("Using select timeout of " + SELECT_TIMEOUT);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Using select timeout of " + SELECT_TIMEOUT);
+            logger.debug("Epoll-bug workaround enabled = " + EPOLL_BUG_WORKAROUND);
+        }
     }
 
     static int select(Selector selector) throws IOException {
