@@ -15,10 +15,11 @@
  */
 package io.netty.util;
 
+import static org.junit.Assert.*;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
+
 import org.junit.Test;
 
 public class NetworkConstantsTest {
@@ -30,7 +31,7 @@ public class NetworkConstantsTest {
     }
 
     @Test
-    public void testLoopback() throws UnknownHostException {
+    public void testLoopback() {
         assertNotNull(NetworkConstants.LOOPBACK_IF);
     }
 

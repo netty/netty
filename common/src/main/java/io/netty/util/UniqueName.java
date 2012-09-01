@@ -103,7 +103,7 @@ public class UniqueName implements Comparable<UniqueName> {
             return returnCode;
         }
 
-        return ((Integer) id).compareTo((Integer) other.id);
+        return ((Integer) id).compareTo(other.id);
     }
 
     @Override
