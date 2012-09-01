@@ -36,6 +36,7 @@ public final class DetectionUtil {
 
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
+    private static final boolean HAS_LINKED_TRANSFER_QUEUE = hasClass("java.util.concurrent.LinkedTransferQueue");
     private static final boolean IS_WINDOWS;
     static {
         String os = System.getProperty("os.name").toLowerCase();
@@ -59,6 +60,10 @@ public final class DetectionUtil {
         return JAVA_VERSION;
     }
 
+    static boolean hasJava7LinkedTransferQueue() {
+      return HAS_LINKED_TRANSFER_QUEUE;
+    }
+
     private static boolean hasUnsafe(ClassLoader loader) {
         boolean useUnsafe = Boolean.valueOf(SystemPropertyUtil.get("org.jboss.netty.tryUnsafe", "true"));
         if (!useUnsafe) {
@@ -72,6 +77,17 @@ public final class DetectionUtil {
             // Ignore
         }
         return false;
+    }
+
+    private static boolean hasClass(String className) {
+      try {
+        Class.forName(className, false, AtomicInteger.class.getClassLoader());
+        return true;
+      } catch (NoClassDefFoundError ignored) {
+        return false;
+      } catch (ClassNotFoundException ignored) {
+        return false;
+      }
     }
 
     private static boolean hasUnsafeField(final Class<?> unsafeClass) throws PrivilegedActionException {
