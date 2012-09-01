@@ -15,66 +15,56 @@
  */
 package io.netty.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.*;
+
 import org.junit.Before;
 import org.junit.Test;
 
 public class DefaultAttributeMapTest {
-    
+
     private DefaultAttributeMap map;
-    
+
     @Before
     public void setup() {
-        this.map = new DefaultAttributeMap();
+        map = new DefaultAttributeMap();
     }
-    
+
     @Test
     public void testMapExists() {
-        assertNotNull(this.map);
+        assertNotNull(map);
     }
-    
+
     @Test
     public void testGetSetString() {
         AttributeKey<String> key = new AttributeKey<String>("Nothing");
-        Attribute one = this.map.attr(key);
-        
-        assertSame(one, this.map.attr(key));
-        
+        Attribute<String> one = map.attr(key);
+
+        assertSame(one, map.attr(key));
+
         one.setIfAbsent("Whoohoo");
-        
         assertSame(one.get(), "Whoohoo");
-        
+
         one.setIfAbsent("What");
-        
         assertNotSame(one.get(), "What");
-        
+
         one.remove();
-        
         assertNull(one.get());
     }
-    
+
     @Test
     public void testGetSetInt() {
         AttributeKey<Integer> key = new AttributeKey<Integer>("Nada");
-        Attribute one = this.map.attr(key);
-        
-        assertSame(one, this.map.attr(key));
-        
+        Attribute<Integer> one = map.attr(key);
+
+        assertSame(one, map.attr(key));
+
         one.setIfAbsent(3653);
-        
-        assertEquals(one.get(), 3653);
-        
+        assertEquals(one.get(), Integer.valueOf(3653));
+
         one.setIfAbsent(1);
-        
         assertNotSame(one.get(), 1);
-        
+
         one.remove();
-        
         assertNull(one.get());
     }
-    
 }
