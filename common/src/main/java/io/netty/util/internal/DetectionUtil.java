@@ -20,8 +20,8 @@ import java.net.ServerSocket;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.Deflater;
 
 
 /**
@@ -147,10 +147,11 @@ public final class DetectionUtil {
         }
 
         try {
-            Deflater.class.getDeclaredField("SYNC_FLUSH");
-            return 7;
+            Class.forName(
+                    "java.util.concurrent.LinkedTransferQueue", false,
+                    BlockingQueue.class.getClassLoader());
         } catch (Exception e) {
-            // Ignore
+            return 7;
         }
 
         return 6;
