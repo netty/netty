@@ -58,10 +58,10 @@ final class NioProviderMetadata {
         int constraintLevel = -1;
 
         // Use the system property if possible.
-        constraintLevel = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, -1);
+        constraintLevel = SystemPropertyUtil.getInt(CONSTRAINT_LEVEL_PROPERTY, -1);
         if (constraintLevel < 0 || constraintLevel > 2) {
             // Try the old property.
-            constraintLevel = SystemPropertyUtil.get(OLD_CONSTRAINT_LEVEL_PROPERTY, -1);
+            constraintLevel = SystemPropertyUtil.getInt(OLD_CONSTRAINT_LEVEL_PROPERTY, -1);
             if (constraintLevel < 0 || constraintLevel > 2) {
                 constraintLevel = -1;
             } else {

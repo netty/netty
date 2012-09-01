@@ -30,9 +30,9 @@ final class SelectorUtil {
 
     static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
     static final long DEFAULT_SELECT_TIMEOUT = 10;
-    static final long SELECT_TIMEOUT;
-    static final long SELECT_TIMEOUT_NANOS;
-    static final boolean EPOOL_BUG_WORKAROUND;
+    static final long SELECT_TIMEOUT = SystemPropertyUtil.getLong("org.jboss.netty.selectTimeout", DEFAULT_SELECT_TIMEOUT);
+    static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
+    static final boolean EPOOL_BUG_WORKAROUND = SystemPropertyUtil.getBoolean("org.jboss.netty.epollBugWorkaround", false);
 
     // Workaround for JDK NIO bug.
     //
@@ -51,23 +51,10 @@ final class SelectorUtil {
                 logger.debug("Unable to get/set System Property '" + key + "'", e);
             }
         }
-        long selectTimeout;
-        try {
-            selectTimeout = Long.parseLong(SystemPropertyUtil.get("org.jboss.netty.selectTimeout",
-                    String.valueOf(DEFAULT_SELECT_TIMEOUT)));
-        } catch (NumberFormatException e) {
-            selectTimeout = DEFAULT_SELECT_TIMEOUT;
-        }
-        SELECT_TIMEOUT = selectTimeout;
-        SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
         if (logger.isDebugEnabled()) {
             logger.debug("Using select timeout of " + SELECT_TIMEOUT);
-        }
-        EPOOL_BUG_WORKAROUND = Boolean.valueOf(System.getProperty("org.jboss.netty.epollBugWorkaround", "false"));
-        if (logger.isDebugEnabled()) {
             logger.debug("Epoll-bug workaround enabled = " + EPOOL_BUG_WORKAROUND);
         }
-
     }
 
     static int select(Selector selector) throws IOException {
