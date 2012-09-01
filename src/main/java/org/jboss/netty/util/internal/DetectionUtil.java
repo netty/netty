@@ -18,9 +18,9 @@ package org.jboss.netty.util.internal;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.Deflater;
-
 
 /**
  * Utility that detects various properties specific to the current runtime
@@ -95,14 +95,16 @@ public final class DetectionUtil {
         }
 
         try {
-            Deflater.class.getDeclaredField("SYNC_FLUSH");
-            return 7;
+            Class.forName(
+                    "java.util.concurrent.LinkedTransferQueue", false,
+                    BlockingQueue.class.getClassLoader());
         } catch (Exception e) {
-            // Ignore
+            return 7;
         }
 
         try {
-            Double.class.getDeclaredField("MIN_NORMAL");
+            Class.forName(
+                    "java.util.ArrayDeque", false, Queue.class.getClassLoader());
             return 6;
         } catch (Exception e) {
             // Ignore
