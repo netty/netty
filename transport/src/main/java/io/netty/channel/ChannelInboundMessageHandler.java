@@ -17,7 +17,14 @@ package io.netty.channel;
 
 import io.netty.buffer.MessageBuf;
 
+/**
+ * Special {@link ChannelInboundHandler} which store the inbound data in a {@link MessageBuf} for futher processing.
+ */
 public interface ChannelInboundMessageHandler<I> extends ChannelInboundHandler {
+
+    /**
+     * Return the {@link MessageBuf} which will be used for inbound data to store.
+     */
     @Override
     MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }

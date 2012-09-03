@@ -17,14 +17,22 @@ package io.netty.channel.socket.nio;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
+import java.util.concurrent.TimeUnit;
 
 final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
+    static final long DEFAULT_SELECT_TIMEOUT = 10;
+    static final long SELECT_TIMEOUT =
+            SystemPropertyUtil.getLong("io.netty.selectTimeout", DEFAULT_SELECT_TIMEOUT);
+    static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
+    static final boolean EPOLL_BUG_WORKAROUND =
+            SystemPropertyUtil.getBoolean("io.netty.epollBugWorkaround", false);
 
     // Workaround for JDK NIO bug.
     //
@@ -43,11 +51,15 @@ final class SelectorUtil {
                 logger.debug("Unable to get/set System Property '" + key + "'", e);
             }
         }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Using select timeout of " + SELECT_TIMEOUT);
+            logger.debug("Epoll-bug workaround enabled = " + EPOLL_BUG_WORKAROUND);
+        }
     }
 
-    static void select(Selector selector) throws IOException {
+    static int select(Selector selector) throws IOException {
         try {
-            selector.select(10);
+            return selector.select(SELECT_TIMEOUT);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -56,6 +68,7 @@ final class SelectorUtil {
             }
             // Harmless exception - log anyway
         }
+        return -1;
     }
 
     static void cleanupKeys(Selector selector) {

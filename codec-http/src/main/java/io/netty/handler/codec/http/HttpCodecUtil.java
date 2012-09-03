@@ -154,7 +154,11 @@ final class HttpCodecUtil {
     static void removeTransferEncodingChunked(HttpMessage m) {
         List<String> values = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
         values.remove(HttpHeaders.Values.CHUNKED);
-        m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+        if (values.isEmpty()) {
+            m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        } else {
+            m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+        }
     }
 
     static boolean isContentLengthSet(HttpMessage m) {

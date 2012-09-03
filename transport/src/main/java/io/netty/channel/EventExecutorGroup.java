@@ -18,6 +18,12 @@ package io.netty.channel;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The {@link EventExecutorGroup} is responsible to provide {@link EventExecutor}'s to use via its
+ * {@link #next()} method. Beside this it also is responsible to handle their live-cycle and allows
+ * to shut them down in a global fashion.
+ *
+ */
 public interface EventExecutorGroup {
 
     /**

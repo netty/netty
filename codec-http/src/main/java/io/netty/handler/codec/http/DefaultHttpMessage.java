@@ -31,7 +31,7 @@ public class DefaultHttpMessage implements HttpMessage {
     private final HttpHeaders headers = new HttpHeaders();
     private HttpVersion version;
     private ByteBuf content = Unpooled.EMPTY_BUFFER;
-    private boolean chunked;
+    private HttpTransferEncoding te = HttpTransferEncoding.SINGLE;
 
     /**
      * Creates a new instance.
@@ -61,19 +61,31 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     @Override
-    public boolean isChunked() {
-        if (chunked) {
-            return true;
-        } else {
-            return HttpCodecUtil.isTransferEncodingChunked(this);
-        }
+    public HttpTransferEncoding getTransferEncoding() {
+        return te;
     }
 
     @Override
-    public void setChunked(boolean chunked) {
-        this.chunked = chunked;
-        if (chunked) {
+    public void setTransferEncoding(HttpTransferEncoding te) {
+        if (te == null) {
+            throw new NullPointerException("te (transferEncoding)");
+        }
+        this.te = te;
+        switch (te) {
+        case SINGLE:
+            HttpCodecUtil.removeTransferEncodingChunked(this);
+            break;
+        case STREAMED:
+            HttpCodecUtil.removeTransferEncodingChunked(this);
             setContent(Unpooled.EMPTY_BUFFER);
+            break;
+        case CHUNKED:
+            if (!HttpCodecUtil.isTransferEncodingChunked(this)) {
+                addHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+            }
+            removeHeader(HttpHeaders.Names.CONTENT_LENGTH);
+            setContent(Unpooled.EMPTY_BUFFER);
+            break;
         }
     }
 
@@ -87,10 +99,12 @@ public class DefaultHttpMessage implements HttpMessage {
         if (content == null) {
             content = Unpooled.EMPTY_BUFFER;
         }
-        if (content.readable() && isChunked()) {
+
+        if (!getTransferEncoding().isSingle() && content.readable()) {
             throw new IllegalArgumentException(
-                    "non-empty content disallowed if this.chunked == true");
+                    "non-empty content disallowed if this.transferEncoding != SINGLE");
         }
+
         this.content = content;
     }
 
@@ -134,7 +148,11 @@ public class DefaultHttpMessage implements HttpMessage {
 
     @Override
     public ByteBuf getContent() {
-        return content;
+        if (getTransferEncoding() == HttpTransferEncoding.SINGLE) {
+            return content;
+        } else {
+            return Unpooled.EMPTY_BUFFER;
+        }
     }
 
     @Override
@@ -145,8 +163,8 @@ public class DefaultHttpMessage implements HttpMessage {
         buf.append(getProtocolVersion().getText());
         buf.append(", keepAlive: ");
         buf.append(HttpHeaders.isKeepAlive(this));
-        buf.append(", chunked: ");
-        buf.append(isChunked());
+        buf.append(", transferEncoding: ");
+        buf.append(getTransferEncoding());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);

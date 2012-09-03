@@ -176,18 +176,19 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public void ensureWritableBytes(int minWritableBytes) {
+        if (minWritableBytes < 0) {
+            throw new IllegalArgumentException(String.format(
+                    "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
+        }
+
         if (minWritableBytes <= writableBytes()) {
             return;
         }
 
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "minWritableBytes: %d (expected: 0+)", minWritableBytes));
-        }
-
         if (minWritableBytes > maxCapacity - writerIndex) {
-            throw new IllegalArgumentException(String.format(
-                    "minWritableBytes: %d (exceeds maxCapacity(%d))", minWritableBytes, maxCapacity));
+            throw new IndexOutOfBoundsException(String.format(
+                    "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d)",
+                    writerIndex, minWritableBytes, maxCapacity));
         }
 
         // Normalize the current capacity to the power of 2.
@@ -195,6 +196,36 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
         // Adjust to the new capacity.
         capacity(newCapacity);
+    }
+
+    @Override
+    public int ensureWritableBytes(int minWritableBytes, boolean force) {
+        if (minWritableBytes < 0) {
+            throw new IllegalArgumentException(String.format(
+                    "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
+        }
+
+        if (minWritableBytes <= writableBytes()) {
+            return 0;
+        }
+
+        if (minWritableBytes > maxCapacity - writerIndex) {
+            if (force) {
+                if (capacity() == maxCapacity()) {
+                    return 1;
+                }
+
+                capacity(maxCapacity());
+                return 3;
+            }
+        }
+
+        // Normalize the current capacity to the power of 2.
+        int newCapacity = calculateNewCapacity(writerIndex + minWritableBytes);
+
+        // Adjust to the new capacity.
+        capacity(newCapacity);
+        return 2;
     }
 
     private int calculateNewCapacity(int minNewCapacity) {

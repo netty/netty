@@ -63,7 +63,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            decoder = null;
+            cleanup();
 
             // Determine the content encoding.
             String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
@@ -73,7 +73,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                 contentEncoding = HttpHeaders.Values.IDENTITY;
             }
 
-            boolean hasContent = m.isChunked() || m.getContent().readable();
+            boolean hasContent =
+                    m.getTransferEncoding().isMultiple() || m.getContent().readable();
             if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
@@ -81,7 +82,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
                         HttpHeaders.Names.CONTENT_ENCODING,
                         getTargetContentEncoding(contentEncoding));
 
-                if (!m.isChunked()) {
+                if (m.getTransferEncoding().isSingle()) {
                     ByteBuf content = m.getContent();
                     // Decode the content
                     ByteBuf newContent = Unpooled.buffer();
@@ -149,6 +150,25 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
      */
     protected String getTargetContentEncoding(String contentEncoding) throws Exception {
         return HttpHeaders.Values.IDENTITY;
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.afterRemove(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.channelInactive(ctx);
+    }
+
+    private void cleanup() {
+        if (decoder != null) {
+            // Clean-up the previous decoder if not cleaned up correctly.
+            finishDecode(Unpooled.buffer());
+        }
     }
 
     private void decode(ByteBuf in, ByteBuf out) {

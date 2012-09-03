@@ -29,7 +29,7 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
+            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
         return new DefaultEventExecutor(this, threadFactory, scheduler);
     }
 }

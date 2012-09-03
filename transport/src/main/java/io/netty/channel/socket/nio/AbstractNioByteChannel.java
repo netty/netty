@@ -17,6 +17,8 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
@@ -31,9 +33,11 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected abstract AbstractNioByteUnsafe newUnsafe();
+    protected NioByteUnsafe newUnsafe() {
+        return new NioByteUnsafe();
+    }
 
-    abstract class AbstractNioByteUnsafe extends AbstractNioUnsafe {
+    private final class NioByteUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
@@ -44,7 +48,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean read = false;
             try {
                 expandReadBuffer(byteBuf);
-                for (;;) {
+                loop: for (;;) {
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount > 0) {
                         read = true;
@@ -52,8 +56,25 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         closed = true;
                         break;
                     }
-                    if (!expandReadBuffer(byteBuf)) {
+
+                    switch (expandReadBuffer(byteBuf)) {
+                    case 0:
+                        // Read all - stop reading.
+                        break loop;
+                    case 1:
+                        // Keep reading until everything is read.
                         break;
+                    case 2:
+                        // Let the inbound handler drain the buffer and continue reading.
+                        if (read) {
+                            read = false;
+                            pipeline.fireInboundBufferUpdated();
+                            if (!byteBuf.writable()) {
+                                throw new IllegalStateException(
+                                        "an inbound handler whose buffer is full must consume at " +
+                                        "least one byte.");
+                            }
+                        }
                     }
                 }
             } catch (Throwable t) {
@@ -69,8 +90,16 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
                 }
-                if (closed && isOpen()) {
-                    close(voidFuture());
+                if (closed) {
+                    setInputShutdown();
+                    if (isOpen()) {
+                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                            suspendReadTask.run();
+                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } else {
+                            close(voidFuture());
+                        }
+                    }
                 }
             }
         }
@@ -100,13 +129,32 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
-    private static boolean expandReadBuffer(ByteBuf byteBuf) {
-        if (!byteBuf.writable()) {
-            // FIXME: Magic number
-            byteBuf.ensureWritableBytes(4096);
-            return true;
+    // 0 - not expanded because the buffer is writable
+    // 1 - expanded because the buffer was not writable
+    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
+    private static int expandReadBuffer(ByteBuf byteBuf) {
+        final int writerIndex = byteBuf.writerIndex();
+        final int capacity = byteBuf.capacity();
+        if (capacity != writerIndex) {
+            return 0;
         }
 
-        return false;
+        final int maxCapacity = byteBuf.maxCapacity();
+        if (capacity == maxCapacity) {
+            return 2;
+        }
+
+        // FIXME: Magic number
+        final int increment = 4096;
+
+        if (writerIndex + increment > maxCapacity) {
+            // Expand to maximum capacity.
+            byteBuf.capacity(maxCapacity);
+        } else {
+            // Expand by the increment.
+            byteBuf.ensureWritableBytes(increment);
+        }
+
+        return 1;
     }
 }

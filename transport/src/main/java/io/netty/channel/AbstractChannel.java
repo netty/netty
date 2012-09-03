@@ -20,12 +20,13 @@ import io.netty.buffer.MessageBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -38,13 +39,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
 
+    private static final Random random = new Random();
+
     /**
      * Generates a negative unique integer ID.  This method generates only
      * negative integers to avoid conflicts with user-specified IDs where only
      * non-negative integers are allowed.
      */
     private static Integer allocateId(Channel channel) {
-        int idVal = System.identityHashCode(channel);
+        int idVal = random.nextInt();
         if (idVal > 0) {
             idVal = -idVal;
         } else if (idVal == 0) {
@@ -77,14 +80,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelFuture voidFuture = new VoidChannelFuture(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
+    protected final ChannelFlushFutureNotifier flushFutureNotifier = new ChannelFlushFutureNotifier();
+
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
     private ClosedChannelException closedChannelException;
-    private final Deque<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
-    private long writeCounter;
     private boolean inFlushNow;
     private boolean flushNowPending;
 
@@ -311,12 +314,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract Unsafe newUnsafe();
 
     /**
-     * Returns the {@linkplain System#identityHashCode(Object) identity hash code}
-     * of this channel.
+     * Returns the ID of this channel.
      */
     @Override
     public final int hashCode() {
-        return System.identityHashCode(this);
+        return id;
     }
 
     /**
@@ -450,6 +452,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 try {
                     boolean wasActive = isActive();
+
+                    // See: https://github.com/netty/netty/issues/576
+                    if (!DetectionUtil.isWindows() && !DetectionUtil.isRoot() &&
+                        Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
+                        localAddress instanceof InetSocketAddress &&
+                        !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
+                        // Warn a user about the fact that a non-root user can't receive a
+                        // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                        logger.warn(
+                                "A non-root user can't receive a broadcast packet if the socket " +
+                                "is not bound to a wildcard address; binding to a non-wildcard " +
+                                "address (" + localAddress + ") anyway as requested.");
+                    }
+
                     doBind(localAddress);
                     future.setSuccess();
                     if (!wasActive && isActive()) {
@@ -510,7 +526,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         closedChannelException = new ClosedChannelException();
                     }
 
-                    notifyFlushFutures(closedChannelException);
+                    flushFutureNotifier.notifyFlushFutures(closedChannelException);
 
                     if (wasActive && !isActive()) {
                         pipeline.fireChannelInactive();
@@ -578,14 +594,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         bufSize = ctx.outboundMessageBuffer().size();
                     }
 
-                    long checkpoint = writeCounter + bufSize;
-                    if (future instanceof FlushCheckpoint) {
-                        FlushCheckpoint cp = (FlushCheckpoint) future;
-                        cp.flushCheckpoint(checkpoint);
-                        flushCheckpoints.add(cp);
-                    } else {
-                        flushCheckpoints.add(new DefaultFlushCheckpoint(checkpoint, future));
-                    }
+                    flushFutureNotifier.addFlushFuture(future, bufSize);
                 }
 
                 if (!inFlushNow) { // Avoid re-entrance
@@ -596,7 +605,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             // Event loop will call flushNow() later by itself.
                         }
                     } catch (Throwable t) {
-                        notifyFlushFutures(t);
+                        flushFutureNotifier.notifyFlushFutures(t);
                         pipeline.fireExceptionCaught(t);
                         if (t instanceof IOException) {
                             close(voidFuture());
@@ -643,7 +652,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         final int newSize = out.readableBytes();
                         final int writtenBytes = oldSize - newSize;
                         if (writtenBytes > 0) {
-                            writeCounter += writtenBytes;
+                            flushFutureNotifier.increaseWriteCounter(writtenBytes);
                             if (newSize == 0) {
                                 out.discardReadBytes();
                             }
@@ -657,14 +666,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
-                        writeCounter += oldSize - out.size();
+                        flushFutureNotifier.increaseWriteCounter(oldSize - out.size());
                     }
                 }
 
                 if (cause == null) {
-                    notifyFlushFutures();
+                    flushFutureNotifier.notifyFlushFutures();
                 } else {
-                    notifyFlushFutures(cause);
+                    flushFutureNotifier.notifyFlushFutures(cause);
                     pipeline.fireExceptionCaught(cause);
                     if (cause instanceof IOException) {
                         close(voidFuture());
@@ -724,92 +733,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     protected abstract boolean isFlushPending();
-
-    protected void notifyFlushFutures() {
-        notifyFlushFutures(0);
-    }
-
-    protected void notifyFlushFutures(long writtenBytes) {
-        writeCounter += writtenBytes;
-
-        if (flushCheckpoints.isEmpty()) {
-            return;
-        }
-
-        final long writeCounter = this.writeCounter;
-        for (;;) {
-            FlushCheckpoint cp = flushCheckpoints.peek();
-            if (cp == null) {
-                // Reset the counter if there's nothing in the notification list.
-                this.writeCounter = 0;
-                break;
-            }
-
-            if (cp.flushCheckpoint() > writeCounter) {
-                if (writeCounter > 0 && flushCheckpoints.size() == 1) {
-                    this.writeCounter = 0;
-                    cp.flushCheckpoint(cp.flushCheckpoint() - writeCounter);
-                }
-                break;
-            }
-
-            flushCheckpoints.remove();
-            cp.future().setSuccess();
-        }
-
-        // Avoid overflow
-        final long newWriteCounter = this.writeCounter;
-        if (newWriteCounter >= 0x1000000000000000L) {
-            // Reset the counter only when the counter grew pretty large
-            // so that we can reduce the cost of updating all entries in the notification list.
-            this.writeCounter = 0;
-            for (FlushCheckpoint cp: flushCheckpoints) {
-                cp.flushCheckpoint(cp.flushCheckpoint() - newWriteCounter);
-            }
-        }
-    }
-
-    protected void notifyFlushFutures(Throwable cause) {
-        notifyFlushFutures();
-        for (;;) {
-            FlushCheckpoint cp = flushCheckpoints.poll();
-            if (cp == null) {
-                break;
-            }
-            cp.future().setFailure(cause);
-        }
-    }
-
-    abstract static class FlushCheckpoint {
-        abstract long flushCheckpoint();
-        abstract void flushCheckpoint(long checkpoint);
-        abstract ChannelFuture future();
-    }
-
-    private static class DefaultFlushCheckpoint extends FlushCheckpoint {
-        private long checkpoint;
-        private final ChannelFuture future;
-
-        DefaultFlushCheckpoint(long checkpoint, ChannelFuture future) {
-            this.checkpoint = checkpoint;
-            this.future = future;
-        }
-
-        @Override
-        long flushCheckpoint() {
-            return checkpoint;
-        }
-
-        @Override
-        void flushCheckpoint(long checkpoint) {
-            this.checkpoint = checkpoint;
-        }
-
-        @Override
-        ChannelFuture future() {
-            return future;
-        }
-    }
 
     private final class CloseFuture extends DefaultChannelFuture implements ChannelFuture.Unsafe {
 

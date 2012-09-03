@@ -92,7 +92,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
 
             if (failOnMissingResponse) {
                 // check if the request is chunked if so do not increment
-                if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
+                if (msg instanceof HttpRequest && ((HttpMessage) msg).getTransferEncoding().isSingle()) {
                     requestResponseCounter.incrementAndGet();
                 } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
                     // increment as its the last chunk
@@ -127,8 +127,8 @@ public class HttpClientCodec extends CombinedChannelHandler {
                 return;
             }
 
-            // check if its a HttpMessage and its not chunked
-            if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
+            // check if it's an HttpMessage and its transfer encoding is SINGLE.
+            if (msg instanceof HttpMessage && ((HttpMessage) msg).getTransferEncoding().isSingle()) {
                 requestResponseCounter.decrementAndGet();
             } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
                 requestResponseCounter.decrementAndGet();

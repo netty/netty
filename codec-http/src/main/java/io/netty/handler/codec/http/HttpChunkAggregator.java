@@ -26,7 +26,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
-import java.util.List;
 import java.util.Map.Entry;
 
 /**
@@ -128,29 +127,27 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
                 ctx.write(CONTINUE.duplicate());
             }
 
-            if (m.isChunked()) {
-                // A chunked message - remove 'Transfer-Encoding' header,
-                // initialize the cumulative buffer, and wait for incoming chunks.
-                List<String> encodings = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-                encodings.remove(HttpHeaders.Values.CHUNKED);
-                if (encodings.isEmpty()) {
-                    m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-                }
-                m.setChunked(false);
+            switch (m.getTransferEncoding()) {
+            case SINGLE:
+                this.currentMessage = null;
+                return m;
+            case STREAMED:
+            case CHUNKED:
+                // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
+                m.setTransferEncoding(HttpTransferEncoding.SINGLE);
                 m.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
                 this.currentMessage = m;
                 return null;
-            } else {
-                // Not a chunked message - pass through.
-                this.currentMessage = null;
-                return m;
+            default:
+                throw new Error();
             }
         } else if (msg instanceof HttpChunk) {
             // Sanity check
             if (currentMessage == null) {
                 throw new IllegalStateException(
                         "received " + HttpChunk.class.getSimpleName() +
-                        " without " + HttpMessage.class.getSimpleName());
+                        " without " + HttpMessage.class.getSimpleName() +
+                        " or last message's transfer encoding was 'SINGLE'");
             }
 
             // Merge the received chunk into the content of the current message.

@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -38,6 +39,7 @@ import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -52,6 +54,7 @@ import org.junit.Test;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
+    private static final int FIRST_MESSAGE_SIZE = 16384;
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
 
@@ -92,9 +95,20 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
         ChannelFuture hf = cc.pipeline().get(SslHandler.class).handshake();
+        final ChannelFuture firstByteWriteFuture =
+                cc.write(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
+        final AtomicBoolean firstByteWriteFutureDone = new AtomicBoolean();
+        hf.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                firstByteWriteFutureDone.set(firstByteWriteFuture.isDone());
+            }
+        });
         hf.sync();
 
-        for (int i = 0; i < data.length;) {
+        assertFalse(firstByteWriteFutureDone.get());
+
+        for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(Unpooled.wrappedBuffer(data, i, length));
             i += length;

@@ -191,15 +191,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             State nextState = readHeaders(buffer);
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
-                // Chunked encoding
-                message.setChunked(true);
-                // Generate HttpMessage first.  HttpChunks will follow.
+                // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
                 return message;
             } else if (nextState == State.SKIP_CONTROL_CHARS) {
                 // No content is expected.
-                // Remove the headers which are not supposed to be present not
-                // to confuse subsequent handlers.
-                message.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 return message;
             } else {
                 long contentLength = HttpHeaders.getContentLength(message, -1);
@@ -213,7 +208,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                     if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
-                        message.setChunked(true);
+                        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
                         // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                         // state reads data chunk by chunk.
                         chunkSize = HttpHeaders.getContentLength(message, -1);
@@ -224,7 +219,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                     if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
-                        message.setChunked(true);
+                        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
                         return message;
                     }
                     break;
@@ -240,8 +235,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
-            if (!message.isChunked()) {
-                message.setChunked(true);
+
+            if (message.getTransferEncoding() != HttpTransferEncoding.STREAMED) {
+                message.setTransferEncoding(HttpTransferEncoding.STREAMED);
                 return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
             } else {
                 return new DefaultHttpChunk(buffer.readBytes(toRead));
@@ -464,8 +460,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         }
         contentRead += toRead;
         if (length < contentRead) {
-            if (!message.isChunked()) {
-                message.setChunked(true);
+            if (message.getTransferEncoding() != HttpTransferEncoding.STREAMED) {
+                message.setTransferEncoding(HttpTransferEncoding.STREAMED);
                 return new Object[] {message, new DefaultHttpChunk(read(buffer, toRead))};
             } else {
                 return new DefaultHttpChunk(read(buffer, toRead));
@@ -533,14 +529,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         State nextState;
 
         if (isContentAlwaysEmpty(message)) {
+            message.setTransferEncoding(HttpTransferEncoding.SINGLE);
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (message.isChunked()) {
-            // HttpMessage.isChunked() returns true when either:
-            // 1) HttpMessage.setChunked(true) was called or
-            // 2) 'Transfer-Encoding' is 'chunked'.
-            // Because this decoder did not call HttpMessage.setChunked(true)
-            // yet, HttpMessage.isChunked() should return true only when
-            // 'Transfer-Encoding' is 'chunked'.
+        } else if (HttpCodecUtil.isTransferEncodingChunked(message)) {
+            message.setTransferEncoding(HttpTransferEncoding.CHUNKED);
             nextState = State.READ_CHUNK_SIZE;
         } else if (HttpHeaders.getContentLength(message, -1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;

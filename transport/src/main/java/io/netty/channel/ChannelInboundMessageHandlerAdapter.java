@@ -28,6 +28,8 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        beginMessageReceived(ctx);
+
         MessageBuf<I> in = ctx.inboundMessageBuffer();
         for (;;) {
             I msg = in.poll();
@@ -40,7 +42,11 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 ctx.fireExceptionCaught(t);
             }
         }
+
+        endMessageReceived(ctx);
     }
 
+    public void beginMessageReceived(ChannelHandlerContext ctx) throws Exception { }
     public abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception { }
 }

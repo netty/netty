@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import static java.util.concurrent.TimeUnit.*;
-import io.netty.channel.AbstractChannel.FlushCheckpoint;
+import io.netty.channel.ChannelFlushFutureNotifier.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -24,7 +24,9 @@ import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The default {@link ChannelFuture} implementation.  It is recommended to
@@ -179,6 +181,32 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         awaitUninterruptibly();
         rethrowIfFailed();
         return this;
+    }
+
+    @Override
+    public Void get() throws InterruptedException, ExecutionException {
+        await();
+        Throwable cause = cause();
+        if (cause == null) {
+            return null;
+        } else {
+            throw new ExecutionException(cause);
+        }
+    }
+
+    @Override
+    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
+            TimeoutException {
+        if (!await(timeout, unit)) {
+            throw new TimeoutException();
+        }
+
+        Throwable cause = cause();
+        if (cause == null) {
+            return null;
+        } else {
+            throw new ExecutionException(cause);
+        }
     }
 
     private void rethrowIfFailed() {
@@ -386,6 +414,11 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
 
         notifyListeners();
         return true;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return cancel();
     }
 
     private void notifyListeners() {

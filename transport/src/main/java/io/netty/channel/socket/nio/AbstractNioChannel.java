@@ -38,8 +38,24 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
     private final SelectableChannel ch;
-    private final int defaultInterestOps;
+    private final int readInterestOp;
     private volatile SelectionKey selectionKey;
+    private volatile boolean inputShutdown;
+
+    final Runnable suspendReadTask = new Runnable() {
+        @Override
+        public void run() {
+            selectionKey().interestOps(selectionKey().interestOps() & ~readInterestOp);
+        }
+
+    };
+
+    final Runnable resumeReadTask = new Runnable() {
+        @Override
+        public void run() {
+            selectionKey().interestOps(selectionKey().interestOps() | readInterestOp);
+        }
+    };
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -50,10 +66,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private ConnectException connectTimeoutException;
 
     protected AbstractNioChannel(
-            Channel parent, Integer id, SelectableChannel ch, int defaultInterestOps) {
+            Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
         super(parent, id);
         this.ch = ch;
-        this.defaultInterestOps = defaultInterestOps;
+        this.readInterestOp = readInterestOp;
         try {
             ch.configureBlocking(false);
         } catch (IOException e) {
@@ -100,6 +116,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return selectionKey;
     }
 
+    boolean isInputShutdown() {
+        return inputShutdown;
+    }
+
+    void setInputShutdown() {
+        inputShutdown = true;
+    }
+
     public interface NioUnsafe extends Unsafe {
         java.nio.channels.Channel ch();
         void finishConnect();
@@ -107,6 +131,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
+
         @Override
         public java.nio.channels.Channel ch() {
             return javaChannel();
@@ -187,6 +212,30 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectFuture = null;
             }
         }
+
+        @Override
+        public void suspendRead() {
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                suspendReadTask.run();
+            } else {
+                loop.execute(suspendReadTask);
+            }
+        }
+
+        @Override
+        public void resumeRead() {
+            if (inputShutdown) {
+                return;
+            }
+
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                resumeReadTask.run();
+            } else {
+                loop.execute(resumeReadTask);
+            }
+        }
     }
 
     @Override
@@ -204,7 +253,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected Runnable doRegister() throws Exception {
         NioEventLoop loop = (NioEventLoop) eventLoop();
         selectionKey = javaChannel().register(
-                loop.selector, isActive()? defaultInterestOps : 0, this);
+                loop.selector, isActive() && !inputShutdown ? readInterestOp : 0, this);
         return null;
     }
 

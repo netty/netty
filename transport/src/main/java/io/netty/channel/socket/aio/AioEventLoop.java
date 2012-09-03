@@ -16,13 +16,13 @@
 package io.netty.channel.socket.aio;
 
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.TaskScheduler;
+import io.netty.channel.ChannelTaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 
 final class AioEventLoop extends SingleThreadEventLoop {
 
-    AioEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+    AioEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
     }
 

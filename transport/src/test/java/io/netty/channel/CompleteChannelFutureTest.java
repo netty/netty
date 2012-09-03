@@ -18,7 +18,9 @@ package io.netty.channel;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -84,6 +86,17 @@ public class CompleteChannelFutureTest {
 
         @Override
         public ChannelFuture syncUninterruptibly() {
+            throw new Error();
+        }
+
+        @Override
+        public Void get() throws InterruptedException, ExecutionException {
+            throw new Error();
+        }
+
+        @Override
+        public Void get(long timeout, TimeUnit unit) throws InterruptedException,
+                ExecutionException, TimeoutException {
             throw new Error();
         }
     }

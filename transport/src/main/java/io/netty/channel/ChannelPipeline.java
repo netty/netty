@@ -455,11 +455,25 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler first();
 
     /**
+     * Returns the context of the first {@link ChannelHandler} in this pipeline.
+     *
+     * @return the context of the first handler.  {@code null} if this pipeline is empty.
+     */
+    ChannelHandlerContext firstContext();
+
+    /**
      * Returns the last {@link ChannelHandler} in this pipeline.
      *
      * @return the last handler.  {@code null} if this pipeline is empty.
      */
     ChannelHandler last();
+
+    /**
+     * Returns the context of the last {@link ChannelHandler} in this pipeline.
+     *
+     * @return the context of the last handler.  {@code null} if this pipeline is empty.
+     */
+    ChannelHandlerContext lastContext();
 
     /**
      * Returns the {@link ChannelHandler} with the specified name in this

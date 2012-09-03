@@ -15,12 +15,23 @@
  */
 package io.netty.channel;
 
+/**
+ * {@link ChannelHandler} which adds callbacks for state changes. This allows the user
+ * to hook in to state changes easily.
+ */
 public interface ChannelStateHandler extends ChannelHandler {
+
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
     void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
     void channelActive(ChannelHandlerContext ctx) throws Exception;
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
 
+    /**
+     * The inbound buffer of the {@link ChannelHandlerContext} was updated with new data.
+     * This means something may be ready to get processed by the actual {@link ChannelStateHandler}
+     * implementation. It's up to the implementation to consume it or keep it in the buffer
+     * to wait for more data and consume it later.
+     */
     void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
 }

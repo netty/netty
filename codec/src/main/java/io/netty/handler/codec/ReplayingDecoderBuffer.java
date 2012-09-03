@@ -140,6 +140,11 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    public int ensureWritableBytes(int minWritableBytes, boolean force) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
     public ByteBuf duplicate() {
         throw new UnreplayableOperationException();
     }

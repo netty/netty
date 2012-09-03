@@ -84,7 +84,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 buf.append("\r\n");
             }
 
-            if (request.isChunked()) {
+            if (request.getTransferEncoding().isMultiple()) {
                 readingChunks = true;
             } else {
                 ByteBuf content = request.getContent();

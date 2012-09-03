@@ -44,12 +44,14 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     @Override
     public ByteBuf outboundByteBuffer() {
-        throw new NoSuchBufferException();
+        throw new NoSuchBufferException(String.format(
+                "%s does not have an outbound buffer.", ServerChannel.class.getSimpleName()));
     }
 
     @Override
     public MessageBuf<Object> outboundMessageBuffer() {
-        throw new NoSuchBufferException();
+        throw new NoSuchBufferException(String.format(
+                "%s does not have an outbound buffer.", ServerChannel.class.getSimpleName()));
     }
 
     @Override

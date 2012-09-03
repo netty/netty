@@ -15,28 +15,42 @@
  */
 package io.netty.channel.socket.aio;
 
+import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.TaskScheduler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.channels.AsynchronousChannelGroup;
-import java.util.ArrayDeque;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 public class AioEventLoopGroup extends MultithreadEventLoopGroup {
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(AioEventLoopGroup.class);
+    private static final AioChannelFinder CHANNEL_FINDER;
 
-    private static final ConcurrentMap<Class<?>, Field[]> fieldCache = new ConcurrentHashMap<Class<?>, Field[]>();
-    private static final Field[] FAILURE = new Field[0];
+    static {
+        AioChannelFinder finder;
+        try {
+            if (DetectionUtil.hasUnsafe()) {
+                finder = new UnsafeAioChannelFinder();
+            } else {
+                finder = new ReflectiveAioChannelFinder();
+            }
+        } catch (Throwable t) {
+            LOGGER.debug(String.format(
+                    "Failed to instantiate the optimal %s implementation - falling back to %s.",
+                    AioChannelFinder.class.getSimpleName(), ReflectiveAioChannelFinder.class.getSimpleName()), t);
+            finder = new ReflectiveAioChannelFinder();
+        }
+        CHANNEL_FINDER = finder;
+    }
 
     final AsynchronousChannelGroup group;
 
@@ -59,14 +73,14 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
+            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
         return new AioEventLoop(this, threadFactory, scheduler);
     }
 
     private void executeAioTask(Runnable command) {
         AbstractAioChannel ch = null;
         try {
-            ch = findChannel(command);
+            ch = CHANNEL_FINDER.findChannel(command);
         } catch (Throwable t) {
             // Ignore
         }
@@ -83,68 +97,6 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         } else {
             l.execute(command);
         }
-    }
-
-    private static AbstractAioChannel findChannel(Runnable command) throws Exception {
-        Class<?> commandType = command.getClass();
-        Field[] fields = fieldCache.get(commandType);
-        if (fields == null) {
-            try {
-                fields = findFieldSequence(command, new ArrayDeque<Field>(2));
-            } catch (Throwable t) {
-                // Failed to get the field list
-            }
-
-            if (fields == null) {
-                fields = FAILURE;
-            }
-
-            fieldCache.put(commandType, fields); // No need to use putIfAbsent()
-        }
-
-        if (fields == FAILURE) {
-            return null;
-        }
-
-        final int lastIndex = fields.length - 1;
-        for (int i = 0; i < lastIndex; i ++) {
-            command = (Runnable) fields[i].get(command);
-        }
-
-        return (AbstractAioChannel) fields[lastIndex].get(command);
-    }
-
-    private static Field[] findFieldSequence(Runnable command, Deque<Field> fields) throws Exception {
-        Class<?> commandType = command.getClass();
-        for (Field f: commandType.getDeclaredFields()) {
-            if (f.getType() == Runnable.class) {
-                f.setAccessible(true);
-                fields.addLast(f);
-                try {
-                    Field[] ret = findFieldSequence((Runnable) f.get(command), fields);
-                    if (ret != null) {
-                        return ret;
-                    }
-                } finally {
-                    fields.removeLast();
-                }
-            }
-
-            if (f.getType() == Object.class) {
-                f.setAccessible(true);
-                fields.addLast(f);
-                try {
-                    Object candidate = f.get(command);
-                    if (candidate instanceof AbstractAioChannel) {
-                        return fields.toArray(new Field[fields.size()]);
-                    }
-                } finally {
-                    fields.removeLast();
-                }
-            }
-        }
-
-        return null;
     }
 
     private final class AioExecutorService extends AbstractExecutorService {

@@ -34,6 +34,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
     private final NetworkChannel channel;
+    private volatile boolean allowHalfClosure;
     private volatile long readTimeoutInMillis;
     private volatile long writeTimeoutInMillis;
 
@@ -53,7 +54,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
         return getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                AIO_READ_TIMEOUT, AIO_WRITE_TIMEOUT);
+                AIO_READ_TIMEOUT, AIO_WRITE_TIMEOUT, ALLOW_HALF_CLOSURE);
     }
 
     @Override
@@ -85,6 +86,9 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
         if (option == AIO_WRITE_TIMEOUT) {
             return (T) Long.valueOf(getWriteTimeout());
         }
+        if (option == ALLOW_HALF_CLOSURE) {
+            return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
 
         return super.getOption(option);
     }
@@ -111,6 +115,8 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
             setReadTimeout((Long) value);
         } else if (option == AIO_WRITE_TIMEOUT) {
             setWriteTimeout((Long) value);
+        } else if (option == ALLOW_HALF_CLOSURE) {
+            setAllowHalfClosure((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -294,5 +300,15 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
      */
     public long getWriteTimeout() {
         return writeTimeoutInMillis;
+    }
+
+    @Override
+    public boolean isAllowHalfClosure() {
+        return allowHalfClosure;
+    }
+
+    @Override
+    public void setAllowHalfClosure(boolean allowHalfClosure) {
+        this.allowHalfClosure = allowHalfClosure;
     }
 }

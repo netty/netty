@@ -1,0 +1,94 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.testsuite.transport.socket;
+
+import static org.junit.Assert.*;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.socket.SocketChannel;
+
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+
+import org.junit.Test;
+
+public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
+
+    @Test(timeout = 30000)
+    public void testShutdownOutput() throws Throwable {
+        run();
+    }
+
+    public void testShutdownOutput(Bootstrap cb) throws Throwable {
+        TestHandler h = new TestHandler();
+        ServerSocket ss = new ServerSocket();
+        Socket s = null;
+        try {
+            ss.bind(addr);
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect().sync().channel();
+            assertTrue(ch.isActive());
+            assertFalse(ch.isOutputShutdown());
+
+            s = ss.accept();
+            ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
+            assertEquals(1, s.getInputStream().read());
+
+            assertTrue(h.ch.isOpen());
+            assertTrue(h.ch.isActive());
+            assertFalse(h.ch.isInputShutdown());
+            assertFalse(h.ch.isOutputShutdown());
+
+            // Make the connection half-closed and ensure read() returns -1.
+            ch.shutdownOutput().sync();
+            assertEquals(-1, s.getInputStream().read());
+
+            assertTrue(h.ch.isOpen());
+            assertTrue(h.ch.isActive());
+            assertFalse(h.ch.isInputShutdown());
+            assertTrue(h.ch.isOutputShutdown());
+
+            // If half-closed, the peer should be able to write something.
+            s.getOutputStream().write(1);
+            assertEquals(1, (int) h.queue.take());
+
+        } finally {
+            if (s != null) {
+                s.close();
+            }
+            ss.close();
+        }
+    }
+
+    private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+        volatile SocketChannel ch;
+        final BlockingQueue<Byte> queue = new SynchronousQueue<Byte>();
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ch = (SocketChannel) ctx.channel();
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            queue.offer(in.readByte());
+        }
+    }
+}

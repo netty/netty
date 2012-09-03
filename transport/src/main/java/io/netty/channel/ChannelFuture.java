@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -162,7 +163,7 @@ import java.util.concurrent.TimeUnit;
  * @apiviz.landmark
  * @apiviz.owns io.netty.channel.ChannelFutureListener - - notifies
  */
-public interface ChannelFuture {
+public interface ChannelFuture extends Future<Void> {
 
     /**
      * Returns a channel where the I/O operation associated with this
@@ -175,12 +176,14 @@ public interface ChannelFuture {
      * complete, regardless of whether the operation was successful, failed,
      * or cancelled.
      */
+    @Override
     boolean isDone();
 
     /**
      * Returns {@code true} if and only if this future was
      * cancelled by a {@link #cancel()} method.
      */
+    @Override
     boolean isCancelled();
 
     /**

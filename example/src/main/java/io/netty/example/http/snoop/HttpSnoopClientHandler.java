@@ -44,7 +44,7 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
                 System.out.println();
             }
 
-            if (response.isChunked()) {
+            if (response.getTransferEncoding().isMultiple()) {
                 readingChunks = true;
                 System.out.println("CHUNKED CONTENT {");
             } else {

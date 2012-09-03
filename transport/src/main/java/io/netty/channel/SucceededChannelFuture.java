@@ -16,6 +16,9 @@
 package io.netty.channel;
 
 import java.nio.channels.Channels;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
@@ -52,4 +55,16 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     public ChannelFuture syncUninterruptibly() {
         return this;
     }
+
+    @Override
+    public Void get() throws InterruptedException, ExecutionException {
+        return null;
+    }
+
+    @Override
+    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
+            TimeoutException {
+        return null;
+    }
+
 }

@@ -38,7 +38,7 @@ public class HttpChunkAggregatorTest {
 
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
         HttpHeaders.setHeader(message, "X-Test", true);
-        message.setChunked(true);
+        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
         HttpChunk chunk1 = new DefaultHttpChunk(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpChunk chunk3 = new DefaultHttpChunk(Unpooled.EMPTY_BUFFER);
@@ -59,7 +59,7 @@ public class HttpChunkAggregatorTest {
 
     }
 
-    private void checkContentBuffer(HttpMessage aggregatedMessage) {
+    private static void checkContentBuffer(HttpMessage aggregatedMessage) {
         CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.getContent();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
@@ -76,7 +76,7 @@ public class HttpChunkAggregatorTest {
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
         HttpHeaders.setHeader(message, "X-Test", true);
-        message.setChunked(true);
+        message.setTransferEncoding(HttpTransferEncoding.CHUNKED);
         HttpChunk chunk1 = new DefaultHttpChunk(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
@@ -107,7 +107,7 @@ public class HttpChunkAggregatorTest {
         HttpChunkAggregator aggr = new HttpChunkAggregator(4);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
-        message.setChunked(true);
+        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
         HttpChunk chunk1 = new DefaultHttpChunk(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         assertFalse(embedder.writeInbound(message));

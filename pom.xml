@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.Alpha2-SNAPSHOT</version>
+  <version>4.0.0.Alpha4-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -351,6 +351,19 @@
         <version>2.8.1</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
+          <charset>UTF-8</charset>
+          <docencoding>UTF-8</docencoding>
+          <breakiterator>true</breakiterator>
+          <version>false</version>
+          <author>false</author>
+          <keywords>true</keywords>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.7</version>
+        <configuration>
+          <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
         </configuration>
       </plugin>
       <plugin>
@@ -361,7 +374,6 @@
           <arguments>-P release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
-          <localCheckout>true</localCheckout>
         </configuration>
       </plugin>
     </plugins>

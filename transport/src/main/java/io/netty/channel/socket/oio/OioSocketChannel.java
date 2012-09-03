@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -46,7 +48,6 @@ public class OioSocketChannel extends AbstractOioByteChannel
     private final SocketChannelConfig config;
     private InputStream is;
     private OutputStream os;
-    private volatile boolean readSuspended;
 
     public OioSocketChannel() {
         this(new Socket());
@@ -100,6 +101,42 @@ public class OioSocketChannel extends AbstractOioByteChannel
     @Override
     public boolean isActive() {
         return !socket.isClosed() && socket.isConnected();
+    }
+
+    @Override
+    public boolean isInputShutdown() {
+        return super.isInputShutdown();
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return socket.isOutputShutdown() || !isActive();
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput() {
+        final ChannelFuture future = newFuture();
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            shutdownOutput(future);
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownOutput(future);
+                }
+            });
+        }
+        return future;
+    }
+
+    private void shutdownOutput(ChannelFuture future) {
+        try {
+            socket.shutdownOutput();
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+        }
     }
 
     @Override
@@ -172,13 +209,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
         }
 
         try {
-            int read = buf.writeBytes(is, buf.writableBytes());
-            if (read > 0 && !readSuspended) {
-                return read;
-            } else {
-                // so the read bytes were 0 or the read was suspend
-                return 0;
-            }
+            return buf.writeBytes(is, buf.writableBytes());
         } catch (SocketTimeoutException e) {
             return 0;
         }
@@ -191,24 +222,5 @@ public class OioSocketChannel extends AbstractOioByteChannel
             throw new NotYetConnectedException();
         }
         buf.readBytes(os, buf.readableBytes());
-    }
-
-
-    @Override
-    protected AbstractOioByteUnsafe newUnsafe() {
-        return new OioSocketChannelUnsafe();
-    }
-
-    private final class OioSocketChannelUnsafe extends AbstractOioByteUnsafe {
-
-        @Override
-        public void suspendRead() {
-            readSuspended = true;
-        }
-
-        @Override
-        public void resumeRead() {
-            readSuspended = false;
-        }
     }
 }

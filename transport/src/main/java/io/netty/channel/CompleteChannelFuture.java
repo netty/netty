@@ -122,6 +122,11 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return false;
+    }
+
+    @Override
     public boolean isCancelled() {
         return false;
     }
