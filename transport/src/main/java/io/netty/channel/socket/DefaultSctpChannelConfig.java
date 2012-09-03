@@ -29,11 +29,11 @@ import static io.netty.channel.ChannelOption.*;
 /**
  * The default {@link SctpChannelConfig} implementation for SCTP.
  */
-class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
+public class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
 
     private SctpChannel channel;
 
-    DefaultSctpChannelConfig(SctpChannel channel) {
+    public DefaultSctpChannelConfig(SctpChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
