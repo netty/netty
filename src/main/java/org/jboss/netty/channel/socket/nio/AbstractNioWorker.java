@@ -254,7 +254,7 @@ abstract class AbstractNioWorker implements Worker {
         Selector selector = this.selector;
 
         // use 80% of the timeout for measure
-        final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
+        final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS * 80 / 100;
         boolean wakenupFromLoop = false;
         for (;;) {
             wakenUp.set(false);
