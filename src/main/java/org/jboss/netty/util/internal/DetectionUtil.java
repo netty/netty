@@ -111,8 +111,9 @@ public final class DetectionUtil {
             Class.forName(
                     "java.util.concurrent.LinkedTransferQueue", false,
                     BlockingQueue.class.getClassLoader());
-        } catch (Exception e) {
             return 7;
+        } catch (Exception e) {
+            // Ignore
         }
 
         try {
