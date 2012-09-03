@@ -76,11 +76,6 @@ abstract class AbstractNioWorker implements Worker {
     private final Executor executor;
 
     /**
-     * Boolean to indicate if this worker has been started.
-     */
-    private boolean started;
-
-    /**
      * If this worker has been started thread will be a reference to the thread
      * used when starting. i.e. the current thread when the run method is executed.
      */
@@ -90,8 +85,6 @@ abstract class AbstractNioWorker implements Worker {
      * The NIO {@link Selector}.
      */
     volatile Selector selector;
-
-    private boolean isShutdown;
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
@@ -142,6 +135,7 @@ abstract class AbstractNioWorker implements Worker {
     public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
         this.allowShutdownOnIdle = allowShutdownOnIdle;
+        openSelector();
     }
 
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
@@ -149,7 +143,6 @@ abstract class AbstractNioWorker implements Worker {
         Runnable registerTask = createRegisterTask(channel, future);
 
         synchronized (startStopLock) {
-            Selector selector = start();
 
             boolean offered = registerTaskQueue.offer(registerTask);
             assert offered;
@@ -213,38 +206,31 @@ abstract class AbstractNioWorker implements Worker {
      *
      * @return selector
      */
-    private Selector start() {
-        if (!started) {
-            // Open a selector if this worker didn't start yet.
-            try {
-                selector = Selector.open();
-            } catch (Throwable t) {
-                throw new ChannelException("Failed to create a selector.", t);
-            }
-
-            // Start the worker thread with the new Selector.
-            boolean success = false;
-            try {
-                DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id));
-                success = true;
-            } finally {
-                if (!success) {
-                    // Release the Selector if the execution fails.
-                    try {
-                        selector.close();
-                    } catch (Throwable t) {
-                        logger.warn("Failed to close a selector.", t);
-                    }
-                    selector = null;
-                    // The method will return to the caller at this point.
-                }
-            }
+    private void openSelector() {
+        try {
+            selector = Selector.open();
+        } catch (Throwable t) {
+            throw new ChannelException("Failed to create a selector.", t);
         }
 
+        // Start the worker thread with the new Selector.
+        boolean success = false;
+        try {
+            DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id));
+            success = true;
+        } finally {
+            if (!success) {
+                // Release the Selector if the execution fails.
+                try {
+                    selector.close();
+                } catch (Throwable t) {
+                    logger.warn("Failed to close a selector.", t);
+                }
+                selector = null;
+                // The method will return to the caller at this point.
+            }
+        }
         assert selector != null && selector.isOpen();
-
-        started = true;
-        return selector;
     }
 
 
@@ -371,7 +357,6 @@ abstract class AbstractNioWorker implements Worker {
 
                         synchronized (startStopLock) {
                             if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
-                                started = false;
                                 try {
                                     selector.close();
                                 } catch (IOException e) {
@@ -380,7 +365,6 @@ abstract class AbstractNioWorker implements Worker {
                                 } finally {
                                     this.selector = null;
                                 }
-                                isShutdown = true;
                                 break;
                             } else {
                                 shutdown = false;
@@ -430,9 +414,9 @@ abstract class AbstractNioWorker implements Worker {
             eventQueue.offer(task);
 
             synchronized (startStopLock) {
-                // check if the selector was shutdown already. If so execute all
+                // check if the selector was shutdown already or was not started yet. If so execute all
                 // submitted tasks in the calling thread
-                if (isShutdown) {
+                if (selector == null) {
                     // execute everything in the event queue as the
                     for (;;) {
                         Runnable r = eventQueue.poll();
@@ -442,7 +426,6 @@ abstract class AbstractNioWorker implements Worker {
                         r.run();
                     }
                 } else {
-                    start();
                     if (wakenUp.compareAndSet(false, true))  {
                         // wake up the selector to speed things
                         Selector selector = this.selector;
