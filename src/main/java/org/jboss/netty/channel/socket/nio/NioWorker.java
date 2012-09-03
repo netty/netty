@@ -40,16 +40,6 @@ public class NioWorker extends AbstractNioWorker {
         super(executor);
     }
 
-    /**
-     *
-     * @deprecated use {@link #NioWorker(Executor)}
-     */
-    @Deprecated
-    public NioWorker(Executor executor, boolean allowShutdownOnIdle) {
-        super(executor, allowShutdownOnIdle);
-    }
-
-
     @Override
     protected boolean read(SelectionKey k) {
         final SocketChannel ch = (SocketChannel) k.channel();

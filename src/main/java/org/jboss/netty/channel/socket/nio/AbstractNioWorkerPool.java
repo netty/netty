@@ -19,7 +19,6 @@ package org.jboss.netty.channel.socket.nio;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
@@ -34,18 +33,15 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
-    private final boolean allowShutDownOnIdle;
+
 
     /**
      * Create a new instance
      *
      * @param workerExecutor the {@link Executor} to use for the {@link Worker}'s
-     * @param allowShutdownOnIdle allow the {@link Worker}'s to shutdown when there is not
-     *                            {@link Channel} is registered with it
      * @param workerCount the count of {@link Worker}'s to create
-     * @deprecated use {@link #AbstractNioWorkerPool(Executor, int)}
      */
-    AbstractNioWorkerPool(Executor workerExecutor, int workerCount, boolean allowShutDownOnIdle) {
+    AbstractNioWorkerPool(Executor workerExecutor, int workerCount) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
@@ -59,33 +55,8 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
         for (int i = 0; i < workers.length; i++) {
             workers[i] = createWorker(workerExecutor);
         }
-        this.allowShutDownOnIdle = allowShutDownOnIdle;
         this.workerExecutor = workerExecutor;
-
     }
-
-    /**
-     * Create a new instance
-     *
-     * @param workerExecutor the {@link Executor} to use for the {@link Worker}'s
-     * @param workerCount the count of {@link Worker}'s to create
-     */
-    AbstractNioWorkerPool(Executor workerExecutor, int workerCount) {
-        this(workerExecutor, workerCount, false);
-    }
-
-    /**
-     * Create a new {@link Worker} which uses the given {@link Executor} to service IO
-     *
-     *
-     * @param executor the {@link Executor} to use
-     * @param allowShutdownOnIdle allow the {@link Worker} to shutdown when there is not
-     *                            {@link Channel} is registered with it
-     * @return worker the new {@link Worker}
-     * @deprecated use {@link #createWorker(Executor)}
-     */
-    @Deprecated
-    protected abstract E createWorker(Executor executor, boolean allowShutdownOnIdle);
 
     /**
      * Create a new {@link Worker} which uses the given {@link Executor} to service IO
@@ -94,9 +65,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
      * @param executor the {@link Executor} to use
      * @return worker the new {@link Worker}
      */
-    protected E createWorker(Executor executor) {
-        return createWorker(executor, allowShutDownOnIdle);
-    }
+    protected abstract E createWorker(Executor executor);
 
     @SuppressWarnings("unchecked")
     public E nextWorker() {

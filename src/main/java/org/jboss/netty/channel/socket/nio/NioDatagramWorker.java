@@ -54,15 +54,6 @@ public class NioDatagramWorker extends AbstractNioWorker {
         super(executor);
     }
 
-    /**
-     *
-     * @deprecated use {@link #NioDatagramWorker(Executor)}
-     */
-    @Deprecated
-    NioDatagramWorker(final Executor executor, boolean allowShutdownOnIdle) {
-        super(executor, allowShutdownOnIdle);
-    }
-
     @Override
     protected boolean read(final SelectionKey key) {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();

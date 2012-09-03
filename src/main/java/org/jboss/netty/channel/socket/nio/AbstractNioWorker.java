@@ -121,20 +121,8 @@ abstract class AbstractNioWorker implements Worker {
 
     protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
-    private final boolean allowShutdownOnIdle;
-
     AbstractNioWorker(Executor executor) {
-        this(executor, true);
-    }
-
-    /**
-     *
-     * @deprecated Use {@link #AbstractNioWorker(Executor)}
-     */
-    @Deprecated
-    public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
-        this.allowShutdownOnIdle = allowShutdownOnIdle;
         openSelector();
     }
 
@@ -369,11 +357,6 @@ abstract class AbstractNioWorker implements Worker {
                             } else {
                                 shutdown = false;
                             }
-                        }
-                    } else {
-                        if (allowShutdownOnIdle) {
-                            // Give one more second.
-                            shutdown = true;
                         }
                     }
                 } else {
