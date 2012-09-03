@@ -91,6 +91,8 @@ abstract class AbstractNioWorker implements Worker {
      */
     volatile Selector selector;
 
+    private boolean isShutdown;
+
     /**
      * Boolean that controls determines if a blocked Selector.select should
      * break out of its selection process. In our case we use a timeone for
@@ -378,6 +380,7 @@ abstract class AbstractNioWorker implements Worker {
                                 } finally {
                                     this.selector = null;
                                 }
+                                isShutdown = true;
                                 break;
                             } else {
                                 shutdown = false;
@@ -424,12 +427,22 @@ abstract class AbstractNioWorker implements Worker {
         if (!alwaysAsync && Thread.currentThread() == thread) {
             task.run();
         } else {
-            synchronized (startStopLock) {
-                start();
-                boolean added = eventQueue.offer(task);
+            eventQueue.offer(task);
 
-                assert added;
-                if (added) {
+            synchronized (startStopLock) {
+                // check if the selector was shutdown already. If so execute all
+                // submitted tasks in the calling thread
+                if (isShutdown) {
+                    // execute everything in the event queue as the
+                    for (;;) {
+                        Runnable r = eventQueue.poll();
+                        if (r == null) {
+                            break;
+                        }
+                        r.run();
+                    }
+                } else {
+                    start();
                     if (wakenUp.compareAndSet(false, true))  {
                         // wake up the selector to speed things
                         Selector selector = this.selector;
@@ -437,10 +450,8 @@ abstract class AbstractNioWorker implements Worker {
                             selector.wakeup();
                         }
                     }
-
                 }
             }
-
         }
 
     }
