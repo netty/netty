@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -128,22 +129,18 @@ abstract class AbstractNioWorker implements Worker {
 
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
 
-        Runnable registerTask = createRegisterTask(channel, future);
-
         synchronized (startStopLock) {
+            if (selector == null) {
+                // the selector was null this means the Worker has already been shutdown.
+                throw new RejectedExecutionException("Worker has already been shutdown");
+            }
+            Runnable registerTask = createRegisterTask(channel, future);
 
             boolean offered = registerTaskQueue.offer(registerTask);
             assert offered;
 
             if (wakenUp.compareAndSet(false, true)) {
-                // wake up the selector to speed things
-                selector = this.selector;
-
-                // Check if the selector is not null to prevent NPE if selector was
-                // set to null from another thread. See #469
-                if (selector != null) {
-                    selector.wakeup();
-                }
+                selector.wakeup();
             }
 
         }
