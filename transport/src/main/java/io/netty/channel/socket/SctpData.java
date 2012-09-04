@@ -23,7 +23,7 @@ import io.netty.buffer.Unpooled;
 /**
  * Representation of SCTP Data Chunk
  */
-public final class SctpFrame {
+public final class SctpData implements SctpMessage {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
@@ -37,13 +37,13 @@ public final class SctpFrame {
      * @param streamIdentifier that you want to send the payload
      * @param payloadBuffer channel buffer
      */
-    public SctpFrame(int protocolIdentifier, int streamIdentifier, ByteBuf payloadBuffer) {
+    public SctpData(int protocolIdentifier, int streamIdentifier, ByteBuf payloadBuffer) {
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
         this.payloadBuffer = payloadBuffer;
     }
 
-    public SctpFrame(MessageInfo msgInfo, ByteBuf payloadBuffer) {
+    public SctpData(MessageInfo msgInfo, ByteBuf payloadBuffer) {
         this.msgInfo = msgInfo;
         this.streamIdentifier = msgInfo.streamNumber();
         this.protocolIdentifier = msgInfo.payloadProtocolID();
@@ -80,7 +80,7 @@ public final class SctpFrame {
             return false;
         }
 
-        SctpFrame sctpFrame = (SctpFrame) o;
+        SctpData sctpFrame = (SctpData) o;
 
         if (protocolIdentifier != sctpFrame.protocolIdentifier) {
             return false;

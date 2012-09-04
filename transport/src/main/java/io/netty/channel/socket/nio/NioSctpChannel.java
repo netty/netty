@@ -28,7 +28,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSctpChannelConfig;
 import io.netty.channel.socket.SctpChannelConfig;
-import io.netty.channel.socket.SctpFrame;
+import io.netty.channel.socket.SctpData;
 import io.netty.channel.socket.SctpNotificationHandler;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -226,13 +226,13 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
 
         data.flip();
-        buf.add(new SctpFrame(messageInfo, Unpooled.wrappedBuffer(data)));
+        buf.add(new SctpData(messageInfo, Unpooled.wrappedBuffer(data)));
         return 1;
     }
 
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
-        SctpFrame packet = (SctpFrame) buf.peek();
+        SctpData packet = (SctpData) buf.peek();
         ByteBuf data = packet.getPayloadBuffer();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
