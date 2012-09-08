@@ -25,6 +25,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSctpChannelConfig;
 import io.netty.channel.socket.SctpChannelConfig;
@@ -34,6 +35,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -48,6 +50,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     private final SctpChannelConfig config;
 
+    @SuppressWarnings("rawtypes")
     private final NotificationHandler notificationHandler;
 
     private static SctpChannel newSctpChannel() {
@@ -216,6 +219,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         javaChannel().close();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
@@ -277,4 +281,59 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
         return 1;
     }
+
+    @Override
+    public ChannelFuture bindAddress(InetAddress localAddress) {
+        ChannelFuture future = newFuture();
+        doBindAddress(localAddress, future);
+        return future;
+    }
+
+    void doBindAddress(final InetAddress localAddress, final ChannelFuture future) {
+        if (eventLoop().inEventLoop()) {
+            try {
+                javaChannel().bindAddress(localAddress);
+                future.setSuccess();
+                // TODO: Do we want to fire an event ?
+            } catch (Throwable t) {
+                future.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+            }
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doBindAddress(localAddress, future);
+                }
+            });
+        }
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(InetAddress localAddress) {
+        ChannelFuture future = newFuture();
+        doUnbindAddress(localAddress, future);
+        return future;
+    }
+
+    void doUnbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+        if (eventLoop().inEventLoop()) {
+            try {
+                javaChannel().unbindAddress(localAddress);
+                future.setSuccess();
+                // TODO: Do we want to fire an event ?
+            } catch (Throwable t) {
+                future.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+            }
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doUnbindAddress(localAddress, future);
+                }
+            });
+        }
+    }
+
 }
