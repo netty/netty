@@ -60,22 +60,18 @@ class WebSocketServerHandshakeHandler extends ChannelInboundMessageHandlerAdapte
         if (handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
-            try {
-                final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
-                handshakeFuture.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            ctx.fireExceptionCaught(future.cause());
-                        }
+            final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
+            handshakeFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        ctx.fireExceptionCaught(future.cause());
                     }
-                });
-                WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
-                    WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
-            } catch (WebSocketHandshakeException e) {
-                ctx.fireExceptionCaught(e);
-            }
+                }
+            });
+            WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
+            ctx.pipeline().replace(this, "WS403Responder",
+                WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
         }
     }
 
