@@ -20,6 +20,8 @@ import java.util.Map;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
@@ -171,7 +173,13 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
         ChannelFuture future = channel.write(request);
 
-        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                ChannelPipeline p = future.getChannel().getPipeline();
+                p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));
+            }
+        });
 
         return future;
     }
