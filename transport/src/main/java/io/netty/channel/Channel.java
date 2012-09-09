@@ -26,8 +26,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 
-import sun.awt.windows.ThemeReader;
-
 
 /**
  * A nexus to a network socket or a component which is capable of I/O

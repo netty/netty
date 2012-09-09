@@ -27,7 +27,6 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         ByteBuf in = ctx.outboundByteBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        int oldOutSize = out.readableBytes();
         while (in.readable()) {
             int oldInSize = in.readableBytes();
             try {

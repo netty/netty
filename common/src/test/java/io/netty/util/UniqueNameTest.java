@@ -15,12 +15,11 @@
  */
 package io.netty.util;
 
+import static org.junit.Assert.*;
+
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertSame;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,7 +30,7 @@ public class UniqueNameTest {
      * This is set up before each test
      */
     private ConcurrentHashMap<String, Boolean> names;
-    
+
     /**
      * Registers a {@link UniqueName}
      *
@@ -44,30 +43,30 @@ public class UniqueNameTest {
 
     @Before
     public void initializeTest() {
-        this.names = new ConcurrentHashMap<String, Boolean>();
+        names = new ConcurrentHashMap<String, Boolean>();
     }
 
     @Test(expected=NullPointerException.class)
     public void testCannnotProvideNullMap() {
-        UniqueName nullName = new UniqueName(null, "Nothing");
+        new UniqueName(null, "Nothing");
     }
 
     @Test(expected=NullPointerException.class)
     public void testCannotProvideNullName() {
-        UniqueName nullName = new UniqueName(this.names, null);
+        new UniqueName(names, null);
     }
 
     @Test
     public void testArgsCanBePassed() {
-        UniqueName nullName = new UniqueName(this.names, "Argh, matey!", 2, 5, new Object());
+        new UniqueName(names, "Argh, matey!", 2, 5, new Object());
     }
 
     @Test
     public void testRegisteringName() {
         registerName("Abcedrian");
 
-        assertTrue(this.names.get("Abcedrian"));
-        assertTrue(this.names.get("Hellyes") == null);
+        assertTrue(names.get("Abcedrian"));
+        assertTrue(names.get("Hellyes") == null);
     }
 
     @Test
@@ -103,7 +102,7 @@ public class UniqueNameTest {
             }
         }
     }
-    
+
     @Test
     public void testCompareNames() {
         UniqueName one = registerName("One");

@@ -17,8 +17,8 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.ChannelTaskScheduler;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -26,9 +26,9 @@ import io.netty.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,17 +49,17 @@ final class NioEventLoop extends SingleThreadEventLoop {
     /**
      * Internal Netty logger.
      */
-    protected static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioEventLoop.class);
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioEventLoop.class);
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
     /**
      * The NIO {@link Selector}.
      */
-    protected Selector selector;
+    Selector selector;
 
-    protected final SelectorProvider provider;
+    private final SelectorProvider provider;
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
@@ -67,7 +67,7 @@ final class NioEventLoop extends SingleThreadEventLoop {
      * the select method and the select method will block for that time unless
      * waken up.
      */
-    protected final AtomicBoolean wakenUp = new AtomicBoolean();
+    private final AtomicBoolean wakenUp = new AtomicBoolean();
 
     private int cancelledKeys;
     private boolean cleanedCancelledKeys;
@@ -147,29 +147,31 @@ final class NioEventLoop extends SingleThreadEventLoop {
             try {
                 long beforeSelect = System.nanoTime();
                 int selected = SelectorUtil.select(selector);
-                if (selected == 0) {
-                    long timeBlocked = System.nanoTime()  - beforeSelect;
-                    if (timeBlocked < minSelectTimeout) {
-                        // returned before the minSelectTimeout elapsed with nothing select.
-                        // this may be the cause of the jdk epoll(..) bug, so increment the counter
-                        // which we use later to see if its really the jdk bug.
-                        selectReturnsImmediately ++;
-                    } else {
-                        selectReturnsImmediately = 0;
-                    }
-                    if (selectReturnsImmediately == 10) {
-                        // The selector returned immediately for 10 times in a row,
-                        // so recreate one selector as it seems like we hit the
-                        // famous epoll(..) jdk bug.
-                        selector = recreateSelector();
-                        selectReturnsImmediately = 0;
+                if (SelectorUtil.EPOLL_BUG_WORKAROUND) {
+                    if (selected == 0) {
+                        long timeBlocked = System.nanoTime()  - beforeSelect;
+                        if (timeBlocked < minSelectTimeout) {
+                            // returned before the minSelectTimeout elapsed with nothing select.
+                            // this may be the cause of the jdk epoll(..) bug, so increment the counter
+                            // which we use later to see if its really the jdk bug.
+                            selectReturnsImmediately ++;
+                        } else {
+                            selectReturnsImmediately = 0;
+                        }
+                        if (selectReturnsImmediately == 10) {
+                            // The selector returned immediately for 10 times in a row,
+                            // so recreate one selector as it seems like we hit the
+                            // famous epoll(..) jdk bug.
+                            selector = recreateSelector();
+                            selectReturnsImmediately = 0;
 
-                        // try to select again
-                        continue;
+                            // try to select again
+                            continue;
+                        }
+                    } else {
+                        // reset counter
+                        selectReturnsImmediately = 0;
                     }
-                } else {
-                    // reset counter
-                    selectReturnsImmediately = 0;
                 }
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
