@@ -147,14 +147,18 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         ChannelFuture future = channel.write(res);
 
         // Upgrade the connection and send the handshake response.
-        ChannelPipeline p = channel.pipeline();
-        if (p.get(HttpChunkAggregator.class) != null) {
-            p.remove(HttpChunkAggregator.class);
-        }
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) {
+                ChannelPipeline p = future.channel().pipeline();
+                if (p.get(HttpChunkAggregator.class) != null) {
+                    p.remove(HttpChunkAggregator.class);
+                }
 
-        p.replace(HttpRequestDecoder.class, "wsdecoder",
-                new WebSocket08FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
-        p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
+                p.replace(HttpRequestDecoder.class, "wsdecoder",
+                        new WebSocket08FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
+                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
+            }
+        });
 
         return future;
     }
