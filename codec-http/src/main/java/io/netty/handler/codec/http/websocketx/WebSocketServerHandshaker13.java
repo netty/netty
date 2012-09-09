@@ -148,6 +148,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
         // Upgrade the connection and send the handshake response.
         future.addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
                 if (p.get(HttpChunkAggregator.class) != null) {
