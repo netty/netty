@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpChunkAggregator;
@@ -180,7 +181,12 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
         ChannelFuture future = channel.write(res);
 
-        p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) {
+                ChannelPipeline p = future.channel().pipeline();
+                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
+            }
+        });
 
         return future;
     }
