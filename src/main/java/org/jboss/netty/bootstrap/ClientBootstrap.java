@@ -245,7 +245,7 @@ public class ClientBootstrap extends Bootstrap {
      *  ChannelFuture bindFuture = bootstrap.bind(new InetSocketAddress("192.168.0.15", 0));
      *  Channel channel = bindFuture.getChannel();
      *  channel.setAttachment(dataObj);
-     *  bootstrap.connect(new InetSocketAddress("192.168.0.30", 8080));
+     *  channel.connect(new InetSocketAddress("192.168.0.30", 8080));
      * </pre>
      * <br>
      *
