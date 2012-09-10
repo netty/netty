@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
@@ -53,9 +54,12 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
 
     @Override
     public void afterAdd(ChannelHandlerContext ctx) {
-        // Add the WebSocketHandshakeHandler before this one.
-        ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols, allowExtensions));
+        ChannelPipeline cp = ctx.pipeline();
+        if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
+            // Add the WebSocketHandshakeHandler before this one.
+            ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
+                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols, allowExtensions));
+        }
     }
 
     @Override
