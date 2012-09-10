@@ -188,7 +188,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         ChannelFuture future = channel.write(request);
 
         future.addListener(new ChannelFutureListener() {
-            @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.getChannel().getPipeline();
                 p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
