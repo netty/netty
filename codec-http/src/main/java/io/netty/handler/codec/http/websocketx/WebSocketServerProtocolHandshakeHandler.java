@@ -43,7 +43,8 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
     private final String subprotocols;
     private final boolean allowExtensions;
 
-    public WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
+    public WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
