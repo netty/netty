@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -79,13 +80,11 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        try {
-            if (cause instanceof WebSocketHandshakeException) {
-                DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
-                response.setContent(Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
-                ctx.channel().write(response);
-            }
-        } finally {
+        if (cause instanceof WebSocketHandshakeException) {
+            DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
+            response.setContent(Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
+            ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
+        } else {
             ctx.close();
         }
     }
