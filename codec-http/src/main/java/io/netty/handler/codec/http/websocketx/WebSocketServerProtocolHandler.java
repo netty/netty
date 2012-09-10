@@ -54,8 +54,8 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     @Override
     public void afterAdd(ChannelHandlerContext ctx) {
         // Add the WebSocketHandshakeHandler before this one.
-        ctx.pipeline().addBefore(ctx.name(), WebSocketServerHandshakeHandler.class.getName(),
-                new WebSocketServerHandshakeHandler(websocketPath, subprotocols, allowExtensions));
+        ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
+                new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols, allowExtensions));
     }
 
     @Override

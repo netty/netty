@@ -35,15 +35,15 @@ import io.netty.logging.InternalLoggerFactory;
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request)
  */
-class WebSocketServerHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
+public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(WebSocketServerHandshakeHandler.class);
+            InternalLoggerFactory.getInstance(WebSocketServerProtocolHandshakeHandler.class);
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
 
-    public WebSocketServerHandshakeHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
+    public WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
