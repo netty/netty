@@ -55,7 +55,6 @@ public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler
         this.allowExtensions = allowExtensions;
     }
 
-    @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         ChannelPipeline cp = ctx.getPipeline();
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
@@ -102,7 +101,6 @@ public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler
 
     static ChannelHandler forbiddenHttpRequestResponder() {
         return new SimpleChannelHandler() {
-            @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
                 if (!(e.getMessage() instanceof WebSocketFrame)) {
                     DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
@@ -114,16 +112,13 @@ public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler
         };
     }
 
-    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
     }
 
 
-    @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
     }
 
-    @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
     }
 
