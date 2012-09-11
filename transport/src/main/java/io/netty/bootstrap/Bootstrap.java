@@ -29,7 +29,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelException;
 
-
+/**
+ * {@link Bootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
+ * method-chaining to provide an easy way to configure the {@link Bootstrap}.
+ *
+ */
 public abstract class Bootstrap<B extends Bootstrap<?>> {
     private EventLoopGroup group;
     private ChannelFactory factory;
@@ -37,6 +41,10 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private ChannelHandler handler;
 
+    /**
+     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
+     * {@link Channel}
+     */
     @SuppressWarnings("unchecked")
     public B group(EventLoopGroup group) {
         if (group == null) {
@@ -49,6 +57,11 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         return (B) this;
     }
 
+    /**
+     * The {@link Class} which is used to create {@link Channel} instances from.
+     * You either use this or {@link #channelFactory(ChannelFactory)} if your
+     * {@link Channel} implementation has no no-args constructor.
+     */
     public B channel(Class<? extends Channel> channelClass) {
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
@@ -56,6 +69,13 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         return channelFactory(new BootstrapChannelFactory(channelClass));
     }
 
+    /**
+     * {@link ChannelFactory} which is used to create {@link Channel} instances from
+     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
+     * is not working for you because of some more complex needs. If your {@link Channel} implementation
+     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} for
+     * simplify your code.
+     */
     @SuppressWarnings("unchecked")
     public B channelFactory(ChannelFactory factory) {
         if (factory == null) {
@@ -64,34 +84,46 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         if (this.factory != null) {
             throw new IllegalStateException("factory set already");
         }
+
         this.factory = factory;
         return (B) this;
     }
 
+    /**
+     * The {@link SocketAddress} which is used to bind the local "end" to.
+     *
+     */
     @SuppressWarnings("unchecked")
     public B localAddress(SocketAddress localAddress) {
         this.localAddress = localAddress;
         return (B) this;
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * See {@link #localAddress(SocketAddress)}
+     */
     public B localAddress(int port) {
-        localAddress = new InetSocketAddress(port);
-        return (B) this;
+        return localAddress(new InetSocketAddress(port));
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * See {@link #localAddress(SocketAddress)}
+     */
     public B localAddress(String host, int port) {
-        localAddress = new InetSocketAddress(host, port);
-        return (B) this;
+        return localAddress(new InetSocketAddress(host, port));
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * See {@link #localAddress(SocketAddress)}
+     */
     public B localAddress(InetAddress host, int port) {
-        localAddress = new InetSocketAddress(host, port);
-        return (B) this;
+        return localAddress(new InetSocketAddress(host, port));
     }
 
+    /**
+     * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
+     * created. Use a value of <code>null</code> to remove a previous set {@link ChannelOption}.
+     */
     @SuppressWarnings("unchecked")
     public <T> B option(ChannelOption<T> option, T value) {
         if (option == null) {
@@ -105,12 +137,21 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         return (B) this;
     }
 
+    /**
+     * Shutdown the {@link Bootstrap} and the {@link EventLoopGroup} which is
+     * used by it. Only call this if you don't share the {@link EventLoopGroup}
+     * between different {@link Bootstrap}'s.
+     */
     public void shutdown() {
         if (group != null) {
             group.shutdown();
         }
     }
 
+    /**
+     * Validate all the parameters. Sub-classes may override this, but should
+     * call the super method in that case.
+     */
     protected void validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
@@ -127,12 +168,18 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         validate();
     }
 
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
     public ChannelFuture bind() {
         validate();
         Channel channel = factory().newChannel();
         return bind(channel.newFuture());
     }
 
+    /**
+     * the {@link ChannelHandler} to use for serving the requests.
+     */
     @SuppressWarnings("unchecked")
     public B handler(ChannelHandler handler) {
         if (handler == null) {
@@ -152,6 +199,9 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         return true;
     }
 
+    /**
+     * Bind the {@link Channel} of the given {@link ChannelFactory}.
+     */
     public abstract ChannelFuture bind(ChannelFuture future);
 
     protected final SocketAddress localAddress() {
@@ -192,7 +242,15 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
 
     }
 
+    /**
+     * Factory that is responsible to create new {@link Channel}'s on {@link Bootstrap#bind()}
+     * requests.
+     *
+     */
     public interface ChannelFactory {
+        /**
+         * {@link Channel} to use in the {@link Bootstrap}
+         */
         Channel newChannel();
     }
 }

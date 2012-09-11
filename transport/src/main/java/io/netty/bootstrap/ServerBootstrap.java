@@ -30,6 +30,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.NetworkConstants;
@@ -40,6 +41,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
+ *
+ */
 public class ServerBootstrap extends Bootstrap<ServerBootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
@@ -57,11 +62,19 @@ public class ServerBootstrap extends Bootstrap<ServerBootstrap> {
     private ChannelHandler handler;
     private ChannelHandler childHandler;
 
+    /**
+     * Specify the {@link EventLoopGroup} which is used for the parent (acceptor) and the child (client).
+     */
     @Override
     public ServerBootstrap group(EventLoopGroup group) {
         return group(group, group);
     }
 
+    /**
+     * Set the {@link EventLoopGroup} for the parent (acceptor) and the child (client). These
+     * {@link EventLoopGroup}'s are used to handle all the events and IO for {@link SocketChannel} and
+     * {@link Channel}'s.
+     */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
         if (childGroup == null) {
@@ -74,6 +87,9 @@ public class ServerBootstrap extends Bootstrap<ServerBootstrap> {
         return this;
     }
 
+    /**
+     * The {@link Class} which is used to create the {@link ServerChannel} from (for the acceptor).
+     */
     @Override
     public ServerBootstrap channel(Class<? extends Channel> channelClass) {
         if (channelClass == null) {
@@ -85,6 +101,11 @@ public class ServerBootstrap extends Bootstrap<ServerBootstrap> {
         return super.channel(channelClass);
     }
 
+    /**
+     * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they get created
+     * (after the acceptor accepted the {@link Channel}). Use a value of <code>null</code> to remove a previous set
+     * {@link ChannelOption}.
+     */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
         if (childOption == null) {
             throw new NullPointerException("childOption");
@@ -97,6 +118,9 @@ public class ServerBootstrap extends Bootstrap<ServerBootstrap> {
         return this;
     }
 
+    /**
+     * Set the {@link ChannelHandler} which is used to server the request for the {@link Channel}'s.
+     */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
         if (childHandler == null) {
             throw new NullPointerException("childHandler");
