@@ -16,15 +16,17 @@
 package org.jboss.netty.handler.codec.http.websocketx;
 
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -32,7 +34,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  * Handles WebSocket control frames (Close, Ping, Pong) and data frames (Text and Binary) are passed
  * to the next handler in the pipeline.
  */
-public class WebSocketServerProtocolHandler extends SimpleChannelHandler {
+public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler implements
+    LifeCycleAwareChannelHandler {
 
     private final String websocketPath;
     private final String subprotocols;
@@ -53,7 +56,7 @@ public class WebSocketServerProtocolHandler extends SimpleChannelHandler {
     }
 
     @Override
-    public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         ChannelPipeline cp = ctx.getPipeline();
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
@@ -109,6 +112,19 @@ public class WebSocketServerProtocolHandler extends SimpleChannelHandler {
                 }
             }
         };
+    }
+
+    @Override
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    }
+
+
+    @Override
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
     }
 
 }

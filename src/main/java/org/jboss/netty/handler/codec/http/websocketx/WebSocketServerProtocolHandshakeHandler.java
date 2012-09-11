@@ -25,7 +25,7 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -37,7 +37,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request)
  */
-public class WebSocketServerProtocolHandshakeHandler extends SimpleChannelHandler {
+public class WebSocketServerProtocolHandshakeHandler extends SimpleChannelUpstreamHandler {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(WebSocketServerProtocolHandshakeHandler.class);
