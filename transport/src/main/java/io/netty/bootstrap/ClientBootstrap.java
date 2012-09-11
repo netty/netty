@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelFuture;
@@ -29,22 +30,37 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Map.Entry;
 
+/**
+ * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
+ * for clients.
+ *
+ */
 public class ClientBootstrap extends Bootstrap<ClientBootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ClientBootstrap.class);
     private SocketAddress remoteAddress;
 
 
+    /**
+     * The {@link SocketAddress} to connect to once the {@link #connect()} method
+     * is called.
+     */
     public ClientBootstrap remoteAddress(SocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
         return this;
     }
 
+    /**
+     * See {@link #remoteAddress(SocketAddress)}
+     */
     public ClientBootstrap remoteAddress(String host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
         return this;
     }
 
+    /**
+     * See {@link #remoteAddress(SocketAddress)}
+     */
     public ClientBootstrap remoteAddress(InetAddress host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
         return this;
@@ -71,12 +87,18 @@ public class ClientBootstrap extends Bootstrap<ClientBootstrap> {
         return future.channel().bind(localAddress(), future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
     public ChannelFuture connect() {
         validate();
         Channel channel = factory().newChannel();
         return connect(channel.newFuture());
     }
 
+    /**
+     * See {@link #connect()}
+     */
     public ChannelFuture connect(ChannelFuture future) {
         validate(future);
         if (remoteAddress == null) {
@@ -138,4 +160,23 @@ public class ClientBootstrap extends Bootstrap<ClientBootstrap> {
         }
     }
 
+    /**
+     * Create a new {@link ClientBootstrap} using this "full-setup" {@link ClientBootstrap} as template. 
+     * Only the given parameters are replaced, the rest is configured exactly the same way as the template.
+     */
+    public ClientBootstrap newBootstrap(SocketAddress localAddress, SocketAddress remoteAddress, ChannelHandler handler) {
+        validate();
+        ClientBootstrap cb = new ClientBootstrap().handler(handler).channelFactory(factory()).group(group()).localAddress(localAddress).remoteAddress(remoteAddress);
+        cb.options().putAll(options());
+        
+        return cb;
+    }
+
+    /**
+     * Create a new {@link ClientBootstrap} using this "full-setup" {@link ClientBootstrap} as template. 
+     * Only the given parameters are replaced, the rest is configured exactly the same way as the template.
+     */
+    public ClientBootstrap newBootstrap(SocketAddress localAddress, SocketAddress remoteAddress) {
+        return newBootstrap(localAddress, remoteAddress, handler());
+    }
 }
