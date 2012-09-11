@@ -118,9 +118,6 @@ public abstract class Bootstrap<B extends Bootstrap<?>> {
         if (factory == null) {
             throw new IllegalStateException("factory not set");
         }
-        if (handler == null) {
-            throw new IllegalStateException("handler not set");
-        }
     }
 
     protected final void validate(ChannelFuture future) {

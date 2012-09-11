@@ -15,7 +15,7 @@
  */
 package io.netty.example.objectecho;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
@@ -41,10 +41,10 @@ public class ObjectEchoClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        ClientBootstrap b = new ClientBootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .remoteAddress(host, port)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override

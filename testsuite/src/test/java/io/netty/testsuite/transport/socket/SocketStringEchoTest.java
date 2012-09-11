@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,7 +57,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         run();
     }
 
-    public void testStringEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testStringEcho(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
         final StringEchoHandler sh = new StringEchoHandler();
         final StringEchoHandler ch = new StringEchoHandler();
 

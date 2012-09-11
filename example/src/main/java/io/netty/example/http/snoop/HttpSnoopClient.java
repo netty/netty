@@ -15,7 +15,7 @@
  */
 package io.netty.example.http.snoop;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -62,10 +62,10 @@ public class HttpSnoopClient {
         boolean ssl = scheme.equalsIgnoreCase("https");
 
         // Configure the client.
-        Bootstrap b = new Bootstrap();
+        ClientBootstrap b = new ClientBootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .handler(new HttpSnoopClientInitializer(ssl))
              .remoteAddress(new InetSocketAddress(host, port));
 

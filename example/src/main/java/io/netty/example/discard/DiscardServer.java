@@ -37,7 +37,7 @@ public class DiscardServer {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
-             .channel(new NioServerSocketChannel())
+             .channel(NioServerSocketChannel.class)
              .localAddress(port)
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override

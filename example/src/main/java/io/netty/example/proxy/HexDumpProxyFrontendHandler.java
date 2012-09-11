@@ -15,7 +15,7 @@
  */
 package io.netty.example.proxy;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -43,9 +43,9 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
         final Channel inboundChannel = ctx.channel();
 
         // Start the connection attempt.
-        Bootstrap b = new Bootstrap();
+        ClientBootstrap b = new ClientBootstrap();
         b.group(inboundChannel.eventLoop())
-         .channel(new NioSocketChannel())
+         .channel(NioSocketChannel.class)
          .remoteAddress(remoteHost, remotePort)
          .handler(new HexDumpProxyBackendHandler(inboundChannel));
 

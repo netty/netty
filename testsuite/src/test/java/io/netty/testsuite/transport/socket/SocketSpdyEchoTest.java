@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -175,7 +175,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    public void testSpdyEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testSpdyEcho(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
 
         ByteBuf frames = createFrames(version);
 

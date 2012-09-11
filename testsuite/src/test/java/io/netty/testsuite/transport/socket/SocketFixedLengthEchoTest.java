@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -47,7 +47,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         run();
     }
 
-    public void testFixedLengthEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testFixedLengthEcho(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
         final EchoHandler sh = new EchoHandler();
         final EchoHandler ch = new EchoHandler();
 

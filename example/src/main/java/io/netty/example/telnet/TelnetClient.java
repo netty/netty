@@ -15,7 +15,7 @@
  */
 package io.netty.example.telnet;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
@@ -38,10 +38,10 @@ public class TelnetClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        ClientBootstrap b = new ClientBootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .remoteAddress(host, port)
              .handler(new TelnetClientInitializer());
 

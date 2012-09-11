@@ -15,7 +15,7 @@
  */
 package io.netty.example.localecho;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -43,14 +43,14 @@ public class LocalEcho {
         // Address to bind on / connect to.
         final LocalAddress addr = new LocalAddress(port);
 
-        Bootstrap cb = new Bootstrap();
+        ClientBootstrap cb = new ClientBootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         try {
             // Note that we can use any event loop to ensure certain local channels
             // are handled by the same event loop thread which drives a certain socket channel
             // to reduce the communication latency between socket channels and local channels.
             sb.group(new LocalEventLoopGroup())
-              .channel(new LocalServerChannel())
+              .channel(LocalServerChannel.class)
               .localAddress(addr)
               .handler(new ChannelInitializer<LocalServerChannel>() {
                   @Override
@@ -68,7 +68,7 @@ public class LocalEcho {
               });
 
             cb.group(new NioEventLoopGroup()) // NIO event loops are also OK
-              .channel(new LocalChannel())
+              .channel(LocalChannel.class)
               .remoteAddress(addr)
               .handler(new ChannelInitializer<LocalChannel>() {
                   @Override

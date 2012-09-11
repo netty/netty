@@ -15,7 +15,7 @@
  */
 package io.netty.example.uptime;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -50,16 +50,16 @@ public class UptimeClient {
     }
 
     public void run() {
-        configureBootstrap(new Bootstrap()).connect();
+        configureBootstrap(new ClientBootstrap()).connect();
     }
 
-    private Bootstrap configureBootstrap(Bootstrap b) {
+    private ClientBootstrap configureBootstrap(ClientBootstrap b) {
         return configureBootstrap(b, new NioEventLoopGroup());
     }
 
-    Bootstrap configureBootstrap(Bootstrap b, EventLoopGroup g) {
+    ClientBootstrap configureBootstrap(ClientBootstrap b, EventLoopGroup g) {
         b.group(g)
-         .channel(new NioSocketChannel())
+         .channel(NioSocketChannel.class)
          .remoteAddress(host, port)
          .handler(new ChannelInitializer<SocketChannel>() {
             @Override

@@ -15,8 +15,10 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.Bootstrap.ChannelFactory;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.aio.AioEventLoopGroup;
 import io.netty.channel.socket.aio.AioServerSocketChannel;
@@ -36,34 +38,34 @@ import java.util.Map.Entry;
 
 final class SocketTestPermutation {
 
-    static List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> socket() {
-        List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> list =
-                new ArrayList<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>>();
+    static List<Entry<Factory<ServerBootstrap>, Factory<ClientBootstrap>>> socket() {
+        List<Entry<Factory<ServerBootstrap>, Factory<ClientBootstrap>>> list =
+                new ArrayList<Entry<Factory<ServerBootstrap>, Factory<ClientBootstrap>>>();
 
         // Make the list of ServerBootstrap factories.
         List<Factory<ServerBootstrap>> sbfs = serverSocket();
 
         // Make the list of Bootstrap factories.
-        List<Factory<Bootstrap>> cbfs = clientSocket();
+        List<Factory<ClientBootstrap>> cbfs = clientSocket();
 
         // Populate the combinations
         for (Factory<ServerBootstrap> sbf: sbfs) {
-            for (Factory<Bootstrap> cbf: cbfs) {
+            for (Factory<ClientBootstrap> cbf: cbfs) {
                 final Factory<ServerBootstrap> sbf0 = sbf;
-                final Factory<Bootstrap> cbf0 = cbf;
-                list.add(new Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>() {
+                final Factory<ClientBootstrap> cbf0 = cbf;
+                list.add(new Entry<Factory<ServerBootstrap>, Factory<ClientBootstrap>>() {
                     @Override
                     public Factory<ServerBootstrap> getKey() {
                         return sbf0;
                     }
 
                     @Override
-                    public Factory<Bootstrap> getValue() {
+                    public Factory<ClientBootstrap> getValue() {
                         return cbf0;
                     }
 
                     @Override
-                    public Factory<Bootstrap> setValue(Factory<Bootstrap> value) {
+                    public Factory<ClientBootstrap> setValue(Factory<ClientBootstrap> value) {
                         throw new UnsupportedOperationException();
                     }
                 });
@@ -76,45 +78,49 @@ final class SocketTestPermutation {
         return list;
     }
 
-    static List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> datagram() {
-        List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> list =
-                new ArrayList<Entry<Factory<Bootstrap>, Factory<Bootstrap>>>();
+    static List<Entry<Factory<ClientBootstrap>, Factory<ClientBootstrap>>> datagram() {
+        List<Entry<Factory<ClientBootstrap>, Factory<ClientBootstrap>>> list =
+                new ArrayList<Entry<Factory<ClientBootstrap>, Factory<ClientBootstrap>>>();
 
         // Make the list of Bootstrap factories.
-        List<Factory<Bootstrap>> bfs =
-                new ArrayList<Factory<Bootstrap>>();
-        bfs.add(new Factory<Bootstrap>() {
+        List<Factory<ClientBootstrap>> bfs =
+                new ArrayList<Factory<ClientBootstrap>>();
+        bfs.add(new Factory<ClientBootstrap>() {
             @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channel(
-                        new NioDatagramChannel(InternetProtocolFamily.IPv4));
+            public ClientBootstrap newInstance() {
+                return new ClientBootstrap().group(new NioEventLoopGroup()).channelFactory(new ChannelFactory() {
+                    @Override
+                    public Channel newChannel() {
+                       return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                    }
+                });
             }
         });
-        bfs.add(new Factory<Bootstrap>() {
+        bfs.add(new Factory<ClientBootstrap>() {
             @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(new OioEventLoopGroup()).channel(new OioDatagramChannel());
+            public ClientBootstrap newInstance() {
+                return new ClientBootstrap().group(new OioEventLoopGroup()).channel(OioDatagramChannel.class);
             }
         });
 
         // Populate the combinations
-        for (Factory<Bootstrap> sbf: bfs) {
-            for (Factory<Bootstrap> cbf: bfs) {
-                final Factory<Bootstrap> sbf0 = sbf;
-                final Factory<Bootstrap> cbf0 = cbf;
-                list.add(new Entry<Factory<Bootstrap>, Factory<Bootstrap>>() {
+        for (Factory<ClientBootstrap> sbf: bfs) {
+            for (Factory<ClientBootstrap> cbf: bfs) {
+                final Factory<ClientBootstrap> sbf0 = sbf;
+                final Factory<ClientBootstrap> cbf0 = cbf;
+                list.add(new Entry<Factory<ClientBootstrap>, Factory<ClientBootstrap>>() {
                     @Override
-                    public Factory<Bootstrap> getKey() {
+                    public Factory<ClientBootstrap> getKey() {
                         return sbf0;
                     }
 
                     @Override
-                    public Factory<Bootstrap> getValue() {
+                    public Factory<ClientBootstrap> getValue() {
                         return cbf0;
                     }
 
                     @Override
-                    public Factory<Bootstrap> setValue(Factory<Bootstrap> value) {
+                    public Factory<ClientBootstrap> setValue(Factory<ClientBootstrap> value) {
                         throw new UnsupportedOperationException();
                     }
                 });
@@ -133,17 +139,21 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
                                 group(new NioEventLoopGroup(), new NioEventLoopGroup()).
-                                channel(new NioServerSocketChannel());
+                                channel(NioServerSocketChannel.class);
             }
         });
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                AioEventLoopGroup parentGroup = new AioEventLoopGroup();
-                AioEventLoopGroup childGroup = new AioEventLoopGroup();
-                return new ServerBootstrap().
-                                group(parentGroup, childGroup).
-                                channel(new AioServerSocketChannel(parentGroup, childGroup));
+                final AioEventLoopGroup parentGroup = new AioEventLoopGroup();
+                final AioEventLoopGroup childGroup = new AioEventLoopGroup();
+                return new ServerBootstrap().group(parentGroup, childGroup).channelFactory(new ChannelFactory() {
+
+                    @Override
+                    public Channel newChannel() {
+                        return new AioServerSocketChannel(parentGroup, childGroup);
+                    }
+                });
             }
         });
         list.add(new Factory<ServerBootstrap>() {
@@ -151,32 +161,37 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
                                 group(new OioEventLoopGroup(), new OioEventLoopGroup()).
-                                channel(new OioServerSocketChannel());
+                                channel(OioServerSocketChannel.class);
             }
         });
 
         return list;
     }
 
-    static List<Factory<Bootstrap>> clientSocket() {
-        List<Factory<Bootstrap>> list = new ArrayList<Factory<Bootstrap>>();
-        list.add(new Factory<Bootstrap>() {
+    static List<Factory<ClientBootstrap>> clientSocket() {
+        List<Factory<ClientBootstrap>> list = new ArrayList<Factory<ClientBootstrap>>();
+        list.add(new Factory<ClientBootstrap>() {
             @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channel(new NioSocketChannel());
+            public ClientBootstrap newInstance() {
+                return new ClientBootstrap().group(new NioEventLoopGroup()).channel(NioSocketChannel.class);
             }
         });
-        list.add(new Factory<Bootstrap>() {
+        list.add(new Factory<ClientBootstrap>() {
             @Override
-            public Bootstrap newInstance() {
-                AioEventLoopGroup loop = new AioEventLoopGroup();
-                return new Bootstrap().group(loop).channel(new AioSocketChannel(loop));
+            public ClientBootstrap newInstance() {
+                final AioEventLoopGroup loop = new AioEventLoopGroup();
+                return new ClientBootstrap().group(loop).channelFactory(new ChannelFactory() {
+                    @Override
+                    public Channel newChannel() {
+                        return new AioSocketChannel(loop);
+                    }
+                });
             }
         });
-        list.add(new Factory<Bootstrap>() {
+        list.add(new Factory<ClientBootstrap>() {
             @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(new OioEventLoopGroup()).channel(new OioSocketChannel());
+            public ClientBootstrap newInstance() {
+                return new ClientBootstrap().group(new OioEventLoopGroup()).channel(OioSocketChannel.class);
             }
         });
         return list;

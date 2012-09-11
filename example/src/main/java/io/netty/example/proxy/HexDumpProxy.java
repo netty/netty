@@ -40,7 +40,7 @@ public class HexDumpProxy {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
-             .channel(new NioServerSocketChannel())
+             .channel(NioServerSocketChannel.class)
              .localAddress(localPort)
              .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort));
 

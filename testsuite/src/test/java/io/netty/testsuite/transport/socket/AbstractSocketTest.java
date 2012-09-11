@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -34,7 +34,7 @@ import org.junit.rules.TestName;
 
 public abstract class AbstractSocketTest {
 
-    private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
+    private static final List<Entry<Factory<ServerBootstrap>, Factory<ClientBootstrap>>> COMBO =
             SocketTestPermutation.socket();
 
     @Rule
@@ -43,13 +43,13 @@ public abstract class AbstractSocketTest {
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     protected volatile ServerBootstrap sb;
-    protected volatile Bootstrap cb;
+    protected volatile ClientBootstrap cb;
     protected volatile InetSocketAddress addr;
-    protected volatile Factory<Bootstrap> currentBootstrap;
+    protected volatile Factory<ClientBootstrap> currentBootstrap;
     
     protected void run() throws Throwable {
         int i = 0;
-        for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {
+        for (Entry<Factory<ServerBootstrap>, Factory<ClientBootstrap>> e: COMBO) {
             currentBootstrap = e.getValue();
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
@@ -62,7 +62,7 @@ public abstract class AbstractSocketTest {
                     "Running: %s %d of %d", testName.getMethodName(), ++ i, COMBO.size()));
             try {
                 Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), ServerBootstrap.class, Bootstrap.class);
+                        testName.getMethodName(), ServerBootstrap.class, ClientBootstrap.class);
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();

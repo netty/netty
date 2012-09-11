@@ -130,4 +130,12 @@ public class ClientBootstrap extends Bootstrap<ClientBootstrap> {
         group().register(channel).syncUninterruptibly();
     }
 
+    @Override
+    protected void validate() {
+        super.validate();
+        if (handler() == null) {
+            throw new IllegalStateException("handler not set");
+        }
+    }
+
 }

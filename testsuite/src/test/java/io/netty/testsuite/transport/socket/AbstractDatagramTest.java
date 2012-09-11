@@ -16,6 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
@@ -33,7 +34,7 @@ import org.junit.rules.TestName;
 
 public abstract class AbstractDatagramTest {
 
-    private static final List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> COMBO =
+    private static final List<Entry<Factory<ClientBootstrap>, Factory<ClientBootstrap>>> COMBO =
             SocketTestPermutation.datagram();
 
     @Rule
@@ -41,13 +42,13 @@ public abstract class AbstractDatagramTest {
 
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
-    protected volatile Bootstrap sb;
-    protected volatile Bootstrap cb;
+    protected volatile ClientBootstrap sb;
+    protected volatile ClientBootstrap cb;
     protected volatile InetSocketAddress addr;
 
     protected void run() throws Throwable {
         int i = 0;
-        for (Entry<Factory<Bootstrap>, Factory<Bootstrap>> e: COMBO) {
+        for (Entry<Factory<ClientBootstrap>, Factory<ClientBootstrap>> e: COMBO) {
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
             addr = new InetSocketAddress(
