@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.group.ChannelGroup;
 
 import java.lang.annotation.Documented;
@@ -87,7 +87,7 @@ import java.nio.channels.Channels;
  * the confidential information:
  * <pre>
  * // Create a new handler instance per channel.
- * // See {@link Bootstrap#setPipelineFactory(ChannelPipelineFactory)}.
+ * // See {@link ClientBootstrap#setPipelineFactory(ChannelPipelineFactory)}.
  * public class DataServerPipelineFactory implements {@link ChannelPipelineFactory} {
  *     public {@link ChannelPipeline} getPipeline() {
  *         return {@link Channels}.pipeline(<b>new DataServerHandler()</b>);

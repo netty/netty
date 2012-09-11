@@ -13,39 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.bootstrap;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+package io.netty.bootstrap;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
-public class Bootstrap {
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelException;
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+public abstract class Bootstrap<B extends Bootstrap<?>> {
     private EventLoopGroup group;
-    private Channel channel;
-    private ChannelHandler handler;
+    private ChannelFactory factory;
     private SocketAddress localAddress;
-    private SocketAddress remoteAddress;
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+    private ChannelHandler handler;
 
-    public Bootstrap group(EventLoopGroup group) {
+    @SuppressWarnings("unchecked")
+    public B group(EventLoopGroup group) {
         if (group == null) {
             throw new NullPointerException("group");
         }
@@ -53,21 +46,54 @@ public class Bootstrap {
             throw new IllegalStateException("group set already");
         }
         this.group = group;
-        return this;
+        return (B) this;
     }
 
-    public Bootstrap channel(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
+    public B channel(Class<? extends Channel> channelClass) {
+        if (channelClass == null) {
+            throw new NullPointerException("channelClass");
         }
-        if (this.channel != null) {
-            throw new IllegalStateException("channel set already");
-        }
-        this.channel = channel;
-        return this;
+        return channelFactory(new BootstrapChannelFactory(channelClass));
     }
 
-    public <T> Bootstrap option(ChannelOption<T> option, T value) {
+    @SuppressWarnings("unchecked")
+    public B channelFactory(ChannelFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
+        if (this.factory != null) {
+            throw new IllegalStateException("factory set already");
+        }
+        this.factory = factory;
+        return (B) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public B localAddress(SocketAddress localAddress) {
+        this.localAddress = localAddress;
+        return (B) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public B localAddress(int port) {
+        localAddress = new InetSocketAddress(port);
+        return (B) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public B localAddress(String host, int port) {
+        localAddress = new InetSocketAddress(host, port);
+        return (B) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public B localAddress(InetAddress host, int port) {
+        localAddress = new InetSocketAddress(host, port);
+        return (B) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> B option(ChannelOption<T> option, T value) {
         if (option == null) {
             throw new NullPointerException("option");
         }
@@ -76,135 +102,50 @@ public class Bootstrap {
         } else {
             options.put(option, value);
         }
-        return this;
+        return (B) this;
     }
 
-    public Bootstrap handler(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
+    public void shutdown() {
+        if (group != null) {
+            group.shutdown();
         }
-        this.handler = handler;
-        return this;
     }
 
-    public Bootstrap localAddress(SocketAddress localAddress) {
-        this.localAddress = localAddress;
-        return this;
+    protected void validate() {
+        if (group == null) {
+            throw new IllegalStateException("group not set");
+        }
+        if (factory == null) {
+            throw new IllegalStateException("factory not set");
+        }
+        if (handler == null) {
+            throw new IllegalStateException("handler not set");
+        }
     }
 
-    public Bootstrap localAddress(int port) {
-        localAddress = new InetSocketAddress(port);
-        return this;
-    }
-
-    public Bootstrap localAddress(String host, int port) {
-        localAddress = new InetSocketAddress(host, port);
-        return this;
-    }
-
-    public Bootstrap localAddress(InetAddress host, int port) {
-        localAddress = new InetSocketAddress(host, port);
-        return this;
-    }
-
-    public Bootstrap remoteAddress(SocketAddress remoteAddress) {
-        this.remoteAddress = remoteAddress;
-        return this;
-    }
-
-    public Bootstrap remoteAddress(String host, int port) {
-        remoteAddress = new InetSocketAddress(host, port);
-        return this;
-    }
-
-    public Bootstrap remoteAddress(InetAddress host, int port) {
-        remoteAddress = new InetSocketAddress(host, port);
-        return this;
+    protected final void validate(ChannelFuture future) {
+        if (future == null) {
+            throw new NullPointerException("future");
+        }
+        validate();
     }
 
     public ChannelFuture bind() {
         validate();
+        Channel channel = factory().newChannel();
         return bind(channel.newFuture());
     }
 
-    public ChannelFuture bind(ChannelFuture future) {
-        validate(future);
-        if (localAddress == null) {
-            throw new IllegalStateException("localAddress not set");
+    @SuppressWarnings("unchecked")
+    public B handler(ChannelHandler handler) {
+        if (handler == null) {
+            throw new NullPointerException("handler");
         }
-
-        try {
-            init();
-        } catch (Throwable t) {
-            future.setFailure(t);
-            return future;
-        }
-
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        return channel.bind(localAddress, future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        this.handler = handler;
+        return (B) this;
     }
 
-    public ChannelFuture connect() {
-        validate();
-        return connect(channel.newFuture());
-    }
-
-    public ChannelFuture connect(ChannelFuture future) {
-        validate(future);
-        if (remoteAddress == null) {
-            throw new IllegalStateException("remoteAddress not set");
-        }
-
-        try {
-            init();
-        } catch (Throwable t) {
-            future.setFailure(t);
-            return future;
-        }
-
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        if (localAddress == null) {
-            channel.connect(remoteAddress, future);
-        } else {
-            channel.connect(remoteAddress, localAddress, future);
-        }
-        return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-    }
-
-    private void init() throws Exception {
-        if (channel.isActive()) {
-            throw new IllegalStateException("channel already active:: " + channel);
-        }
-        if (channel.isRegistered()) {
-            throw new IllegalStateException("channel already registered: " + channel);
-        }
-        if (!channel.isOpen()) {
-            throw new ClosedChannelException();
-        }
-
-        ChannelPipeline p = channel.pipeline();
-        p.addLast(handler);
-
-        for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
-            try {
-                if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-                    logger.warn("Unknown channel option: " + e);
-                }
-            } catch (Throwable t) {
-                logger.warn("Failed to set a channel option: " + channel, t);
-            }
-        }
-
-        group.register(channel).syncUninterruptibly();
-    }
-
-    private static boolean ensureOpen(ChannelFuture future) {
+    protected static boolean ensureOpen(ChannelFuture future) {
         if (!future.channel().isOpen()) {
             // Registration was successful but the channel was closed due to some failure in
             // handler.
@@ -214,32 +155,47 @@ public class Bootstrap {
         return true;
     }
 
-    public void shutdown() {
-        if (group != null) {
-            group.shutdown();
-        }
+    public abstract ChannelFuture bind(ChannelFuture future);
+
+    protected final SocketAddress localAddress() {
+        return localAddress;
     }
 
-    private void validate() {
-        if (group == null) {
-            throw new IllegalStateException("group not set");
-        }
-        if (channel == null) {
-            throw new IllegalStateException("channel not set");
-        }
-        if (handler == null) {
-            throw new IllegalStateException("handler not set");
-        }
+    protected final ChannelFactory factory() {
+        return factory;
     }
 
-    private void validate(ChannelFuture future) {
-        if (future == null) {
-            throw new NullPointerException("future");
+    protected final ChannelHandler handler() {
+        return handler;
+    }
+
+    protected final EventLoopGroup group() {
+        return group;
+    }
+
+    protected final Map<ChannelOption<?>, Object> options() {
+        return options;
+    }
+
+    private final class BootstrapChannelFactory implements ChannelFactory {
+        private final Class<? extends Channel> clazz;
+
+        BootstrapChannelFactory(Class<? extends Channel> clazz) {
+            this.clazz = clazz;
         }
 
-        if (future.channel() != channel) {
-            throw new IllegalArgumentException("future.channel() must be the same channel.");
+        @Override
+        public Channel newChannel() {
+            try {
+                return clazz.newInstance();
+            } catch (Throwable t) {
+                throw new ChannelException("Unable to create Channel from class " + clazz, t);
+            }
         }
-        validate();
+
+    }
+
+    public interface ChannelFactory {
+        Channel newChannel();
     }
 }
