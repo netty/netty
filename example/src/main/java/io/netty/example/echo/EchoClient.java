@@ -15,7 +15,7 @@
  */
 package io.netty.example.echo;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -47,7 +47,7 @@ public class EchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        ClientBootstrap b = new ClientBootstrap();
+        Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)

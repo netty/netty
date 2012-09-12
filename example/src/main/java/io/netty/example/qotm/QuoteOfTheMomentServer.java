@@ -15,7 +15,7 @@
  */
 package io.netty.example.qotm;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
@@ -37,7 +37,7 @@ public class QuoteOfTheMomentServer {
     }
 
     public void run() throws Exception {
-        ClientBootstrap b = new ClientBootstrap();
+        Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioDatagramChannel.class)

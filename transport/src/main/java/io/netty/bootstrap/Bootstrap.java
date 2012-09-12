@@ -13,244 +13,170 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.bootstrap;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelException;
+import java.nio.channels.ClosedChannelException;
+import java.util.Map.Entry;
 
 /**
- * {@link Bootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
- * method-chaining to provide an easy way to configure the {@link Bootstrap}.
+ * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
+ * for clients.
  *
  */
-public abstract class Bootstrap<B extends Bootstrap<?>> {
-    private EventLoopGroup group;
-    private ChannelFactory factory;
-    private SocketAddress localAddress;
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private ChannelHandler handler;
+public class Bootstrap extends AbstractBootstrap<Bootstrap> {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
+    private SocketAddress remoteAddress;
+
 
     /**
-     * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
-     * {@link Channel}
+     * The {@link SocketAddress} to connect to once the {@link #connect()} method
+     * is called.
      */
-    @SuppressWarnings("unchecked")
-    public B group(EventLoopGroup group) {
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
-        if (this.group != null) {
-            throw new IllegalStateException("group set already");
-        }
-        this.group = group;
-        return (B) this;
+    public Bootstrap remoteAddress(SocketAddress remoteAddress) {
+        this.remoteAddress = remoteAddress;
+        return this;
     }
 
     /**
-     * The {@link Class} which is used to create {@link Channel} instances from.
-     * You either use this or {@link #channelFactory(ChannelFactory)} if your
-     * {@link Channel} implementation has no no-args constructor.
+     * See {@link #remoteAddress(SocketAddress)}
      */
-    public B channel(Class<? extends Channel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
-        return channelFactory(new BootstrapChannelFactory(channelClass));
+    public Bootstrap remoteAddress(String host, int port) {
+        remoteAddress = new InetSocketAddress(host, port);
+        return this;
     }
 
     /**
-     * {@link ChannelFactory} which is used to create {@link Channel} instances from
-     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
-     * is not working for you because of some more complex needs. If your {@link Channel} implementation
-     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} for
-     * simplify your code.
+     * See {@link #remoteAddress(SocketAddress)}
      */
-    @SuppressWarnings("unchecked")
-    public B channelFactory(ChannelFactory factory) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (this.factory != null) {
-            throw new IllegalStateException("factory set already");
+    public Bootstrap remoteAddress(InetAddress host, int port) {
+        remoteAddress = new InetSocketAddress(host, port);
+        return this;
+    }
+
+    @Override
+    public ChannelFuture bind(ChannelFuture future) {
+        validate(future);
+        if (localAddress() == null) {
+            throw new IllegalStateException("localAddress not set");
         }
 
-        this.factory = factory;
-        return (B) this;
+        try {
+            init(future.channel());
+        } catch (Throwable t) {
+            future.setFailure(t);
+            return future;
+        }
+
+        if (!ensureOpen(future)) {
+            return future;
+        }
+
+        return future.channel().bind(localAddress(), future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     /**
-     * The {@link SocketAddress} which is used to bind the local "end" to.
-     *
+     * Connect a {@link Channel} to the remote peer.
      */
-    @SuppressWarnings("unchecked")
-    public B localAddress(SocketAddress localAddress) {
-        this.localAddress = localAddress;
-        return (B) this;
-    }
-
-    /**
-     * See {@link #localAddress(SocketAddress)}
-     */
-    public B localAddress(int port) {
-        return localAddress(new InetSocketAddress(port));
-    }
-
-    /**
-     * See {@link #localAddress(SocketAddress)}
-     */
-    public B localAddress(String host, int port) {
-        return localAddress(new InetSocketAddress(host, port));
-    }
-
-    /**
-     * See {@link #localAddress(SocketAddress)}
-     */
-    public B localAddress(InetAddress host, int port) {
-        return localAddress(new InetSocketAddress(host, port));
-    }
-
-    /**
-     * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
-     * created. Use a value of <code>null</code> to remove a previous set {@link ChannelOption}.
-     */
-    @SuppressWarnings("unchecked")
-    public <T> B option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
-        if (value == null) {
-            options.remove(option);
-        } else {
-            options.put(option, value);
-        }
-        return (B) this;
-    }
-
-    /**
-     * Shutdown the {@link Bootstrap} and the {@link EventLoopGroup} which is
-     * used by it. Only call this if you don't share the {@link EventLoopGroup}
-     * between different {@link Bootstrap}'s.
-     */
-    public void shutdown() {
-        if (group != null) {
-            group.shutdown();
-        }
-    }
-
-    /**
-     * Validate all the parameters. Sub-classes may override this, but should
-     * call the super method in that case.
-     */
-    protected void validate() {
-        if (group == null) {
-            throw new IllegalStateException("group not set");
-        }
-        if (factory == null) {
-            throw new IllegalStateException("factory not set");
-        }
-    }
-
-    protected final void validate(ChannelFuture future) {
-        if (future == null) {
-            throw new NullPointerException("future");
-        }
-        validate();
-    }
-
-    /**
-     * Create a new {@link Channel} and bind it.
-     */
-    public ChannelFuture bind() {
+    public ChannelFuture connect() {
         validate();
         Channel channel = factory().newChannel();
-        return bind(channel.newFuture());
+        return connect(channel.newFuture());
     }
 
     /**
-     * the {@link ChannelHandler} to use for serving the requests.
+     * See {@link #connect()}
      */
+    public ChannelFuture connect(ChannelFuture future) {
+        validate(future);
+        if (remoteAddress == null) {
+            throw new IllegalStateException("remoteAddress not set");
+        }
+
+        try {
+            init(future.channel());
+        } catch (Throwable t) {
+            future.setFailure(t);
+            return future;
+        }
+
+        if (!ensureOpen(future)) {
+            return future;
+        }
+
+        if (localAddress() == null) {
+            future.channel().connect(remoteAddress, future);
+        } else {
+            future.channel().connect(remoteAddress, localAddress(), future);
+        }
+        return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+    }
+
     @SuppressWarnings("unchecked")
-    public B handler(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
+    private void init(Channel channel) throws Exception {
+        if (channel.isActive()) {
+            throw new IllegalStateException("channel already active:: " + channel);
         }
-        this.handler = handler;
-        return (B) this;
-    }
-
-    protected static boolean ensureOpen(ChannelFuture future) {
-        if (!future.channel().isOpen()) {
-            // Registration was successful but the channel was closed due to some failure in
-            // handler.
-            future.setFailure(new ChannelException("initialization failure"));
-            return false;
+        if (channel.isRegistered()) {
+            throw new IllegalStateException("channel already registered: " + channel);
         }
-        return true;
-    }
-
-    /**
-     * Bind the {@link Channel} of the given {@link ChannelFactory}.
-     */
-    public abstract ChannelFuture bind(ChannelFuture future);
-
-    protected final SocketAddress localAddress() {
-        return localAddress;
-    }
-
-    protected final ChannelFactory factory() {
-        return factory;
-    }
-
-    protected final ChannelHandler handler() {
-        return handler;
-    }
-
-    protected final EventLoopGroup group() {
-        return group;
-    }
-
-    protected final Map<ChannelOption<?>, Object> options() {
-        return options;
-    }
-
-    private final class BootstrapChannelFactory implements ChannelFactory {
-        private final Class<? extends Channel> clazz;
-
-        BootstrapChannelFactory(Class<? extends Channel> clazz) {
-            this.clazz = clazz;
+        if (!channel.isOpen()) {
+            throw new ClosedChannelException();
         }
 
-        @Override
-        public Channel newChannel() {
+        ChannelPipeline p = channel.pipeline();
+        p.addLast(handler());
+
+        for (Entry<ChannelOption<?>, Object> e: options().entrySet()) {
             try {
-                return clazz.newInstance();
+                if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                    logger.warn("Unknown channel option: " + e);
+                }
             } catch (Throwable t) {
-                throw new ChannelException("Unable to create Channel from class " + clazz, t);
+                logger.warn("Failed to set a channel option: " + channel, t);
             }
         }
 
+        group().register(channel).syncUninterruptibly();
+    }
+
+    @Override
+    protected void validate() {
+        super.validate();
+        if (handler() == null) {
+            throw new IllegalStateException("handler not set");
+        }
     }
 
     /**
-     * Factory that is responsible to create new {@link Channel}'s on {@link Bootstrap#bind()}
-     * requests.
-     *
+     * Create a new {@link Bootstrap} using this "full-setup" {@link Bootstrap} as template.
+     * Only the given parameters are replaced, the rest is configured exactly the same way as the template.
      */
-    public interface ChannelFactory {
-        /**
-         * {@link Channel} to use in the {@link Bootstrap}
-         */
-        Channel newChannel();
+    public Bootstrap newBootstrap(SocketAddress localAddress, SocketAddress remoteAddress, ChannelHandler handler) {
+        validate();
+        Bootstrap cb = new Bootstrap().handler(handler).channelFactory(factory()).group(group())
+                .localAddress(localAddress).remoteAddress(remoteAddress);
+        cb.options().putAll(options());
+        return cb;
+    }
+
+    /**
+     * Create a new {@link Bootstrap} using this "full-setup" {@link Bootstrap} as template.
+     * Only the given parameters are replaced, the rest is configured exactly the same way as the template.
+     */
+    public Bootstrap newBootstrap(SocketAddress localAddress, SocketAddress remoteAddress) {
+        return newBootstrap(localAddress, remoteAddress, handler());
     }
 }

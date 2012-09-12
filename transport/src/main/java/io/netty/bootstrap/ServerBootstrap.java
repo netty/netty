@@ -45,7 +45,7 @@ import java.util.Map.Entry;
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
  *
  */
-public class ServerBootstrap extends Bootstrap<ServerBootstrap> {
+public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
     private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(NetworkConstants.LOCALHOST, 0);

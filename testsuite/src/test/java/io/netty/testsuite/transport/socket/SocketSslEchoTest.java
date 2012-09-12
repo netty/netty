@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -67,7 +67,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         run();
     }
 
-    public void testSslEcho(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
+    public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final EchoHandler sh = new EchoHandler(true);
         final EchoHandler ch = new EchoHandler(false);
 

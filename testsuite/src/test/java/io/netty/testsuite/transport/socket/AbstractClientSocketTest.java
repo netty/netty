@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
@@ -32,19 +32,19 @@ import org.junit.rules.TestName;
 
 public abstract class AbstractClientSocketTest {
 
-    private static final List<Factory<ClientBootstrap>> COMBO = SocketTestPermutation.clientSocket();
+    private static final List<Factory<Bootstrap>> COMBO = SocketTestPermutation.clientSocket();
 
     @Rule
     public final TestName testName = new TestName();
 
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
-    protected volatile ClientBootstrap cb;
+    protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
 
     protected void run() throws Throwable {
         int i = 0;
-        for (Factory<ClientBootstrap> e: COMBO) {
+        for (Factory<Bootstrap> e: COMBO) {
             cb = e.newInstance();
             addr = new InetSocketAddress(
                     NetworkConstants.LOCALHOST, TestUtils.getFreePort());
@@ -54,7 +54,7 @@ public abstract class AbstractClientSocketTest {
                     "Running: %s %d of %d", testName.getMethodName(), ++ i, COMBO.size()));
             try {
                 Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), ClientBootstrap.class);
+                        testName.getMethodName(), Bootstrap.class);
                 m.invoke(this, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();

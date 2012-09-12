@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -37,7 +37,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         run();
     }
 
-    public void testShutdownOutput(ClientBootstrap cb) throws Throwable {
+    public void testShutdownOutput(Bootstrap cb) throws Throwable {
         TestHandler h = new TestHandler();
         ServerSocket ss = new ServerSocket();
         Socket s = null;

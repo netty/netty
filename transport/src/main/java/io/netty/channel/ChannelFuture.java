@@ -129,7 +129,7 @@ import java.util.concurrent.TimeUnit;
  * connect timeout should be configured via a transport-specific option:
  * <pre>
  * // BAD - NEVER DO THIS
- * {@link ClientBootstrap} b = ...;
+ * {@link Bootstrap} b = ...;
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly(10, TimeUnit.SECONDS);
  * if (f.isCancelled()) {
@@ -143,7 +143,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // GOOD
- * {@link ClientBootstrap} b = ...;
+ * {@link Bootstrap} b = ...;
  * // Configure the connect timeout option.
  * <b>b.setOption("connectTimeoutMillis", 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);

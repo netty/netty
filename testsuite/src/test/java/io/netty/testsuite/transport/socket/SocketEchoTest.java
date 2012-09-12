@@ -16,7 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -44,7 +44,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         run();
     }
 
-    public void testSimpleEcho(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
+    public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testSimpleEcho0(sb, cb, Integer.MAX_VALUE);
     }
 
@@ -53,11 +53,11 @@ public class SocketEchoTest extends AbstractSocketTest {
         run();
     }
 
-    public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, ClientBootstrap cb) throws Throwable {
+    public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testSimpleEcho0(sb, cb, 32);
     }
 
-    private static void testSimpleEcho0(ServerBootstrap sb, ClientBootstrap cb, int maxInboundBufferSize) throws Throwable {
+    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize) throws Throwable {
         EchoHandler sh = new EchoHandler(maxInboundBufferSize);
         EchoHandler ch = new EchoHandler(maxInboundBufferSize);
 

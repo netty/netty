@@ -15,7 +15,7 @@
  */
 package io.netty.channel.local;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,7 +39,7 @@ public class LocalChannelRegistryTest {
 
         for (int i = 0; i < 2; i ++) {
             LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
-            ClientBootstrap cb = new ClientBootstrap();
+            Bootstrap cb = new Bootstrap();
             ServerBootstrap sb = new ServerBootstrap();
 
             cb.group(new LocalEventLoopGroup())

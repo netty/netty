@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.group.ChannelGroup;
 
 import java.lang.annotation.Documented;

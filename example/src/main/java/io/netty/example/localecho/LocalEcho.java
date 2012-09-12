@@ -15,7 +15,7 @@
  */
 package io.netty.example.localecho;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -43,7 +43,7 @@ public class LocalEcho {
         // Address to bind on / connect to.
         final LocalAddress addr = new LocalAddress(port);
 
-        ClientBootstrap cb = new ClientBootstrap();
+        Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         try {
             // Note that we can use any event loop to ensure certain local channels

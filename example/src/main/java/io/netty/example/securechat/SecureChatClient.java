@@ -15,7 +15,7 @@
  */
 package io.netty.example.securechat;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
@@ -39,7 +39,7 @@ public class SecureChatClient {
     }
 
     public void run() throws Exception {
-        ClientBootstrap b = new ClientBootstrap();
+        Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)

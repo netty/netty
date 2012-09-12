@@ -15,7 +15,7 @@
  */
 package io.netty.example.uptime;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -84,7 +84,7 @@ public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
             @Override
             public void run() {
                 println("Reconnecting to: " + ctx.channel().remoteAddress());
-                client.configureBootstrap(new ClientBootstrap(), loop).connect();
+                client.configureBootstrap(new Bootstrap(), loop).connect();
             }
         }, UptimeClient.RECONNECT_DELAY, TimeUnit.SECONDS);
     }

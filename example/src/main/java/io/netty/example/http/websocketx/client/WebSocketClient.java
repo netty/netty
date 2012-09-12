@@ -36,7 +36,7 @@
 //THE SOFTWARE.
 package io.netty.example.http.websocketx.client;
 
-import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -65,7 +65,7 @@ public class WebSocketClient {
     }
 
     public void run() throws Exception {
-        ClientBootstrap b = new ClientBootstrap();
+        Bootstrap b = new Bootstrap();
         try {
 
             String protocol = uri.getScheme();
