@@ -59,7 +59,7 @@ public class UptimeClient {
 
     Bootstrap configureBootstrap(Bootstrap b, EventLoopGroup g) {
         b.group(g)
-         .channel(new NioSocketChannel())
+         .channel(NioSocketChannel.class)
          .remoteAddress(host, port)
          .handler(new ChannelInitializer<SocketChannel>() {
             @Override

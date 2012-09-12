@@ -15,6 +15,7 @@
  */
 package io.netty.example.sctp;
 
+import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -54,7 +55,7 @@ public class SctpEchoClient {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSctpChannel())
+             .channel(NioSctpChannel.class)
              .option(ChannelOption.SCTP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SctpChannel>() {

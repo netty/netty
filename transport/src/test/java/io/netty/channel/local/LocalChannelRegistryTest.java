@@ -43,12 +43,12 @@ public class LocalChannelRegistryTest {
             ServerBootstrap sb = new ServerBootstrap();
 
             cb.group(new LocalEventLoopGroup())
-              .channel(new LocalChannel())
+              .channel(LocalChannel.class)
               .remoteAddress(addr)
               .handler(new TestHandler());
 
             sb.group(new LocalEventLoopGroup())
-              .channel(new LocalServerChannel())
+              .channel(LocalServerChannel.class)
               .localAddress(addr)
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override

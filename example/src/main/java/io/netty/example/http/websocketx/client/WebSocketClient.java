@@ -84,7 +84,7 @@ public class WebSocketClient {
                             uri, WebSocketVersion.V13, null, false, customHeaders);
 
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .remoteAddress(uri.getHost(), uri.getPort())
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override

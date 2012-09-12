@@ -46,7 +46,7 @@ public class LocalTimeClient {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .remoteAddress(host, port)
              .handler(new LocalTimeClientInitializer());
 
