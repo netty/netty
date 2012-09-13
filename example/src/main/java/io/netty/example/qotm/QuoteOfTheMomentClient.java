@@ -44,7 +44,7 @@ public class QuoteOfTheMomentClient {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioDatagramChannel())
+             .channel(NioDatagramChannel.class)
              .localAddress(new InetSocketAddress(0))
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentClientHandler());

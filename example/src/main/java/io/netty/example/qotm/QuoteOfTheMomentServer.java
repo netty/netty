@@ -40,7 +40,7 @@ public class QuoteOfTheMomentServer {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioDatagramChannel())
+             .channel(NioDatagramChannel.class)
              .localAddress(new InetSocketAddress(port))
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentServerHandler());

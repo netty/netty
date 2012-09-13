@@ -15,8 +15,10 @@
  */
 package io.netty.testsuite.transport.socket;
 
+import io.netty.bootstrap.AbstractBootstrap.ChannelFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.aio.AioEventLoopGroup;
 import io.netty.channel.socket.aio.AioServerSocketChannel;
@@ -86,14 +88,18 @@ final class SocketTestPermutation {
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channel(
-                        new NioDatagramChannel(InternetProtocolFamily.IPv4));
+                return new Bootstrap().group(new NioEventLoopGroup()).channelFactory(new ChannelFactory() {
+                    @Override
+                    public Channel newChannel() {
+                       return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                    }
+                });
             }
         });
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new OioEventLoopGroup()).channel(new OioDatagramChannel());
+                return new Bootstrap().group(new OioEventLoopGroup()).channel(OioDatagramChannel.class);
             }
         });
 
@@ -133,17 +139,21 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
                                 group(new NioEventLoopGroup(), new NioEventLoopGroup()).
-                                channel(new NioServerSocketChannel());
+                                channel(NioServerSocketChannel.class);
             }
         });
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                AioEventLoopGroup parentGroup = new AioEventLoopGroup();
-                AioEventLoopGroup childGroup = new AioEventLoopGroup();
-                return new ServerBootstrap().
-                                group(parentGroup, childGroup).
-                                channel(new AioServerSocketChannel(parentGroup, childGroup));
+                final AioEventLoopGroup parentGroup = new AioEventLoopGroup();
+                final AioEventLoopGroup childGroup = new AioEventLoopGroup();
+                return new ServerBootstrap().group(parentGroup, childGroup).channelFactory(new ChannelFactory() {
+
+                    @Override
+                    public Channel newChannel() {
+                        return new AioServerSocketChannel(parentGroup, childGroup);
+                    }
+                });
             }
         });
         list.add(new Factory<ServerBootstrap>() {
@@ -151,7 +161,7 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
                                 group(new OioEventLoopGroup(), new OioEventLoopGroup()).
-                                channel(new OioServerSocketChannel());
+                                channel(OioServerSocketChannel.class);
             }
         });
 
@@ -163,20 +173,25 @@ final class SocketTestPermutation {
         list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channel(new NioSocketChannel());
+                return new Bootstrap().group(new NioEventLoopGroup()).channel(NioSocketChannel.class);
             }
         });
         list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                AioEventLoopGroup loop = new AioEventLoopGroup();
-                return new Bootstrap().group(loop).channel(new AioSocketChannel(loop));
+                final AioEventLoopGroup loop = new AioEventLoopGroup();
+                return new Bootstrap().group(loop).channelFactory(new ChannelFactory() {
+                    @Override
+                    public Channel newChannel() {
+                        return new AioSocketChannel(loop);
+                    }
+                });
             }
         });
         list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new OioEventLoopGroup()).channel(new OioSocketChannel());
+                return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSocketChannel.class);
             }
         });
         return list;
