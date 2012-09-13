@@ -253,6 +253,9 @@ final class NioEventLoop extends SingleThreadEventLoop {
 
     private void processSelectedKeys() {
         Set<SelectionKey> selectedKeys = selector.selectedKeys();
+        // check if the set is empty and if so just return to not create garbage by
+        // creating a new Iterator every time even if there is nothing to process.
+        // See https://github.com/netty/netty/issues/597
         if (selectedKeys.isEmpty()) {
             return;
         }
