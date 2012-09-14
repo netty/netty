@@ -29,12 +29,9 @@ import org.jboss.netty.util.CharsetUtil;
 final class WebSocketUtil {
 
     /**
-     * Performs an MD5 hash
-     *
-     * @param bytes
-     *            Data to hash
-     * @return Hashed data
+     * @deprecated use {@link #md5(ChannelBuffer)}
      */
+    @Deprecated
     static byte[] md5(byte[] bytes) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -45,12 +42,30 @@ final class WebSocketUtil {
     }
 
     /**
-     * Performs an SHA-1 hash
+     * Performs an MD5 hash
      *
-     * @param bytes
-     *            Data to hash
+     * @param buffer
+     *            buffer to hash
      * @return Hashed data
      */
+    static ChannelBuffer md5(ChannelBuffer buffer) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            if (buffer.hasArray()) {
+                md.update(buffer.array(), buffer.readerIndex(), buffer.readableBytes());
+            } else {
+                md.update(buffer.toByteBuffer());
+            }
+            return ChannelBuffers.wrappedBuffer(md.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new InternalError("MD5 not supported on this platform");
+        }
+    }
+
+    /**
+     * @deprecated use {@link #sha1(ChannelBuffer)}
+     */
+    @Deprecated
     static byte[] sha1(byte[] bytes) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA1");
@@ -61,15 +76,45 @@ final class WebSocketUtil {
     }
 
     /**
-     * Base 64 encoding
+     * Performs an SHA-1 hash
      *
-     * @param bytes
-     *            Bytes to encode
-     * @return encoded string
+     * @param buffer
+     *            buffer to hash
+     * @return Hashed data
      */
+    static ChannelBuffer sha1(ChannelBuffer buffer) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA1");
+            if (buffer.hasArray()) {
+                md.update(buffer.array(), buffer.readerIndex(), buffer.readableBytes());
+            } else {
+                md.update(buffer.toByteBuffer());
+            }
+            return ChannelBuffers.wrappedBuffer(md.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new InternalError("SHA-1 not supported on this platform");
+        }
+    }
+
+
+    /**
+     * @deprecated use {@link #base64(ChannelBuffer)}
+     */
+    @Deprecated
     static String base64(byte[] bytes) {
         ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
         return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
+    }
+
+    /**
+     * Base 64 encoding
+     *
+     * @param buffer
+     *            Bytes to encode
+     * @return encoded string
+     */
+    static String base64(ChannelBuffer buffer) {
+        return Base64.encode(buffer).toString(CharsetUtil.UTF_8);
     }
 
     /**

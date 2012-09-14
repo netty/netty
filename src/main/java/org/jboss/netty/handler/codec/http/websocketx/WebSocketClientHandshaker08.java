@@ -18,6 +18,8 @@ package org.jboss.netty.handler.codec.http.websocketx;
 import java.net.URI;
 import java.util.Map;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -127,11 +129,11 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         // Get 16 bit nonce and base 64 encode it
-        byte[] nonce = WebSocketUtil.randomBytes(16);
+        ChannelBuffer nonce = ChannelBuffers.wrappedBuffer(WebSocketUtil.randomBytes(16));
         String key = WebSocketUtil.base64(nonce);
 
         String acceptSeed = key + MAGIC_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII.name()));
+        ChannelBuffer sha1 = WebSocketUtil.sha1(ChannelBuffers.copiedBuffer(acceptSeed, CharsetUtil.US_ASCII));
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {

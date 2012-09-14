@@ -173,8 +173,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            ChannelBuffer output = ChannelBuffers.wrappedBuffer(WebSocketUtil.md5(input.array()));
-            res.setContent(output);
+            res.setContent(WebSocketUtil.md5(input));
         } else {
             // Old Hixie 75 handshake method with no challenge:
             res.addHeader(WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));

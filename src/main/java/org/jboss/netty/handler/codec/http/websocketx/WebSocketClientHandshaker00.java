@@ -17,9 +17,9 @@ package org.jboss.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Map;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -48,7 +48,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
-    private byte[] expectedChallengeResponseBytes;
+    private ChannelBuffer expectedChallengeResponseBytes;
 
     /**
      * Constructor with default values
@@ -146,7 +146,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         System.arraycopy(number1Array, 0, challenge, 0, 4);
         System.arraycopy(number2Array, 0, challenge, 4, 4);
         System.arraycopy(key3, 0, challenge, 8, 8);
-        expectedChallengeResponseBytes = WebSocketUtil.md5(challenge);
+        expectedChallengeResponseBytes = WebSocketUtil.md5(ChannelBuffers.wrappedBuffer(challenge));
 
         // Get path
         URI wsURL = getWebSocketUrl();
@@ -239,8 +239,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + response.getHeader(Names.CONNECTION));
         }
 
-        byte[] challenge = response.getContent().array();
-        if (!Arrays.equals(challenge, expectedChallengeResponseBytes)) {
+        ChannelBuffer challenge = response.getContent();
+        if (challenge.equals(expectedChallengeResponseBytes)) {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
 

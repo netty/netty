@@ -20,6 +20,8 @@ import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 import java.io.UnsupportedEncodingException;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -147,12 +149,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
         String acceptSeed = key + WEBSOCKET_13_ACCEPT_GUID;
-        byte[] sha1;
-        try {
-            sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII.name()));
-        } catch (UnsupportedEncodingException e) {
-            return Channels.failedFuture(channel, e);
-        }
+        ChannelBuffer sha1 = WebSocketUtil.sha1(ChannelBuffers.copiedBuffer(acceptSeed, CharsetUtil.US_ASCII));
         String accept = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
