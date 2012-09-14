@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -71,7 +72,7 @@ public class WebSocketServerProtocolHandshakeHandler extends SimpleChannelUpstre
                 handshakeFuture.addListener(new ChannelFutureListener() {
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
-                            //ctx.fireExceptionCaught(future.getCause());
+                            Channels.fireExceptionCaught(ctx, future.getCause());
                         }
                     }
                 });
@@ -84,7 +85,7 @@ public class WebSocketServerProtocolHandshakeHandler extends SimpleChannelUpstre
 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.error("Exception Caught", cause);
-        //ctx.close();
+        ctx.getChannel().close();
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
