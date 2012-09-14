@@ -32,6 +32,7 @@
         <include>**/*.xml</include>
         <include>**/license/**</include>
         <include>**/src/**</include>
+        <include>**/lib/**</include>
       </includes>
       <excludes>
         <exclude>**/bin/**</exclude>
