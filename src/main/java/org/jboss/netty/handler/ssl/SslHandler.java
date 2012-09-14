@@ -773,15 +773,16 @@ public class SslHandler extends FrameDecoder
         return (short) (buf.getByte(offset) << 8 | buf.getByte(offset + 1) & 0xFF);
     }
 
-    private ChannelFuture wrap(ChannelHandlerContext context, Channel channel)
+    private void wrap(ChannelHandlerContext context, Channel channel)
             throws SSLException {
 
-        ChannelFuture future = null;
         ChannelBuffer msg;
         ByteBuffer outNetBuf = bufferPool.acquireBuffer();
         boolean success = true;
         boolean offered = false;
         boolean needsUnwrap = false;
+        PendingWrite pendingWrite = null;
+
         try {
             loop:
             for (;;) {
@@ -789,7 +790,7 @@ public class SslHandler extends FrameDecoder
                 // in order and their encrypted counterpart is offered in
                 // order.
                 synchronized (pendingUnencryptedWrites) {
-                    PendingWrite pendingWrite = pendingUnencryptedWrites.peek();
+                    pendingWrite = pendingUnencryptedWrites.peek();
                     if (pendingWrite == null) {
                         break;
                     }
@@ -828,6 +829,7 @@ public class SslHandler extends FrameDecoder
                             msg.writeBytes(outNetBuf);
                             outNetBuf.clear();
 
+                            ChannelFuture future;
                             if (pendingWrite.outAppBuf.hasRemaining()) {
                                 // pendingWrite's future shouldn't be notified if
                                 // only partial data is written.
@@ -893,12 +895,18 @@ public class SslHandler extends FrameDecoder
             if (!success) {
                 IllegalStateException cause =
                     new IllegalStateException("SSLEngine already closed");
+
+                // Check if we had a pendingWrite in process, if so we need to also notify as otherwise
+                // the ChannelFuture will never get notified
+                if (pendingWrite != null) {
+                    pendingWrite.future.setFailure(cause);
+                }
+
                 // Mark all remaining pending writes as failure if anything
                 // wrong happened before the write requests are wrapped.
                 // Please note that we do not call setFailure while a lock is
                 // acquired, to avoid a potential dead lock.
                 for (;;) {
-                    PendingWrite pendingWrite;
                     synchronized (pendingUnencryptedWrites) {
                         pendingWrite = pendingUnencryptedWrites.poll();
                         if (pendingWrite == null) {
@@ -914,11 +922,6 @@ public class SslHandler extends FrameDecoder
         if (needsUnwrap) {
             unwrap(context, channel, ChannelBuffers.EMPTY_BUFFER, 0, 0);
         }
-
-        if (future == null) {
-            future = succeededFuture(channel);
-        }
-        return future;
     }
 
     private void offerEncryptedWriteRequest(MessageEvent encryptedWrite) {
