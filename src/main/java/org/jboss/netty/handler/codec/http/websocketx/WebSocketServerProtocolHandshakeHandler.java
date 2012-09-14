@@ -69,7 +69,6 @@ public class WebSocketServerProtocolHandshakeHandler extends SimpleChannelUpstre
             } else {
                 final ChannelFuture handshakeFuture = handshaker.handshake(ctx.getChannel(), req);
                 handshakeFuture.addListener(new ChannelFutureListener() {
-                    @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
                             //ctx.fireExceptionCaught(future.getCause());

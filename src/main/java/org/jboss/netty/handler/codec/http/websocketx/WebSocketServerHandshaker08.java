@@ -18,15 +18,12 @@ package org.jboss.netty.handler.codec.http.websocketx;
 import static org.jboss.netty.handler.codec.http.HttpHeaders.Values.*;
 import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
-import java.io.UnsupportedEncodingException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
@@ -169,7 +166,6 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
         // Upgrade the connection and send the handshake response.
         future.addListener(new ChannelFutureListener() {
-            @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.getChannel().getPipeline();
                 if (p.get(HttpChunkAggregator.class) != null) {
