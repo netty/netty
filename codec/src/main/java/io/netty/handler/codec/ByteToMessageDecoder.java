@@ -69,7 +69,7 @@ public abstract class ByteToMessageDecoder<O>
         ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
-        for (;;) {
+        while (in.readable()) {
             try {
                 int oldInputLength = in.readableBytes();
                 O o = decode(ctx, in);

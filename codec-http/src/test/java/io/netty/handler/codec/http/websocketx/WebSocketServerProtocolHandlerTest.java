@@ -44,7 +44,7 @@ public class WebSocketServerProtocolHandlerTest {
     @Test
     public void testHttpUpgradeRequest() throws Exception {
         EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
-        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerHandshakeHandler.class);
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         
         writeUpgradeRequest(ch);
         

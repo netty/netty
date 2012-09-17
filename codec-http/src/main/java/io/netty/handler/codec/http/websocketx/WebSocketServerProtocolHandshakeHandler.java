@@ -23,25 +23,28 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request)
  */
-class WebSocketServerHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
+public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(WebSocketServerHandshakeHandler.class);
+            InternalLoggerFactory.getInstance(WebSocketServerProtocolHandshakeHandler.class);
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
 
-    public WebSocketServerHandshakeHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
+    public WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
@@ -55,27 +58,23 @@ class WebSocketServerHandshakeHandler extends ChannelInboundMessageHandlerAdapte
         }
 
         final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                getWebSocketLocation(req, websocketPath), subprotocols, allowExtensions);
+                getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
         final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
-            try {
-                final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
-                handshakeFuture.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            ctx.fireExceptionCaught(future.cause());
-                        }
+            final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
+            handshakeFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        ctx.fireExceptionCaught(future.cause());
                     }
-                });
-                WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
-                    WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
-            } catch (WebSocketHandshakeException e) {
-                ctx.fireExceptionCaught(e);
-            }
+                }
+            });
+            WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
+            ctx.pipeline().replace(this, "WS403Responder",
+                WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
         }
     }
 
@@ -92,8 +91,13 @@ class WebSocketServerHandshakeHandler extends ChannelInboundMessageHandlerAdapte
         }
     }
 
-    private static String getWebSocketLocation(HttpRequest req, String path) {
-        return "ws://" + req.getHeader(HttpHeaders.Names.HOST) + path;
+    private static String getWebSocketLocation(ChannelPipeline cp, HttpRequest req, String path) {
+        String protocol = "ws";
+        if (cp.get(SslHandler.class) != null) {
+            // SSL in use so use Secure WebSockets
+            protocol = "wss";
+        }
+        return protocol + "://" + req.getHeader(HttpHeaders.Names.HOST) + path;
     }
 
 }

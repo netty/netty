@@ -45,7 +45,7 @@ public class SctpEchoServer {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
-             .channel(new NioSctpServerChannel())
+             .channel(NioSctpServerChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))
              .childOption(ChannelOption.SCTP_NODELAY, true)

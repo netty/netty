@@ -39,7 +39,7 @@ public class DiscardClient {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .remoteAddress(host, port)
              .handler(new DiscardClientHandler(firstMessageSize));
 

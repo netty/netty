@@ -36,7 +36,7 @@ public class AutobahnServer {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
-             .channel(new NioServerSocketChannel())
+             .channel(NioServerSocketChannel.class)
              .localAddress(port)
              .childHandler(new AutobahnServerInitializer());
 

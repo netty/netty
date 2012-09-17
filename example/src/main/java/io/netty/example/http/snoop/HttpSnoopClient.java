@@ -65,7 +65,7 @@ public class HttpSnoopClient {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new NioEventLoopGroup())
-             .channel(new NioSocketChannel())
+             .channel(NioSocketChannel.class)
              .handler(new HttpSnoopClientInitializer(ssl))
              .remoteAddress(new InetSocketAddress(host, port));
 
