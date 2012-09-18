@@ -56,7 +56,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
 class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     private static final AtomicInteger nextId = new AtomicInteger();
-    private static final Timer TIMER = new HashedWheelTimer();
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
@@ -70,11 +69,13 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     private final WorkerPool<NioWorker> workerPool;
 
+    private final Timer timer;
+
     NioClientSocketPipelineSink(
-            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
+            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool, Timer timer) {
 
         this.bossExecutor = bossExecutor;
-
+        this.timer = timer;
         bosses = new Boss[bossCount];
         for (int i = 0; i < bosses.length; i ++) {
             bosses[i] = new Boss(i);
@@ -249,7 +250,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             int timeout = channel.getConfig().getConnectTimeoutMillis();
             if (timeout > 0) {
                 if (!channel.isConnected()) {
-                    channel.timoutTimer = TIMER.newTimeout(wakeupTask,
+                    channel.timoutTimer = timer.newTimeout(wakeupTask,
                             timeout, TimeUnit.MILLISECONDS);
                 }
             }
