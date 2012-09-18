@@ -246,10 +246,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                 boolean offered = registerTaskQueue.offer(registerTask);
                 assert offered;
             }
-            if (channel.connectDeadlineNanos > 0) {
+            int timeout = channel.getConfig().getConnectTimeoutMillis();
+            if (timeout > 0) {
                 if (!channel.isConnected()) {
                     channel.timoutTimer = TIMER.newTimeout(wakeupTask,
-                            channel.connectDeadlineNanos, TimeUnit.NANOSECONDS);
+                            timeout, TimeUnit.MILLISECONDS);
                 }
             }
             if (wakenUp.compareAndSet(false, true)) {
@@ -360,10 +361,8 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
                     // Handle connection timeout every 10 milliseconds approximately.
                     long currentTimeNanos = System.nanoTime();
-                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 10 * 1000000L) {
-                        lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
-                        processConnectTimeout(selector.keys(), currentTimeNanos);
-                    }
+                    lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
+                    processConnectTimeout(selector.keys(), currentTimeNanos);
 
                     // Exit the loop when there's nothing to handle.
                     // The shutdown flag is used to delay the shutdown of this
