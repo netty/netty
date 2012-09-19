@@ -254,6 +254,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
             final Queue<MessageEvent> queue = getQueue();
             if (consolidateOnFlush) {
                 if (queue.isEmpty()) {
+                    flush.set(false);
                     return;
                 }
 
@@ -283,6 +284,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
                     ctx.sendDownstream(e);
                 }
             }
+            flush.set(false);
         }
 
         if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty())) {
