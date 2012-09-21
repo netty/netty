@@ -186,6 +186,7 @@ public class ChunkedWriteHandler
     private void flush(ChannelHandlerContext ctx, boolean fireNow) throws Exception {
         boolean acquired = false;
         final Channel channel = ctx.getChannel();
+        boolean suspend = false;
 
         // use CAS to see if the have flush already running, if so we don't need to take futher actions
         if (acquired = flush.compareAndSet(false, true)) {
@@ -216,7 +217,6 @@ public class ChunkedWriteHandler
                             final ChunkedInput chunks = (ChunkedInput) m;
                             Object chunk;
                             boolean endOfInput;
-                            boolean suspend;
                             try {
                                 chunk = chunks.nextChunk();
                                 endOfInput = chunks.isEndOfInput();
@@ -297,7 +297,7 @@ public class ChunkedWriteHandler
 
         }
 
-        if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty())) {
+        if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty() && !suspend)) {
             flush(ctx, fireNow);
         }
     }
