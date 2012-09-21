@@ -52,7 +52,7 @@ public class OioSctpEchoClient {
         Bootstrap b = new Bootstrap();
         try {
             b.group(new OioEventLoopGroup())
-             .channel(new OioSctpChannel())
+             .channel(OioSctpChannel.class)
              .option(ChannelOption.SCTP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SctpChannel>() {

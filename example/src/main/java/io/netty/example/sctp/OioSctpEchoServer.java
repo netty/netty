@@ -43,7 +43,7 @@ public class OioSctpEchoServer {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.group(new OioEventLoopGroup(), new OioEventLoopGroup())
-             .channel(new OioSctpServerChannel())
+             .channel(OioSctpServerChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
              .localAddress(new InetSocketAddress(port))
              .childOption(ChannelOption.SCTP_NODELAY, true)

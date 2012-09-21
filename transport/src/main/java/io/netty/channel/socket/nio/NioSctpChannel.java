@@ -293,7 +293,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             try {
                 javaChannel().bindAddress(localAddress);
                 future.setSuccess();
-                // TODO: Do we want to fire an event ?
             } catch (Throwable t) {
                 future.setFailure(t);
                 pipeline().fireExceptionCaught(t);
@@ -320,7 +319,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             try {
                 javaChannel().unbindAddress(localAddress);
                 future.setSuccess();
-                // TODO: Do we want to fire an event ?
             } catch (Throwable t) {
                 future.setFailure(t);
                 pipeline().fireExceptionCaught(t);

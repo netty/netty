@@ -25,6 +25,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSctpChannelConfig;
 import io.netty.channel.socket.SctpChannelConfig;
@@ -34,6 +35,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -247,5 +249,57 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected void doClose() throws Exception {
         ch.close();
+    }
+
+    @Override
+    public ChannelFuture bindAddress(InetAddress localAddress) {
+        ChannelFuture future = newFuture();
+        doBindAddress(localAddress, future);
+        return future;
+    }
+
+    void doBindAddress(final InetAddress localAddress, final ChannelFuture future) {
+        if (eventLoop().inEventLoop()) {
+            try {
+                ch.bindAddress(localAddress);
+                future.setSuccess();
+            } catch (Throwable t) {
+                future.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+            }
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doBindAddress(localAddress, future);
+                }
+            });
+        }
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(InetAddress localAddress) {
+        ChannelFuture future = newFuture();
+        doUnbindAddress(localAddress, future);
+        return future;
+    }
+
+    void doUnbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+        if (eventLoop().inEventLoop()) {
+            try {
+                ch.unbindAddress(localAddress);
+                future.setSuccess();
+            } catch (Throwable t) {
+                future.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+            }
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doUnbindAddress(localAddress, future);
+                }
+            });
+        }
     }
 }
