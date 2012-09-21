@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.Timeout;
 
 final class NioClientSocketChannel extends NioSocketChannel {
 
@@ -70,6 +71,8 @@ final class NioClientSocketChannel extends NioSocketChannel {
 
     // Does not need to be volatile as it's accessed by only one thread.
     long connectDeadlineNanos;
+
+    volatile Timeout timoutTimer;
 
     NioClientSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
