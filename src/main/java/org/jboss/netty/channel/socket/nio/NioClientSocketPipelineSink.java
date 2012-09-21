@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,6 +46,10 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.TimerTask;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
@@ -64,11 +69,13 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     private final WorkerPool<NioWorker> workerPool;
 
+    private final Timer timer;
+
     NioClientSocketPipelineSink(
-            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
+            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool, Timer timer) {
 
         this.bossExecutor = bossExecutor;
-
+        this.timer = timer;
         bosses = new Boss[bossCount];
         for (int i = 0; i < bosses.length; i ++) {
             bosses[i] = new Boss(i);
@@ -179,6 +186,15 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         private final Object startStopLock = new Object();
         private final Queue<Runnable> registerTaskQueue = new ConcurrentLinkedQueue<Runnable>();
         private final int subId;
+        private final TimerTask wakeupTask = new TimerTask() {
+            public void run(Timeout timeout) throws Exception {
+                if (selector != null) {
+                    if (wakenUp.compareAndSet(false, true)) {
+                        selector.wakeup();
+                    }
+                }
+            }
+        };
 
         Boss(int subId) {
             this.subId = subId;
@@ -231,10 +247,17 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                 boolean offered = registerTaskQueue.offer(registerTask);
                 assert offered;
             }
-
+            int timeout = channel.getConfig().getConnectTimeoutMillis();
+            if (timeout > 0) {
+                if (!channel.isConnected()) {
+                    channel.timoutTimer = timer.newTimeout(wakeupTask,
+                            timeout, TimeUnit.MILLISECONDS);
+                }
+            }
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
             }
+
         }
 
         public void run() {
@@ -339,10 +362,8 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
                     // Handle connection timeout every 10 milliseconds approximately.
                     long currentTimeNanos = System.nanoTime();
-                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 10 * 1000000L) {
-                        lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
-                        processConnectTimeout(selector.keys(), currentTimeNanos);
-                    }
+                    lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
+                    processConnectTimeout(selector.keys(), currentTimeNanos);
 
                     // Exit the loop when there's nothing to handle.
                     // The shutdown flag is used to delay the shutdown of this
@@ -471,6 +492,9 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
             if (ch.channel.finishConnect()) {
                 k.cancel();
+                if (ch.timoutTimer != null) {
+                    ch.timoutTimer.cancel();
+                }
                 ch.worker.register(ch, ch.connectFuture);
             }
         }

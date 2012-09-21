@@ -26,6 +26,8 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
@@ -86,6 +88,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final Executor bossExecutor;
     private final WorkerPool<NioWorker> workerPool;
     private final NioClientSocketPipelineSink sink;
+    private final Timer timer;
 
     /**
      * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()}
@@ -152,6 +155,12 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, int bossCount,
             WorkerPool<NioWorker> workerPool) {
+        this(bossExecutor, bossCount, workerPool, new HashedWheelTimer());
+    }
+
+    public NioClientSocketChannelFactory(
+            Executor bossExecutor, int bossCount,
+            WorkerPool<NioWorker> workerPool, Timer timer) {
 
         if (bossExecutor == null) {
             throw new NullPointerException("bossExecutor");
@@ -168,8 +177,9 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
         this.bossExecutor = bossExecutor;
         this.workerPool = workerPool;
+        this.timer = timer;
         sink = new NioClientSocketPipelineSink(
-                bossExecutor, bossCount, workerPool);
+                bossExecutor, bossCount, workerPool, timer);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
@@ -178,6 +188,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     public void releaseExternalResources() {
         ExecutorUtil.terminate(bossExecutor);
+        timer.stop();
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }

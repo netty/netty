@@ -29,7 +29,7 @@ final class SelectorUtil {
         InternalLoggerFactory.getInstance(SelectorUtil.class);
 
     static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
-    static final long DEFAULT_SELECT_TIMEOUT = 10;
+    static final long DEFAULT_SELECT_TIMEOUT = 500;
     static final long SELECT_TIMEOUT =
             SystemPropertyUtil.getLong("org.jboss.netty.selectTimeout", DEFAULT_SELECT_TIMEOUT);
     static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
