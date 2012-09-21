@@ -52,7 +52,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     private final SctpChannel ch;
     private final SctpChannelConfig config;
-    private final NotificationHandler notificationHandler;
+    private final NotificationHandler<?> notificationHandler;
 
     private static SctpChannel openChannel() {
         try {

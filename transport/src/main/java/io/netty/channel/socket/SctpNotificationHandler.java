@@ -22,7 +22,6 @@ import com.sun.nio.sctp.Notification;
 import com.sun.nio.sctp.PeerAddressChangeNotification;
 import com.sun.nio.sctp.SendFailedNotification;
 import com.sun.nio.sctp.ShutdownNotification;
-import io.netty.channel.ChannelPipeline;
 
 public class SctpNotificationHandler extends AbstractNotificationHandler<Object> {
 
