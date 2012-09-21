@@ -20,10 +20,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SctpChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSctpChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.socket.oio.OioSctpChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
@@ -37,13 +35,13 @@ import java.net.InetSocketAddress;
  * traffic between the echo client and server by sending the first message to
  * the server.
  */
-public class SctpEchoClient {
+public class OioSctpEchoClient {
 
     private final String host;
     private final int port;
     private final int firstMessageSize;
 
-    public SctpEchoClient(String host, int port, int firstMessageSize) {
+    public OioSctpEchoClient(String host, int port, int firstMessageSize) {
         this.host = host;
         this.port = port;
         this.firstMessageSize = firstMessageSize;
@@ -53,8 +51,8 @@ public class SctpEchoClient {
         // Configure the client.
         Bootstrap b = new Bootstrap();
         try {
-            b.group(new NioEventLoopGroup())
-             .channel(new NioSctpChannel())
+            b.group(new OioEventLoopGroup())
+             .channel(new OioSctpChannel())
              .option(ChannelOption.SCTP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SctpChannel>() {
@@ -81,8 +79,8 @@ public class SctpEchoClient {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
             System.err.println(
-                    "Usage: " + SctpEchoClient.class.getSimpleName() +
-                    " <host> <port> [<first message size>]");
+                    "Usage: " + OioSctpEchoClient.class.getSimpleName() +
+                            " <host> <port> [<first message size>]");
             return;
         }
 
@@ -96,6 +94,6 @@ public class SctpEchoClient {
             firstMessageSize = 256;
         }
 
-        new SctpEchoClient(host, port, firstMessageSize).run();
+        new OioSctpEchoClient(host, port, firstMessageSize).run();
     }
 }

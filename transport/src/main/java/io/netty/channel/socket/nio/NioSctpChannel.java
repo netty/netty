@@ -70,6 +70,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         super(parent, id, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
+            config = new DefaultSctpChannelConfig(sctpChannel);
+            notificationHandler = new SctpNotificationHandler(this);
         } catch (IOException e) {
             try {
                 sctpChannel.close();
@@ -83,9 +85,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
-
-        config = new DefaultSctpChannelConfig(sctpChannel);
-        notificationHandler = new SctpNotificationHandler(this);
     }
 
     @Override
@@ -245,11 +244,11 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
 
 
-        final MessageInfo messageInfo = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
-        messageInfo.payloadProtocolID(packet.getProtocolIdentifier());
-        messageInfo.streamNumber(packet.getStreamIdentifier());
+        final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
+        mi.payloadProtocolID(packet.getProtocolIdentifier());
+        mi.streamNumber(packet.getStreamIdentifier());
 
-        final int writtenBytes = javaChannel().send(nioData, messageInfo);
+        final int writtenBytes = javaChannel().send(nioData, mi);
 
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
