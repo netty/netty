@@ -47,8 +47,6 @@ public class SctpEchoServerHandler extends ChannelInboundMessageHandlerAdapter<S
             MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
             out.add(msg);
             ctx.flush();
-        } else {
-            logger.log(Level.INFO, "Received SCTP Notification", msg);
         }
     }
 }

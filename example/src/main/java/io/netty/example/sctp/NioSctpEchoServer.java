@@ -20,10 +20,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SctpChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSctpServerChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
@@ -32,11 +30,11 @@ import java.net.InetSocketAddress;
 /**
  * Echoes back any received data from a SCTP client.
  */
-public class SctpEchoServer {
+public class NioSctpEchoServer {
 
     private final int port;
 
-    public SctpEchoServer(int port) {
+    public NioSctpEchoServer(int port) {
         this.port = port;
     }
 
@@ -77,6 +75,6 @@ public class SctpEchoServer {
         } else {
             port = 2556;
         }
-        new SctpEchoServer(port).run();
+        new NioSctpEchoServer(port).run();
     }
 }
