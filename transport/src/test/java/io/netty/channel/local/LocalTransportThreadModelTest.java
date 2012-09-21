@@ -58,7 +58,7 @@ public class LocalTransportThreadModelTest {
         // Configure a test server
         sb = new ServerBootstrap();
         sb.group(new LocalEventLoopGroup())
-          .channel(new LocalServerChannel())
+          .channel(LocalServerChannel.class)
           .localAddress(LocalAddress.ANY)
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override

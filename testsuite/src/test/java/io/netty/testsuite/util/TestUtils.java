@@ -20,8 +20,8 @@ import java.net.ServerSocket;
 
 public class TestUtils {
 
-    private final static int START_PORT = 20000;
-    private final static int END_PORT = 30000;
+    private static int START_PORT = 20000;
+    private static int END_PORT = 30000;
 
     /**
      * Return a free port which can be used to bind to
@@ -34,6 +34,7 @@ public class TestUtils {
                 ServerSocket socket = new ServerSocket(start);
                 socket.setReuseAddress(true);
                 socket.close();
+                START_PORT = start + 1;
                 return start;
             } catch (IOException e) {
                 // ignore

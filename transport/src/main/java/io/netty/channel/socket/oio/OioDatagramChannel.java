@@ -205,7 +205,10 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         DatagramPacket p = (DatagramPacket) buf.poll();
         ByteBuf data = p.data();
         int length = data.readableBytes();
-        tmpPacket.setSocketAddress(p.remoteAddress());
+        InetSocketAddress remote = p.remoteAddress();
+        if (remote != null) {
+            tmpPacket.setSocketAddress(remote);
+        }
         if (data.hasArray()) {
             tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
         } else {

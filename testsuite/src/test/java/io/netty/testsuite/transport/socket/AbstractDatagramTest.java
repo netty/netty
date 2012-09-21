@@ -15,6 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
+import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -59,7 +60,7 @@ public abstract class AbstractDatagramTest {
                     "Running: %s %d of %d", testName.getMethodName(), ++ i, COMBO.size()));
             try {
                 Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), Bootstrap.class, Bootstrap.class);
+                        testName.getMethodName(), AbstractBootstrap.class, AbstractBootstrap.class);
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();

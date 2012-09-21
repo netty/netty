@@ -40,7 +40,7 @@ public class HttpSnoopServer {
 
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
-             .channel(new NioServerSocketChannel())
+             .channel(NioServerSocketChannel.class)
              .childHandler(new HttpSnoopServerInitializer())
              .localAddress(new InetSocketAddress(port));
 

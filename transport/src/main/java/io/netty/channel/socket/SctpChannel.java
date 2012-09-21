@@ -19,9 +19,7 @@ import com.sun.nio.sctp.Association;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Set;
 
@@ -72,10 +70,21 @@ public interface SctpChannel extends Channel {
     @Override
     SocketAddress remoteAddress();
 
-
     /**
      * Return all remote addresses of the SCTP server channel.
      * Please note that, it will return more than one address if the remote is using multi-homing.
      */
     Set<SocketAddress> allRemoteAddresses();
+
+    /**
+     * Bind a address to the already bound channel to enable multi-homing.
+     * The Channel bust be bound and yet to be connected.
+     */
+    ChannelFuture bindAddress(InetAddress localAddress);
+
+    /**
+     *  Unbind the address from channel's multi-homing address list.
+     *  The address should be added already in multi-homing address list.
+     */
+    ChannelFuture unbindAddress(InetAddress localAddress);
 }
