@@ -26,6 +26,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
 
     public abstract void initChannel(C ch) throws Exception;
 
+    @SuppressWarnings("unchecked")
     @Override
     public final void channelRegistered(ChannelHandlerContext ctx)
             throws Exception {

@@ -61,6 +61,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
                 IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS, UDP_RECEIVE_PACKET_SIZE);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_BROADCAST) {
@@ -82,12 +83,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
             return (T) Boolean.valueOf(isLoopbackModeDisabled());
         }
         if (option == IP_MULTICAST_ADDR) {
-            @SuppressWarnings("unchecked")
             T i = (T) getInterface();
             return i;
         }
         if (option == IP_MULTICAST_IF) {
-            @SuppressWarnings("unchecked")
             T i = (T) getNetworkInterface();
             return i;
         }
