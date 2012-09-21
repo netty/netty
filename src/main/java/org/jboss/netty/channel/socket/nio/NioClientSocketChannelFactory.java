@@ -152,12 +152,34 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         this(bossExecutor, bossCount, new NioWorkerPool(workerExecutor, workerCount));
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss thread
+     * @param bossCount
+     *        the maximum number of boss threads
+     * @param workerPool
+     *        the {@link WorkerPool} to use to do the IO
+     */
     public NioClientSocketChannelFactory(
             Executor bossExecutor, int bossCount,
             WorkerPool<NioWorker> workerPool) {
         this(bossExecutor, bossCount, workerPool, new HashedWheelTimer());
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss thread
+     * @param bossCount
+     *        the maximum number of boss threads
+     * @param workerPool
+     *        the {@link WorkerPool} to use to do the IO
+     * @param timer
+     *        the {@link Timer} to use to handle the connection timeouts
+     */
     public NioClientSocketChannelFactory(
             Executor bossExecutor, int bossCount,
             WorkerPool<NioWorker> workerPool, Timer timer) {

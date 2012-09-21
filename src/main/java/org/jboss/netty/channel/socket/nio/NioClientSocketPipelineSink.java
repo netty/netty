@@ -46,7 +46,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
@@ -265,7 +264,6 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             int selectReturnsImmediately = 0;
 
             Selector selector = this.selector;
-            long lastConnectTimeoutCheckTimeNanos = System.nanoTime();
 
             // use 80% of the timeout for measure
             final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS * 80 / 100;
@@ -362,7 +360,6 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
                     // Handle connection timeout every 10 milliseconds approximately.
                     long currentTimeNanos = System.nanoTime();
-                    lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
                     processConnectTimeout(selector.keys(), currentTimeNanos);
 
                     // Exit the loop when there's nothing to handle.
