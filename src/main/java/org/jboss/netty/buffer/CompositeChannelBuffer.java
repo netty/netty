@@ -228,12 +228,19 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
-        int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Needs "
                     + (index + length) + ", maximum is " + capacity() + " or "
                     + dst.length);
         }
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("Index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
+
+        int componentId = componentId(index);
 
         int i = componentId;
         while (length > 0) {
@@ -256,7 +263,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
                     + (index + length) + ", maximum is " + capacity());
         }
-
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("Index must be >= 0");
+        }
         int i = componentId;
         try {
             while (length > 0) {
@@ -275,14 +284,18 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
-        int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
                     + (index + length) + " or " + (dstIndex + length) + ", maximum is "
                     + capacity() + " or " + dst.capacity());
         }
-
-        int i = componentId;
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("Index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
+        int i = componentId(index);
         while (length > 0) {
             ChannelBuffer s = components[i];
             int adjustment = indices[i];
@@ -310,13 +323,17 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
-        int componentId = componentId(index);
         if (index > capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be read - needs "
                     + (index + length) + ", maximum of " + capacity());
         }
-
-        int i = componentId;
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("Index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
+        int i = componentId(index);
         while (length > 0) {
             ChannelBuffer s = components[i];
             int adjustment = indices[i];
@@ -640,15 +657,20 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     @Override
     public ByteBuffer[] toByteBuffers(int index, int length) {
-        int componentId = componentId(index);
         if (index + length > capacity()) {
             throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
                     + (index + length) + ", maximum is " + capacity());
         }
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("Index must be >= 0");
+        }
+        if (length == 0) {
+            return new ByteBuffer[0];
+        }
 
         List<ByteBuffer> buffers = new ArrayList<ByteBuffer>(components.length);
 
-        int i = componentId;
+        int i = componentId(index);
         while (length > 0) {
             ChannelBuffer s = components[i];
             int adjustment = indices[i];

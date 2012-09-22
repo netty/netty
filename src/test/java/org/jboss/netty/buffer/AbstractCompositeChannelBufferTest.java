@@ -355,4 +355,12 @@ public abstract class AbstractCompositeChannelBufferTest extends
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5));
         assertFalse(ChannelBuffers.equals(a, b));
     }
+
+    // Test for #474
+    @Test
+    public void testEmptyBuffer() {
+        ChannelBuffer b = wrappedBuffer(order, new byte[] {1,2}, new byte[] {3,4});
+        b.readBytes(new byte[4]);
+        b.readBytes(new byte[0]);
+    }
 }
