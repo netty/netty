@@ -548,6 +548,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
+        public final void closeForcibly() {
+            try {
+                doClose();
+            } catch (Exception e) {
+                logger.warn("Failed to close a channel.", e);
+            }
+        }
+
+        @Override
         public final void deregister(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 if (!registered) {
