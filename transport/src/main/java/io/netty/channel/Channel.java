@@ -249,6 +249,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
         void close(ChannelFuture future);
 
         /**
+         * Closes the {@link Channel} immediately without firing any events.  Probably only useful
+         * when registration attempt failed.
+         */
+        void closeForcibly();
+
+        /**
          * Deregister the {@link Channel} of the {@link ChannelFuture} from {@link EventLoop} and notify the
          * {@link ChannelFuture} once the operation was complete.
          */
