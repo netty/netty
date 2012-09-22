@@ -223,7 +223,7 @@ public class LocalChannel extends AbstractChannel {
             buf.drainTo(peerPipeline.inboundMessageBuffer());
             peerPipeline.fireInboundBufferUpdated();
         } else {
-            final Object msgs[] = buf.toArray();
+            final Object[] msgs = buf.toArray();
             buf.clear();
             peerLoop.execute(new Runnable() {
                 @Override
