@@ -77,14 +77,12 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         try {
             long startTime = System.nanoTime();
             for (int i = 0; i < NUM_CHANNELS; i ++) {
-                System.err.println(i + ": " + System.currentTimeMillis());
                 Socket s = new Socket();
                 s.connect(addr, 10000);
                 sockets.add(s);
             }
             long endTime = System.nanoTime();
 
-            System.err.println(endTime - startTime);
             Assert.assertTrue(endTime - startTime < TIMEOUT);
         } finally {
             for (Socket s: sockets) {
