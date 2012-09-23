@@ -30,13 +30,13 @@ public abstract class SctpServerChannel extends AbstractSelectableChannel {
     public static SctpServerChannel open() throws IOException {
         return null;
     }
-    
+
     protected SctpServerChannel(SelectorProvider provider) {
         super(provider);
     }
 
     public abstract <T> T getOption(SctpSocketOption<T> name) throws IOException;
-    public abstract <T> SctpChannel setOption(SctpSocketOption<T> name, T value) throws IOException;
+    public abstract <T> SctpServerChannel setOption(SctpSocketOption<T> name, T value) throws IOException;
 
     public abstract Set<SocketAddress> getAllLocalAddresses() throws IOException;
 
