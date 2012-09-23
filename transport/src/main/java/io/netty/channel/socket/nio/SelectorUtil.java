@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
-    static final long DEFAULT_SELECT_TIMEOUT = 10;
+    static final long DEFAULT_SELECT_TIMEOUT = 500;
     static final long SELECT_TIMEOUT =
             SystemPropertyUtil.getLong("io.netty.selectTimeout", DEFAULT_SELECT_TIMEOUT);
     static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
