@@ -34,6 +34,7 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.Collections;
 
 /**
  * A {@link Channel} for the local transport.
@@ -229,9 +230,7 @@ public class LocalChannel extends AbstractChannel {
                 @Override
                 public void run() {
                     MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
-                    for (Object m: msgs) {
-                        buf.add(m);
-                    }
+                    Collections.addAll(buf, msgs);
                     peerPipeline.fireInboundBufferUpdated();
                 }
             });
