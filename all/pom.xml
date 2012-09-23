@@ -259,6 +259,13 @@
           <docTitle>Netty Source Xref (${project.version})</docTitle>
           <windowTitle>Netty Source Xref (${project.version})</windowTitle>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-build</artifactId>
+            <version>10</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
