@@ -36,7 +36,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  */
 public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
 
-    static enum SelectedProtocol {
+    public static enum SelectedProtocol {
         SpdyVersion2,
         SpdyVersion3,
         HttpVersion1_1,
@@ -57,7 +57,7 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
      * MUST return {@link SelectedProtocol#None}.
      *
      */
-    abstract SelectedProtocol getProtocol(SSLEngine engine);
+    protected abstract SelectedProtocol getProtocol(SSLEngine engine);
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         // Get the SslHandler from the ChannelPipeline so we can obtain the SslEngine from it.
