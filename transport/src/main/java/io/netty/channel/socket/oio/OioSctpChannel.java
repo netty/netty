@@ -29,7 +29,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.DefaultSctpChannelConfig;
 import io.netty.channel.socket.SctpChannelConfig;
-import io.netty.channel.socket.SctpData;
+import io.netty.channel.socket.SctpMessage;
 import io.netty.channel.socket.SctpNotificationHandler;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -120,7 +120,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         }
 
         data.flip();
-        buf.add(new SctpData(messageInfo, Unpooled.wrappedBuffer(data)));
+        buf.add(new SctpMessage(messageInfo, Unpooled.wrappedBuffer(data)));
 
         if (readSuspended) {
             return 0;
@@ -132,7 +132,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
-        SctpData packet = (SctpData) buf.poll();
+        SctpMessage packet = (SctpMessage) buf.poll();
         ByteBuf data = packet.getPayloadBuffer();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;

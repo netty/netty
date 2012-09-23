@@ -22,7 +22,6 @@ import com.sun.nio.sctp.Notification;
 import com.sun.nio.sctp.PeerAddressChangeNotification;
 import com.sun.nio.sctp.SendFailedNotification;
 import com.sun.nio.sctp.ShutdownNotification;
-import io.netty.channel.ChannelPipeline;
 
 public class SctpNotificationHandler extends AbstractNotificationHandler<Object> {
 
@@ -58,7 +57,7 @@ public class SctpNotificationHandler extends AbstractNotificationHandler<Object>
     }
 
     private void updateInboundBuffer(Notification notification, Object o) {
-        sctpChannel.pipeline().inboundMessageBuffer().add(new SctpNotification(notification, o));
+        sctpChannel.pipeline().fireUserEventTriggered(new SctpNotificationEvent(notification, o));
     }
 }
 
