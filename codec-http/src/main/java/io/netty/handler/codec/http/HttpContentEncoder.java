@@ -55,11 +55,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      * Creates a new instance.
      */
     protected HttpContentEncoder() {
-    }
-
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof HttpMessage;
+        super(
+                new Class<?>[] { HttpMessage.class },
+                new Class<?>[] { HttpMessage.class, HttpChunk.class });
     }
 
     @Override
@@ -72,11 +70,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
         assert offered;
         return msg;
-    }
-
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof HttpMessage || msg instanceof HttpChunk;
     }
 
     @Override

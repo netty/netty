@@ -51,14 +51,13 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  */
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ByteBuf> {
 
-    @Override
-    public MessageBuf<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
+    public ByteArrayEncoder() {
+        super(byte[].class);
     }
 
     @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof byte[];
+    public MessageBuf<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
     }
 
     @Override

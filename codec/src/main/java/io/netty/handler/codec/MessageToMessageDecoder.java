@@ -24,6 +24,12 @@ import io.netty.channel.ChannelInboundMessageHandler;
 public abstract class MessageToMessageDecoder<I, O>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
+    private final Class<?>[] acceptedMsgTypes;
+
+    protected MessageToMessageDecoder(Class<?>... acceptedMsgTypes) {
+        this.acceptedMsgTypes = CodecUtil.acceptedMessageTypes(acceptedMsgTypes);
+    }
+
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
@@ -77,7 +83,7 @@ public abstract class MessageToMessageDecoder<I, O>
      * @param msg the message
      */
     public boolean isDecodable(Object msg) throws Exception {
-        return true;
+        return CodecUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     public abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;

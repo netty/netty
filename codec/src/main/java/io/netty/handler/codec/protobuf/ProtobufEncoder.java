@@ -59,9 +59,8 @@ import com.google.protobuf.MessageLite;
 @Sharable
 public class ProtobufEncoder extends MessageToMessageEncoder<Object, ByteBuf> {
 
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof MessageLite || msg instanceof MessageLite.Builder;
+    public ProtobufEncoder() {
+        super(MessageLite.class, MessageLite.Builder.class);
     }
 
     @Override

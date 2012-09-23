@@ -28,6 +28,10 @@ import java.math.BigInteger;
  */
 public class NumberEncoder extends MessageToByteEncoder<Number> {
 
+    public NumberEncoder() {
+        super(Number.class);
+    }
+
     @Override
     public void encode(
             ChannelHandlerContext ctx, Number msg, ByteBuf out) throws Exception {

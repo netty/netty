@@ -129,18 +129,13 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
      * @param version the protocol version
      */
     public SpdyHttpEncoder(int version) {
+        super(HttpMessage.class, HttpChunk.class);
+
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
         }
         spdyVersion = version;
-    }
-
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof HttpRequest ||
-                msg instanceof HttpResponse ||
-                msg instanceof HttpChunk;
     }
 
     @Override

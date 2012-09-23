@@ -59,6 +59,8 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
      *        the long term.
      */
     public CompatibleObjectEncoder(int resetInterval) {
+        super(Serializable.class);
+
         if (resetInterval < 0) {
             throw new IllegalArgumentException(
                     "resetInterval: " + resetInterval);
@@ -73,11 +75,6 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
      */
     protected ObjectOutputStream newObjectOutputStream(OutputStream out) throws Exception {
         return new ObjectOutputStream(out);
-    }
-
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof Serializable;
     }
 
     @Override

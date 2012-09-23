@@ -66,6 +66,8 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
      *        a {@link TooLongFrameException} will be raised.
      */
     public HttpChunkAggregator(int maxContentLength) {
+        super(HttpMessage.class, HttpChunk.class);
+
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " +
@@ -104,11 +106,6 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
             throw new IllegalStateException(
                     "decoder properties cannot be changed once the decoder is added to a pipeline.");
         }
-    }
-
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof HttpMessage || msg instanceof HttpChunk;
     }
 
     @Override
