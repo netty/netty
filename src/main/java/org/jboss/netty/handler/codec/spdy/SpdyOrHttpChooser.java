@@ -102,6 +102,7 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
         pipeline.addLast("spdySessionHandler", new SpdySessionHandler(version, true));
         pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(version));
         pipeline.addLast("spdyHttpDecoder", new SpdyHttpDecoder(version, maxSpdyContentLength));
+        pipeline.addLast("spdyStreamIdHandler", new SpdyHttpResponseStreamIdHandler());
         pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForSpdy());
     }
 
