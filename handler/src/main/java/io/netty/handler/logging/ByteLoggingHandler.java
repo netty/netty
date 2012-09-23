@@ -143,11 +143,10 @@ public class ByteLoggingHandler
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
         StringBuilder dump = new StringBuilder(rows * 80 + message.length() + 16);
 
-        dump.append(message).append('(').append(length).append('B').append(')');
-        dump.append(
-                NEWLINE + "         +-------------------------------------------------+" +
-                NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
-                NEWLINE + "+--------+-------------------------------------------------+----------------+");
+        dump.append(message).append('(').append(length).append('B').append(')').append(NEWLINE)
+                .append("         +-------------------------------------------------+").append(NEWLINE)
+                .append("         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |").append(NEWLINE )
+                .append("+--------+-------------------------------------------------+----------------+");
 
         final int startIndex = buf.readerIndex();
         final int endIndex = buf.writerIndex();
@@ -183,8 +182,7 @@ public class ByteLoggingHandler
             dump.append('|');
         }
 
-        dump.append(
-                NEWLINE + "+--------+-------------------------------------------------+----------------+");
+        dump.append(NEWLINE).append("+--------+-------------------------------------------------+----------------+");
 
         return dump.toString();
     }
