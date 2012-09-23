@@ -1,0 +1,62 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package org.jboss.netty.handler.codec.spdy;
+
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.HttpMessage;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+
+/**
+ * {@link SimpleChannelHandler} which will take care of add the right {@link SpdyHttpHeaders#Names#STREAM_ID} to the
+ * {@link HttpResponse} if non is in there. This makes it possible to just re-use plan handlers that was used with HTTP
+ * only before.
+ *
+ */
+public class SpdyHttpResponseStreamIdHandler extends SimpleChannelHandler {
+    private static final Integer NO_ID = -1;
+    private final Queue<Integer> ids = new ConcurrentLinkedQueue<Integer>();
+
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        if (e.getMessage() instanceof HttpMessage) {
+            boolean contains = ((HttpMessage) e.getMessage()).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
+            if (!contains) {
+                ids.add(NO_ID);
+            } else {
+                ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) e.getMessage()));
+            }
+        }
+        super.messageReceived(ctx, e);
+    }
+
+    @Override
+    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        if (e.getMessage() instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) e.getMessage();
+            Integer id = ids.poll();
+            if (id != null && id != NO_ID && !response.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
+                SpdyHttpHeaders.setStreamId(response, id);
+            }
+        }
+        super.writeRequested(ctx, e);
+    }
+
+}
