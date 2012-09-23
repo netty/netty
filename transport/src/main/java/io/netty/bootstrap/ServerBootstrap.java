@@ -17,17 +17,16 @@ package io.netty.bootstrap;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -232,6 +231,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
                 try {
                     childGroup.register(child);
                 } catch (Throwable t) {
+                    child.unsafe().closeForcibly();
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }
             }

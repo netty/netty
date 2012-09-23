@@ -72,6 +72,8 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
             }
         }
 
+        Thread.sleep(TIMEOUT / 1000000);
+
         try {
             long startTime = System.nanoTime();
             for (int i = 0; i < NUM_CHANNELS; i ++) {

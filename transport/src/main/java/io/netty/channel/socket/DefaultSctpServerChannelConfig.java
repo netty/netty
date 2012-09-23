@@ -28,7 +28,6 @@ import java.util.Map;
 import static com.sun.nio.sctp.SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS;
 import static com.sun.nio.sctp.SctpStandardSocketOptions.SO_RCVBUF;
 import static com.sun.nio.sctp.SctpStandardSocketOptions.SO_SNDBUF;
-import static io.netty.channel.ChannelOption.SCTP_NODELAY;
 
 /**
  * The default {@link SctpServerChannelConfig} implementation for SCTP.
@@ -56,6 +55,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == ChannelOption.SO_RCVBUF) {

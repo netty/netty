@@ -29,7 +29,7 @@ public final class SctpData implements SctpMessage {
 
     private final ByteBuf payloadBuffer;
 
-    private MessageInfo msgInfo;
+    private final MessageInfo msgInfo;
 
     /**
      * Essential data that is being carried within SCTP Data Chunk
@@ -41,6 +41,7 @@ public final class SctpData implements SctpMessage {
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
         this.payloadBuffer = payloadBuffer;
+        this.msgInfo = null;
     }
 
     public SctpData(MessageInfo msgInfo, ByteBuf payloadBuffer) {

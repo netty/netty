@@ -48,6 +48,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean setOptions(Map<ChannelOption<?>, ?> options) {
         if (options == null) {
@@ -64,6 +65,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return setAllOptions;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == null) {

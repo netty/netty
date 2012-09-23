@@ -19,9 +19,9 @@ package io.netty.channel.socket.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ChannelTaskScheduler;
 
 import java.util.Collections;
 import java.util.Queue;

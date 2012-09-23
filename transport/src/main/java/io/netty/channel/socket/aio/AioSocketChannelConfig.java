@@ -57,6 +57,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
                 AIO_READ_TIMEOUT, AIO_WRITE_TIMEOUT, ALLOW_HALF_CLOSURE);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_RCVBUF) {
