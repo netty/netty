@@ -26,7 +26,8 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
  * {@link SimpleChannelHandler} that takes care of adding the right {@link SpdyHttpHeaders#Names#STREAM_ID} to the
- * {@link HttpResponse} if one is not present. This makes it possible to just re-use plan handlers current used for HTTP.
+ * {@link HttpResponse} if one is not present. This makes it possible to just re-use plan handlers current used
+ * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends SimpleChannelHandler {
     private static final Integer NO_ID = -1;
