@@ -120,8 +120,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             final int capacity = components.get(numComponents - 1).endOffset + readableBytes;
 
             ByteBuf consolidated = buffer.unsafe().newBuffer(capacity);
-            for (int i = 0; i < numComponents; i ++) {
-                ByteBuf b = components.get(i).buf;
+            for (Component component : components) {
+                ByteBuf b = component.buf;
                 consolidated.writeBytes(b);
                 b.unsafe().release();
             }
