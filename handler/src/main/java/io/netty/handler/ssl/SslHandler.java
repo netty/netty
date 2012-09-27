@@ -170,6 +170,9 @@ public class SslHandler
     private final Queue<ChannelFuture> handshakeFutures = new ArrayDeque<ChannelFuture>();
     private final SSLEngineInboundCloseFuture sslCloseFuture = new SSLEngineInboundCloseFuture();
 
+    private volatile long handshakeTimeoutMillis = 10000;
+    private volatile long closeNotifyTimeoutMillis = 3000;
+
     /**
      * Creates a new instance.
      *
@@ -227,6 +230,46 @@ public class SslHandler
         this.startTls = startTls;
     }
 
+    public long getHandshakeTimeoutMillis() {
+        return handshakeTimeoutMillis;
+    }
+
+    public void setHandshakeTimeout(long handshakeTimeout, TimeUnit unit) {
+        if (unit == null) {
+            throw new NullPointerException("unit");
+        }
+
+        setHandshakeTimeoutMillis(unit.toMillis(handshakeTimeout));
+    }
+
+    public void setHandshakeTimeoutMillis(long handshakeTimeoutMillis) {
+        if (handshakeTimeoutMillis < 0) {
+            throw new IllegalArgumentException(
+                    "handshakeTimeoutMillis: " + handshakeTimeoutMillis + " (expected: >= 0)");
+        }
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+    }
+
+    public long getCloseNotifyTimeoutMillis() {
+        return handshakeTimeoutMillis;
+    }
+
+    public void setCloseNotifyTimeout(long closeNotifyTimeout, TimeUnit unit) {
+        if (unit == null) {
+            throw new NullPointerException("unit");
+        }
+
+        setCloseNotifyTimeoutMillis(unit.toMillis(closeNotifyTimeout));
+    }
+
+    public void setCloseNotifyTimeoutMillis(long closeNotifyTimeoutMillis) {
+        if (closeNotifyTimeoutMillis < 0) {
+            throw new IllegalArgumentException(
+                    "closeNotifyTimeoutMillis: " + closeNotifyTimeoutMillis + " (expected: >= 0)");
+        }
+        this.closeNotifyTimeoutMillis = closeNotifyTimeoutMillis;
+    }
+
     /**
      * Returns the {@link SSLEngine} which is used by this handler.
      */
@@ -259,7 +302,7 @@ public class SslHandler
                 ctx.fireExceptionCaught(e);
                 ctx.close();
             }
-        }, 10, TimeUnit.SECONDS); // FIXME: Magic value
+        }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
         ctx.executor().execute(new Runnable() {
             @Override
             public void run() {
@@ -861,7 +904,7 @@ public class SslHandler
         }
     }
 
-    private static void safeClose(
+    private void safeClose(
             final ChannelHandlerContext ctx, ChannelFuture flushFuture,
             final ChannelFuture closeFuture) {
         if (!ctx.channel().isActive()) {
@@ -878,7 +921,7 @@ public class SslHandler
                                         " Force-closing the connection.");
                 ctx.close(closeFuture);
             }
-        }, 3, TimeUnit.SECONDS); // FIXME: Magic value
+        }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {
