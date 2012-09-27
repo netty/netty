@@ -98,9 +98,7 @@ final class CodecUtil {
         }
 
         Class<?>[] newAllowedMsgTypes = new Class[numElem];
-        for (int i = 0; i < numElem; i ++) {
-            newAllowedMsgTypes[i] = acceptedMsgTypes[i];
-        }
+        System.arraycopy(acceptedMsgTypes, 0, newAllowedMsgTypes, 0, numElem);
 
         return newAllowedMsgTypes;
     }

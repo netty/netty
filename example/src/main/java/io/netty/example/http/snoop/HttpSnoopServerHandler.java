@@ -62,12 +62,14 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             buf.append("===================================\r\n");
 
-            buf.append("VERSION: " + request.getProtocolVersion() + "\r\n");
-            buf.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
-            buf.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+            buf.append("VERSION: ").append(request.getProtocolVersion()).append("\r\n");
+            buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
+            buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
             for (Map.Entry<String, String> h: request.getHeaders()) {
-                buf.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
+                String key = h.getKey();
+                String value = h.getValue();
+                buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
             }
             buf.append("\r\n");
 
@@ -78,7 +80,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     String key = p.getKey();
                     List<String> vals = p.getValue();
                     for (String val : vals) {
-                        buf.append("PARAM: " + key + " = " + val + "\r\n");
+                        buf.append("PARAM: ").append(key).append(" = ").append(val).append("\r\n");
                     }
                 }
                 buf.append("\r\n");
@@ -89,7 +91,9 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             } else {
                 ByteBuf content = request.getContent();
                 if (content.readable()) {
-                    buf.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
+                    buf.append("CONTENT: ");
+                    buf.append(content.toString(CharsetUtil.UTF_8));
+                    buf.append("\r\n");
                 }
                 writeResponse(ctx);
             }
@@ -104,7 +108,8 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     buf.append("\r\n");
                     for (String name: trailer.getHeaderNames()) {
                         for (String value: trailer.getHeaders(name)) {
-                            buf.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
+                            buf.append("TRAILING HEADER: ");
+                            buf.append(name).append(" = ").append(value).append("\r\n");
                         }
                     }
                     buf.append("\r\n");
@@ -112,7 +117,8 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
 
                 writeResponse(ctx);
             } else {
-                buf.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
+                buf.append("CHUNK: ");
+                buf.append(chunk.getContent().toString(CharsetUtil.UTF_8)).append("\r\n");
             }
         }
     }
