@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
@@ -124,6 +125,12 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, Htt
                 ctx.write(CONTINUE.duplicate());
             }
 
+            if (!m.getDecoderResult().isSuccess()) {
+                m.setTransferEncoding(HttpTransferEncoding.SINGLE);
+                this.currentMessage = null;
+                return m;
+            }
+
             switch (m.getTransferEncoding()) {
             case SINGLE:
                 this.currentMessage = null;
@@ -164,7 +171,16 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, Htt
             // Append the content of the chunk
             appendToCumulation(chunk.getContent());
 
-            if (chunk.isLast()) {
+            final boolean last;
+            if (!chunk.getDecoderResult().isSuccess()) {
+                currentMessage.setDecoderResult(
+                        DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
+                last = true;
+            } else {
+                last = chunk.isLast();
+            }
+
+            if (last) {
                 this.currentMessage = null;
 
                 // Merge trailing headers into the message.
