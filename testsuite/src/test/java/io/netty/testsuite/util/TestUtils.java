@@ -15,13 +15,38 @@
  */
 package io.netty.testsuite.util;
 
+import io.netty.util.NetworkConstants;
+
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 public class TestUtils {
 
-    private static int START_PORT = 20000;
-    private static int END_PORT = 30000;
+    private static final int START_PORT = 32768;
+    private static final int END_PORT = 65536;
+    private static final int NUM_CANDIDATES = END_PORT - START_PORT;
+
+    private static final List<Integer> PORTS = new ArrayList<Integer>();
+    private static Iterator<Integer> PORTS_ITERATOR;
+
+    static {
+        for (int i = START_PORT; i < END_PORT; i ++) {
+            PORTS.add(i);
+        }
+        Collections.shuffle(PORTS);
+    }
+
+    private static int nextCandidatePort() {
+        if (PORTS_ITERATOR == null || !PORTS_ITERATOR.hasNext()) {
+            PORTS_ITERATOR = PORTS.iterator();
+        }
+        return PORTS_ITERATOR.next();
+    }
 
     /**
      * Return a free port which can be used to bind to
@@ -29,19 +54,28 @@ public class TestUtils {
      * @return port
      */
     public static int getFreePort() {
-        for(int start = START_PORT; start <= END_PORT; start++) {
+        for (int i = 0; i < NUM_CANDIDATES; i ++) {
+            int port = nextCandidatePort();
             try {
-                ServerSocket socket = new ServerSocket(start);
-                socket.setReuseAddress(true);
-                socket.close();
-                START_PORT = start + 1;
-                return start;
+                // Ensure it is possible to bind on both wildcard and loopback.
+                ServerSocket ss;
+                ss = new ServerSocket();
+                ss.setReuseAddress(false);
+                ss.bind(new InetSocketAddress(port));
+                ss.close();
+
+                ss = new ServerSocket();
+                ss.setReuseAddress(false);
+                ss.bind(new InetSocketAddress(NetworkConstants.LOCALHOST, port));
+                ss.close();
+
+                return port;
             } catch (IOException e) {
                 // ignore
             }
-
         }
-        throw new RuntimeException("Unable to find a free port....");
+
+        throw new RuntimeException("unable to find a free port");
     }
 
     private TestUtils() { }
