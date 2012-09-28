@@ -113,7 +113,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             return;
         }
 
-        final String path = sanitizeUri(request.getUri());
+        final String uri = request.getUri();
+        final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -124,6 +125,16 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             sendError(ctx, NOT_FOUND);
             return;
         }
+
+        if (file.isDirectory()) {
+            if (uri.endsWith("/")) {
+                sendListing(ctx, file);
+            } else {
+                sendRedirect(ctx, uri + '/');
+            }
+            return;
+        }
+
         if (!file.isFile()) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -195,6 +206,10 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             }
         }
 
+        if (!uri.startsWith("/")) {
+            return null;
+        }
+
         // Convert file separators.
         uri = uri.replace('/', File.separatorChar);
 
@@ -208,6 +223,58 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Convert to absolute path.
         return System.getProperty("user.dir") + File.separator + uri;
+    }
+
+    private static void sendListing(ChannelHandlerContext ctx, File dir) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
+
+        StringBuilder buf = new StringBuilder();
+
+        buf.append("<!DOCTYPE html>\r\n");
+        buf.append("<html><head><title>");
+        buf.append("Listing of: ");
+        buf.append(dir.getPath());
+        buf.append("</title></head><body>\r\n");
+
+        buf.append("<h3>Listing of: ");
+        buf.append(dir.getPath());
+        buf.append("</h3>\r\n");
+
+        buf.append("<ul>");
+        buf.append("<li><a href=\"../\">..</a></li>\r\n");
+
+        for (File f: dir.listFiles()) {
+            if (f.isHidden()) {
+                continue;
+            }
+            if (!f.canRead()) {
+                continue;
+            }
+
+            String name = f.getName();
+
+            buf.append("<li><a href=\"");
+            buf.append(name);
+            buf.append("\">");
+            buf.append(name);
+            buf.append("</a></li>\r\n");
+        }
+
+        buf.append("</ul></body></html>\r\n");
+
+        response.setContent(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
+
+        // Close the connection as soon as the error message is sent.
+        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, FOUND);
+        response.setHeader(LOCATION, newUri);
+
+        // Close the connection as soon as the error message is sent.
+        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
