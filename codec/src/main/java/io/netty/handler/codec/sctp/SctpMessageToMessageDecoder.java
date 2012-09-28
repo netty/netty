@@ -16,24 +16,24 @@
 
 package io.netty.handler.codec.sctp;
 
-import com.sun.nio.sctp.MessageInfo;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SctpMessage;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
-public class SctpMessageDecoder extends MessageToMessageDecoder<SctpMessage, ByteBuf> {
-    private ByteBuf cumulation = Unpooled.EMPTY_BUFFER;
+public abstract class SctpMessageToMessageDecoder<O> extends MessageToMessageDecoder<SctpMessage, O> {
 
     @Override
-    public ByteBuf decode(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
-        ByteBuf byteBuf = cumulation = Unpooled.wrappedBuffer(cumulation, msg.getPayloadBuffer());
-        if (msg.isComplete()) {
-            cumulation = Unpooled.EMPTY_BUFFER;
-            return byteBuf;
+    public boolean isDecodable(Object msg) throws Exception {
+        if (msg instanceof SctpMessage) {
+            SctpMessage sctpMsg = (SctpMessage) msg;
+            if (sctpMsg.isComplete()) {
+                return true;
+            }
+
+            throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in " +
+                    "the pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         } else {
-            return null;
+            return false;
         }
     }
 }

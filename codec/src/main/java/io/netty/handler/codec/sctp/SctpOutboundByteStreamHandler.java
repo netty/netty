@@ -20,15 +20,25 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 import io.netty.channel.socket.SctpMessage;
 import io.netty.handler.codec.EncoderException;
 
-public class SctpMessageEncoder extends ChannelOutboundMessageHandlerAdapter<ByteBuf> {
+/**
+ * A ChannelHandler which transform {@link ByteBuf} to {@link SctpMessage}  and send it through a specific stream
+ * with given protocol identifier.
+ *
+ */
+public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAdapter {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
-    public SctpMessageEncoder(int streamIdentifier, int protocolIdentifier) {
+
+    /**
+     * @param streamIdentifier stream number, this should be >=0 or <= max stream number of the association.
+     * @param protocolIdentifier supported application protocol id.
+     */
+    public SctpOutboundByteStreamHandler(int streamIdentifier, int protocolIdentifier) {
         this.streamIdentifier = streamIdentifier;
         this.protocolIdentifier = protocolIdentifier;
     }

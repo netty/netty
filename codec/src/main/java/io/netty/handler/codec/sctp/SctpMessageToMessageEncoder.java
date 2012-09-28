@@ -14,7 +14,23 @@
  * under the License.
  */
 
-/**
- * Decoder and encoders to manage message completion and multi-streaming codec in SCTP/IP.
- */
 package io.netty.handler.codec.sctp;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.SctpMessage;
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+public abstract class SctpMessageToMessageEncoder<I> extends MessageToMessageEncoder<I, SctpMessage> {
+
+    /**
+     * Returns {@code true} if and only if the specified message can be encoded by this encoder.
+     *
+     * @param msg the message
+     */
+    public boolean isEncodable(Object msg) throws Exception {
+        return true;
+    }
+
+    public abstract SctpMessage encode(ChannelHandlerContext ctx, I msg) throws Exception;
+}
