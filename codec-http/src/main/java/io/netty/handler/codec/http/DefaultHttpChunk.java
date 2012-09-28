@@ -66,7 +66,7 @@ public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
         }
 
         buf.append(", decodeResult: ");
-        buf.append(getDecodeResult());
+        buf.append(getDecoderResult());
         buf.append(')');
 
         return buf.toString();

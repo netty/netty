@@ -459,10 +459,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     private HttpMessage invalidMessage(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         if (message != null) {
-            message.setDecodeResult(DecoderResult.partialFailure(cause));
+            message.setDecoderResult(DecoderResult.partialFailure(cause));
         } else {
             message = createInvalidMessage();
-            message.setDecodeResult(DecoderResult.failure(cause));
+            message.setDecoderResult(DecoderResult.failure(cause));
         }
         return message;
     }
@@ -470,7 +470,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     private HttpChunk invalidChunk(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         HttpChunk chunk = new DefaultHttpChunk(Unpooled.EMPTY_BUFFER);
-        chunk.setDecodeResult(DecoderResult.failure(cause));
+        chunk.setDecoderResult(DecoderResult.failure(cause));
         return chunk;
     }
 

@@ -18,6 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.DecoderResult;
 
 public interface HttpObject {
-    DecoderResult getDecodeResult();
-    void setDecodeResult(DecoderResult result);
+    DecoderResult getDecoderResult();
+    void setDecoderResult(DecoderResult result);
 }

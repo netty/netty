@@ -120,7 +120,7 @@ public class DefaultHttpChunkTrailer extends DefaultHttpObject implements HttpCh
         }
 
         buf.append(", decodeResult: ");
-        buf.append(getDecodeResult());
+        buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);

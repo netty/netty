@@ -106,12 +106,12 @@ public interface HttpChunk extends HttpObject {
         }
 
         @Override
-        public DecoderResult getDecodeResult() {
+        public DecoderResult getDecoderResult() {
             return DecoderResult.SUCCESS;
         }
 
         @Override
-        public void setDecodeResult(DecoderResult result) {
+        public void setDecoderResult(DecoderResult result) {
             throw new IllegalStateException("read-only");
         }
     };
