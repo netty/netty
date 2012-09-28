@@ -50,7 +50,7 @@ import java.nio.charset.Charset;
  * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends MessageToMessageEncoder<String, ByteBuf> {
+public class StringEncoder extends MessageToMessageEncoder<CharSequence, ByteBuf> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -66,6 +66,8 @@ public class StringEncoder extends MessageToMessageEncoder<String, ByteBuf> {
      * Creates a new instance with the specified character set.
      */
     public StringEncoder(Charset charset) {
+        super(CharSequence.class);
+
         if (charset == null) {
             throw new NullPointerException("charset");
         }
@@ -73,12 +75,7 @@ public class StringEncoder extends MessageToMessageEncoder<String, ByteBuf> {
     }
 
     @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof String;
-    }
-
-    @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, String msg) throws Exception {
+    public ByteBuf encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
         return Unpooled.copiedBuffer(msg, charset);
     }
 }

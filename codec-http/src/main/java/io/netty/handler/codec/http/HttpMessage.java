@@ -34,7 +34,7 @@ import java.util.Set;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - is followed by
  */
-public interface HttpMessage {
+public interface HttpMessage extends HttpObject {
 
     /**
      * Returns the value of a header with the specified name.  If there are

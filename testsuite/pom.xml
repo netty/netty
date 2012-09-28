@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Alpha5-SNAPSHOT</version>
+    <version>4.0.0.Alpha6-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite</artifactId>
@@ -45,7 +45,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.7</version>
         <configuration>
           <skip>true</skip>
         </configuration>

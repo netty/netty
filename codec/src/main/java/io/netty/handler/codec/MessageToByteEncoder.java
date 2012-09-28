@@ -23,6 +23,12 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
+    private final Class<?>[] acceptedMsgTypes;
+
+    protected MessageToByteEncoder(Class<?>... acceptedMsgTypes) {
+        this.acceptedMsgTypes = CodecUtil.acceptedMessageTypes(acceptedMsgTypes);
+    }
+
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
@@ -61,7 +67,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
      * @param msg the message
      */
     public boolean isEncodable(Object msg) throws Exception {
-        return true;
+        return CodecUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     public abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;

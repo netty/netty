@@ -27,10 +27,17 @@ public final class SctpNotificationEvent {
         this.attachment = attachment;
     }
 
+    /**
+     * Return the {@link Notification}
+     */
     public Notification notification() {
         return notification;
     }
 
+    /**
+     * Return the attachment of this {@link SctpNotificationEvent}, or
+     * <code>null</code> if no attachment was provided
+     */
     public Object attachment() {
         return attachment;
     }

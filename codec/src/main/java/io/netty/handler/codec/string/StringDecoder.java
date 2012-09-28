@@ -68,15 +68,12 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
      * Creates a new instance with the specified character set.
      */
     public StringDecoder(Charset charset) {
+        super(ByteBuf.class);
+
         if (charset == null) {
             throw new NullPointerException("charset");
         }
         this.charset = charset;
-    }
-
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
     }
 
     @Override

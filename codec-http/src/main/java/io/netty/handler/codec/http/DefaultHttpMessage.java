@@ -26,7 +26,7 @@ import java.util.Set;
 /**
  * The default {@link HttpMessage} implementation.
  */
-public class DefaultHttpMessage implements HttpMessage {
+public class DefaultHttpMessage extends DefaultHttpObject implements HttpMessage {
 
     private final HttpHeaders headers = new HttpHeaders();
     private HttpVersion version;

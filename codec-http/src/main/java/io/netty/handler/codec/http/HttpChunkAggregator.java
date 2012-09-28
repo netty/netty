@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
@@ -46,7 +47,7 @@ import java.util.Map.Entry;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
+public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, HttpMessage> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
     private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
@@ -66,6 +67,8 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
      *        a {@link TooLongFrameException} will be raised.
      */
     public HttpChunkAggregator(int maxContentLength) {
+        super(HttpObject.class);
+
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " +
@@ -107,12 +110,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
     }
 
     @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof HttpMessage || msg instanceof HttpChunk;
-    }
-
-    @Override
-    public HttpMessage decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public HttpMessage decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
@@ -125,6 +123,12 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
                 ctx.write(CONTINUE.duplicate());
+            }
+
+            if (!m.getDecoderResult().isSuccess()) {
+                m.setTransferEncoding(HttpTransferEncoding.SINGLE);
+                this.currentMessage = null;
+                return m;
             }
 
             switch (m.getTransferEncoding()) {
@@ -167,7 +171,16 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
             // Append the content of the chunk
             appendToCumulation(chunk.getContent());
 
-            if (chunk.isLast()) {
+            final boolean last;
+            if (!chunk.getDecoderResult().isSuccess()) {
+                currentMessage.setDecoderResult(
+                        DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
+                last = true;
+            } else {
+                last = chunk.isLast();
+            }
+
+            if (last) {
                 this.currentMessage = null;
 
                 // Merge trailing headers into the message.

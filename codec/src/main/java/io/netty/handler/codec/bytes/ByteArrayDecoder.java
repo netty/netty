@@ -49,9 +49,8 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  */
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf, byte[]> {
 
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
+    public ByteArrayDecoder() {
+        super(ByteBuf.class);
     }
 
     @Override

@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 /**
  * The default {@link HttpChunk} implementation.
  */
-public class DefaultHttpChunk implements HttpChunk {
+public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
 
     private ByteBuf content;
     private boolean last;
@@ -50,5 +50,25 @@ public class DefaultHttpChunk implements HttpChunk {
     @Override
     public boolean isLast() {
         return last;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+
+        final boolean last = isLast();
+        buf.append("(last: ");
+        buf.append(last);
+        if (!last) {
+            buf.append(", size: ");
+            buf.append(getContent().readableBytes());
+        }
+
+        buf.append(", decodeResult: ");
+        buf.append(getDecoderResult());
+        buf.append(')');
+
+        return buf.toString();
     }
 }

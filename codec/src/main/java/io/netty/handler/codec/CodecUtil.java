@@ -82,6 +82,41 @@ final class CodecUtil {
                 msg.getClass().getSimpleName()));
     }
 
+    private static final Class<?>[] EMPTY_TYPES = new Class<?>[0];
+
+    static Class<?>[] acceptedMessageTypes(Class<?>[] acceptedMsgTypes) {
+        if (acceptedMsgTypes == null) {
+            return EMPTY_TYPES;
+        }
+
+        int numElem = 0;
+        for (Class<?> c: acceptedMsgTypes) {
+            if (c == null) {
+                break;
+            }
+            numElem ++;
+        }
+
+        Class<?>[] newAllowedMsgTypes = new Class[numElem];
+        System.arraycopy(acceptedMsgTypes, 0, newAllowedMsgTypes, 0, numElem);
+
+        return newAllowedMsgTypes;
+    }
+
+    static boolean acceptMessage(Class<?>[] acceptedMsgTypes, Object msg) {
+        if (acceptedMsgTypes.length == 0) {
+            return true;
+        }
+
+        for (Class<?> c: acceptedMsgTypes) {
+            if (c.isInstance(msg)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private CodecUtil() {
         // Unused
     }

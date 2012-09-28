@@ -23,6 +23,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventExecutor;
@@ -33,6 +34,7 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.Collections;
 
 /**
  * A {@link Channel} for the local transport.
@@ -215,16 +217,24 @@ public class LocalChannel extends AbstractChannel {
         }
 
         final LocalChannel peer = this.peer;
-        assert peer != null;
+        final ChannelPipeline peerPipeline = peer.pipeline();
+        final EventLoop peerLoop = peer.eventLoop();
 
-        buf.drainTo(peer.pipeline().inboundMessageBuffer());
-
-        peer.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                peer.pipeline().fireInboundBufferUpdated();
-            }
-        });
+        if (peerLoop == eventLoop()) {
+            buf.drainTo(peerPipeline.inboundMessageBuffer());
+            peerPipeline.fireInboundBufferUpdated();
+        } else {
+            final Object[] msgs = buf.toArray();
+            buf.clear();
+            peerLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
+                    Collections.addAll(buf, msgs);
+                    peerPipeline.fireInboundBufferUpdated();
+                }
+            });
+        }
     }
 
     @Override

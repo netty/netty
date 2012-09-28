@@ -388,6 +388,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return remove(getContextOrDie(name)).handler();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends ChannelHandler> T remove(Class<T> handlerType) {
         return (T) remove(getContextOrDie(handlerType)).handler();
@@ -784,6 +785,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends ChannelHandler> T get(Class<T> handlerType) {
         ChannelHandlerContext ctx = context(handlerType);

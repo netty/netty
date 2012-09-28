@@ -59,6 +59,12 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+        // Handle a bad request.
+        if (!req.getDecoderResult().isSuccess()) {
+            sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, BAD_REQUEST));
+            return;
+        }
+
         // Allow only GET methods.
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));

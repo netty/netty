@@ -25,12 +25,14 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpChunkTrailer;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -62,14 +64,19 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             buf.append("===================================\r\n");
 
-            buf.append("VERSION: " + request.getProtocolVersion() + "\r\n");
-            buf.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
-            buf.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+            buf.append("VERSION: ").append(request.getProtocolVersion()).append("\r\n");
+            buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
+            buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
-            for (Map.Entry<String, String> h: request.getHeaders()) {
-                buf.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
+            List<Map.Entry<String, String>> headers = request.getHeaders();
+            if (!headers.isEmpty()) {
+                for (Map.Entry<String, String> h: request.getHeaders()) {
+                    String key = h.getKey();
+                    String value = h.getValue();
+                    buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
+                }
+                buf.append("\r\n");
             }
-            buf.append("\r\n");
 
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> params = queryStringDecoder.getParameters();
@@ -78,7 +85,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     String key = p.getKey();
                     List<String> vals = p.getValue();
                     for (String val : vals) {
-                        buf.append("PARAM: " + key + " = " + val + "\r\n");
+                        buf.append("PARAM: ").append(key).append(" = ").append(val).append("\r\n");
                     }
                 }
                 buf.append("\r\n");
@@ -89,9 +96,12 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             } else {
                 ByteBuf content = request.getContent();
                 if (content.readable()) {
-                    buf.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
+                    buf.append("CONTENT: ");
+                    buf.append(content.toString(CharsetUtil.UTF_8));
+                    buf.append("\r\n");
                 }
-                writeResponse(ctx);
+                appendDecoderResult(buf, request);
+                writeResponse(ctx, request);
             }
         } else {
             HttpChunk chunk = (HttpChunk) msg;
@@ -104,25 +114,46 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     buf.append("\r\n");
                     for (String name: trailer.getHeaderNames()) {
                         for (String value: trailer.getHeaders(name)) {
-                            buf.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
+                            buf.append("TRAILING HEADER: ");
+                            buf.append(name).append(" = ").append(value).append("\r\n");
                         }
                     }
                     buf.append("\r\n");
                 }
 
-                writeResponse(ctx);
+                appendDecoderResult(buf, chunk);
+                writeResponse(ctx, chunk);
             } else {
-                buf.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
+                buf.append("CHUNK: ");
+                buf.append(chunk.getContent().toString(CharsetUtil.UTF_8)).append("\r\n");
+                appendDecoderResult(buf, chunk);
             }
         }
     }
 
-    private void writeResponse(ChannelHandlerContext ctx) {
+    private static void appendDecoderResult(StringBuilder buf, HttpObject o) {
+        DecoderResult result = o.getDecoderResult();
+        if (result.isSuccess()) {
+            return;
+        }
+
+        buf.append(".. WITH A ");
+        if (result.isPartialFailure()) {
+            buf.append("PARTIAL ");
+        }
+        buf.append("DECODER FAILURE: ");
+        buf.append(result.cause());
+        buf.append("\r\n");
+    }
+
+    private void writeResponse(ChannelHandlerContext ctx, HttpObject currentObj) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
 
         // Build the response object.
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+        HttpResponse response = new DefaultHttpResponse(
+                HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST);
+
         response.setContent(Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
 

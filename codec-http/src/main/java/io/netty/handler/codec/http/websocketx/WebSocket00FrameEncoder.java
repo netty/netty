@@ -32,9 +32,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
 @Sharable
 public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
 
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof WebSocketFrame;
+    public WebSocket00FrameEncoder() {
+        super(WebSocketFrame.class);
     }
 
     @Override

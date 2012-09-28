@@ -25,7 +25,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -104,12 +103,18 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     public void messageReceived(
             ChannelHandlerContext ctx, HttpRequest request) throws Exception {
 
+        if (!request.getDecoderResult().isSuccess()) {
+            sendError(ctx, BAD_REQUEST);
+            return;
+        }
+
         if (request.getMethod() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        final String path = sanitizeUri(request.getUri());
+        final String uri = request.getUri();
+        final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -120,6 +125,16 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             sendError(ctx, NOT_FOUND);
             return;
         }
+
+        if (file.isDirectory()) {
+            if (uri.endsWith("/")) {
+                sendListing(ctx, file);
+            } else {
+                sendRedirect(ctx, uri + '/');
+            }
+            return;
+        }
+
         if (!file.isFile()) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -172,13 +187,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause instanceof TooLongFrameException) {
-            sendError(ctx, BAD_REQUEST);
-            return;
-        }
-
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         if (ctx.channel().isActive()) {
             sendError(ctx, INTERNAL_SERVER_ERROR);
@@ -197,6 +206,10 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             }
         }
 
+        if (!uri.startsWith("/")) {
+            return null;
+        }
+
         // Convert file separators.
         uri = uri.replace('/', File.separatorChar);
 
@@ -210,6 +223,55 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Convert to absolute path.
         return System.getProperty("user.dir") + File.separator + uri;
+    }
+
+    private static void sendListing(ChannelHandlerContext ctx, File dir) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
+
+        StringBuilder buf = new StringBuilder();
+
+        buf.append("<!DOCTYPE html>\r\n");
+        buf.append("<html><head><title>");
+        buf.append("Listing of: ");
+        buf.append(dir.getPath());
+        buf.append("</title></head><body>\r\n");
+
+        buf.append("<h3>Listing of: ");
+        buf.append(dir.getPath());
+        buf.append("</h3>\r\n");
+
+        buf.append("<ul>");
+        buf.append("<li><a href=\"../\">..</a></li>\r\n");
+
+        for (File f: dir.listFiles()) {
+            if (f.isHidden() || !f.canRead()) {
+                continue;
+            }
+
+            String name = f.getName();
+
+            buf.append("<li><a href=\"");
+            buf.append(name);
+            buf.append("\">");
+            buf.append(name);
+            buf.append("</a></li>\r\n");
+        }
+
+        buf.append("</ul></body></html>\r\n");
+
+        response.setContent(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
+
+        // Close the connection as soon as the error message is sent.
+        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, FOUND);
+        response.setHeader(LOCATION, newUri);
+
+        // Close the connection as soon as the error message is sent.
+        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {

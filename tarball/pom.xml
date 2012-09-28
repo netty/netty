@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Alpha5-SNAPSHOT</version>
+    <version>4.0.0.Alpha6-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-tarball</artifactId>
@@ -51,7 +51,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-clean-plugin</artifactId>
-        <version>2.5</version>
         <executions>
           <execution>
             <id>clean-first</id>
@@ -87,7 +86,6 @@
       <!-- Do not deploy this module -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.7</version>
         <configuration>
           <skip>true</skip>
         </configuration>
@@ -102,7 +100,6 @@
         <plugins>
           <plugin>
             <artifactId>maven-dependency-plugin</artifactId>
-            <version>2.4</version>
             <executions>
               <execution>
                 <id>copy-jars</id>
@@ -158,7 +155,6 @@
           </plugin>
           <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
-            <version>2.3</version>
             <executions>
               <execution>
                 <id>build-tarball</id>
@@ -177,11 +173,9 @@
               </execution>
             </executions>
           </plugin>
-
         </plugins>
       </build>
     </profile>
   </profiles>
-
 </project>
 

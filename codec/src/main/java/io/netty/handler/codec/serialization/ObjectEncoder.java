@@ -39,9 +39,8 @@ import java.io.Serializable;
 public class ObjectEncoder extends MessageToByteEncoder<Object> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof Serializable;
+    public ObjectEncoder() {
+        super(Serializable.class);
     }
 
     @Override

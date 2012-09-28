@@ -48,11 +48,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
      * Creates a new instance.
      */
     protected HttpContentDecoder() {
-    }
-
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof HttpMessage || msg instanceof HttpChunk;
+        super(HttpObject.class);
     }
 
     @Override

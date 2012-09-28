@@ -83,6 +83,8 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      */
     public LengthFieldPrepender(
             int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
+        super(ByteBuf.class);
+
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
@@ -93,11 +95,6 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
-    }
-
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
     }
 
     @Override
