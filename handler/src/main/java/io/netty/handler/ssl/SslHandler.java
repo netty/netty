@@ -290,23 +290,32 @@ public class SslHandler
     public ChannelFuture handshake(final ChannelFuture future) {
         final ChannelHandlerContext ctx = this.ctx;
 
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                if (future.isDone()) {
-                    return;
-                }
+        final ScheduledFuture<?> timeoutFuture;
+        if (handshakeTimeoutMillis > 0) {
+            timeoutFuture = ctx.executor().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    if (future.isDone()) {
+                        return;
+                    }
 
-                SSLException e = new SSLException("handshake timed out");
-                future.setFailure(e);
-                ctx.fireExceptionCaught(e);
-                ctx.close();
-            }
-        }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
+                    SSLException e = new SSLException("handshake timed out");
+                    future.setFailure(e);
+                    ctx.fireExceptionCaught(e);
+                    ctx.close();
+                }
+            }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
+        } else {
+            timeoutFuture = null;
+        }
+
         ctx.executor().execute(new Runnable() {
             @Override
             public void run() {
                 try {
+                    if (timeoutFuture != null) {
+                        timeoutFuture.cancel(false);
+                    }
                     engine.beginHandshake();
                     handshakeFutures.add(future);
                     flush(ctx, ctx.newFuture());
@@ -912,23 +921,31 @@ public class SslHandler
             return;
         }
 
-        // Force-close the connection if close_notify is not fully sent in time.
-        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                logger.warn(
-                        ctx.channel() + " last lssssswrite attempt timed out." +
-                                        " Force-closing the connection.");
-                ctx.close(closeFuture);
-            }
-        }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
+        final ScheduledFuture<?> timeoutFuture;
+        if (closeNotifyTimeoutMillis > 0) {
+            // Force-close the connection if close_notify is not fully sent in time.
+            timeoutFuture = ctx.executor().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    logger.warn(
+                            ctx.channel() + " last lssssswrite attempt timed out." +
+                                            " Force-closing the connection.");
+                    ctx.close(closeFuture);
+                }
+            }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
+        } else {
+            timeoutFuture = null;
+        }
+
 
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f)
                     throws Exception {
-                timeoutFuture.cancel(false);
+                if (timeoutFuture != null) {
+                    timeoutFuture.cancel(false);
+                }
                 if (ctx.channel().isActive()) {
                     ctx.close(closeFuture);
                 }
