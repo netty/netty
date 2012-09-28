@@ -327,6 +327,49 @@ public class HttpHeaders {
          */
         public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
+        // CORS:
+        // http://en.wikipedia.org/wiki/Cross-origin_resource_sharing
+        // https://developer.mozilla.org/en-US/docs/HTTP_access_control
+
+        // CORS response headers
+
+        /**
+         * {@code "Access-Control-Allow-Origin"}
+         */
+        public static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+        /**
+         * {@code "Access-Control-Expose-Headers"}
+         */
+        public static final String ACCESS_CONTROL_EXPOSE_HEADERS = "Access-Control-Expose-Headers";
+        /**
+         * {@code "Access-Control-Max-Age"}
+         */
+        public static final String ACCESS_CONTROL_MAX_AGE = "Access-Control-Max-Age";
+        /**
+         * {@code "Access-Control-Allow-Credentials"}
+         */
+        public static final String ACCESS_CONTROL_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
+        /**
+         * {@code "Access-Control-Allow-Methods"}
+         */
+        public static final String ACCESS_CONTROL_ALLOW_METHODS = "Access-Control-Allow-Methods";
+        /**
+         * {@code "Access-Control-Allow-Headers"}
+         */
+        public static final String ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
+
+        // CORS request headers
+        // "Origin" has already been declared above
+
+        /**
+         * {@code "Access-Control-Request-Method"}
+         */
+        public static final String ACCESS_CONTROL_REQUEST_METHODS = "Access-Control-Request-Method";
+        /**
+         * {@code "Access-Control-Request-Headers"}
+         */
+        public static final String ACCESS_CONTROL_REQUEST_HEADERS = "Access-Control-Request-Headers";
+
         private Names() {
         }
     }
