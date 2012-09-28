@@ -15,23 +15,23 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.DecodeResult;
+import io.netty.handler.codec.DecoderResult;
 
 public class DefaultHttpObject implements HttpObject {
 
-    private DecodeResult decodeResult = DecodeResult.SUCCESS;
+    private DecoderResult decodeResult = DecoderResult.SUCCESS;
 
     protected DefaultHttpObject() {
         // Disallow direct instantiation
     }
 
     @Override
-    public DecodeResult getDecodeResult() {
+    public DecoderResult getDecodeResult() {
         return decodeResult;
     }
 
     @Override
-    public void setDecodeResult(DecodeResult result) {
+    public void setDecodeResult(DecoderResult result) {
         if (result == null) {
             throw new NullPointerException("result");
         }

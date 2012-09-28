@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.DecodeResult;
+import io.netty.handler.codec.DecoderResult;
 
 import java.util.Collections;
 import java.util.List;
@@ -106,12 +106,12 @@ public interface HttpChunk extends HttpObject {
         }
 
         @Override
-        public DecodeResult getDecodeResult() {
-            return DecodeResult.SUCCESS;
+        public DecoderResult getDecodeResult() {
+            return DecoderResult.SUCCESS;
         }
 
         @Override
-        public void setDecodeResult(DecodeResult result) {
+        public void setDecodeResult(DecoderResult result) {
             throw new IllegalStateException("read-only");
         }
     };

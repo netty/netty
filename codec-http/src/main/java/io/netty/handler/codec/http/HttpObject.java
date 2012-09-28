@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.handler.codec.DecodeResult;
+import io.netty.handler.codec.DecoderResult;
 
 public interface HttpObject {
-    DecodeResult getDecodeResult();
-    void setDecodeResult(DecodeResult result);
+    DecoderResult getDecodeResult();
+    void setDecodeResult(DecoderResult result);
 }

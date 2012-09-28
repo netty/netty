@@ -15,28 +15,28 @@
  */
 package io.netty.handler.codec;
 
-public class DecodeResult {
+public class DecoderResult {
 
-    public static final DecodeResult SUCCESS = new DecodeResult(false, null);
+    public static final DecoderResult SUCCESS = new DecoderResult(false, null);
 
-    public static DecodeResult failure(Throwable cause) {
+    public static DecoderResult failure(Throwable cause) {
         if (cause == null) {
             throw new NullPointerException("cause");
         }
-        return new DecodeResult(false, cause);
+        return new DecoderResult(false, cause);
     }
 
-    public static DecodeResult partialFailure(Throwable cause) {
+    public static DecoderResult partialFailure(Throwable cause) {
         if (cause == null) {
             throw new NullPointerException("cause");
         }
-        return new DecodeResult(true, cause);
+        return new DecoderResult(true, cause);
     }
 
     private final boolean partial;
     private final Throwable cause;
 
-    protected DecodeResult(boolean partial, Throwable cause) {
+    protected DecoderResult(boolean partial, Throwable cause) {
         if (partial && cause == null) {
             throw new IllegalArgumentException("successful result cannot be partial.");
         }

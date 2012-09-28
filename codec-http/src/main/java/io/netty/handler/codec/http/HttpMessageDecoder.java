@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.DecodeResult;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -459,10 +459,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     private HttpMessage invalidMessage(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         if (message != null) {
-            message.setDecodeResult(DecodeResult.partialFailure(cause));
+            message.setDecodeResult(DecoderResult.partialFailure(cause));
         } else {
             message = createInvalidMessage();
-            message.setDecodeResult(DecodeResult.failure(cause));
+            message.setDecodeResult(DecoderResult.failure(cause));
         }
         return message;
     }
@@ -470,7 +470,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     private HttpChunk invalidChunk(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         HttpChunk chunk = new DefaultHttpChunk(Unpooled.EMPTY_BUFFER);
-        chunk.setDecodeResult(DecodeResult.failure(cause));
+        chunk.setDecodeResult(DecoderResult.failure(cause));
         return chunk;
     }
 
