@@ -117,7 +117,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-clean-plugin</artifactId>
-        <version>2.5</version>
         <executions>
           <execution>
             <id>clean-first</id>
@@ -130,7 +129,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.4</version>
         <executions>
           <execution>
             <id>unpack-sources</id>
@@ -162,7 +160,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.7</version>
         <executions>
           <execution>
             <id>add-source</id>
@@ -203,7 +200,6 @@
       <!-- Disable all plugin executions configured by jar packaging -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.5</version>
         <executions>
           <execution>
             <id>default-resources</id>
@@ -239,7 +235,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.2</version>
         <executions>
           <execution>
             <id>generate-xref</id>
