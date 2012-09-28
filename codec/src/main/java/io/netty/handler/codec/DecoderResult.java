@@ -49,7 +49,15 @@ public class DecoderResult {
         return cause == null;
     }
 
-    public boolean isPartial() {
+    public boolean isFailure() {
+        return cause != null;
+    }
+
+    public boolean isCompleteFailure() {
+        return cause != null && !partial;
+    }
+
+    public boolean isPartialFailure() {
         return partial;
     }
 
@@ -65,7 +73,7 @@ public class DecoderResult {
 
         String cause = cause().toString();
         StringBuilder buf = new StringBuilder(cause.length() + 17);
-        if (isPartial()) {
+        if (isPartialFailure()) {
             buf.append("partial_");
         }
         buf.append("failure(");

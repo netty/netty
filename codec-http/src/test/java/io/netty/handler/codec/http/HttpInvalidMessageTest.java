@@ -37,7 +37,7 @@ public class HttpInvalidMessageTest {
         HttpRequest req = (HttpRequest) ch.readInbound();
         DecoderResult dr = req.getDecoderResult();
         Assert.assertFalse(dr.isSuccess());
-        Assert.assertFalse(dr.isPartial());
+        Assert.assertFalse(dr.isPartialFailure());
         ensureInboundTrafficDiscarded(ch);
     }
 
@@ -51,7 +51,7 @@ public class HttpInvalidMessageTest {
         HttpRequest req = (HttpRequest) ch.readInbound();
         DecoderResult dr = req.getDecoderResult();
         Assert.assertFalse(dr.isSuccess());
-        Assert.assertTrue(dr.isPartial());
+        Assert.assertTrue(dr.isPartialFailure());
         Assert.assertEquals("Good Value", req.getHeader("Good_Name"));
         Assert.assertEquals("/maybe-something", req.getUri());
         ensureInboundTrafficDiscarded(ch);
@@ -64,7 +64,7 @@ public class HttpInvalidMessageTest {
         HttpResponse res = (HttpResponse) ch.readInbound();
         DecoderResult dr = res.getDecoderResult();
         Assert.assertFalse(dr.isSuccess());
-        Assert.assertFalse(dr.isPartial());
+        Assert.assertFalse(dr.isPartialFailure());
         ensureInboundTrafficDiscarded(ch);
     }
 
@@ -78,7 +78,7 @@ public class HttpInvalidMessageTest {
         HttpResponse res = (HttpResponse) ch.readInbound();
         DecoderResult dr = res.getDecoderResult();
         Assert.assertFalse(dr.isSuccess());
-        Assert.assertTrue(dr.isPartial());
+        Assert.assertTrue(dr.isPartialFailure());
         Assert.assertEquals("Maybe OK", res.getStatus().getReasonPhrase());
         Assert.assertEquals("Good Value", res.getHeader("Good_Name"));
         ensureInboundTrafficDiscarded(ch);
@@ -97,7 +97,7 @@ public class HttpInvalidMessageTest {
         HttpChunk chunk = (HttpChunk) ch.readInbound();
         DecoderResult dr = chunk.getDecoderResult();
         Assert.assertFalse(dr.isSuccess());
-        Assert.assertFalse(dr.isPartial());
+        Assert.assertFalse(dr.isPartialFailure());
         ensureInboundTrafficDiscarded(ch);
     }
 
