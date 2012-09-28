@@ -245,10 +245,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         buf.append("<li><a href=\"../\">..</a></li>\r\n");
 
         for (File f: dir.listFiles()) {
-            if (f.isHidden()) {
-                continue;
-            }
-            if (!f.canRead()) {
+            if (f.isHidden() || !f.canRead()) {
                 continue;
             }
 
