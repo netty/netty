@@ -46,7 +46,7 @@ import java.util.Map.Entry;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMessage> {
+public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, HttpMessage> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
     private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
@@ -66,7 +66,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
      *        a {@link TooLongFrameException} will be raised.
      */
     public HttpChunkAggregator(int maxContentLength) {
-        super(HttpMessage.class, HttpChunk.class);
+        super(HttpObject.class);
 
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
@@ -109,7 +109,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<Object, HttpMes
     }
 
     @Override
-    public HttpMessage decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public HttpMessage decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {

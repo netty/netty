@@ -57,7 +57,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     protected HttpContentEncoder() {
         super(
                 new Class<?>[] { HttpMessage.class },
-                new Class<?>[] { HttpMessage.class, HttpChunk.class });
+                new Class<?>[] { HttpObject.class });
     }
 
     @Override

@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpChunkTrailer;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
@@ -129,7 +130,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
      * @param version the protocol version
      */
     public SpdyHttpEncoder(int version) {
-        super(HttpMessage.class, HttpChunk.class);
+        super(HttpObject.class);
 
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(

@@ -50,7 +50,7 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
      * Creates a new instance.
      */
     protected HttpMessageEncoder() {
-        super(HttpMessage.class, HttpChunk.class);
+        super(HttpObject.class);
     }
 
     @Override
