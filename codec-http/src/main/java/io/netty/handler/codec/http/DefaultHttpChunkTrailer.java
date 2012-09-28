@@ -25,7 +25,7 @@ import java.util.Set;
 /**
  * The default {@link HttpChunkTrailer} implementation.
  */
-public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
+public class DefaultHttpChunkTrailer extends DefaultHttpObject implements HttpChunkTrailer {
 
     private final HttpHeaders headers = new HttpHeaders() {
         @Override

@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.DecodeResult;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +34,7 @@ import java.util.Set;
  * {@link ChannelPipeline}.
  * @apiviz.landmark
  */
-public interface HttpChunk {
+public interface HttpChunk extends HttpObject {
 
     /**
      * The 'end of content' marker in chunked encoding.
@@ -101,6 +102,16 @@ public interface HttpChunk {
 
         @Override
         public void setHeader(String name, Iterable<?> values) {
+            throw new IllegalStateException("read-only");
+        }
+
+        @Override
+        public DecodeResult getDecodeResult() {
+            return DecodeResult.SUCCESS;
+        }
+
+        @Override
+        public void setDecodeResult(DecodeResult result) {
             throw new IllegalStateException("read-only");
         }
     };

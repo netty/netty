@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 /**
  * The default {@link HttpChunk} implementation.
  */
-public class DefaultHttpChunk implements HttpChunk {
+public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
 
     private ByteBuf content;
     private boolean last;
