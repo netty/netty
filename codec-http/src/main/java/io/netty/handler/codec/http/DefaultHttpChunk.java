@@ -51,4 +51,24 @@ public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
     public boolean isLast() {
         return last;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+
+        final boolean last = isLast();
+        buf.append("(last: ");
+        buf.append(last);
+        if (!last) {
+            buf.append(", size: ");
+            buf.append(getContent().readableBytes());
+        }
+
+        buf.append(", decodeResult: ");
+        buf.append(getDecodeResult());
+        buf.append(')');
+
+        return buf.toString();
+    }
 }

@@ -72,6 +72,11 @@ public class RtspRequestDecoder extends RtspMessageDecoder {
     }
 
     @Override
+    protected HttpMessage createInvalidMessage() {
+        return new DefaultHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.OPTIONS, "/bad-request");
+    }
+
+    @Override
     protected boolean isDecodingRequest() {
         return true;
     }

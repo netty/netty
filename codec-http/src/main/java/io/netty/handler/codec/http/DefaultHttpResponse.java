@@ -54,6 +54,8 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         buf.append(getClass().getSimpleName());
         buf.append("(transferEncoding: ");
         buf.append(getTransferEncoding());
+        buf.append(", decodeResult: ");
+        buf.append(getDecodeResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append(getProtocolVersion().getText());
