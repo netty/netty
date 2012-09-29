@@ -217,7 +217,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         // You will have to do something serious in the production environment.
         if (uri.contains(File.separator + ".") ||
             uri.contains("." + File.separator) ||
-            uri.startsWith(".") || uri.endsWith(".")) {
+            uri.startsWith(".") || uri.endsWith(".") ||
+            uri.matches(".*[<>&\"].*")) {
             return null;
         }
 
@@ -230,15 +231,16 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
 
         StringBuilder buf = new StringBuilder();
+        String dirPath = dir.getPath();
 
         buf.append("<!DOCTYPE html>\r\n");
         buf.append("<html><head><title>");
         buf.append("Listing of: ");
-        buf.append(dir.getPath());
+        buf.append(dirPath);
         buf.append("</title></head><body>\r\n");
 
         buf.append("<h3>Listing of: ");
-        buf.append(dir.getPath());
+        buf.append(dirPath);
         buf.append("</h3>\r\n");
 
         buf.append("<ul>");
@@ -250,6 +252,9 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             }
 
             String name = f.getName();
+            if (!name.matches("[A-Za-z0-9][-_A-Za-z0-9\\.]*")) {
+                continue;
+            }
 
             buf.append("<li><a href=\"");
             buf.append(name);
