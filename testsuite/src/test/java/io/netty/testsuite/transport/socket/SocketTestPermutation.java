@@ -26,11 +26,15 @@ import io.netty.channel.socket.aio.AioSocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSctpServerChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.nio.NioSctpChannel;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
+import io.netty.channel.socket.oio.OioSctpServerChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
+import io.netty.channel.socket.oio.OioSctpChannel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -130,6 +134,43 @@ final class SocketTestPermutation {
         return list;
     }
 
+    static List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> sctpChannel() {
+        List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> list =
+                new ArrayList<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>>();
+
+        // Make the list of SCTP ServerBootstrap factories.
+        List<Factory<ServerBootstrap>> sbfs = sctpServerChannel();
+
+        // Make the list of SCTP Bootstrap factories.
+        List<Factory<Bootstrap>> cbfs = sctpClientChannel();
+
+        // Populate the combinations
+        for (Factory<ServerBootstrap> sbf: sbfs) {
+            for (Factory<Bootstrap> cbf: cbfs) {
+                final Factory<ServerBootstrap> sbf0 = sbf;
+                final Factory<Bootstrap> cbf0 = cbf;
+                list.add(new Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>() {
+                    @Override
+                    public Factory<ServerBootstrap> getKey() {
+                        return sbf0;
+                    }
+
+                    @Override
+                    public Factory<Bootstrap> getValue() {
+                        return cbf0;
+                    }
+
+                    @Override
+                    public Factory<Bootstrap> setValue(Factory<Bootstrap> value) {
+                        throw new UnsupportedOperationException();
+                    }
+                });
+            }
+        }
+
+        return list;
+    }
+
     static List<Factory<ServerBootstrap>> serverSocket() {
         List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
 
@@ -192,6 +233,47 @@ final class SocketTestPermutation {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSocketChannel.class);
+            }
+        });
+        return list;
+    }
+
+    static List<Factory<ServerBootstrap>> sctpServerChannel() {
+        List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
+
+        // Make the list of ServerBootstrap factories.
+        list.add(new Factory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                return new ServerBootstrap().
+                        group(new NioEventLoopGroup(), new NioEventLoopGroup()).
+                        channel(NioSctpServerChannel.class);
+            }
+        });
+        list.add(new Factory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                return new ServerBootstrap().
+                        group(new OioEventLoopGroup(), new OioEventLoopGroup()).
+                        channel(OioSctpServerChannel.class);
+            }
+        });
+
+        return list;
+    }
+
+    static List<Factory<Bootstrap>> sctpClientChannel() {
+        List<Factory<Bootstrap>> list = new ArrayList<Factory<Bootstrap>>();
+        list.add(new Factory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(new NioEventLoopGroup()).channel(NioSctpChannel.class);
+            }
+        });
+        list.add(new Factory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSctpChannel.class);
             }
         });
         return list;
