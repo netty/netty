@@ -380,6 +380,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
      * Returns the maximum total size of the queued events for this pool.
      */
     public long getMaxTotalMemorySize() {
+        if (totalLimiter == null) {
+            return 0;
+        }
         return totalLimiter.limit;
     }
 
