@@ -34,7 +34,10 @@ import java.util.TreeSet;
 public class HttpHeaders {
 
     /**
-     * Standard HTTP header names.
+     * Standard and CORS HTTP header names.
+     * For CORS headers, see
+     * https://developer.mozilla.org/en-US/docs/HTTP_access_control
+     *
      * @apiviz.stereotype static
      */
     public static final class Names {
@@ -78,6 +81,10 @@ public class HttpHeaders {
          * {@code "Access-Control-Allow-Origin"}
          */
         public static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+        /**
+         * {@code "Access-Control-Expose-Headers"}
+         */
+        public static final String ACCESS_CONTROL_EXPOSE_HEADERS = "Access-Control-Expose-Headers";
         /**
          * {@code "Access-Control-Max-Age"}
          */
