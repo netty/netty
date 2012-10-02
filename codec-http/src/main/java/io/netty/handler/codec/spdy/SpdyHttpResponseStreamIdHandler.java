@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
@@ -31,7 +31,7 @@ import io.netty.handler.codec.http.HttpResponse;
 public class SpdyHttpResponseStreamIdHandler extends
         MessageToMessageCodec<HttpRequest, HttpRequest, HttpResponse, HttpResponse> {
     private static final Integer NO_ID = -1;
-    private final Queue<Integer> ids = new ConcurrentLinkedQueue<Integer>();
+    private final Queue<Integer> ids = new LinkedList<Integer>();
 
     public SpdyHttpResponseStreamIdHandler() {
         super(new Class<?>[] { HttpRequest.class }, new Class<?>[] { HttpResponse.class });
