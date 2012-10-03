@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry kind="src" path="buffer/src/main/java"/>
+	<classpathentry kind="src" path="codec/src/main/java"/>
+	<classpathentry kind="src" path="codec-http/src/main/java"/>
+	<classpathentry kind="src" path="common/src/main/java"/>
+	<classpathentry kind="src" path="handler/src/main/java"/>
+	<classpathentry kind="src" path="transport/src/main/java"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ch.finnova.pe.jdk.build.time.dependencies"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
