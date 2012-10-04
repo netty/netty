@@ -84,6 +84,7 @@ public class ChunkedWriteHandler
     private volatile ChannelHandlerContext ctx;
     private final AtomicBoolean flush = new AtomicBoolean(false);
     private MessageEvent currentEvent;
+    private volatile boolean flushNeeded;
 
     /**
      * Continues to fetch the chunks from the input.
@@ -187,9 +188,10 @@ public class ChunkedWriteHandler
         boolean acquired = false;
         final Channel channel = ctx.getChannel();
         boolean suspend = false;
-
+        flushNeeded = true;
         // use CAS to see if the have flush already running, if so we don't need to take futher actions
         if (acquired = flush.compareAndSet(false, true)) {
+            flushNeeded = false;
             try {
 
                 if (!channel.isConnected()) {
@@ -297,7 +299,7 @@ public class ChunkedWriteHandler
 
         }
 
-        if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty() && !suspend)) {
+        if (acquired && ((!channel.isConnected() || channel.isWritable() && !queue.isEmpty() && !suspend) || flushNeeded)) {
             flush(ctx, fireNow);
         }
     }
