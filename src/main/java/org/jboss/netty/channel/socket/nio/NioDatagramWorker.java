@@ -111,6 +111,12 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
 
     @Override
+    public void releaseExternalResources() {
+        super.releaseExternalResources();
+        bufferAllocator.releaseExternalResources();
+    }
+
+    @Override
     protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
         final Thread workerThread = thread;
         if (workerThread == null || Thread.currentThread() != workerThread) {

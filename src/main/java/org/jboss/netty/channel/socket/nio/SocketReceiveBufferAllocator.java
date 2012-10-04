@@ -17,9 +17,10 @@ package org.jboss.netty.channel.socket.nio;
 
 import java.nio.ByteBuffer;
 
+import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ByteBufferUtil;
 
-final class SocketReceiveBufferAllocator {
+final class SocketReceiveBufferAllocator implements ExternalResourceReleasable {
 
     private ByteBuffer buf;
     private int exceedCount;
@@ -71,5 +72,11 @@ final class SocketReceiveBufferAllocator {
             q ++;
         }
         return q << 10;
+    }
+
+    public void releaseExternalResources() {
+        if (buf != null) {
+            ByteBufferUtil.destroy(buf);
+        }
     }
 }

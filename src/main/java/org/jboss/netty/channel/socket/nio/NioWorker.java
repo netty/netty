@@ -131,6 +131,12 @@ public class NioWorker extends AbstractNioWorker {
     }
 
     @Override
+    public void releaseExternalResources() {
+        super.releaseExternalResources();
+        recvBufferPool.releaseExternalResources();
+    }
+
+    @Override
     protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean server = !(channel instanceof NioClientSocketChannel);
         return new RegisterTask((NioSocketChannel) channel, future, server);

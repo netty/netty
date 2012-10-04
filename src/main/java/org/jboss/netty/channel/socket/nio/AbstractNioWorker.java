@@ -49,10 +49,11 @@ import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
-abstract class AbstractNioWorker implements Worker {
+abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
 
 
     private static final AtomicInteger nextId = new AtomicInteger();
@@ -900,6 +901,11 @@ abstract class AbstractNioWorker implements Worker {
                 fireExceptionCaughtLater(channel, t);
             }
         }
+    }
+
+
+    public void releaseExternalResources() {
+        sendBufferPool.releaseExternalResources();
     }
 
     /**

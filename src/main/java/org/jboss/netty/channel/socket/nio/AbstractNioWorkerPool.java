@@ -75,6 +75,9 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
 
     public void releaseExternalResources() {
         ExecutorUtil.terminate(workerExecutor);
+        for (AbstractNioWorker worker: workers) {
+            worker.releaseExternalResources();
+        }
     }
 
 }

@@ -27,8 +27,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.internal.ByteBufferUtil;
 
-final class SocketSendBufferPool {
+final class SocketSendBufferPool implements ExternalResourceReleasable {
 
     private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();
 
@@ -381,6 +383,12 @@ final class SocketSendBufferPool {
 
         public void release() {
             // Unpooled.
+        }
+    }
+
+    public void releaseExternalResources() {
+        if (current.buffer != null) {
+            ByteBufferUtil.destroy(current.buffer);
         }
     }
 }
