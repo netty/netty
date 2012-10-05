@@ -578,14 +578,19 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
-        int componentId = toComponentIndex(index);
         if (index > capacity() - length || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Needs "
                     + (index + length) + ", maximum is " + capacity() + " or "
                     + dst.length);
         }
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
+        int i = toComponentIndex(index);
 
-        int i = componentId;
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
@@ -601,15 +606,20 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public void getBytes(int index, ByteBuffer dst) {
-        int componentId = toComponentIndex(index);
         int limit = dst.limit();
         int length = dst.remaining();
+
         if (index > capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
                     + (index + length) + ", maximum is " + capacity());
         }
-
-        int i = componentId;
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
+        int i = toComponentIndex(index);
         try {
             while (length > 0) {
                 Component c = components.get(i);
@@ -629,14 +639,18 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        int componentId = toComponentIndex(index);
         if (index > capacity() - length || dstIndex > dst.capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
                     + (index + length) + " or " + (dstIndex + length) + ", maximum is "
                     + capacity() + " or " + dst.capacity());
         }
-
-        int i = componentId;
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
+        int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
@@ -670,13 +684,18 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
-        int componentId = toComponentIndex(index);
         if (index > capacity() - length) {
             throw new IndexOutOfBoundsException("Too many bytes to be read - needs "
                     + (index + length) + ", maximum of " + capacity());
         }
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("index must be >= 0");
+        }
+        if (length == 0) {
+            return;
+        }
 
-        int i = componentId;
+        int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
@@ -1031,11 +1050,17 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
-        int componentId = toComponentIndex(index);
         if (index + length > capacity()) {
             throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
                     + (index + length) + ", maximum is " + capacity());
         }
+        if (index < 0) {
+            throw new IndexOutOfBoundsException("index must be >= 0");
+        }
+        if (length == 0) {
+            return new ByteBuffer[0];
+        }
+        int componentId = toComponentIndex(index);
 
         List<ByteBuffer> buffers = new ArrayList<ByteBuffer>(components.size());
 

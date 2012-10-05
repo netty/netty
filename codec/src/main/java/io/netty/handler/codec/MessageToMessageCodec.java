@@ -53,6 +53,19 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         }
     };
 
+    private final Class<?>[] acceptedInboundMsgTypes;
+    private final Class<?>[] acceptedOutboundMsgTypes;
+
+    protected MessageToMessageCodec() {
+        this(null, null);
+    }
+
+    protected MessageToMessageCodec(
+            Class<?>[] acceptedInboundMsgTypes, Class<?>[] acceptedOutboundMsgTypes) {
+        this.acceptedInboundMsgTypes = CodecUtil.acceptedMessageTypes(acceptedInboundMsgTypes);
+        this.acceptedOutboundMsgTypes = CodecUtil.acceptedMessageTypes(acceptedOutboundMsgTypes);
+    }
+
     @Override
     public MessageBuf<INBOUND_IN> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return decoder.newInboundBuffer(ctx);
@@ -80,7 +93,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
      * @param msg the message
      */
     public boolean isDecodable(Object msg) throws Exception {
-        return true;
+        return CodecUtil.acceptMessage(acceptedInboundMsgTypes, msg);
     }
 
     /**
@@ -89,7 +102,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
      * @param msg the message
      */
     public boolean isEncodable(Object msg) throws Exception {
-        return true;
+        return CodecUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
     }
 
     public abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,7 @@ import java.util.Set;
 /**
  * The default {@link HttpChunkTrailer} implementation.
  */
-public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
+public class DefaultHttpChunkTrailer extends DefaultHttpObject implements HttpChunkTrailer {
 
     private final HttpHeaders headers = new HttpHeaders() {
         @Override
@@ -103,5 +104,38 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
     @Override
     public void setContent(ByteBuf content) {
         throw new IllegalStateException("read-only");
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+
+        final boolean last = isLast();
+        buf.append("(last: ");
+        buf.append(last);
+        if (!last) {
+            buf.append(", size: ");
+            buf.append(getContent().readableBytes());
+        }
+
+        buf.append(", decodeResult: ");
+        buf.append(getDecoderResult());
+        buf.append(')');
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
+    }
+
+    private void appendHeaders(StringBuilder buf) {
+        for (Map.Entry<String, String> e: getHeaders()) {
+            buf.append(e.getKey());
+            buf.append(": ");
+            buf.append(e.getValue());
+            buf.append(StringUtil.NEWLINE);
+        }
     }
 }

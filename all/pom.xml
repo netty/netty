@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Alpha5-SNAPSHOT</version>
+    <version>4.0.0.Alpha6-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty</artifactId>
@@ -117,7 +117,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-clean-plugin</artifactId>
-        <version>2.5</version>
         <executions>
           <execution>
             <id>clean-first</id>
@@ -130,7 +129,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.4</version>
         <executions>
           <execution>
             <id>unpack-sources</id>
@@ -162,7 +160,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.7</version>
         <executions>
           <execution>
             <id>add-source</id>
@@ -203,7 +200,6 @@
       <!-- Disable all plugin executions configured by jar packaging -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.5</version>
         <executions>
           <execution>
             <id>default-resources</id>
@@ -239,7 +235,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.2</version>
         <executions>
           <execution>
             <id>generate-xref</id>
@@ -259,6 +254,13 @@
           <docTitle>Netty Source Xref (${project.version})</docTitle>
           <windowTitle>Netty Source Xref (${project.version})</windowTitle>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-build</artifactId>
+            <version>10</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>

@@ -54,17 +54,14 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf, ByteBuf> {
     }
 
     public Base64Encoder(boolean breakLines, Base64Dialect dialect) {
+        super(ByteBuf.class);
+
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
 
         this.breakLines = breakLines;
         this.dialect = dialect;
-    }
-
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
     }
 
     @Override

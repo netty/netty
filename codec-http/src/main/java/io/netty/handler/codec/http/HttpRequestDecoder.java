@@ -77,6 +77,11 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
     }
 
     @Override
+    protected HttpMessage createInvalidMessage() {
+        return new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request");
+    }
+
+    @Override
     protected boolean isDecodingRequest() {
         return true;
     }

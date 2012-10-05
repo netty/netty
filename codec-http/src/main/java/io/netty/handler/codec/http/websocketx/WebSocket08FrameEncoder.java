@@ -90,17 +90,14 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
      *            false.
      */
     public WebSocket08FrameEncoder(boolean maskPayload) {
+        super(WebSocketFrame.class);
         this.maskPayload = maskPayload;
     }
 
     @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof WebSocketFrame;
-    }
+    public void encode(
+            ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
 
-    @Override
-    public void encode(ChannelHandlerContext ctx,
-            WebSocketFrame msg, ByteBuf out) throws Exception {
         byte[] mask;
 
         ByteBuf data = msg.getBinaryData();

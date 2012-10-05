@@ -100,7 +100,9 @@ class OioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void wakeup(boolean inEventLoop) {
-        interruptThread();
+        if (!inEventLoop && isShutdown()) {
+            interruptThread();
+        }
     }
 
     private void deregister() {

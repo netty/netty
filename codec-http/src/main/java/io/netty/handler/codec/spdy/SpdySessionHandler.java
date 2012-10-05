@@ -103,19 +103,7 @@ public class SpdySessionHandler
                 break;
             }
 
-            if (msg instanceof SpdyDataFrame ||
-                    msg instanceof SpdySynStreamFrame ||
-                    msg instanceof SpdySynReplyFrame ||
-                    msg instanceof SpdyRstStreamFrame ||
-                    msg instanceof SpdySettingsFrame ||
-                    msg instanceof SpdyPingFrame ||
-                    msg instanceof SpdyGoAwayFrame ||
-                    msg instanceof SpdyHeadersFrame ||
-                    msg instanceof SpdyWindowUpdateFrame) {
-                handleInboundMessage(ctx, msg);
-            } else {
-                ctx.nextInboundMessageBuffer().add(msg);
-            }
+            handleInboundMessage(ctx, msg);
         }
         ctx.fireInboundBufferUpdated();
     }

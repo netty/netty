@@ -48,6 +48,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_RCVBUF) {

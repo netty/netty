@@ -44,11 +44,7 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<B
      * Creates a new instance.
      */
     public ProtobufVarint32LengthFieldPrepender() {
-    }
-
-    @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
+        super(ByteBuf.class);
     }
 
     @Override

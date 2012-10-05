@@ -70,6 +70,8 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(getClass().getSimpleName());
         buf.append("(transferEncoding: ");
         buf.append(getTransferEncoding());
+        buf.append(", decodeResult: ");
+        buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append(getMethod().toString());

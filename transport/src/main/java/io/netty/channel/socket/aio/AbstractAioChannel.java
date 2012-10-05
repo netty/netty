@@ -68,7 +68,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        if (((AioEventLoop) eventLoop()).parent() != group) {
+        if (eventLoop().parent() != group) {
             throw new ChannelException(
                     getClass().getSimpleName() + " must be registered to the " +
                     AioEventLoopGroup.class.getSimpleName() + " which was specified in the constructor.");

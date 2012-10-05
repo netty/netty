@@ -51,6 +51,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
                 ALLOW_HALF_CLOSURE);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == SO_RCVBUF) {

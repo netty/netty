@@ -22,16 +22,13 @@ import com.sun.nio.sctp.Notification;
 import com.sun.nio.sctp.PeerAddressChangeNotification;
 import com.sun.nio.sctp.SendFailedNotification;
 import com.sun.nio.sctp.ShutdownNotification;
-import io.netty.channel.ChannelPipeline;
 
 public class SctpNotificationHandler extends AbstractNotificationHandler<Object> {
 
     private final SctpChannel sctpChannel;
-    private final ChannelPipeline pipeline;
 
     public SctpNotificationHandler(SctpChannel sctpChannel) {
         this.sctpChannel = sctpChannel;
-        pipeline = sctpChannel.pipeline();
     }
 
     @Override
@@ -54,12 +51,13 @@ public class SctpNotificationHandler extends AbstractNotificationHandler<Object>
 
     @Override
     public HandlerResult handleNotification(ShutdownNotification notification, Object o) {
+        updateInboundBuffer(notification, o);
         sctpChannel.close();
         return HandlerResult.RETURN;
     }
 
     private void updateInboundBuffer(Notification notification, Object o) {
-        pipeline.inboundMessageBuffer().add(new SctpNotification(notification, o));
+        sctpChannel.pipeline().inboundMessageBuffer().add(new SctpNotification(notification, o));
     }
 }
 

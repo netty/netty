@@ -74,16 +74,13 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLit
     }
 
     public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
+        super(ByteBuf.class);
+
         if (prototype == null) {
             throw new NullPointerException("prototype");
         }
         this.prototype = prototype.getDefaultInstanceForType();
         this.extensionRegistry = extensionRegistry;
-    }
-
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
     }
 
     @Override

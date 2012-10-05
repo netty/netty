@@ -83,6 +83,8 @@ import io.netty.handler.codec.TooLongFrameException;
  */
 public class HttpResponseDecoder extends HttpMessageDecoder {
 
+    private static final HttpResponseStatus UNKNOWN_STATUS = new HttpResponseStatus(999, "Unknown");
+
     /**
      * Creates a new instance with the default
      * {@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
@@ -104,6 +106,11 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
         return new DefaultHttpResponse(
                 HttpVersion.valueOf(initialLine[0]),
                 new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
+    }
+
+    @Override
+    protected HttpMessage createInvalidMessage() {
+        return new DefaultHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS);
     }
 
     @Override

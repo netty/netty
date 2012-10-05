@@ -53,15 +53,12 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf, ByteBuf> {
     }
 
     public Base64Decoder(Base64Dialect dialect) {
+        super(ByteBuf.class);
+
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
         this.dialect = dialect;
-    }
-
-    @Override
-    public boolean isDecodable(Object msg) throws Exception {
-        return msg instanceof ByteBuf;
     }
 
     @Override
