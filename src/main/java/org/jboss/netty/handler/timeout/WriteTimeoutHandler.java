@@ -159,8 +159,21 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         super.writeRequested(ctx, e);
     }
 
+    private void fireWriteTimeOut(final ChannelHandlerContext ctx) {
+        ctx.getPipeline().execute(new Runnable() {
+
+            public void run() {
+                try {
+                    writeTimedOut(ctx);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
+            }
+        });
+    }
+
     protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
-       Channels.fireExceptionCaughtLater(ctx, EXCEPTION);
+       Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 
     private final class WriteTimeoutTask implements TimerTask {
@@ -185,11 +198,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
             // Mark the future as failure
             if (future.setFailure(EXCEPTION)) {
                 // If succeeded to mark as failure, notify the pipeline, too.
-                try {
-                    writeTimedOut(ctx);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
+                fireWriteTimeOut(ctx);
             }
         }
     }

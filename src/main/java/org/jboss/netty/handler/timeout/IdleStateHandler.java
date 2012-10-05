@@ -373,6 +373,20 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         return state;
     }
 
+    private void fireChannelIdle(
+            final ChannelHandlerContext ctx, final IdleState state, final long lastActivityTimeMillis) {
+       ctx.getPipeline().execute(new Runnable() {
+
+            public void run() {
+                try {
+                    channelIdle(ctx, state, lastActivityTimeMillis);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
+            }
+        });
+    }
+
     protected void channelIdle(
             ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
         ctx.sendUpstream(new DefaultIdleStateEvent(ctx.getChannel(), state, lastActivityTimeMillis));
@@ -399,11 +413,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 // Reader is idle - set a new timeout and notify the callback.
                 state.readerIdleTimeout =
                     timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                try {
-                    channelIdle(ctx, IdleState.READER_IDLE, lastReadTime);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
+                fireChannelIdle(ctx, IdleState.READER_IDLE, lastReadTime);
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 state.readerIdleTimeout =
@@ -434,11 +444,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 // Writer is idle - set a new timeout and notify the callback.
                 state.writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                try {
-                    channelIdle(ctx, IdleState.WRITER_IDLE, lastWriteTime);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
+                fireChannelIdle(ctx, IdleState.WRITER_IDLE, lastWriteTime);
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
                 state.writerIdleTimeout =
@@ -469,11 +475,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 // notify the callback.
                 state.allIdleTimeout =
                     timer.newTimeout(this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
-                try {
-                    channelIdle(ctx, IdleState.ALL_IDLE, lastIoTime);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
+                fireChannelIdle(ctx, IdleState.ALL_IDLE, lastIoTime);
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.

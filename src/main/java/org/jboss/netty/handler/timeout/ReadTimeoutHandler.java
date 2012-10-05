@@ -232,6 +232,19 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         return state;
     }
 
+    private void fireReadTimedOut(final ChannelHandlerContext ctx) throws Exception {
+        ctx.getPipeline().execute(new Runnable() {
+
+            public void run() {
+                try {
+                    readTimedOut(ctx);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
+            }
+        });
+    }
+
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
         Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
@@ -260,13 +273,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
                 // Read timed out - set a new timeout and notify the callback.
                 state.timeout =
                     timer.newTimeout(this, timeoutMillis, TimeUnit.MILLISECONDS);
-                try {
-                    // FIXME This should be called from an I/O thread.
-                    //       To be fixed in Netty 4.
-                    readTimedOut(ctx);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
+                fireReadTimedOut(ctx);
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 state.timeout =
