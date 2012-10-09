@@ -24,7 +24,7 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
-// Uncomment the following line if you want HTTPS
+// Uncomment the following lines if you want HTTPS
 //import javax.net.ssl.SSLEngine;
 //import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 //import org.jboss.netty.handler.ssl.SslHandler;
@@ -34,7 +34,7 @@ public class HttpStaticFileServerPipelineFactory implements ChannelPipelineFacto
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 
-        // Uncomment the following line if you want HTTPS
+        // Uncomment the following lines if you want HTTPS
         //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
         //engine.setUseClientMode(false);
         //pipeline.addLast("ssl", new SslHandler(engine));
