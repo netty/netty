@@ -58,7 +58,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private EventLoopGroup childGroup;
-    private ChannelHandler handler;
     private ChannelHandler childHandler;
 
     /**
@@ -153,8 +152,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
 
         ChannelPipeline p = future.channel().pipeline();
-        if (handler != null) {
-            p.addLast(handler);
+        if (handler() != null) {
+            p.addLast(handler());
         }
         p.addLast(acceptor);
 
