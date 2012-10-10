@@ -300,9 +300,10 @@ public class SslHandler
                     }
 
                     SSLException e = new SSLException("handshake timed out");
-                    future.setFailure(e);
-                    ctx.fireExceptionCaught(e);
-                    ctx.close();
+                    if ( future.setFailure(e) ){
+                    	ctx.fireExceptionCaught(e);
+                    	ctx.close();
+                    }
                 }
             }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -320,9 +321,10 @@ public class SslHandler
                     handshakeFutures.add(future);
                     flush(ctx, ctx.newFuture());
                 } catch (Exception e) {
-                    future.setFailure(e);
-                    ctx.fireExceptionCaught(e);
-                    ctx.close();
+                    if ( future.setFailure(e) ) {
+                    	ctx.fireExceptionCaught(e);
+                    	ctx.close();
+                    }
                 }
             }
         });
