@@ -17,12 +17,12 @@ package io.netty.channel.socket;
 
 import com.sun.nio.sctp.Notification;
 
-public final class SctpNotification implements SctpMessage {
-    private final Notification notification;
-    private final Object attachment;
+public final class SctpNotificationEvent {
+    private Notification notification;
+    private Object attachment;
 
 
-    public SctpNotification(Notification notification, Object attachment) {
+    public SctpNotificationEvent(Notification notification, Object attachment) {
         this.notification = notification;
         this.attachment = attachment;
     }
@@ -35,7 +35,7 @@ public final class SctpNotification implements SctpMessage {
     }
 
     /**
-     * Return the attachment of this {@link SctpNotification}, or
+     * Return the attachment of this {@link SctpNotificationEvent}, or
      * <code>null</code> if no attachment was provided
      */
     public Object attachment() {
@@ -51,7 +51,7 @@ public final class SctpNotification implements SctpMessage {
             return false;
         }
 
-        SctpNotification that = (SctpNotification) o;
+        SctpNotificationEvent that = (SctpNotificationEvent) o;
 
         if (!attachment.equals(that.attachment)) {
             return false;

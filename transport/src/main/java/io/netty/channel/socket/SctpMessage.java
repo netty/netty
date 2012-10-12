@@ -15,8 +15,115 @@
  */
 package io.netty.channel.socket;
 
+import com.sun.nio.sctp.MessageInfo;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+
 /**
- * A marker interface for a SCTP/IP message
+ * Representation of SCTP Data Chunk
  */
-public interface SctpMessage {
+public final class SctpMessage {
+    private final int streamIdentifier;
+    private final int protocolIdentifier;
+
+    private final ByteBuf payloadBuffer;
+
+    private MessageInfo msgInfo;
+
+    /**
+     * Essential data that is being carried within SCTP Data Chunk
+     * @param protocolIdentifier of payload
+     * @param streamIdentifier that you want to send the payload
+     * @param payloadBuffer channel buffer
+     */
+    public SctpMessage(int protocolIdentifier, int streamIdentifier, ByteBuf payloadBuffer) {
+        this.protocolIdentifier = protocolIdentifier;
+        this.streamIdentifier = streamIdentifier;
+        this.payloadBuffer = payloadBuffer;
+    }
+
+    public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
+        this.msgInfo = msgInfo;
+        this.streamIdentifier = msgInfo.streamNumber();
+        this.protocolIdentifier = msgInfo.payloadProtocolID();
+        this.payloadBuffer = payloadBuffer;
+    }
+
+    public int getStreamIdentifier() {
+        return streamIdentifier;
+    }
+
+    public int getProtocolIdentifier() {
+        return protocolIdentifier;
+    }
+
+    public ByteBuf getPayloadBuffer() {
+        if (payloadBuffer.readable()) {
+            return payloadBuffer.slice();
+        } else {
+            return Unpooled.EMPTY_BUFFER;
+        }
+    }
+
+    public MessageInfo getMessageInfo() {
+        return msgInfo;
+    }
+
+    public boolean isComplete() {
+        if (msgInfo != null) {
+            return msgInfo.isComplete();
+        }  else {
+            //all outbound sctp messages are complete
+            return true;
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        SctpMessage sctpFrame = (SctpMessage) o;
+
+        if (protocolIdentifier != sctpFrame.protocolIdentifier) {
+            return false;
+        }
+
+        if (streamIdentifier != sctpFrame.streamIdentifier) {
+            return false;
+        }
+
+        if (!payloadBuffer.equals(sctpFrame.payloadBuffer)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = streamIdentifier;
+        result = 31 * result + protocolIdentifier;
+        result = 31 * result + payloadBuffer.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder().
+                append("SctpFrame{").
+                append("streamIdentifier=").
+                append(streamIdentifier).
+                append(", protocolIdentifier=").
+                append(protocolIdentifier).
+                append(", payloadBuffer=").
+                append(ByteBufUtil.hexDump(getPayloadBuffer())).
+                append('}').toString();
+    }
 }
