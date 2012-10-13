@@ -35,8 +35,10 @@ import io.netty.channel.socket.oio.OioServerSocketChannel;
 import io.netty.channel.socket.oio.OioSctpServerChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.channel.socket.oio.OioSctpChannel;
+import io.netty.testsuite.util.TestUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -239,8 +241,11 @@ final class SocketTestPermutation {
     }
 
     static List<Factory<ServerBootstrap>> sctpServerChannel() {
-        List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
+        if (!TestUtils.isSctpSupported()) {
+            return Collections.emptyList();
+        }
 
+        List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
         // Make the list of ServerBootstrap factories.
         list.add(new Factory<ServerBootstrap>() {
             @Override
@@ -250,6 +255,8 @@ final class SocketTestPermutation {
                         channel(NioSctpServerChannel.class);
             }
         });
+        /*
+         * Comment out till #632 is fixes
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
@@ -258,11 +265,16 @@ final class SocketTestPermutation {
                         channel(OioSctpServerChannel.class);
             }
         });
+        */
 
         return list;
     }
 
     static List<Factory<Bootstrap>> sctpClientChannel() {
+        if (!TestUtils.isSctpSupported()) {
+            return Collections.emptyList();
+        }
+
         List<Factory<Bootstrap>> list = new ArrayList<Factory<Bootstrap>>();
         list.add(new Factory<Bootstrap>() {
             @Override
@@ -270,12 +282,15 @@ final class SocketTestPermutation {
                 return new Bootstrap().group(new NioEventLoopGroup()).channel(NioSctpChannel.class);
             }
         });
-        list.add(new Factory<Bootstrap>() {
+        /*
+         * Comment out till #632 is fixes
+         * list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSctpChannel.class);
             }
         });
+        */
         return list;
     }
 
