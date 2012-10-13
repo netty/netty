@@ -15,12 +15,12 @@
  */
 package io.netty.testsuite.util;
 
-import com.sun.nio.sctp.SctpChannel;
 import io.netty.util.NetworkConstants;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.channels.Channel;
 import java.util.*;
 
 public class TestUtils {
@@ -84,17 +84,25 @@ public class TestUtils {
         String os = System.getProperty("os.name").toLowerCase(Locale.UK);
         if (os.equals("unix") || os.equals("linux") || os.equals("sun") || os.equals("solaris")) {
             try {
-                SctpChannel.open();
-            } catch (IOException e) {
-                // ignore
+                // Try to open a SCTP Channel, by using reflection to make it compile also on
+                // operation systems that not support SCTP like OSX and Windows
+                Class<?> sctpChannelClass = Class.forName("com.sun.nio.sctp.SctpChannel");
+                Channel channel = (Channel) sctpChannelClass.getMethod("open", null).invoke(null, null);
+                try {
+                    channel.close();
+                } catch (IOException e) {
+                    // ignore
+                }
             } catch (UnsupportedOperationException e) {
                 // This exception may get thrown if the OS does not have
                 // the shared libs installed.
                 System.out.print("Not supported: " + e.getMessage());
                 return false;
-
+            } catch (Throwable t) {
+                if (!(t instanceof IOException)) {
+                    return false;
+                }
             }
-
             return true;
         }
         return false;
