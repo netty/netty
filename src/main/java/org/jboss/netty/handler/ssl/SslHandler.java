@@ -660,12 +660,38 @@ public class SslHandler extends FrameDecoder
         return false;
     }
 
-    @Override
-    protected Object decode(
-            final ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+    /**
+     * Returns <code>true</code> if the given {@link ChannelBuffer} is encrypted. Be aware that this method
+     * will not increase the readerIndex of the given {@link ChannelBuffer}.
+     *
+     * @param   buffer
+     *                  The {@link ChannelBuffer} to read from. Be aware that it must have at least 5 bytes to read,
+     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     * @return  encrypted
+     *                  <code>true</code> if the {@link ChannelBuffer} is encrypted, <code>false</code> otherwise.
+     * @throws IllegalArgumentException
+     *                  Is thrown if the given {@link ChannelBuffer} has not at least 5 bytes to read.
+     */
+    public static boolean isEncrypted(ChannelBuffer buffer) {
+        return getEncryptedPacketLength(buffer) != -1;
+    }
 
+    /**
+     * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
+     * the readerIndex of the given {@link ChannelBuffer}.
+     *
+     * @param   buffer
+     *                  The {@link ChannelBuffer} to read from. Be aware that it must have at least 5 bytes to read,
+     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     * @return  length
+     *                  The length of the encrypted packet that is included in the buffer. This will
+     *                  return <code>-1</code> if the given {@link ChannelBuffer} is not encrypted at all.
+     * @throws IllegalArgumentException
+     *                  Is thrown if the given {@link ChannelBuffer} has not at least 5 bytes to read.
+     */
+    private static int getEncryptedPacketLength(ChannelBuffer buffer) {
         if (buffer.readableBytes() < 5) {
-            return null;
+            throw new IllegalArgumentException("buffer must have at least 5 readable bytes");
         }
 
         int packetLength = 0;
@@ -722,21 +748,37 @@ public class SslHandler extends FrameDecoder
             }
 
             if (!sslv2) {
-                // Bad data - discard the buffer and raise an exception.
-                NotSslRecordException e = new NotSslRecordException(
-                        "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
-                buffer.skipBytes(buffer.readableBytes());
-                if (closeOnSSLException) {
-                    // first trigger the exception and then close the channel
-                    fireExceptionCaught(ctx, e);
-                    Channels.close(ctx, future(channel));
+                return -1;
+            }
+        }
+        return packetLength;
+    }
 
-                    // just return null as we closed the channel before, that
-                    // will take care of cleanup etc
-                    return null;
-                } else {
-                    throw e;
-                }
+    @Override
+    protected Object decode(
+            final ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+
+        if (buffer.readableBytes() < 5) {
+            return null;
+        }
+
+        int packetLength = getEncryptedPacketLength(buffer);
+
+        if (packetLength == -1) {
+            // Bad data - discard the buffer and raise an exception.
+            NotSslRecordException e = new NotSslRecordException(
+                    "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
+            buffer.skipBytes(buffer.readableBytes());
+            if (closeOnSSLException) {
+                // first trigger the exception and then close the channel
+                fireExceptionCaught(ctx, e);
+                Channels.close(ctx, future(channel));
+
+                // just return null as we closed the channel before, that
+                // will take care of cleanup etc
+                return null;
+            } else {
+                throw e;
             }
         }
 
