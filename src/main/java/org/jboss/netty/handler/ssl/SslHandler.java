@@ -208,6 +208,8 @@ public class SslHandler extends FrameDecoder
 
     private boolean closeOnSSLException;
 
+    private int packetLength = Integer.MIN_VALUE;
+
     /**
      * Creates a new instance.
      *
@@ -758,31 +760,35 @@ public class SslHandler extends FrameDecoder
     protected Object decode(
             final ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
 
-        if (buffer.readableBytes() < 5) {
-            return null;
-        }
-
-        int packetLength = getEncryptedPacketLength(buffer);
-
-        if (packetLength == -1) {
-            // Bad data - discard the buffer and raise an exception.
-            NotSslRecordException e = new NotSslRecordException(
-                    "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
-            buffer.skipBytes(buffer.readableBytes());
-            if (closeOnSSLException) {
-                // first trigger the exception and then close the channel
-                fireExceptionCaught(ctx, e);
-                Channels.close(ctx, future(channel));
-
-                // just return null as we closed the channel before, that
-                // will take care of cleanup etc
+        // Check if the packet length was parsed yet, if so we can skip the parsing
+        if (packetLength == Integer.MIN_VALUE) {
+            if (buffer.readableBytes() < 5) {
                 return null;
-            } else {
-                throw e;
             }
-        }
+            int packetLength = getEncryptedPacketLength(buffer);
 
-        assert packetLength > 0;
+            if (packetLength == -1) {
+                // Bad data - discard the buffer and raise an exception.
+                NotSslRecordException e = new NotSslRecordException(
+                        "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
+                buffer.skipBytes(buffer.readableBytes());
+
+                if (closeOnSSLException) {
+                    // first trigger the exception and then close the channel
+                    fireExceptionCaught(ctx, e);
+                    Channels.close(ctx, future(channel));
+
+                    // just return null as we closed the channel before, that
+                    // will take care of cleanup etc
+                    return null;
+                } else {
+                    throw e;
+                }
+            }
+
+            assert packetLength > 0;
+            this.packetLength = packetLength;
+        }
 
         if (buffer.readableBytes() < packetLength) {
             return null;
@@ -804,7 +810,13 @@ public class SslHandler extends FrameDecoder
         //    before calling the user code.
         final int packetOffset = buffer.readerIndex();
         buffer.skipBytes(packetLength);
-        return unwrap(ctx, channel, buffer, packetOffset, packetLength);
+        try {
+            return unwrap(ctx, channel, buffer, packetOffset, packetLength);
+        } finally {
+            // reset the packet length so it will be parsed again on the next call
+            packetLength = Integer.MIN_VALUE;
+        }
+
     }
 
     /**
