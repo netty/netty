@@ -119,6 +119,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             read += fileChannel.read(byteBuffer);
         }
         fileChannel.close();
+        inputStream.close();
         byteBuffer.flip();
         channelBuffer = ChannelBuffers.wrappedBuffer(byteBuffer);
         size = newsize;
@@ -204,6 +205,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         fileChannel.force(false);
         fileChannel.close();
+        outputStream.close();
         isRenamed = true;
         return written == length;
     }

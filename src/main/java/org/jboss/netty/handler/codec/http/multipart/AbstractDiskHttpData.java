@@ -120,6 +120,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         buffer.readerIndex(buffer.readerIndex() + written);
         localfileChannel.force(false);
         localfileChannel.close();
+        outputStream.close();
         completed = true;
     }
 
