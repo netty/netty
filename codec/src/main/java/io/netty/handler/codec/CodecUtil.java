@@ -117,6 +117,28 @@ final class CodecUtil {
         return false;
     }
 
+    static void addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        try {
+            ctx.nextOutboundMessageBuffer().add(msg);
+        } catch (NoSuchBufferException e) {
+            NoSuchBufferException newE =
+                    new NoSuchBufferException(e.getMessage() + " (msg: " + msg + ')');
+            newE.setStackTrace(e.getStackTrace());
+            throw newE;
+        }
+    }
+
+    static void addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        try {
+            ctx.nextInboundMessageBuffer().add(msg);
+        } catch (NoSuchBufferException e) {
+            NoSuchBufferException newE =
+                    new NoSuchBufferException(e.getMessage() + " (msg: " + msg + ')');
+            newE.setStackTrace(e.getStackTrace());
+            throw newE;
+        }
+    }
+
     private CodecUtil() {
         // Unused
     }
