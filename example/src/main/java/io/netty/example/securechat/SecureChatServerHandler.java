@@ -16,6 +16,8 @@
 package io.netty.example.securechat;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
@@ -37,19 +39,23 @@ public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter
     static final ChannelGroup channels = new DefaultChannelGroup();
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // Once session is secured, send a greeting.
-        ctx.write(
-                "Welcome to " + InetAddress.getLocalHost().getHostName() +
-                " secure chat service!\n");
-        ctx.write(
-                "Your session is protected by " +
-                ctx.pipeline().get(SslHandler.class).getEngine().getSession().getCipherSuite() +
-                " cipher suite.\n");
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+        // Once session is secured, send a greeting and register the channel to the global channel
+        // list so the channel received the messages from others.
+        ctx.pipeline().get(SslHandler.class).handshake().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                ctx.write(
+                        "Welcome to " + InetAddress.getLocalHost().getHostName() +
+                        " secure chat service!\n");
+                ctx.write(
+                        "Your session is protected by " +
+                        ctx.pipeline().get(SslHandler.class).getEngine().getSession().getCipherSuite() +
+                        " cipher suite.\n");
 
-        // Register the channel to the global channel list
-        // so the channel received the messages from others.
-        channels.add(ctx.channel());
+                channels.add(ctx.channel());
+            }
+        });
     }
 
     @Override
