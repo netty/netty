@@ -55,42 +55,37 @@ public class PortUnificationServerHandler extends FrameDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-
-        // Will use the first two bytes to detect a protocol.
-        if (buffer.readableBytes() < 2) {
+        // Will use the first 5 bytes to detect a protocol.
+        if (buffer.readableBytes() < 5) {
             return null;
         }
 
-        final int magic1 = buffer.getUnsignedByte(buffer.readerIndex());
-        final int magic2 = buffer.getUnsignedByte(buffer.readerIndex() + 1);
-
-        if (isSsl(magic1)) {
+        if (isSsl(buffer)) {
             enableSsl(ctx);
-        } else if (isGzip(magic1, magic2)) {
-            enableGzip(ctx);
-        } else if (isHttp(magic1, magic2)) {
-            switchToHttp(ctx);
-        } else if (isFactorial(magic1)) {
-            switchToFactorial(ctx);
         } else {
-            // Unknown protocol; discard everything and close the connection.
-            buffer.skipBytes(buffer.readableBytes());
-            ctx.getChannel().close();
-            return null;
+            final int magic1 = buffer.getUnsignedByte(buffer.readerIndex());
+            final int magic2 = buffer.getUnsignedByte(buffer.readerIndex() + 1);
+            if (isGzip(magic1, magic2)) {
+                enableGzip(ctx);
+            } else if (isHttp(magic1, magic2)) {
+                switchToHttp(ctx);
+            } else if (isFactorial(magic1)) {
+                switchToFactorial(ctx);
+            } else {
+                // Unknown protocol; discard everything and close the connection.
+                buffer.skipBytes(buffer.readableBytes());
+                ctx.getChannel().close();
+                return null;
+            }
         }
 
         // Forward the current read buffer as is to the new handlers.
         return buffer.readBytes(buffer.readableBytes());
     }
 
-    private boolean isSsl(int magic1) {
+    private boolean isSsl(ChannelBuffer buffer) {
         if (detectSsl) {
-            switch (magic1) {
-            case 20: case 21: case 22: case 23: case 255:
-                return true;
-            default:
-                return magic1 >= 128;
-            }
+            return SslHandler.isEncrypted(buffer);
         }
         return false;
     }
