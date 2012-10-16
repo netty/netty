@@ -944,18 +944,12 @@ public class SslHandler
                     if (!future.isSuccess()) {
                         ctx.pipeline().fireExceptionCaught(future.cause());
                         ctx.close();
-                    } else {
-                        // Send the event upstream after the handshake was completed without an error.
-                        //
-                        // See https://github.com/netty/netty/issues/358
-                       ctx.fireChannelActive();
                     }
-
                 }
             });
-        } else {
-            ctx.fireChannelActive();
         }
+
+        ctx.fireChannelActive();
     }
 
     private void safeClose(
