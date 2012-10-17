@@ -28,6 +28,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -99,10 +100,10 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
             l = next();
         }
 
-        if (l.isShutdown()) {
-            command.run();
-        } else {
-            l.execute(command);
+        try {
+        	l.execute(command);
+        } catch ( RejectedExecutionException e ) {
+        	command.run();
         }
     }
 
