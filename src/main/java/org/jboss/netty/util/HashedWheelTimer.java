@@ -280,9 +280,8 @@ public class HashedWheelTimer implements Timer {
                     TimerTask.class.getSimpleName());
         }
 
-        if (!workerState.compareAndSet(1, 2)) {
-            // workerState can be 0 or 2 at this moment - let it always be 2.
-            workerState.set(2);
+        if (workerState.getAndSet(2) != 1) {
+            // workerState can be 0 or 2 at this moment, so just return an empty set
             return Collections.emptySet();
         }
 
