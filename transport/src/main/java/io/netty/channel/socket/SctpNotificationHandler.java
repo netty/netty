@@ -57,7 +57,7 @@ public class SctpNotificationHandler extends AbstractNotificationHandler<Object>
     }
 
     private void updateInboundBuffer(Notification notification, Object o) {
-        sctpChannel.pipeline().fireUserEventTriggered(new SctpNotificationEvent(notification, o));
+        sctpChannel.pipeline().inboundMessageBuffer().add(new SctpNotification(notification, o));
     }
 }
 

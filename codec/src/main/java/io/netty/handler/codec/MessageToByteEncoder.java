@@ -41,7 +41,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
             }
 
             if (!isEncodable(msg)) {
-                CodecUtil.addToNextOutboundBuffer(ctx, msg);
+                ctx.nextOutboundMessageBuffer().add(msg);
                 continue;
             }
 

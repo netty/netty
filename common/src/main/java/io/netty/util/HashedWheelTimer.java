@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -85,7 +86,7 @@ public class HashedWheelTimer implements Timer {
 
     private final Worker worker = new Worker();
     final Thread workerThread;
-    final AtomicInteger workerState = new AtomicInteger(); // 0 - init, 1 - started, 2 - shut down
+    final AtomicBoolean shutdown = new AtomicBoolean();
 
     private final long roundDuration;
     final long tickDuration;
@@ -240,24 +241,18 @@ public class HashedWheelTimer implements Timer {
      * @throws IllegalStateException if this timer has been
      *                               {@linkplain #stop() stopped} already
      */
-    public void start() {
-        switch (workerState.get()) {
-        case 0:
-            if (workerState.compareAndSet(0, 1)) {
-                workerThread.start();
-            }
-            break;
-        case 1:
-            break;
-        case 2:
+    public synchronized void start() {
+        if (shutdown.get()) {
             throw new IllegalStateException("cannot be started once stopped");
-        default:
-            throw new Error();
+        }
+
+        if (!workerThread.isAlive()) {
+            workerThread.start();
         }
     }
 
     @Override
-    public Set<Timeout> stop() {
+    public synchronized Set<Timeout> stop() {
         if (Thread.currentThread() == workerThread) {
             throw new IllegalStateException(
                     HashedWheelTimer.class.getSimpleName() +
@@ -265,9 +260,7 @@ public class HashedWheelTimer implements Timer {
                     TimerTask.class.getSimpleName());
         }
 
-        if (!workerState.compareAndSet(1, 2)) {
-            // workerState can be 0 or 2 at this moment - let it always be 2.
-            workerState.set(2);
+        if (!shutdown.compareAndSet(false, true)) {
             return Collections.emptySet();
         }
 
@@ -307,7 +300,9 @@ public class HashedWheelTimer implements Timer {
             throw new NullPointerException("unit");
         }
 
-        start();
+        if (!workerThread.isAlive()) {
+            start();
+        }
 
         delay = unit.toMillis(delay);
         HashedWheelTimeout timeout = new HashedWheelTimeout(task, currentTime + delay);
@@ -360,7 +355,7 @@ public class HashedWheelTimer implements Timer {
             startTime = System.currentTimeMillis();
             tick = 1;
 
-            while (workerState.get() == 1) {
+            while (!shutdown.get()) {
                 final long deadline = waitForNextTick();
                 if (deadline > 0) {
                     fetchExpiredTimeouts(expiredTimeouts, deadline);
@@ -453,7 +448,7 @@ public class HashedWheelTimer implements Timer {
                 try {
                     Thread.sleep(sleepTime);
                 } catch (InterruptedException e) {
-                    if (workerState.get() != 1) {
+                    if (shutdown.get()) {
                         return -1;
                     }
                 }

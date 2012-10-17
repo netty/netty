@@ -72,13 +72,6 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    public void shutdown() {
-        super.shutdown();
-        // Also shutdown the underlying AsynchrounsChannelGroup
-        group.shutdown();
-    }
-
-    @Override
     protected EventExecutor newChild(
             ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
         return new AioEventLoop(this, threadFactory, scheduler);

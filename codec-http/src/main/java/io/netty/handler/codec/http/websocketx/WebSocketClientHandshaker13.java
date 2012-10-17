@@ -153,9 +153,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
-                p.addAfter(
-                        p.context(HttpRequestEncoder.class).name(),
-                        "ws-encoder", new WebSocket13FrameEncoder(true));
+                p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
             }
         });
 
@@ -212,9 +210,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         setHandshakeComplete();
 
-        ChannelPipeline p = channel.pipeline();
-        p.remove(HttpRequestEncoder.class);
-        p.get(HttpResponseDecoder.class).replace(
+        channel.pipeline().get(HttpResponseDecoder.class).replace(
                 "ws-decoder",
                 new WebSocket13FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
     }
