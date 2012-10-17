@@ -85,7 +85,7 @@ public class OioSctpEchoClient {
         }
 
         // Parse options.
-        final String host = "localhost";
+        final String host = args[0];
         final int port = Integer.parseInt(args[1]);
         final int firstMessageSize;
         if (args.length == 3) {

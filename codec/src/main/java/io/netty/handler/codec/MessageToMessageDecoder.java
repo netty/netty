@@ -47,7 +47,7 @@ public abstract class MessageToMessageDecoder<I, O>
                     break;
                 }
                 if (!isDecodable(msg)) {
-                    ctx.nextInboundMessageBuffer().add(msg);
+                    CodecUtil.addToNextInboundBuffer(ctx, msg);
                     notify = true;
                     continue;
                 }

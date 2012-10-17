@@ -20,10 +20,8 @@ import io.netty.util.NetworkConstants;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.nio.channels.Channel;
+import java.util.*;
 
 public class TestUtils {
 
@@ -76,6 +74,38 @@ public class TestUtils {
         }
 
         throw new RuntimeException("unable to find a free port");
+    }
+
+    /**
+     * Return <code>true</code> if SCTP is supported by the running os.
+     *
+     */
+    public static boolean isSctpSupported() {
+        String os = System.getProperty("os.name").toLowerCase(Locale.UK);
+        if (os.equals("unix") || os.equals("linux") || os.equals("sun") || os.equals("solaris")) {
+            try {
+                // Try to open a SCTP Channel, by using reflection to make it compile also on
+                // operation systems that not support SCTP like OSX and Windows
+                Class<?> sctpChannelClass = Class.forName("com.sun.nio.sctp.SctpChannel");
+                Channel channel = (Channel) sctpChannelClass.getMethod("open", null).invoke(null, null);
+                try {
+                    channel.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            } catch (UnsupportedOperationException e) {
+                // This exception may get thrown if the OS does not have
+                // the shared libs installed.
+                System.out.print("Not supported: " + e.getMessage());
+                return false;
+            } catch (Throwable t) {
+                if (!(t instanceof IOException)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     private TestUtils() { }

@@ -49,7 +49,6 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
@@ -79,9 +78,10 @@ public class WebSocketClient {
             // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change
             // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
-            final WebSocketClientHandshaker handshaker =
-                    new WebSocketClientHandshakerFactory().newHandshaker(
-                            uri, WebSocketVersion.V13, null, false, customHeaders);
+            final WebSocketClientHandler handler =
+                    new WebSocketClientHandler(
+                            new WebSocketClientHandshakerFactory().newHandshaker(
+                                    uri, WebSocketVersion.V13, null, false, customHeaders));
 
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
@@ -92,17 +92,17 @@ public class WebSocketClient {
                      ChannelPipeline pipeline = ch.pipeline();
                      pipeline.addLast("decoder", new HttpResponseDecoder());
                      pipeline.addLast("encoder", new HttpRequestEncoder());
-                     pipeline.addLast("ws-handler", new WebSocketClientHandler(handshaker));
+                     pipeline.addLast("ws-handler", handler);
                  }
              });
 
             System.out.println("WebSocket Client connecting");
             Channel ch = b.connect().sync().channel();
-            handshaker.handshake(ch).sync();
+            handler.handshakeFuture().sync();
 
             // Send 10 messages and wait for responses
             System.out.println("WebSocket Client sending message");
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < 1; i++) {
                 ch.write(new TextWebSocketFrame("Message #" + i));
             }
 
