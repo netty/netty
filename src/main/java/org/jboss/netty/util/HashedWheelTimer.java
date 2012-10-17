@@ -281,7 +281,7 @@ public class HashedWheelTimer implements Timer {
         }
 
         if (workerState.getAndSet(2) != 1) {
-            // workerState can be 0 or 2 at this moment, so just return an empty set
+            // workerState wasn't 1, so return an empty set
             return Collections.emptySet();
         }
 
