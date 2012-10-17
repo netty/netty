@@ -39,7 +39,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                 }
 
                 if (!isEncodable(msg)) {
-                    ctx.nextOutboundMessageBuffer().add(msg);
+                    CodecUtil.addToNextOutboundBuffer(ctx, msg);
                     continue;
                 }
 
