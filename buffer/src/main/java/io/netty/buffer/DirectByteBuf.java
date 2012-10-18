@@ -145,7 +145,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public ByteBuf capacity(int newCapacity) {
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -178,6 +178,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             }
             setByteBuffer(newBuffer);
         }
+        return this;
     }
 
     @Override
@@ -222,7 +223,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         if (dst instanceof DirectByteBuf) {
             DirectByteBuf bbdst = (DirectByteBuf) dst;
             ByteBuffer data = bbdst.tmpBuf;
@@ -233,10 +234,11 @@ public class DirectByteBuf extends AbstractByteBuf {
         } else {
             dst.setBytes(dstIndex, this, index, length);
         }
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         try {
             tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
@@ -244,10 +246,11 @@ public class DirectByteBuf extends AbstractByteBuf {
                     (index + length) + ", maximum is " + buffer.limit());
         }
         tmpBuf.get(dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public ByteBuf getBytes(int index, ByteBuffer dst) {
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
         try {
             tmpBuf.clear().position(index).limit(index + bytesToCopy);
@@ -256,37 +259,43 @@ public class DirectByteBuf extends AbstractByteBuf {
                     (index + bytesToCopy) + ", maximum is " + buffer.limit());
         }
         dst.put(tmpBuf);
+        return this;
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public ByteBuf setByte(int index, int value) {
         buffer.put(index, (byte) value);
+        return this;
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public ByteBuf setShort(int index, int value) {
         buffer.putShort(index, (short) value);
+        return this;
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public ByteBuf setMedium(int index, int value) {
         setByte(index, (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>> 8));
         setByte(index + 2, (byte) (value >>> 0));
+        return this;
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public ByteBuf setInt(int index, int value) {
         buffer.putInt(index, value);
+        return this;
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public ByteBuf setLong(int index, long value) {
         buffer.putLong(index, value);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         if (src instanceof DirectByteBuf) {
             DirectByteBuf bbsrc = (DirectByteBuf) src;
             ByteBuffer data = bbsrc.tmpBuf;
@@ -298,28 +307,31 @@ public class DirectByteBuf extends AbstractByteBuf {
         } else {
             src.getBytes(srcIndex, this, index, length);
         }
+        return this;
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public ByteBuf setBytes(int index, ByteBuffer src) {
         if (src == tmpBuf) {
             src = src.duplicate();
         }
 
         tmpBuf.clear().position(index).limit(index + src.remaining());
         tmpBuf.put(src);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length) throws IOException {
+    public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         if (length == 0) {
-            return;
+            return this;
         }
 
         if (buffer.hasArray()) {
@@ -330,6 +342,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             tmpBuf.get(tmp);
             out.write(tmp);
         }
+        return this;
     }
 
     @Override

@@ -84,7 +84,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public ByteBuf capacity(int newCapacity) {
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -108,6 +108,7 @@ public class HeapByteBuf extends AbstractByteBuf {
             }
             setArray(newArray);
         }
+        return this;
     }
 
     @Override
@@ -131,28 +132,32 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         if (dst instanceof HeapByteBuf) {
             getBytes(index, ((HeapByteBuf) dst).array, dstIndex, length);
         } else {
             dst.setBytes(dstIndex, array, index, length);
         }
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         System.arraycopy(array, index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public ByteBuf getBytes(int index, ByteBuffer dst) {
         dst.put(array, index, Math.min(capacity() - index, dst.remaining()));
+        return this;
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         out.write(array, index, length);
+        return this;
     }
 
     @Override
@@ -162,27 +167,31 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public ByteBuf setByte(int index, int value) {
         array[index] = (byte) value;
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         if (src instanceof HeapByteBuf) {
             setBytes(index, ((HeapByteBuf) src).array, srcIndex, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
         }
+        return this;
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         System.arraycopy(src, srcIndex, array, index, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public ByteBuf setBytes(int index, ByteBuffer src) {
         src.get(array, index, src.remaining());
+        return this;
     }
 
     @Override
@@ -252,28 +261,31 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public ByteBuf setShort(int index, int value) {
         array[index]     = (byte) (value >>> 8);
         array[index + 1] = (byte) (value >>> 0);
+        return this;
     }
 
     @Override
-    public void setMedium(int index, int   value) {
+    public ByteBuf setMedium(int index, int   value) {
         array[index]     = (byte) (value >>> 16);
         array[index + 1] = (byte) (value >>> 8);
         array[index + 2] = (byte) (value >>> 0);
+        return this;
     }
 
     @Override
-    public void setInt(int index, int   value) {
+    public ByteBuf setInt(int index, int   value) {
         array[index]     = (byte) (value >>> 24);
         array[index + 1] = (byte) (value >>> 16);
         array[index + 2] = (byte) (value >>> 8);
         array[index + 3] = (byte) (value >>> 0);
+        return this;
     }
 
     @Override
-    public void setLong(int index, long  value) {
+    public ByteBuf setLong(int index, long  value) {
         array[index]     = (byte) (value >>> 56);
         array[index + 1] = (byte) (value >>> 48);
         array[index + 2] = (byte) (value >>> 40);
@@ -282,6 +294,7 @@ public class HeapByteBuf extends AbstractByteBuf {
         array[index + 5] = (byte) (value >>> 16);
         array[index + 6] = (byte) (value >>> 8);
         array[index + 7] = (byte) (value >>> 0);
+        return this;
     }
 
     @Override

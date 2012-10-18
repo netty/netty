@@ -64,7 +64,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public ByteBuf capacity(int newCapacity) {
         throw new UnreplayableOperationException();
     }
 
@@ -104,7 +104,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void clear() {
+    public ByteBuf clear() {
         throw new UnreplayableOperationException();
     }
 
@@ -130,12 +130,12 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void discardReadBytes() {
+    public ByteBuf discardReadBytes() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void ensureWritableBytes(int writableBytes) {
+    public ByteBuf ensureWritableBytes(int writableBytes) {
         throw new UnreplayableOperationException();
     }
 
@@ -168,35 +168,38 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst) {
+    public ByteBuf getBytes(int index, byte[] dst) {
         checkIndex(index, dst.length);
         buffer.getBytes(index, dst);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public ByteBuf getBytes(int index, ByteBuffer dst) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst) {
+    public ByteBuf getBytes(int index, ByteBuf dst) {
         throw new UnreplayableOperationException();
     }
 
@@ -207,7 +210,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         throw new UnreplayableOperationException();
     }
@@ -354,12 +357,13 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void markReaderIndex() {
+    public ByteBuf markReaderIndex() {
         buffer.markReaderIndex();
+        return this;
     }
 
     @Override
-    public void markWriterIndex() {
+    public ByteBuf markWriterIndex() {
         throw new UnreplayableOperationException();
     }
 
@@ -412,35 +416,38 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void readBytes(byte[] dst, int dstIndex, int length) {
+    public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);
         buffer.readBytes(dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void readBytes(byte[] dst) {
+    public ByteBuf readBytes(byte[] dst) {
         checkReadableBytes(dst.length);
         buffer.readBytes(dst);
+        return this;
     }
 
     @Override
-    public void readBytes(ByteBuffer dst) {
+    public ByteBuf readBytes(ByteBuffer dst) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void readBytes(ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf readBytes(ByteBuf dst, int dstIndex, int length) {
         checkReadableBytes(length);
         buffer.readBytes(dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void readBytes(ByteBuf dst, int length) {
+    public ByteBuf readBytes(ByteBuf dst, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void readBytes(ByteBuf dst) {
+    public ByteBuf readBytes(ByteBuf dst) {
         throw new UnreplayableOperationException();
     }
 
@@ -463,7 +470,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void readBytes(OutputStream out, int length) throws IOException {
+    public ByteBuf readBytes(OutputStream out, int length) throws IOException {
         throw new UnreplayableOperationException();
     }
 
@@ -473,8 +480,9 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void readerIndex(int readerIndex) {
+    public ByteBuf readerIndex(int readerIndex) {
         buffer.readerIndex(readerIndex);
+        return this;
     }
 
     @Override
@@ -538,52 +546,53 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void resetReaderIndex() {
+    public ByteBuf resetReaderIndex() {
         buffer.resetReaderIndex();
+        return this;
     }
 
     @Override
-    public void resetWriterIndex() {
+    public ByteBuf resetWriterIndex() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBoolean(int index, boolean value) {
+    public ByteBuf setBoolean(int index, boolean value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public ByteBuf setByte(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, byte[] src) {
+    public ByteBuf setBytes(int index, byte[] src) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public ByteBuf setBytes(int index, ByteBuffer src) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src) {
+    public ByteBuf setBytes(int index, ByteBuf src) {
         throw new UnreplayableOperationException();
     }
 
@@ -594,7 +603,7 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void setZero(int index, int length) {
+    public ByteBuf setZero(int index, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -605,49 +614,50 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void setIndex(int readerIndex, int writerIndex) {
+    public ByteBuf setIndex(int readerIndex, int writerIndex) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public ByteBuf setInt(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public ByteBuf setLong(int index, long value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public ByteBuf setMedium(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public ByteBuf setShort(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setChar(int index, int value) {
+    public ByteBuf setChar(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setFloat(int index, float value) {
+    public ByteBuf setFloat(int index, float value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void setDouble(int index, double value) {
+    public ByteBuf setDouble(int index, double value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void skipBytes(int length) {
+    public ByteBuf skipBytes(int length) {
         checkReadableBytes(length);
         buffer.skipBytes(length);
+        return this;
     }
 
     @Override
@@ -726,42 +736,42 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void writeBoolean(boolean value) {
+    public ByteBuf writeBoolean(boolean value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeByte(int value) {
+    public ByteBuf writeByte(int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(byte[] src, int srcIndex, int length) {
+    public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(byte[] src) {
+    public ByteBuf writeBytes(byte[] src) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(ByteBuffer src) {
+    public ByteBuf writeBytes(ByteBuffer src) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(ByteBuf src, int srcIndex, int length) {
+    public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(ByteBuf src, int length) {
+    public ByteBuf writeBytes(ByteBuf src, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeBytes(ByteBuf src) {
+    public ByteBuf writeBytes(ByteBuf src) {
         throw new UnreplayableOperationException();
     }
 
@@ -777,22 +787,22 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void writeInt(int value) {
+    public ByteBuf writeInt(int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeLong(long value) {
+    public ByteBuf writeLong(long value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeMedium(int value) {
+    public ByteBuf writeMedium(int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeZero(int length) {
+    public ByteBuf writeZero(int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -802,27 +812,27 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void writerIndex(int writerIndex) {
+    public ByteBuf writerIndex(int writerIndex) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeShort(int value) {
+    public ByteBuf writeShort(int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeChar(int value) {
+    public ByteBuf writeChar(int value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeFloat(float value) {
+    public ByteBuf writeFloat(float value) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void writeDouble(double value) {
+    public ByteBuf writeDouble(double value) {
         throw new UnreplayableOperationException();
     }
 
