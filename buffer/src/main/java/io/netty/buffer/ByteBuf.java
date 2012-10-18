@@ -241,7 +241,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * than the current capacity, the buffer is appended with unspecified data whose length is
      * {@code (newCapacity - currentCapacity)}.
      */
-    void capacity(int newCapacity);
+    ByteBuf capacity(int newCapacity);
 
     /**
      * Returns the maximum allowed capacity of this buffer.  If a user attempts to increase the
@@ -286,7 +286,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            less than {@code 0} or
      *            greater than {@code this.writerIndex}
      */
-    void readerIndex(int readerIndex);
+    ByteBuf readerIndex(int readerIndex);
 
     /**
      * Returns the {@code writerIndex} of this buffer.
@@ -301,7 +301,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            less than {@code this.readerIndex} or
      *            greater than {@code this.capacity}
      */
-    void writerIndex(int writerIndex);
+    ByteBuf writerIndex(int writerIndex);
 
     /**
      * Sets the {@code readerIndex} and {@code writerIndex} of this buffer
@@ -354,7 +354,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         {@code readerIndex} or if the specified {@code writerIndex} is
      *         greater than {@code this.capacity}
      */
-    void setIndex(int readerIndex, int writerIndex);
+    ByteBuf setIndex(int readerIndex, int writerIndex);
 
     /**
      * Returns the number of readable bytes which is equal to
@@ -391,7 +391,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * from that of NIO buffer, which sets the {@code limit} to
      * the {@code capacity} of the buffer.
      */
-    void clear();
+    ByteBuf clear();
 
     /**
      * Marks the current {@code readerIndex} in this buffer.  You can
@@ -399,7 +399,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * {@code readerIndex} by calling {@link #resetReaderIndex()}.
      * The initial value of the marked {@code readerIndex} is {@code 0}.
      */
-    void markReaderIndex();
+    ByteBuf markReaderIndex();
 
     /**
      * Repositions the current {@code readerIndex} to the marked
@@ -409,7 +409,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the current {@code writerIndex} is less than the marked
      *         {@code readerIndex}
      */
-    void resetReaderIndex();
+    ByteBuf resetReaderIndex();
 
     /**
      * Marks the current {@code writerIndex} in this buffer.  You can
@@ -417,7 +417,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * {@code writerIndex} by calling {@link #resetWriterIndex()}.
      * The initial value of the marked {@code writerIndex} is {@code 0}.
      */
-    void markWriterIndex();
+    ByteBuf markWriterIndex();
 
     /**
      * Repositions the current {@code writerIndex} to the marked
@@ -427,7 +427,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the current {@code readerIndex} is greater than the marked
      *         {@code writerIndex}
      */
-    void resetWriterIndex();
+    ByteBuf resetWriterIndex();
 
     /**
      * Discards the bytes between the 0th index and {@code readerIndex}.
@@ -437,7 +437,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * <p>
      * Please refer to the class documentation for more detailed explanation.
      */
-    void discardReadBytes();
+    ByteBuf discardReadBytes();
 
     /**
      * Makes sure the number of {@linkplain #writableBytes() the writable bytes}
@@ -450,7 +450,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}
      */
-    void ensureWritableBytes(int minWritableBytes);
+    ByteBuf ensureWritableBytes(int minWritableBytes);
 
     /**
      * Tries to make sure the number of {@linkplain #writableBytes() the writable bytes}
@@ -632,7 +632,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code index + dst.writableBytes} is greater than
      *            {@code this.capacity}
      */
-    void  getBytes(int index, ByteBuf dst);
+    ByteBuf getBytes(int index, ByteBuf dst);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -652,7 +652,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            {@code this.capacity}, or
      *         if {@code length} is greater than {@code dst.writableBytes}
      */
-    void  getBytes(int index, ByteBuf dst, int length);
+    ByteBuf getBytes(int index, ByteBuf dst, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -671,7 +671,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code dstIndex + length} is greater than
      *            {@code dst.capacity}
      */
-    void  getBytes(int index, ByteBuf dst, int dstIndex, int length);
+    ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -684,7 +684,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code index + dst.length} is greater than
      *            {@code this.capacity}
      */
-    void  getBytes(int index, byte[] dst);
+    ByteBuf getBytes(int index, byte[] dst);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -703,7 +703,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code dstIndex + length} is greater than
      *            {@code dst.length}
      */
-    void getBytes(int index, byte[] dst, int dstIndex, int length);
+    ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -717,7 +717,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code index + dst.remaining()} is greater than
      *            {@code this.capacity}
      */
-    void getBytes(int index, ByteBuffer dst);
+    ByteBuf getBytes(int index, ByteBuffer dst);
 
     /**
      * Transfers this buffer's data to the specified stream starting at the
@@ -734,7 +734,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IOException
      *         if the specified stream threw an exception during I/O
      */
-    void getBytes(int index, OutputStream out, int length) throws IOException;
+    ByteBuf getBytes(int index, OutputStream out, int length) throws IOException;
 
     /**
      * Transfers this buffer's data to the specified channel starting at the
@@ -765,7 +765,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 1} is greater than {@code this.capacity}
      */
-    void setBoolean(int index, boolean value);
+    ByteBuf setBoolean(int index, boolean value);
 
     /**
      * Sets the specified byte at the specified absolute {@code index} in this
@@ -777,7 +777,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 1} is greater than {@code this.capacity}
      */
-    void setByte(int index, int value);
+    ByteBuf setByte(int index, int value);
 
     /**
      * Sets the specified 16-bit short integer at the specified absolute
@@ -790,7 +790,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 2} is greater than {@code this.capacity}
      */
-    void setShort(int index, int value);
+    ByteBuf setShort(int index, int value);
 
     /**
      * Sets the specified 24-bit medium integer at the specified absolute
@@ -803,7 +803,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 3} is greater than {@code this.capacity}
      */
-    void setMedium(int index, int   value);
+    ByteBuf setMedium(int index, int   value);
 
     /**
      * Sets the specified 32-bit integer at the specified absolute
@@ -815,7 +815,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 4} is greater than {@code this.capacity}
      */
-    void setInt(int index, int   value);
+    ByteBuf setInt(int index, int   value);
 
     /**
      * Sets the specified 64-bit long integer at the specified absolute
@@ -827,7 +827,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 8} is greater than {@code this.capacity}
      */
-    void setLong(int index, long  value);
+    ByteBuf setLong(int index, long  value);
 
     /**
      * Sets the specified 2-byte UTF-16 character at the specified absolute
@@ -840,7 +840,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 2} is greater than {@code this.capacity}
      */
-    void setChar(int index, int value);
+    ByteBuf setChar(int index, int value);
 
     /**
      * Sets the specified 32-bit floating-point number at the specified
@@ -852,7 +852,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 4} is greater than {@code this.capacity}
      */
-    void setFloat(int index, float value);
+    ByteBuf setFloat(int index, float value);
 
     /**
      * Sets the specified 64-bit floating-point number at the specified
@@ -864,7 +864,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 8} is greater than {@code this.capacity}
      */
-    void setDouble(int index, double value);
+    ByteBuf setDouble(int index, double value);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -882,7 +882,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code index + src.readableBytes} is greater than
      *            {@code this.capacity}
      */
-    void setBytes(int index, ByteBuf src);
+    ByteBuf setBytes(int index, ByteBuf src);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -902,7 +902,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            {@code this.capacity}, or
      *         if {@code length} is greater than {@code src.readableBytes}
      */
-    void setBytes(int index, ByteBuf src, int length);
+    ByteBuf setBytes(int index, ByteBuf src, int length);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -921,7 +921,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code srcIndex + length} is greater than
      *            {@code src.capacity}
      */
-    void setBytes(int index, ByteBuf src, int srcIndex, int length);
+    ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length);
 
     /**
      * Transfers the specified source array's data to this buffer starting at
@@ -934,7 +934,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code index + src.length} is greater than
      *            {@code this.capacity}
      */
-    void setBytes(int index, byte[] src);
+    ByteBuf setBytes(int index, byte[] src);
 
     /**
      * Transfers the specified source array's data to this buffer starting at
@@ -949,7 +949,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            {@code this.capacity}, or
      *         if {@code srcIndex + length} is greater than {@code src.length}
      */
-    void setBytes(int index, byte[] src, int srcIndex, int length);
+    ByteBuf setBytes(int index, byte[] src, int srcIndex, int length);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -963,7 +963,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code index + src.remaining()} is greater than
      *            {@code this.capacity}
      */
-    void setBytes(int index, ByteBuffer src);
+    ByteBuf setBytes(int index, ByteBuffer src);
 
     /**
      * Transfers the content of the specified source stream to this buffer
@@ -1015,7 +1015,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         if {@code index + length} is greater than {@code this.capacity}
      */
-    void setZero(int index, int length);
+    ByteBuf setZero(int index, int length);
 
     /**
      * Gets a boolean at the current {@code readerIndex} and increases
@@ -1178,7 +1178,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code dst.writableBytes} is greater than
      *            {@code this.readableBytes}
      */
-    void readBytes(ByteBuf dst);
+    ByteBuf readBytes(ByteBuf dst);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1193,7 +1193,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code length} is greater than {@code this.readableBytes} or
      *         if {@code length} is greater than {@code dst.writableBytes}
      */
-    void readBytes(ByteBuf dst, int length);
+    ByteBuf readBytes(ByteBuf dst, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1209,7 +1209,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code dstIndex + length} is greater than
      *            {@code dst.capacity}
      */
-    void readBytes(ByteBuf dst, int dstIndex, int length);
+    ByteBuf readBytes(ByteBuf dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1219,7 +1219,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code dst.length} is greater than {@code this.readableBytes}
      */
-    void readBytes(byte[] dst);
+    ByteBuf readBytes(byte[] dst);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1234,7 +1234,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code length} is greater than {@code this.readableBytes}, or
      *         if {@code dstIndex + length} is greater than {@code dst.length}
      */
-    void readBytes(byte[] dst, int dstIndex, int length);
+    ByteBuf readBytes(byte[] dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1246,7 +1246,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code dst.remaining()} is greater than
      *            {@code this.readableBytes}
      */
-    void readBytes(ByteBuffer dst);
+    ByteBuf readBytes(ByteBuffer dst);
 
     /**
      * Transfers this buffer's data to the specified stream starting at the
@@ -1259,7 +1259,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IOException
      *         if the specified stream threw an exception during I/O
      */
-    void readBytes(OutputStream out, int length) throws IOException;
+    ByteBuf readBytes(OutputStream out, int length) throws IOException;
 
     /**
      * Transfers this buffer's data to the specified stream starting at the
@@ -1283,7 +1283,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
-    void skipBytes(int length);
+    ByteBuf skipBytes(int length);
 
     /**
      * Sets the specified boolean at the current {@code writerIndex}
@@ -1292,7 +1292,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 1}
      */
-    void writeBoolean(boolean value);
+    ByteBuf writeBoolean(boolean value);
 
     /**
      * Sets the specified byte at the current {@code writerIndex}
@@ -1302,7 +1302,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 1}
      */
-    void writeByte(int value);
+    ByteBuf writeByte(int value);
 
     /**
      * Sets the specified 16-bit short integer at the current
@@ -1312,7 +1312,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 2}
      */
-    void writeShort(int value);
+    ByteBuf writeShort(int value);
 
     /**
      * Sets the specified 24-bit medium integer at the current
@@ -1322,7 +1322,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 3}
      */
-    void writeMedium(int   value);
+    ByteBuf writeMedium(int   value);
 
     /**
      * Sets the specified 32-bit integer at the current {@code writerIndex}
@@ -1331,7 +1331,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 4}
      */
-    void writeInt(int   value);
+    ByteBuf writeInt(int   value);
 
     /**
      * Sets the specified 64-bit long integer at the current
@@ -1341,7 +1341,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 8}
      */
-    void writeLong(long  value);
+    ByteBuf writeLong(long  value);
 
     /**
      * Sets the specified 2-byte UTF-16 character at the current
@@ -1351,7 +1351,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 2}
      */
-    void writeChar(int value);
+    ByteBuf writeChar(int value);
 
     /**
      * Sets the specified 32-bit floating point number at the current
@@ -1361,7 +1361,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 4}
      */
-    void writeFloat(float value);
+    ByteBuf writeFloat(float value);
 
     /**
      * Sets the specified 64-bit floating point number at the current
@@ -1371,7 +1371,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 8}
      */
-    void writeDouble(double value);
+    ByteBuf writeDouble(double value);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -1387,7 +1387,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code src.readableBytes} is greater than
      *            {@code this.writableBytes}
      */
-    void writeBytes(ByteBuf src);
+    ByteBuf writeBytes(ByteBuf src);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -1404,7 +1404,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code length} is greater than {@code this.writableBytes} or
      *         if {@code length} is greater then {@code src.readableBytes}
      */
-    void writeBytes(ByteBuf src, int length);
+    ByteBuf writeBytes(ByteBuf src, int length);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -1420,7 +1420,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            {@code src.capacity}, or
      *         if {@code length} is greater than {@code this.writableBytes}
      */
-    void writeBytes(ByteBuf src, int srcIndex, int length);
+    ByteBuf writeBytes(ByteBuf src, int srcIndex, int length);
 
     /**
      * Transfers the specified source array's data to this buffer starting at
@@ -1430,7 +1430,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code src.length} is greater than {@code this.writableBytes}
      */
-    void writeBytes(byte[] src);
+    ByteBuf writeBytes(byte[] src);
 
     /**
      * Transfers the specified source array's data to this buffer starting at
@@ -1446,7 +1446,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *            {@code src.length}, or
      *         if {@code length} is greater than {@code this.writableBytes}
      */
-    void writeBytes(byte[] src, int srcIndex, int length);
+    ByteBuf writeBytes(byte[] src, int srcIndex, int length);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -1458,7 +1458,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *         if {@code src.remaining()} is greater than
      *            {@code this.writableBytes}
      */
-    void writeBytes(ByteBuffer src);
+    ByteBuf writeBytes(ByteBuffer src);
 
     /**
      * Transfers the content of the specified stream to this buffer
@@ -1502,7 +1502,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.writableBytes}
      */
-    void writeZero(int length);
+    ByteBuf writeZero(int length);
 
     /**
      * Locates the first occurrence of the specified {@code value} in this

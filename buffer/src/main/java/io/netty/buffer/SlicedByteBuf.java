@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
+public class SlicedByteBuf extends AbstractWrappedByteBuf {
 
     private final Unsafe unsafe = new SlicedUnsafe();
     private final ByteBuf buffer;
@@ -81,7 +81,7 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public WrappedByteBuf capacity(int newCapacity) {
         throw new UnsupportedOperationException("sliced buffer");
     }
 
@@ -153,76 +153,88 @@ public class SlicedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public WrappedByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public WrappedByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public WrappedByteBuf getBytes(int index, ByteBuffer dst) {
         checkIndex(index, dst.remaining());
         buffer.getBytes(index + adjustment, dst);
+        return this;
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public WrappedByteBuf setByte(int index, int value) {
         checkIndex(index);
         buffer.setByte(index + adjustment, value);
+        return this;
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public WrappedByteBuf setShort(int index, int value) {
         checkIndex(index, 2);
         buffer.setShort(index + adjustment, value);
+        return this;
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public WrappedByteBuf setMedium(int index, int value) {
         checkIndex(index, 3);
         buffer.setMedium(index + adjustment, value);
+        return this;
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public WrappedByteBuf setInt(int index, int value) {
         checkIndex(index, 4);
         buffer.setInt(index + adjustment, value);
+        return this;
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public WrappedByteBuf setLong(int index, long value) {
         checkIndex(index, 8);
         buffer.setLong(index + adjustment, value);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public WrappedByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkIndex(index, length);
         buffer.setBytes(index + adjustment, src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public WrappedByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkIndex(index, length);
         buffer.setBytes(index + adjustment, src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public WrappedByteBuf setBytes(int index, ByteBuffer src) {
         checkIndex(index, src.remaining());
         buffer.setBytes(index + adjustment, src);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public WrappedByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, out, length);
+        return this;
     }
 
     @Override
