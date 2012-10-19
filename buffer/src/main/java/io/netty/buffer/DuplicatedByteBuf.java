@@ -28,7 +28,7 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
+public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
 
     private final Unsafe unsafe = new DuplicatedUnsafe();
     final ByteBuf buffer;
@@ -63,8 +63,9 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public WrappedByteBuf capacity(int newCapacity) {
         buffer.capacity(newCapacity);
+        return this;
     }
 
     @Override
@@ -123,64 +124,76 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public WrappedByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public WrappedByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public WrappedByteBuf getBytes(int index, ByteBuffer dst) {
         buffer.getBytes(index, dst);
+        return this;
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public WrappedByteBuf setByte(int index, int value) {
         buffer.setByte(index, value);
+        return this;
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public WrappedByteBuf setShort(int index, int value) {
         buffer.setShort(index, value);
+        return this;
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public WrappedByteBuf setMedium(int index, int value) {
         buffer.setMedium(index, value);
+        return this;
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public WrappedByteBuf setInt(int index, int value) {
         buffer.setInt(index, value);
+        return this;
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public WrappedByteBuf setLong(int index, long value) {
         buffer.setLong(index, value);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public WrappedByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public WrappedByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public WrappedByteBuf setBytes(int index, ByteBuffer src) {
         buffer.setBytes(index, src);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public WrappedByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);
+        return this;
     }
 
     @Override
