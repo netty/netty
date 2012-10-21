@@ -20,6 +20,7 @@ import java.net.ServerSocket;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,7 +41,7 @@ public final class DetectionUtil {
     private static final boolean IS_ROOT;
 
     static {
-        String os = SystemPropertyUtil.get("os.name").toLowerCase();
+        String os = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.UK);
         // windows
         IS_WINDOWS = os.contains("win");
 
