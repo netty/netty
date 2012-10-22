@@ -192,6 +192,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         final int maxCapacity = byteBuf.maxCapacity();
         if (capacity == maxCapacity) {
+            byteBuf.discardReadBytes();
             return;
         }
 

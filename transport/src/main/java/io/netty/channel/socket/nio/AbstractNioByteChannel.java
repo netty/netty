@@ -141,6 +141,10 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
         final int maxCapacity = byteBuf.maxCapacity();
         if (capacity == maxCapacity) {
+            if (byteBuf.readerIndex() != 0) {
+                byteBuf.discardReadBytes();
+                return 0;
+            }
             return 2;
         }
 
