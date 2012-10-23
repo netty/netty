@@ -28,7 +28,9 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        beginMessageReceived(ctx);
+        if (!beginMessageReceived(ctx)) {
+            return;
+        }
 
         MessageBuf<I> in = ctx.inboundMessageBuffer();
         for (;;) {
@@ -46,7 +48,19 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         endMessageReceived(ctx);
     }
 
-    public void beginMessageReceived(ChannelHandlerContext ctx) throws Exception { }
+    /**
+     * Will get notified once {@link #inboundBufferUpdated(ChannelHandlerContext)} was called.
+     *
+     * If this method returns <code>false</code> no further processing of the {@link MessageBuf}
+     * will be done until the next call of {@link #inboundBufferUpdated(ChannelHandlerContext)}.
+     *
+     * This will return <code>true</code> by default, and may get overriden by sub-classes for
+     * special handling.
+     */
+    public boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        return true;
+    }
+
     public abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
     public void endMessageReceived(ChannelHandlerContext ctx) throws Exception { }
 }
