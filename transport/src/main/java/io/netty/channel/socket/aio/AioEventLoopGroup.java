@@ -78,7 +78,11 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         boolean interrupted = false;
 
         // Tell JDK not to accept any more registration request.  Note that the threads are not really shut down yet.
-        group.shutdown();
+        try {
+            group.shutdownNow();
+        } catch (IOException e) {
+            throw new EventLoopException("failed to shut down a channel group", e);
+        }
 
         // Wait until JDK propagates the shutdown request on AsynchronousChannelGroup to the ExecutorService.
         // JDK will probably submit some final tasks to the ExecutorService before shutting down the ExecutorService,
