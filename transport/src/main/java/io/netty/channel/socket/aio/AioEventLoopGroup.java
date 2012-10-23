@@ -28,6 +28,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -52,6 +53,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         CHANNEL_FINDER = finder;
     }
 
+    private final AioExecutorService groupExecutor = new AioExecutorService();
     final AsynchronousChannelGroup group;
 
     public AioEventLoopGroup() {
@@ -65,7 +67,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     public AioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
         try {
-            group = AsynchronousChannelGroup.withThreadPool(new AioExecutorService());
+            group = AsynchronousChannelGroup.withThreadPool(groupExecutor);
         } catch (IOException e) {
             throw new EventLoopException("Failed to create an AsynchronousChannelGroup", e);
         }
@@ -73,9 +75,29 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     public void shutdown() {
-        super.shutdown();
-        // Also shutdown the underlying AsynchrounsChannelGroup
+        boolean interrupted = false;
+
+        // Tell JDK not to accept any more registration request.  Note that the threads are not really shut down yet.
         group.shutdown();
+
+        // Wait until JDK propagates the shutdown request on AsynchronousChannelGroup to the ExecutorService.
+        // JDK will probably submit some final tasks to the ExecutorService before shutting down the ExecutorService,
+        // so we have to ensure all tasks submitted by JDK are executed before calling super.shutdown() to really
+        // shut down event loop threads.
+        while (!groupExecutor.isTerminated()) {
+            try {
+                groupExecutor.awaitTermination(1, TimeUnit.HOURS);
+            } catch (InterruptedException e) {
+                interrupted = true;
+            }
+        }
+
+        // Close all connections and shut down event loop threads.
+        super.shutdown();
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
@@ -108,30 +130,34 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
 
     private final class AioExecutorService extends AbstractExecutorService {
 
+        // It does not shut down the underlying EventExecutor - it merely pretends to be shut down.
+        // The actual shut down is done by EventLoopGroup and EventLoop implementation.
+        private final CountDownLatch latch = new CountDownLatch(1);
+
         @Override
         public void shutdown() {
-            AioEventLoopGroup.this.shutdown();
+            latch.countDown();
         }
 
         @Override
         public List<Runnable> shutdownNow() {
-            AioEventLoopGroup.this.shutdown();
+            shutdown();
             return Collections.emptyList();
         }
 
         @Override
         public boolean isShutdown() {
-            return AioEventLoopGroup.this.isShutdown();
+            return latch.getCount() == 0;
         }
 
         @Override
         public boolean isTerminated() {
-            return AioEventLoopGroup.this.isTerminated();
+            return isShutdown();
         }
 
         @Override
         public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-            return AioEventLoopGroup.this.awaitTermination(timeout, unit);
+            return latch.await(timeout, unit);
         }
 
         @Override
