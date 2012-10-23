@@ -276,8 +276,12 @@
           <skip>${quickbuild}</skip>
           <excludePackageNames>*.internal,*.example</excludePackageNames>
           <doclet>org.jboss.apiviz.APIviz</doclet>
-          <docletPath>${project.basedir}/lib/apiviz-1.3.1-jdk7.jar</docletPath>
           <docfilessubdirs>true</docfilessubdirs>
+          <docletArtifact>
+            <groupId>org.jboss.apiviz</groupId>
+            <artifactId>apiviz</artifactId>
+            <version>1.3.2.GA</version>
+          </docletArtifact>
           <useStandardDocletOptions>true</useStandardDocletOptions>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
           <overview>${basedir}/src/javadoc/overview.html</overview>
