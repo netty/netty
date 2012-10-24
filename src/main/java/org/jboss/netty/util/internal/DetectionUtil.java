@@ -38,7 +38,7 @@ public final class DetectionUtil {
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
     private static final boolean IS_WINDOWS;
     static {
-        String os = SystemPropertyUtil.get("os.name").toLowerCase();
+        String os = SystemPropertyUtil.get("os.name", "").toLowerCase();
         // windows
         IS_WINDOWS =  os.indexOf("win") >= 0;
     }
