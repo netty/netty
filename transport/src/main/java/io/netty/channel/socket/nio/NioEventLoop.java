@@ -128,6 +128,22 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+
+    public void executeWhenWritable(AbstractNioChannel channel, NioTask<? extends SelectableChannel> task) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+
+        if (isShutdown()) {
+            throw new IllegalStateException("event loop shut down");
+        }
+
+        SelectionKey key = channel.selectionKey();
+        channel.writableTasks.offer((NioTask<SelectableChannel>) task);
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+
+    }
+
     // Create a new selector and "transfer" all channels from the old
     // selector to the new one
     private Selector recreateSelector() {
@@ -330,8 +346,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private static void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final NioUnsafe unsafe = ch.unsafe();
+        int readyOps = -1;
         try {
-            int readyOps = k.readyOps();
+            readyOps = k.readyOps();
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
                 unsafe.read();
                 if (!ch.isOpen()) {
@@ -340,12 +357,44 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                unsafe.flushNow();
+                NioTask<SelectableChannel> task = null;
+                boolean flush = true;
+                for (;;) {
+                    task = ch.writableTasks.poll();
+                    if (task == null) {
+                        break;
+                    } else {
+                        processSelectedKey(ch.selectionKey(), task);
+                        // don't try to flush for now as a task is in use atm.
+                        flush = false;
+                    }
+
+                }
+                if (flush) {
+                    unsafe.flushNow();
+                } else {
+                    int ops = k.interestOps();
+                    ops |= SelectionKey.OP_WRITE;
+                    k.interestOps(ops);
+                }
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                 unsafe.finishConnect();
             }
-        } catch (CancelledKeyException ignored) {
+        } catch (CancelledKeyException e) {
+            NioTask<SelectableChannel> task = null;
+
+            if (readyOps != 1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
+                for (;;) {
+                    task = ch.writableTasks.poll();
+                    if (task == null) {
+                        break;
+                    } else {
+                        invokeChannelUnregistered(task, ch.selectionKey());
+                    }
+
+                }
+            }
             unsafe.close(unsafe.voidFuture());
         }
     }
@@ -371,11 +420,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void closeAll() {
         SelectorUtil.cleanupKeys(selector);
         Set<SelectionKey> keys = selector.keys();
-        Collection<Channel> channels = new ArrayList<Channel>(keys.size());
+        Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
         for (SelectionKey k: keys) {
             Object a = k.attachment();
-            if (a instanceof Channel) {
-                channels.add((Channel) a);
+            if (a instanceof AbstractNioChannel) {
+                channels.add((AbstractNioChannel) a);
             } else {
                 k.cancel();
                 @SuppressWarnings("unchecked")
@@ -384,7 +433,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         }
 
-        for (Channel ch: channels) {
+        for (AbstractNioChannel ch: channels) {
+            NioTask<SelectableChannel> task = null;
+            boolean flush = true;
+            for (;;) {
+                task = ch.writableTasks.poll();
+                if (task == null) {
+                    break;
+                } else {
+                    invokeChannelUnregistered(task, ch.selectionKey());
+                }
+
+            }
             ch.unsafe().close(ch.unsafe().voidFuture());
         }
     }

@@ -29,6 +29,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +43,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
+    final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
 
     final Runnable suspendReadTask = new Runnable() {
         @Override
