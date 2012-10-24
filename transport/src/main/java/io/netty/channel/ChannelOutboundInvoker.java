@@ -26,6 +26,7 @@ public interface ChannelOutboundInvoker {
     ChannelFuture deregister();
     ChannelFuture flush();
     ChannelFuture write(Object message);
+    ChannelFuture sendFile(FileRegion region);
 
     ChannelFuture bind(SocketAddress localAddress, ChannelFuture future);
     ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future);
@@ -35,4 +36,5 @@ public interface ChannelOutboundInvoker {
     ChannelFuture deregister(ChannelFuture future);
     ChannelFuture flush(ChannelFuture future);
     ChannelFuture write(Object message, ChannelFuture future);
+    ChannelFuture sendFile(FileRegion region, ChannelFuture future);
 }

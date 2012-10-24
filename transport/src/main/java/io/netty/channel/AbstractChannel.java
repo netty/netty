@@ -23,6 +23,7 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.DetectionUtil;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -95,6 +96,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /** Cache for the string representation of this channel */
     private boolean strValActive;
     private String strVal;
+
+    private AbstractUnsafe.FlushTask flushTaskInProgress;
 
     /**
      * Creates a new instance.
@@ -317,6 +320,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return unsafe;
     }
 
+    @Override
+    public ChannelFuture sendFile(FileRegion region) {
+        return pipeline.sendFile(region);
+    }
+
+    @Override
+    public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
+        return pipeline.sendFile(region, future);
+    }
+
     protected abstract Unsafe newUnsafe();
 
     /**
@@ -380,9 +393,98 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+
+
     protected abstract class AbstractUnsafe implements Unsafe {
 
+        private final class FlushTask {
+            final FileRegion region;
+            final ChannelFuture future;
+            FlushTask next;
+
+            FlushTask(FileRegion region, ChannelFuture future) {
+                this.region = region;
+                this.future = future;
+                future.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        flushTaskInProgress = next;
+                        if (next != null) {
+                            try {
+                                FileRegion region = next.region;
+                                if (region == null) {
+                                    // no region present means the next flush task was to directly flush
+                                    // the outbound buffer
+                                    flushNotifierAndFlush(future);
+                                } else {
+                                    // flush the region now
+                                    doFlushFileRegion(region, future);
+                                }
+                            } catch (Throwable cause) {
+                                future.setFailure(cause);
+                            }
+                        } else {
+                            // notify the flush futures
+                            flushFutureNotifier.notifyFlushFutures();
+                        }
+                    }
+                });
+            }
+        }
+
         private final Runnable flushLaterTask = new FlushLater();
+
+        @Override
+        public final void sendFile(final FileRegion region, final ChannelFuture future) {
+
+            if (eventLoop().inEventLoop()) {
+                if (outboundBufSize() > 0) {
+                    flushNotifier(newFuture()).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture cf) throws Exception {
+                            sendFile0(region, future);
+                        }
+                    });
+                } else {
+
+                    // nothing pending try to send the fileRegion now!
+                    sendFile0(region, future);
+                }
+
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendFile(region, future);
+                    }
+                });
+            }
+        }
+
+        private void sendFile0(FileRegion region, ChannelFuture future) {
+            if (flushTaskInProgress == null) {
+                flushTaskInProgress = new FlushTask(region, future);
+                try {
+                    // the first FileRegion to flush so trigger it now!
+                    doFlushFileRegion(region, future);
+                } catch (Throwable cause) {
+                    region.close();
+                    future.setFailure(cause);
+                }
+                return;
+            }
+
+            FlushTask task = flushTaskInProgress;
+            for (;;) {
+                FlushTask next = task.next;
+                if (next == null) {
+                    break;
+                }
+                task = next;
+            }
+            // there is something that needs to get flushed first so add it as next in the chain
+            task.next = new FlushTask(region, future);
+        }
 
         @Override
         public final ChannelHandlerContext directOutboundContext() {
@@ -617,43 +719,24 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void flush(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
-                // Append flush future to the notification list.
-                if (future != voidFuture) {
-                    final int bufSize;
-                    final ChannelHandlerContext ctx = directOutboundContext();
-                    if (ctx.hasOutboundByteBuffer()) {
-                        bufSize = ctx.outboundByteBuffer().readableBytes();
-                    } else {
-                        bufSize = ctx.outboundMessageBuffer().size();
-                    }
 
-                    flushFutureNotifier.addFlushFuture(future, bufSize);
-                }
+                if (flushTaskInProgress != null) {
+                    FlushTask task = flushTaskInProgress;
 
-                if (!inFlushNow) { // Avoid re-entrance
-                    try {
-                        if (!isFlushPending()) {
-                            flushNow();
-                        } else {
-                            // Event loop will call flushNow() later by itself.
+                    // loop over the tasks to find the last one
+                    for (;;) {
+                        FlushTask t = task.next;
+                        if (t == null) {
+                            break;
                         }
-                    } catch (Throwable t) {
-                        flushFutureNotifier.notifyFlushFutures(t);
-                        pipeline.fireExceptionCaught(t);
-                        if (t instanceof IOException) {
-                            close(voidFuture());
-                        }
-                    } finally {
-                        if (!isActive()) {
-                            close(unsafe().voidFuture());
-                        }
+                        task = t.next;
                     }
-                } else {
-                    if (!flushNowPending) {
-                        flushNowPending = true;
-                        eventLoop().execute(flushLaterTask);
-                    }
+                    task.next = new FlushTask(null, future);
+
+                    return;
                 }
+                flushNotifierAndFlush(future);
+
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
@@ -664,9 +747,59 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        private void flushNotifierAndFlush(ChannelFuture future) {
+            flushNotifier(future);
+            flush0();
+        }
+
+        private int outboundBufSize() {
+            final int bufSize;
+            final ChannelHandlerContext ctx = directOutboundContext();
+            if (ctx.hasOutboundByteBuffer()) {
+                bufSize = ctx.outboundByteBuffer().readableBytes();
+            } else {
+                bufSize = ctx.outboundMessageBuffer().size();
+            }
+            return bufSize;
+        }
+
+        private ChannelFuture flushNotifier(ChannelFuture future) {
+            // Append flush future to the notification list.
+            if (future != voidFuture) {
+                flushFutureNotifier.addFlushFuture(future, outboundBufSize());
+            }
+            return future;
+        }
+
+        private void flush0() {
+            if (!inFlushNow) { // Avoid re-entrance
+                try {
+                    if (!isFlushPending()) {
+                        flushNow();
+                    } else {
+                        // Event loop will call flushNow() later by itself.
+                    }
+                } catch (Throwable t) {
+                    flushFutureNotifier.notifyFlushFutures(t);
+                    pipeline.fireExceptionCaught(t);
+                    if (t instanceof IOException) {
+                        close(voidFuture());
+                    }
+                } finally {
+                    if (!isActive()) {
+                        close(unsafe().voidFuture());
+                    }
+                }
+            } else {
+                if (!flushNowPending) {
+                    flushNowPending = true;
+                    eventLoop().execute(flushLaterTask);
+                }
+            }
+        }
         @Override
         public final void flushNow() {
-            if (inFlushNow) {
+            if (inFlushNow || flushTaskInProgress != null) {
                 return;
             }
 
@@ -763,6 +896,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    protected static void checkEOF(FileRegion region, long writtenBytes) throws IOException {
+        if (writtenBytes < region.count()) {
+            throw new EOFException("Expected to be able to write "
+                    + region.count() + " bytes, but only wrote "
+                    + writtenBytes);
+        }
     }
 
     protected abstract boolean isFlushPending();

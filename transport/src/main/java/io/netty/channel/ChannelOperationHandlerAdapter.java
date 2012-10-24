@@ -91,4 +91,9 @@ public class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
         }
         ctx.flush(future);
     }
+
+    @Override
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+        ctx.sendFile(region, future);
+    }
 }

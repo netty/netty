@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 
@@ -37,6 +38,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -292,6 +294,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
+    @Override
+    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+        region.transferTo(new WritableByteChannelAdapter(region, future), 0);
+    }
+
     private void beginRead() {
         if (inBeginRead || asyncReadInProgress || readSuspended.get()) {
             return;
@@ -540,4 +547,70 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             }
         }
     }
+
+    private final class WritableByteChannelAdapter implements WritableByteChannel {
+        private final FileRegion region;
+        private final ChannelFuture future;
+        private long written;
+
+        public WritableByteChannelAdapter(FileRegion region, ChannelFuture future) {
+            this.region = region;
+            this.future = future;
+        }
+
+        @Override
+        public int write(final ByteBuffer src) {
+            javaChannel().write(src, null, new CompletionHandler<Integer, Object>() {
+
+                @Override
+                public void completed(Integer result, Object attachment) {
+                    try {
+
+                        if (result == 0) {
+                            javaChannel().write(src, null, this);
+                            return;
+                        }
+                        if (result == -1) {
+                            checkEOF(region, written);
+                            future.setSuccess();
+                            return;
+                        }
+                        written += result;
+
+                        if (written >= region.count()) {
+                            region.close();
+                            future.setSuccess();
+                            return;
+                        }
+                        if (src.hasRemaining()) {
+                            javaChannel().write(src, null, this);
+                        } else {
+                            region.transferTo(WritableByteChannelAdapter.this, written);
+                        }
+                    } catch (Throwable cause) {
+                        region.close();
+                        future.setFailure(cause);
+                    }
+                }
+
+                @Override
+                public void failed(Throwable exc, Object attachment) {
+                    region.close();
+                    future.setFailure(exc);
+                }
+            });
+            return 0;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return javaChannel().isOpen();
+        }
+
+        @Override
+        public void close() throws IOException {
+            javaChannel().close();
+        }
+    }
+
 }
