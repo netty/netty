@@ -22,6 +22,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -34,7 +35,9 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.nio.channels.Channels;
 import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.WritableByteChannel;
 
 public class OioSocketChannel extends AbstractOioByteChannel
                               implements SocketChannel {
@@ -48,6 +51,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     private final SocketChannelConfig config;
     private InputStream is;
     private OutputStream os;
+    private WritableByteChannel outChannel;
 
     public OioSocketChannel() {
         this(new Socket());
@@ -222,5 +226,33 @@ public class OioSocketChannel extends AbstractOioByteChannel
             throw new NotYetConnectedException();
         }
         buf.readBytes(os, buf.readableBytes());
+    }
+
+    @Override
+    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+        OutputStream os = this.os;
+        if (os == null) {
+            throw new NotYetConnectedException();
+        }
+        if (outChannel == null) {
+            outChannel = Channels.newChannel(os);
+        }
+        long written = 0;
+
+        for (;;) {
+            long localWritten = region.transferTo(outChannel, written);
+            if (localWritten == -1) {
+                checkEOF(region, written);
+                region.close();
+                future.setSuccess();
+                return;
+            }
+            written += localWritten;
+            if (written >= region.count()) {
+                future.setSuccess();
+                return;
+            }
+        }
+
     }
 }

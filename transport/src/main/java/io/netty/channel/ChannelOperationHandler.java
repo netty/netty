@@ -26,4 +26,6 @@ public interface ChannelOperationHandler extends ChannelHandler {
     void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
     void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
     void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception;
+
 }

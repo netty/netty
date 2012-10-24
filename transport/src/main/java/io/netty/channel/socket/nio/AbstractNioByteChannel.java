@@ -17,13 +17,17 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.FileRegion;
 
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.WritableByteChannel;
 
 abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
@@ -33,7 +37,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected NioByteUnsafe newUnsafe() {
+    protected AbstractNioUnsafe newUnsafe() {
         return new NioByteUnsafe();
     }
 
@@ -105,6 +109,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
+
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
@@ -122,6 +127,78 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 // Reset reader/writerIndex to 0 if the buffer is empty.
                 buf.clear();
                 break;
+            }
+        }
+    }
+
+
+    @Override
+    protected void doFlushFileRegion(final FileRegion region, final ChannelFuture future) throws Exception {
+        if (javaChannel() instanceof WritableByteChannel) {
+            TransferTask transferTask = new TransferTask(region, (WritableByteChannel) javaChannel(), future);
+            transferTask.transfer();
+        } else {
+            throw new UnsupportedOperationException("Underlying Channel is not of instance "
+                    + WritableByteChannel.class);
+        }
+    }
+
+    private final class TransferTask implements NioTask<SelectableChannel> {
+        private long writtenBytes;
+        private final FileRegion region;
+        private final WritableByteChannel wch;
+        private final ChannelFuture future;
+
+        TransferTask(FileRegion region, WritableByteChannel wch, ChannelFuture future) {
+            this.region = region;
+            this.wch = wch;
+            this.future = future;
+        }
+
+        public void transfer() {
+            try {
+                for (;;) {
+                    long localWrittenBytes = region.transferTo(wch, writtenBytes);
+                    if (localWrittenBytes == 0) {
+                        // reschedule for write once the channel is writable again
+                        eventLoop().executeWhenWritable(
+                                AbstractNioByteChannel.this, this);
+                        return;
+                    } else if (localWrittenBytes == -1) {
+                        checkEOF(region, writtenBytes);
+                        future.setSuccess();
+                        return;
+                    } else {
+                        writtenBytes += localWrittenBytes;
+                        if (writtenBytes >= region.count()) {
+                            region.close();
+                            future.setSuccess();
+                            return;
+                        }
+                    }
+                }
+            } catch (Throwable cause) {
+                region.close();
+                future.setFailure(cause);
+                pipeline().fireExceptionCaught(cause);
+            }
+        }
+
+        @Override
+        public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
+            transfer();
+        }
+
+        @Override
+        public void channelUnregistered(SelectableChannel ch) throws Exception {
+            if (writtenBytes < region.count()) {
+                region.close();
+                if (!isOpen()) {
+                    future.setFailure(new ClosedChannelException());
+                } else {
+                    future.setFailure(new IllegalStateException(
+                            "Channel was unregistered before the region could be fully written"));
+                }
             }
         }
     }
