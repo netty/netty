@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class MessageToMessageDecoder<I, O>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
@@ -27,7 +28,7 @@ public abstract class MessageToMessageDecoder<I, O>
     private final Class<?>[] acceptedMsgTypes;
 
     protected MessageToMessageDecoder(Class<?>... acceptedMsgTypes) {
-        this.acceptedMsgTypes = CodecUtil.acceptedMessageTypes(acceptedMsgTypes);
+        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
 
     @Override
@@ -47,7 +48,7 @@ public abstract class MessageToMessageDecoder<I, O>
                     break;
                 }
                 if (!isDecodable(msg)) {
-                    CodecUtil.addToNextInboundBuffer(ctx, msg);
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                     notify = true;
                     continue;
                 }
@@ -61,7 +62,7 @@ public abstract class MessageToMessageDecoder<I, O>
                     continue;
                 }
 
-                if (CodecUtil.unfoldAndAdd(ctx, omsg, true)) {
+                if (ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, true)) {
                     notify = true;
                 }
             } catch (Throwable t) {
@@ -83,7 +84,7 @@ public abstract class MessageToMessageDecoder<I, O>
      * @param msg the message
      */
     public boolean isDecodable(Object msg) throws Exception {
-        return CodecUtil.acceptMessage(acceptedMsgTypes, msg);
+        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     public abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;

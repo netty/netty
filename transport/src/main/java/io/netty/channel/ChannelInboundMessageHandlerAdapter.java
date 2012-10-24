@@ -21,31 +21,68 @@ import io.netty.buffer.Unpooled;
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
+
+    private final Class<?>[] acceptedMsgTypes;
+
+    protected ChannelInboundMessageHandlerAdapter(Class<?>... acceptedMsgTypes) {
+        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
+    }
+
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (!beginMessageReceived(ctx)) {
             return;
         }
 
-        MessageBuf<I> in = ctx.inboundMessageBuffer();
-        for (;;) {
-            I msg = in.poll();
-            if (msg == null) {
-                break;
+        boolean unsupportedFound = false;
+
+        try {
+            MessageBuf<I> in = ctx.inboundMessageBuffer();
+            for (;;) {
+                Object msg = in.poll();
+                if (msg == null) {
+                    break;
+                }
+                try {
+                    if (!isSupported(msg)) {
+                        ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+                        unsupportedFound = true;
+                        continue;
+                    }
+                    if (unsupportedFound) {
+                        // the last message were unsupported, but now we received one that is supported.
+                        // So reset the flag and notify the next context
+                        unsupportedFound = false;
+                        ctx.fireInboundBufferUpdated();
+                    }
+                    messageReceived(ctx, (I) msg);
+                } catch (Throwable t) {
+                    ctx.fireExceptionCaught(t);
+                }
             }
-            try {
-                messageReceived(ctx, msg);
-            } catch (Throwable t) {
-                ctx.fireExceptionCaught(t);
+        } finally {
+            if (unsupportedFound) {
+                ctx.fireInboundBufferUpdated();
             }
         }
 
         endMessageReceived(ctx);
+    }
+
+
+    /**
+     * Returns {@code true} if and only if the specified message can be handled by this handler.
+     *
+     * @param msg the message
+     */
+    public boolean isSupported(Object msg) throws Exception {
+        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     /**

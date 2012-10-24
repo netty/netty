@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class ByteToMessageDecoder<O>
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
@@ -51,7 +52,7 @@ public abstract class ByteToMessageDecoder<O>
         }
 
         try {
-            if (CodecUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
+            if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
                 ctx.fireInboundBufferUpdated();
             }
         } catch (Throwable t) {
@@ -86,7 +87,7 @@ public abstract class ByteToMessageDecoder<O>
                     }
                 }
 
-                if (CodecUtil.unfoldAndAdd(ctx, o, true)) {
+                if (ChannelHandlerUtil.unfoldAndAdd(ctx, o, true)) {
                     decoded = true;
                 } else {
                     break;
