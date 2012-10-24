@@ -1024,6 +1024,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message) {
+        if (message instanceof FileRegion) {
+            return sendFile((FileRegion) message);
+        }
         return write(message, channel.newFuture());
     }
 
@@ -1179,6 +1182,38 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelFuture sendFile(FileRegion region) {
+        return sendFile(region, channel().newFuture());
+    }
+
+    @Override
+    public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
+        return sendFile(firstContext(DIR_OUTBOUND), region, future);
+    }
+
+    ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, final FileRegion region,
+                           final ChannelFuture future) {
+        validateFuture(future);
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            try {
+                ctx.flushBridge();
+                ((ChannelOperationHandler) ctx.handler()).sendFile(ctx, region, future);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    sendFile(ctx, region, future);
+                }
+            });
+        }
+
+        return future;
+    }
+    @Override
     public ChannelFuture flush(ChannelFuture future) {
         return flush(firstContext(DIR_OUTBOUND), future);
     }
@@ -1218,6 +1253,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
+        if (message instanceof FileRegion) {
+            return sendFile((FileRegion) message, future);
+        }
         return write(tail, message, future);
     }
 
@@ -1501,6 +1539,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             ctx.fireUserEventTriggered(evt);
+        }
+
+        @Override
+        public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+            unsafe.sendFile(region, future);
         }
     }
 }
