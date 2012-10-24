@@ -18,41 +18,21 @@ package io.netty.util.internal;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
-import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A collection of utility methods to retrieve and parse the values of the Java system properties.
  */
 public final class SystemPropertyUtil {
 
-    private static final Properties props = new Properties();
+    private static boolean initializedLogger;
     private static final InternalLogger logger;
+    private static boolean loggedException;
 
-    // Retrieve all system properties at once so that there's no need to deal with
-    // security exceptions from next time.  Otherwise, we might end up with logging every
-    // security exceptions on every system property access or introducing more complexity
-    // just because of less verbose logging.
     static {
-        refresh();
         logger = InternalLoggerFactory.getInstance(SystemPropertyUtil.class);
-    }
-
-    /**
-     * Re-retrieves all system properties so that any post-launch properties updates are retrieved.
-     */
-    public static void refresh() {
-        Properties newProps = null;
-        try {
-            newProps = System.getProperties();
-        } catch (SecurityException e) {
-            logger.warn("Unable to retrieve the system properties; default values will be used.", e);
-            newProps = new Properties();
-        }
-
-        synchronized (props) {
-            props.clear();
-            props.putAll(newProps);
-        }
+        initializedLogger = true;
     }
 
     /**
@@ -60,10 +40,7 @@ public final class SystemPropertyUtil {
      * exists.
      */
     public static boolean contains(String key) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
-        return props.containsKey(key);
+        return get(key) != null;
     }
 
     /**
@@ -89,8 +66,20 @@ public final class SystemPropertyUtil {
         if (key == null) {
             throw new NullPointerException("key");
         }
+        if (key.length() == 0) {
+            throw new IllegalArgumentException("key must not be empty.");
+        }
 
-        String value = props.getProperty(key);
+        String value = null;
+        try {
+            value = System.getProperty(key);
+        } catch (Exception e) {
+            if (!loggedException) {
+                log("Unable to retrieve a system property '" + key + "'; default values will be used.", e);
+                loggedException = true;
+            }
+        }
+
         if (value == null) {
             return def;
         }
@@ -108,11 +97,7 @@ public final class SystemPropertyUtil {
      *         specified property is not allowed.
      */
     public static boolean getBoolean(String key, boolean def) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
-
-        String value = props.getProperty(key);
+        String value = get(key);
         if (value == null) {
             return def;
         }
@@ -130,9 +115,9 @@ public final class SystemPropertyUtil {
             return false;
         }
 
-        logger.warn(
+        log(
                 "Unable to parse the boolean system property '" + key + "':" + value + " - " +
-                "using the default value: " + def);
+                        "using the default value: " + def);
 
         return def;
     }
@@ -147,11 +132,7 @@ public final class SystemPropertyUtil {
      *         specified property is not allowed.
      */
     public static int getInt(String key, int def) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
-
-        String value = props.getProperty(key);
+        String value = get(key);
         if (value == null) {
             return def;
         }
@@ -165,9 +146,9 @@ public final class SystemPropertyUtil {
             }
         }
 
-        logger.warn(
+        log(
                 "Unable to parse the integer system property '" + key + "':" + value + " - " +
-                "using the default value: " + def);
+                        "using the default value: " + def);
 
         return def;
     }
@@ -182,11 +163,7 @@ public final class SystemPropertyUtil {
      *         specified property is not allowed.
      */
     public static long getLong(String key, long def) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
-
-        String value = props.getProperty(key);
+        String value = get(key);
         if (value == null) {
             return def;
         }
@@ -200,11 +177,29 @@ public final class SystemPropertyUtil {
             }
         }
 
-        logger.warn(
+        log(
                 "Unable to parse the long integer system property '" + key + "':" + value + " - " +
-                "using the default value: " + def);
+                        "using the default value: " + def);
 
         return def;
+    }
+
+    private static void log(String msg) {
+        if (initializedLogger) {
+            logger.warn(msg);
+        } else {
+            // Use JDK logging if logger was not initialized yet.
+            Logger.getLogger(SystemPropertyUtil.class.getName()).log(Level.WARNING, msg);
+        }
+    }
+
+    private static void log(String msg, Exception e) {
+        if (initializedLogger) {
+            logger.warn(msg, e);
+        } else {
+            // Use JDK logging if logger was not initialized yet.
+            Logger.getLogger(SystemPropertyUtil.class.getName()).log(Level.WARNING, msg, e);
+        }
     }
 
     private SystemPropertyUtil() {
