@@ -13,17 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec;
+package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.NoSuchBufferException;
 
-final class CodecUtil {
+public final class ChannelHandlerUtil {
 
-    static boolean unfoldAndAdd(
+    public static boolean unfoldAndAdd(
             ChannelHandlerContext ctx, Object msg, boolean inbound) throws Exception {
         if (msg == null) {
             return false;
@@ -84,7 +80,7 @@ final class CodecUtil {
 
     private static final Class<?>[] EMPTY_TYPES = new Class<?>[0];
 
-    static Class<?>[] acceptedMessageTypes(Class<?>[] acceptedMsgTypes) {
+    public static Class<?>[] acceptedMessageTypes(Class<?>[] acceptedMsgTypes) {
         if (acceptedMsgTypes == null) {
             return EMPTY_TYPES;
         }
@@ -103,7 +99,7 @@ final class CodecUtil {
         return newAllowedMsgTypes;
     }
 
-    static boolean acceptMessage(Class<?>[] acceptedMsgTypes, Object msg) {
+    public static boolean acceptMessage(Class<?>[] acceptedMsgTypes, Object msg) {
         if (acceptedMsgTypes.length == 0) {
             return true;
         }
@@ -117,7 +113,7 @@ final class CodecUtil {
         return false;
     }
 
-    static void addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
+    public static void addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
         try {
             ctx.nextOutboundMessageBuffer().add(msg);
         } catch (NoSuchBufferException e) {
@@ -128,7 +124,7 @@ final class CodecUtil {
         }
     }
 
-    static void addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
+    public static void addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
         try {
             ctx.nextInboundMessageBuffer().add(msg);
         } catch (NoSuchBufferException e) {
@@ -139,7 +135,7 @@ final class CodecUtil {
         }
     }
 
-    private CodecUtil() {
+    private ChannelHandlerUtil() {
         // Unused
     }
 }

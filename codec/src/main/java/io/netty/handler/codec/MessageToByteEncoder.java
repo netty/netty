@@ -20,13 +20,14 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
     protected MessageToByteEncoder(Class<?>... acceptedMsgTypes) {
-        this.acceptedMsgTypes = CodecUtil.acceptedMessageTypes(acceptedMsgTypes);
+        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
 
     @Override
@@ -41,7 +42,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
             }
 
             if (!isEncodable(msg)) {
-                CodecUtil.addToNextOutboundBuffer(ctx, msg);
+                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, msg);
                 continue;
             }
 
@@ -67,7 +68,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
      * @param msg the message
      */
     public boolean isEncodable(Object msg) throws Exception {
-        return CodecUtil.acceptMessage(acceptedMsgTypes, msg);
+        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     public abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;

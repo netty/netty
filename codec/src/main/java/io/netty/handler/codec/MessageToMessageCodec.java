@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
         extends ChannelHandlerAdapter
@@ -62,8 +63,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
 
     protected MessageToMessageCodec(
             Class<?>[] acceptedInboundMsgTypes, Class<?>[] acceptedOutboundMsgTypes) {
-        this.acceptedInboundMsgTypes = CodecUtil.acceptedMessageTypes(acceptedInboundMsgTypes);
-        this.acceptedOutboundMsgTypes = CodecUtil.acceptedMessageTypes(acceptedOutboundMsgTypes);
+        this.acceptedInboundMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedInboundMsgTypes);
+        this.acceptedOutboundMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedOutboundMsgTypes);
     }
 
     @Override
@@ -93,7 +94,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
      * @param msg the message
      */
     public boolean isDecodable(Object msg) throws Exception {
-        return CodecUtil.acceptMessage(acceptedInboundMsgTypes, msg);
+        return ChannelHandlerUtil.acceptMessage(acceptedInboundMsgTypes, msg);
     }
 
     /**
@@ -102,7 +103,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
      * @param msg the message
      */
     public boolean isEncodable(Object msg) throws Exception {
-        return CodecUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
+        return ChannelHandlerUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
     }
 
     public abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;

@@ -19,13 +19,14 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
     protected MessageToMessageEncoder(Class<?>... acceptedMsgTypes) {
-        this.acceptedMsgTypes = CodecUtil.acceptedMessageTypes(acceptedMsgTypes);
+        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
 
     @Override
@@ -39,7 +40,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                 }
 
                 if (!isEncodable(msg)) {
-                    CodecUtil.addToNextOutboundBuffer(ctx, msg);
+                    ChannelHandlerUtil.addToNextOutboundBuffer(ctx, msg);
                     continue;
                 }
 
@@ -52,7 +53,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     continue;
                 }
 
-                CodecUtil.unfoldAndAdd(ctx, omsg, false);
+                ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
@@ -71,7 +72,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      * @param msg the message
      */
     public boolean isEncodable(Object msg) throws Exception {
-        return CodecUtil.acceptMessage(acceptedMsgTypes, msg);
+        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     public abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;

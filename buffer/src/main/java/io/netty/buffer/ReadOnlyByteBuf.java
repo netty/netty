@@ -28,7 +28,7 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link Unpooled#unmodifiableBuffer(ByteBuf)}
  * instead of calling the constructor explicitly.
  */
-public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
+public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
 
     private final ByteBuf buffer;
 
@@ -70,47 +70,47 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void discardReadBytes() {
+    public WrappedByteBuf discardReadBytes() {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public WrappedByteBuf setByte(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public WrappedByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public WrappedByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public WrappedByteBuf setBytes(int index, ByteBuffer src) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public WrappedByteBuf setShort(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public WrappedByteBuf setMedium(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public WrappedByteBuf setInt(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public WrappedByteBuf setLong(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -133,24 +133,28 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public WrappedByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public WrappedByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public WrappedByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public WrappedByteBuf getBytes(int index, ByteBuffer dst) {
         buffer.getBytes(index, dst);
+        return this;
     }
 
     @Override
@@ -219,7 +223,7 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public WrappedByteBuf capacity(int newCapacity) {
         throw new ReadOnlyBufferException();
     }
 

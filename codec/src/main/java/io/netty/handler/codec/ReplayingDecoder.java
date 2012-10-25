@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.util.internal.Signal;
 
 /**
@@ -368,7 +369,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
         }
 
         try {
-            if (CodecUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
+            if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
                 fireInboundBufferUpdated(ctx, in);
             }
         } catch (Signal replay) {
@@ -432,7 +433,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
                 }
 
                 // A successful decode
-                if (CodecUtil.unfoldAndAdd(ctx, result, true)) {
+                if (ChannelHandlerUtil.unfoldAndAdd(ctx, result, true)) {
                     decoded = true;
                 }
             } catch (Throwable t) {

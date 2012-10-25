@@ -125,7 +125,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     public interface NioUnsafe extends Unsafe {
-        java.nio.channels.Channel ch();
+        SelectableChannel ch();
         void finishConnect();
         void read();
     }
@@ -133,7 +133,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
 
         @Override
-        public java.nio.channels.Channel ch() {
+        public SelectableChannel ch() {
             return javaChannel();
         }
 
