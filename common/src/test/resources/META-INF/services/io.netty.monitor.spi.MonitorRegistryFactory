@@ -1,0 +1,2 @@
+io.netty.monitor.support.SampleMonitorRegistryFactory
+io.netty.monitor.support.AnotherSampleMonitorRegistryFactory

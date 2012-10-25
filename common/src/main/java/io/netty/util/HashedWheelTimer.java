@@ -17,6 +17,10 @@ package io.netty.util;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.monitor.ValueDistributionMonitor;
+import io.netty.monitor.EventRateMonitor;
+import io.netty.monitor.MonitorName;
+import io.netty.monitor.MonitorRegistry;
 import io.netty.util.internal.DetectionUtil;
 import io.netty.util.internal.SharedResourceMisuseDetector;
 
@@ -83,6 +87,11 @@ public class HashedWheelTimer implements Timer {
     private static final SharedResourceMisuseDetector misuseDetector =
         new SharedResourceMisuseDetector(HashedWheelTimer.class);
 
+    private static final MonitorName TIMEOUT_EXPIRATION_TIME_DEVIATION_MN = new MonitorName(HashedWheelTimer.class,
+            "timeout-expiration-time-deviation");
+    private static final MonitorName TIMEOUTS_PER_SECOND_MN = new MonitorName(HashedWheelTimer.class,
+            "timeouts-per-second");
+
     private final Worker worker = new Worker();
     final Thread workerThread;
     final AtomicInteger workerState = new AtomicInteger(); // 0 - init, 1 - started, 2 - shut down
@@ -93,6 +102,10 @@ public class HashedWheelTimer implements Timer {
     final int mask;
     final ReadWriteLock lock = new ReentrantReadWriteLock();
     volatile int wheelCursor;
+
+    // Monitoring this instance
+    final ValueDistributionMonitor timeoutExpirationTimeDeviation;
+    final EventRateMonitor timeoutsPerSecond;
 
     /**
      * Creates a new timer with the default thread factory
@@ -110,6 +123,8 @@ public class HashedWheelTimer implements Timer {
      *
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
+     * @throws NullPointerException     if {@code unit} is {@code null}
+     * @throws IllegalArgumentException if {@code tickDuration} is <= 0
      */
     public HashedWheelTimer(long tickDuration, TimeUnit unit) {
         this(Executors.defaultThreadFactory(), tickDuration, unit);
@@ -122,6 +137,8 @@ public class HashedWheelTimer implements Timer {
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
      * @param ticksPerWheel  the size of the wheel
+     * @throws NullPointerException     if {@code unit} is {@code null}
+     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
      */
     public HashedWheelTimer(long tickDuration, TimeUnit unit, int ticksPerWheel) {
         this(Executors.defaultThreadFactory(), tickDuration, unit, ticksPerWheel);
@@ -134,6 +151,7 @@ public class HashedWheelTimer implements Timer {
      * @param threadFactory  a {@link ThreadFactory} that creates a
      *                       background {@link Thread} which is dedicated to
      *                       {@link TimerTask} execution.
+     * @throws NullPointerException if {@code threadFactory} is {@code null}
      */
     public HashedWheelTimer(ThreadFactory threadFactory) {
         this(threadFactory, 100, TimeUnit.MILLISECONDS);
@@ -147,6 +165,8 @@ public class HashedWheelTimer implements Timer {
      *                       {@link TimerTask} execution.
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
+     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws IllegalArgumentException if {@code tickDuration} is <= 0
      */
     public HashedWheelTimer(
             ThreadFactory threadFactory, long tickDuration, TimeUnit unit) {
@@ -162,10 +182,87 @@ public class HashedWheelTimer implements Timer {
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
      * @param ticksPerWheel  the size of the wheel
+     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
      */
     public HashedWheelTimer(
             ThreadFactory threadFactory,
             long tickDuration, TimeUnit unit, int ticksPerWheel) {
+        this(threadFactory, tickDuration, unit, ticksPerWheel, MonitorRegistry.NOOP);
+    }
+
+    /**
+     * Creates a new timer with {@link io.netty.monitor monitoring support}
+     * enabled. The new timer instance will monitor
+     * <ul>
+     * <li>
+     * the distribution of deviation between scheduled and actual
+     * {@link Timeout timeout} execution, i.e. how accurate this timer is; and
+     * </li>
+     * <li>
+     * the rate of {@link Timeout timeout} executions per second.
+     * </li>
+     * </ul>
+     *
+     * @param threadFactory   a {@link ThreadFactory} that creates a
+     *                        background {@link Thread} which is dedicated to
+     *                        {@link TimerTask} execution.
+     * @param tickDuration    the duration between tick
+     * @param unit            the time unit of the {@code tickDuration}
+     * @param ticksPerWheel   the size of the wheel
+     * @param monitorRegistry the {@link MonitorRegistry} to use
+     * @throws NullPointerException
+     *                        if either of {@code threadFactory} and {@code unit}
+     *                        is {@code null}
+     * @throws IllegalArgumentException
+     *                        if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
+     */
+    public HashedWheelTimer(ThreadFactory threadFactory, long tickDuration, TimeUnit unit, int ticksPerWheel,
+            MonitorRegistry monitorRegistry) {
+        this(threadFactory, tickDuration, unit, ticksPerWheel, monitorRegistry,
+             TIMEOUT_EXPIRATION_TIME_DEVIATION_MN, TIMEOUTS_PER_SECOND_MN);
+    }
+
+    /**
+     * Creates a new timer with {@link io.netty.monitor monitoring support}
+     * enabled. The new timer instance will monitor
+     * <ul>
+     * <li>
+     * the distribution of deviation between scheduled and actual
+     * {@link Timeout timeout} execution, i.e. how accurate this timer is; and
+     * </li>
+     * <li>
+     * the rate of {@link Timeout timeout} executions per second.
+     * </li>
+     * </ul>
+     *
+     * @param threadFactory   a {@link ThreadFactory} that creates a
+     *                        background {@link Thread} which is dedicated to
+     *                        {@link TimerTask} execution.
+     * @param tickDuration    the duration between tick
+     * @param unit            the time unit of the {@code tickDuration}
+     * @param ticksPerWheel   the size of the wheel
+     * @param monitorRegistry the {@link MonitorRegistry} to use
+     * @param timeoutExpirationTimeDeviationMonitorName
+     *                        the {@link MonitorName name} to use for the
+     *                        {@code Monitor} that tracks the distribution of
+     *                        deviation between scheduled and actual timeout
+     *                        execution
+     * @param timeoutsPerSecondMonitorName
+     *                        the {@link MonitorName name} to use for the
+     *                        {@code Monitor} that tracks the rate of timeout
+     *                        executions per second
+     * @throws NullPointerException
+     *                        if either of {@code threadFactory}, {@code unit},
+     *                        {@code monitorRegistry},
+     *                        {@code timeoutExpirationTimeDeviationMonitorName} and
+     *                        {@code timeoutsPerSecondMonitorName} is {@code null}
+     * @throws IllegalArgumentException
+     *                        if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
+     */
+    public HashedWheelTimer(ThreadFactory threadFactory, long tickDuration, TimeUnit unit, int ticksPerWheel,
+            MonitorRegistry monitorRegistry, MonitorName timeoutExpirationTimeDeviationMonitorName,
+            MonitorName timeoutsPerSecondMonitorName) {
 
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
@@ -173,13 +270,20 @@ public class HashedWheelTimer implements Timer {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
+        if (monitorRegistry == null) {
+            throw new NullPointerException("monitorRegistry");
+        }
+        if (timeoutExpirationTimeDeviationMonitorName == null) {
+            throw new NullPointerException("timeoutExpirationTimeDeviationMonitorName");
+        }
+        if (timeoutsPerSecondMonitorName == null) {
+            throw new NullPointerException("timeoutsPerSecondMonitorName");
+        }
         if (tickDuration <= 0) {
-            throw new IllegalArgumentException(
-                    "tickDuration must be greater than 0: " + tickDuration);
+            throw new IllegalArgumentException("tickDuration must be greater than 0: " + tickDuration);
         }
         if (ticksPerWheel <= 0) {
-            throw new IllegalArgumentException(
-                    "ticksPerWheel must be greater than 0: " + ticksPerWheel);
+            throw new IllegalArgumentException("ticksPerWheel must be greater than 0: " + ticksPerWheel);
         }
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
@@ -190,16 +294,18 @@ public class HashedWheelTimer implements Timer {
         this.tickDuration = tickDuration = unit.toMillis(tickDuration);
 
         // Prevent overflow.
-        if (tickDuration == Long.MAX_VALUE ||
-                tickDuration >= Long.MAX_VALUE / wheel.length) {
-            throw new IllegalArgumentException(
-                    "tickDuration is too long: " +
-                    tickDuration +  ' ' + unit);
+        if (tickDuration == Long.MAX_VALUE || tickDuration >= Long.MAX_VALUE / wheel.length) {
+            throw new IllegalArgumentException("tickDuration is too long: " + tickDuration + ' ' + unit);
         }
 
         roundDuration = tickDuration * wheel.length;
 
         workerThread = threadFactory.newThread(worker);
+
+        timeoutExpirationTimeDeviation =
+                monitorRegistry.newValueDistributionMonitor(timeoutExpirationTimeDeviationMonitorName);
+        timeoutsPerSecond =
+                monitorRegistry.newEventRateMonitor(timeoutsPerSecondMonitorName, TimeUnit.SECONDS);
 
         // Misuse check
         misuseDetector.increase();
@@ -518,6 +624,8 @@ public class HashedWheelTimer implements Timer {
             }
 
             try {
+                timeoutsPerSecond.event();
+                timeoutExpirationTimeDeviation.update(System.currentTimeMillis() - deadline);
                 task.run(this);
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {

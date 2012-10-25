@@ -54,10 +54,18 @@
   </profiles>
 
   <dependencies>
-    <!-- The example depends on all modules either directly or transitively -->
+    <!-- The example depends on (almost) all modules either directly or transitively -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-example</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <!-- The only module netty-example does NOT depend on -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-metrics-yammer</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
       <optional>true</optional>
@@ -296,12 +304,14 @@
             -link http://www.slf4j.org/apidocs/
             -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
             -link http://logging.apache.org/log4j/1.2/apidocs/
+            -link http://metrics.codahale.com/maven/apidocs/
 
             -group "Low-level data representation" io.netty.buffer*
             -group "Central interface for all I/O operations" io.netty.channel*
             -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
             -group "Reusable I/O event interceptors" io.netty.handler*
-            -group "Miscellaneous" io.netty.logging*:io.netty.util*
+            -group "Miscellaneous" io.netty.logging*:io.netty.util*:io.netty.monitor:io.netty.monitor.spi
+            -group "Yammer monitoring support" io.netty.monitor.yammer*
 
             -sourceclasspath ${project.build.outputDirectory}
             -nopackagediagram

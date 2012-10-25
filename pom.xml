@@ -69,6 +69,7 @@
 
   <properties>
     <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
+    <yammer.metrics.version>2.1.2</yammer.metrics.version>
   </properties>
  
   <modules>
@@ -78,6 +79,7 @@
     <module>codec-http</module>
     <module>transport</module>
     <module>handler</module>
+    <module>metrics-yammer</module>
     <module>example</module>
     <module>testsuite</module>
     <module>all</module>
@@ -163,6 +165,14 @@
         </exclusions>
         <optional>true</optional>
       </dependency>
+      
+      <!-- Metrics providers -->
+      <dependency>
+        <groupId>com.yammer.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>${yammer.metrics.version}</version>
+      </dependency>
+      
       <!-- Test dependencies for jboss marshalling encoder/decoder -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
