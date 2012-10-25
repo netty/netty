@@ -273,8 +273,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         try {
             selector.close();
         } catch (IOException e) {
-            logger.warn(
-                    "Failed to close a selector.", e);
+            logger.warn("Failed to close a selector.", e);
         }
     }
 
