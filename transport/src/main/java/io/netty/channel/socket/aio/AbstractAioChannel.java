@@ -43,6 +43,11 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
     protected AbstractAioChannel(Channel parent, Integer id, AioEventLoopGroup group, AsynchronousChannel ch) {
         super(parent, id);
+        // We take advantage of the fact that an AsynchronousChannel is bound to its AsynchronousChannelGroup
+        // and cannot be assigned to another group during its lifetime. So, register and deregister are 
+        // irrelevant as in the end an AsynchronousChannel always belongs to the AsynchronousChannelGroup
+        // it was created with and therefore also always belongs to the same AioEventLoopGroup.
+        group.attach(this);
         this.ch = ch;
         this.group = group;
     }
