@@ -187,6 +187,12 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         private final int subId;
         private final TimerTask wakeupTask = new TimerTask() {
             public void run(Timeout timeout) throws Exception {
+                // This is needed to prevent a possible race that can lead to a NPE
+                // when the selector is closed before this is run
+                //
+                // See https://github.com/netty/netty/issues/685
+                Selector selector = NioClientSocketPipelineSink.Boss.this.selector;
+
                 if (selector != null) {
                     if (wakenUp.compareAndSet(false, true)) {
                         selector.wakeup();
