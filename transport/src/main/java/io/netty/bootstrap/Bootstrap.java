@@ -16,13 +16,13 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.AttributeKey;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -149,6 +149,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
             }
         }
 
+        for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
+            channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+        }
+
         group().register(channel).syncUninterruptibly();
     }
 
@@ -161,22 +165,16 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     /**
-     * Create a new {@link Bootstrap} using this "full-setup" {@link Bootstrap} as template.
-     * Only the given parameters are replaced, the rest is configured exactly the same way as the template.
+     * Create a new {@link Bootstrap} which has the identical configuration with this {@link Bootstrap}.
+     * This method is useful when you make multiple connections with similar settings.
      */
-    public Bootstrap newBootstrap(SocketAddress localAddress, SocketAddress remoteAddress, ChannelHandler handler) {
+    public Bootstrap duplicate() {
         validate();
-        Bootstrap cb = new Bootstrap().handler(handler).channelFactory(factory()).group(group())
-                .localAddress(localAddress).remoteAddress(remoteAddress);
-        cb.options().putAll(options());
-        return cb;
-    }
-
-    /**
-     * Create a new {@link Bootstrap} using this "full-setup" {@link Bootstrap} as template.
-     * Only the given parameters are replaced, the rest is configured exactly the same way as the template.
-     */
-    public Bootstrap newBootstrap(SocketAddress localAddress, SocketAddress remoteAddress) {
-        return newBootstrap(localAddress, remoteAddress, handler());
+        Bootstrap b = new Bootstrap()
+                .group(group()).channelFactory(factory()).handler(handler())
+                .localAddress(localAddress()).remoteAddress(remoteAddress);
+        b.options().putAll(options());
+        b.attrs().putAll(attrs());
+        return b;
     }
 }

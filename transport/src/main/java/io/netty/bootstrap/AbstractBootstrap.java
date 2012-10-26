@@ -16,18 +16,19 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.AttributeKey;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelException;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
@@ -39,6 +40,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     private ChannelFactory factory;
     private SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private ChannelHandler handler;
 
     /**
@@ -138,6 +140,23 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     }
 
     /**
+     * Allow to specify an initial attribute of the newly created {@link Channel}.  If the {@code value} is
+     * {@code null}, the attribute of the specified {@code key} is removed.
+     */
+    public <T> B attr(AttributeKey<T> key, T value) {
+        if (key == null) {
+            throw new NullPointerException("key");
+        }
+        if (value == null) {
+            attrs.remove(key);
+        } else {
+            attrs.put(key, value);
+        }
+
+        return (B) this;
+    }
+
+    /**
      * Shutdown the {@link AbstractBootstrap} and the {@link EventLoopGroup} which is
      * used by it. Only call this if you don't share the {@link EventLoopGroup}
      * between different {@link AbstractBootstrap}'s.
@@ -222,6 +241,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
 
     protected final Map<ChannelOption<?>, Object> options() {
         return options;
+    }
+
+    protected final Map<AttributeKey<?>, Object> attrs() {
+        return attrs;
     }
 
     private final class BootstrapChannelFactory implements ChannelFactory {

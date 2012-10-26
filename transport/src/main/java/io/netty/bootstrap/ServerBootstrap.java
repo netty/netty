@@ -32,6 +32,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.AttributeKey;
 import io.netty.util.NetworkConstants;
 
 import java.net.InetSocketAddress;
@@ -57,6 +58,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     };
 
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private EventLoopGroup childGroup;
     private ChannelHandler childHandler;
 
@@ -116,6 +118,18 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         return this;
     }
 
+    public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
+        if (childKey == null) {
+            throw new NullPointerException("childKey");
+        }
+        if (value == null) {
+            childAttrs.remove(childKey);
+        } else {
+            childAttrs.put(childKey, value);
+        }
+        return this;
+    }
+
     /**
      * Set the {@link ChannelHandler} which is used to server the request for the {@link Channel}'s.
      */
@@ -149,6 +163,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         } catch (Exception e) {
             future.setFailure(e);
             return future;
+        }
+
+        for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
+            channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
         }
 
         ChannelPipeline p = future.channel().pipeline();
@@ -225,6 +243,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
                     } catch (Throwable t) {
                         logger.warn("Failed to set a channel option: " + child, t);
                     }
+                }
+
+                for (Entry<AttributeKey<?>, Object> e: childAttrs.entrySet()) {
+                    child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
                 }
 
                 try {
