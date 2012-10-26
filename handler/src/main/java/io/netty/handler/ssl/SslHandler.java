@@ -277,6 +277,10 @@ public class SslHandler
         return engine;
     }
 
+    /**
+     * Starts the SSL / TLS handshake and returns a {@link ChannelFuture} that will
+     * get notified once the handshake completes.
+     */
     public ChannelFuture handshake() {
         return handshake(ctx.newFuture());
     }
@@ -340,6 +344,11 @@ public class SslHandler
         return close(ctx.newFuture());
     }
 
+
+    /**
+     * See {@link #close()}
+
+     */
     public ChannelFuture close(final ChannelFuture future) {
         final ChannelHandlerContext ctx = this.ctx;
         ctx.executor().execute(new Runnable() {
@@ -856,6 +865,9 @@ public class SslHandler
         }
     }
 
+    /**
+     * Notify all the handshake futures about the successfully handshake
+     */
     private void setHandshakeSuccess() {
         for (;;) {
             ChannelFuture f = handshakeFutures.poll();
@@ -866,6 +878,9 @@ public class SslHandler
         }
     }
 
+    /**
+     * Notify all the handshake futures about the failure during the handshake.
+     */
     private void setHandshakeFailure(Throwable cause) {
         // Release all resources such as internal buffers that SSLEngine
         // is managing.
@@ -967,7 +982,7 @@ public class SslHandler
                 @Override
                 public void run() {
                     logger.warn(
-                            ctx.channel() + " last lssssswrite attempt timed out." +
+                            ctx.channel() + " last write attempt timed out." +
                                             " Force-closing the connection.");
                     ctx.close(closeFuture);
                 }
