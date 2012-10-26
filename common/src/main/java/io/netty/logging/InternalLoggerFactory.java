@@ -28,10 +28,12 @@ package io.netty.logging;
  * which were loaded after the default factory is changed.  Therefore,
  * {@link #setDefaultFactory(InternalLoggerFactory)} should be called as early
  * as possible and shouldn't be called more than once.
+ *
+ * @param <T> the {@link InternalLogger} implementation provided by this {@link InternalLoggerFactory}
  * @apiviz.landmark
  * @apiviz.has io.netty.logging.InternalLogger oneway - - creates
  */
-public abstract class InternalLoggerFactory {
+public abstract class InternalLoggerFactory<T extends InternalLogger> {
     private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
 
     /**
@@ -161,5 +163,5 @@ public abstract class InternalLoggerFactory {
     /**
      * Creates a new logger instance with the specified name.
      */
-    public abstract InternalLogger newInstance(String name);
+    public abstract T newInstance(String name);
 }

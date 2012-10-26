@@ -22,10 +22,10 @@ package io.netty.logging;
  * <a href="http://anonsvn.jboss.org/repos/common/common-logging-spi/">JBoss Logging</a>
  * logger.
  */
-public class JBossLoggerFactory extends InternalLoggerFactory {
+public class JBossLoggerFactory extends InternalLoggerFactory<JBossLogger> {
 
     @Override
-    public InternalLogger newInstance(String name) {
+    public JBossLogger newInstance(String name) {
         final org.jboss.logging.Logger logger =
             org.jboss.logging.Logger.getLogger(name);
         return new JBossLogger(logger);

@@ -21,10 +21,10 @@ package io.netty.logging;
  * <a href="http://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
  * logger.
  */
-public class JdkLoggerFactory extends InternalLoggerFactory {
+public class JdkLoggerFactory extends InternalLoggerFactory<JdkLogger> {
 
     @Override
-    public InternalLogger newInstance(String name) {
+    public JdkLogger newInstance(String name) {
         final java.util.logging.Logger logger =
             java.util.logging.Logger.getLogger(name);
         return new JdkLogger(logger, name);
