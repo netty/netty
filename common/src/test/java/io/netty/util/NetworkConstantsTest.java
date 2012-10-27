@@ -27,7 +27,7 @@ public class NetworkConstantsTest {
     @Test
     public void testLocalhost() throws UnknownHostException {
         assertNotNull(NetworkConstants.LOCALHOST);
-        assertSame(NetworkConstants.LOCALHOST, InetAddress.getLocalHost());
+        assertEquals(NetworkConstants.LOCALHOST, InetAddress.getLocalHost());
     }
 
     @Test
