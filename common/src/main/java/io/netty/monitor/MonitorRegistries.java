@@ -90,13 +90,13 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
      * @return <em>The</em> uniquely determined {@link MonitorRegistry}
      *         implementation
      * @throws IllegalStateException If either none or more that one
-     *             {@link MonitorRegistryFactor} provider was found on the
+     *             {@link MonitorRegistries} provider was found on the
      *             classpath
      */
     public MonitorRegistry unique() {
         final Iterator<MonitorRegistry> registries = iterator();
         if (!registries.hasNext()) {
-            throw new IllegalStateException("Could not find any MonitorRegistryFactories on the classpath - "
+            throw new IllegalStateException("Could not find any MonitorRegistries the classpath - "
                     + "implementations need to be registered in META-INF/services/"
                     + MonitorRegistryFactory.class.getName());
         }

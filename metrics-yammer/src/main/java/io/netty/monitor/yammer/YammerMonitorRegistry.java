@@ -63,7 +63,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
 
     /**
      * Create a new {@link ValueDistributionMonitor} that is backed by a
-     * {@code Yammer} {@link Histrogram}.
+     * {@code Yammer} {@link Histogram}.
      * @see io.netty.monitor.MonitorRegistry#newValueDistributionMonitor(io.netty.monitor.MonitorName)
      */
     @Override
