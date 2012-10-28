@@ -16,6 +16,14 @@
 package io.netty.buffer;
 
 public interface ChannelBuf {
+    /**
+     * The ChannelBufType which will be handled by the ChannelBuf implementation
+     */
     ChannelBufType type();
+
+    /**
+     * Return <code>true</code> if the ChannelBuf is pooled.
+     *
+     */
     boolean isPooled();
 }

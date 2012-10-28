@@ -21,6 +21,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 
+/**
+ * Abstract base class for WrappedByteBuf implementations.
+ */
 public abstract class AbstractWrappedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
 
     protected AbstractWrappedByteBuf(ByteOrder endianness, int maxCapacity) {
