@@ -383,7 +383,6 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
         checkpoint(State.CORRUPT);
         if (channel.isConnected()) {
             channel.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-            channel.close().awaitUninterruptibly();
         }
         throw new CorruptedFrameException(reason);
     }
