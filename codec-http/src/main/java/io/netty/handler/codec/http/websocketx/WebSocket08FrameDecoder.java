@@ -384,13 +384,6 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
 
     private void checkUTF8String(ChannelHandlerContext ctx, byte[] bytes) throws CorruptedFrameException {
         try {
-            // StringBuilder sb = new StringBuilder("UTF8 " + bytes.length +
-            // " bytes: ");
-            // for (byte b : bytes) {
-            // sb.append(Integer.toHexString(b)).append(" ");
-            // }
-            // logger.debug(sb.toString());
-
             if (fragmentedFramesText == null) {
                 fragmentedFramesText = new UTF8Output(bytes);
             } else {
