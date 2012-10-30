@@ -20,6 +20,7 @@ import java.util.Queue;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
@@ -29,22 +30,27 @@ import io.netty.handler.codec.http.HttpResponse;
  * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends
-        MessageToMessageCodec<HttpRequest, HttpRequest, HttpResponse, HttpResponse> {
+        MessageToMessageCodec<HttpRequest, HttpRequest, Object, Object> {
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new LinkedList<Integer>();
 
     public SpdyHttpResponseStreamIdHandler() {
-        super(new Class<?>[] { HttpRequest.class }, new Class<?>[] { HttpResponse.class });
+        super(new Class<?>[] { HttpRequest.class, SpdyRstStreamFrame.class }, new Class<?>[] { HttpResponse.class });
     }
 
     @Override
-    public HttpResponse encode(ChannelHandlerContext ctx, HttpResponse msg) throws Exception {
-        boolean contains = msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
-        if (!contains) {
-            ids.add(NO_ID);
-        } else {
-            ids.add(SpdyHttpHeaders.getStreamId(msg));
+    public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof HttpMessage) {
+            boolean contains = ((HttpMessage)msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
+            if (!contains) {
+                ids.add(NO_ID);
+            } else {
+                ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) msg));
+            }
+        } else if (msg instanceof SpdyRstStreamFrame) {
+            ids.remove(((SpdyRstStreamFrame)msg).getStreamId());
         }
+
         return msg;
     }
 
