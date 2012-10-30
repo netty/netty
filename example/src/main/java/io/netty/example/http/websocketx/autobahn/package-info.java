@@ -17,21 +17,21 @@
 /**
  * This package is intended for use with testing against the Python
  * <a href="http://www.tavendo.de/autobahn/testsuite.html">AutoBahn test suite</a>.
- * 
+ *
  * Autobahn installation documentation can be found <a href="http://autobahn.ws/testsuite/installation">here</a>.
- * 
+ *
  * <h3>How to run the tests on Ubuntu.</h3>
  *
  * <p>01. Install <a href="http://python.org/">python</a> (if not already installed).
- * 
- * <p>02. Install <a href="http://pypi.python.org/pypi/setuptools">Python Setup Tools</a> if not already 
+ *
+ * <p>02. Install <a href="http://pypi.python.org/pypi/setuptools">Python Setup Tools</a> if not already
  * installed. <tt>sudo apt-get install python-setuptools</tt>
- * 
+ *
  * <p>03. Add <tt>ppa:twisted-dev/ppa</tt> to your system's Software Sources
  *
  * <p>04. Install Twisted: <tt>sudo apt-get install python-twisted</tt>
  *
- * <p>05. Install AutoBahn: <tt>sudo easy_install autobahntestsuite</tt>.  Test using <tt>wstest --help<tt>.
+ * <p>05. Install AutoBahn: <tt>sudo easy_install autobahntestsuite</tt>.  Test using <tt>wstest --help</tt>.
  *
  * <p>06. Create a directory for test configuration and results: <tt>mkdir autobahn</tt> <tt>cd autobahn</tt>.
  *
@@ -40,13 +40,13 @@
  * {
  *    "options": {"failByDrop": false},
  *    "outdir": "./reports/servers",
- *  
+ *
  *    "servers": [
  *                 {"agent": "Netty4",
  *                  "url": "ws://localhost:9000",
  *                  "options": {"version": 18}}
  *               ],
- *  
+ *
  *    "cases": ["*"],
  *    "exclude-cases": [],
  *    "exclude-agent-cases": {}
