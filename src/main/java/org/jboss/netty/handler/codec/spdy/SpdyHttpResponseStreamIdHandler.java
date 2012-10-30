@@ -25,7 +25,7 @@ import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
- * {@link SimpleChannelHandler} that takes care of adding the right {@link SpdyHttpHeaders#Names#STREAM_ID} to the
+ * {@link SimpleChannelHandler} that takes care of adding the right streamId to the
  * {@link HttpResponse} if one is not present. This makes it possible to just re-use plan handlers current used
  * for HTTP.
  */
@@ -42,6 +42,9 @@ public class SpdyHttpResponseStreamIdHandler extends SimpleChannelHandler {
             } else {
                 ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) e.getMessage()));
             }
+        } else if (e.getMessage() instanceof SpdyRstStreamFrame) {
+            // remove id from the queue
+            ids.remove(((SpdyRstStreamFrame) e.getMessage()).getStreamId());
         }
         super.messageReceived(ctx, e);
     }
