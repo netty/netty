@@ -41,14 +41,14 @@ public class SpdyHttpResponseStreamIdHandler extends
     @Override
     public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpMessage) {
-            boolean contains = ((HttpMessage)msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
+            boolean contains = ((HttpMessage) msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
                 ids.add(NO_ID);
             } else {
                 ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) msg));
             }
         } else if (msg instanceof SpdyRstStreamFrame) {
-            ids.remove(((SpdyRstStreamFrame)msg).getStreamId());
+            ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
         }
 
         return msg;
