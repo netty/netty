@@ -19,6 +19,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
+import java.util.List;
+
 
 /**
  * A {@link ChannelUpstreamHandler} which provides an individual handler method
@@ -135,7 +137,22 @@ public class SimpleChannelUpstreamHandler implements ChannelUpstreamHandler {
      */
     public void exceptionCaught(
             ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        if (this == ctx.getPipeline().getLast()) {
+        ChannelPipeline pipeline = ctx.getPipeline();
+
+        ChannelHandler last = pipeline.getLast();
+        if (!(last instanceof ChannelUpstreamHandler) && ctx instanceof DefaultChannelPipeline) {
+            // The names comes in the order of which they are insert when using DefaultChannelPipeline
+            List<String> names = ctx.getPipeline().getNames();
+            for (int i = names.size() - 1; i >= 0; i--) {
+                ChannelHandler handler = ctx.getPipeline().get(names.get(i));
+                if (handler instanceof ChannelUpstreamHandler) {
+                    // find the last handler
+                    last = handler;
+                    break;
+                }
+            }
+        }
+        if (this == last) {
             logger.warn(
                     "EXCEPTION, please implement " + getClass().getName() +
                     ".exceptionCaught() for proper handling.", e.getCause());
