@@ -18,6 +18,7 @@ package io.netty.handler.codec.spdy;
 import javax.net.ssl.SSLEngine;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -63,22 +64,24 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.nextInboundByteBuffer();
-    }
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        initPipeline(ctx);
-        ctx.fireChannelActive();
+        return Unpooled.buffer();
     }
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        initPipeline(ctx);
-        ctx.fireInboundBufferUpdated();
+        if (initPipeline(ctx)) {
+            ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());
+
+            // When we reached here we can remove this handler as its now clear what protocol we want to use
+            // from this point on.
+            ctx.pipeline().remove(this);
+
+            ctx.fireInboundBufferUpdated();
+
+        }
     }
 
-    private void initPipeline(ChannelHandlerContext ctx) {
+    private boolean initPipeline(ChannelHandlerContext ctx) {
         // Get the SslHandler from the ChannelPipeline so we can obtain the SslEngine from it.
         SslHandler handler = ctx.pipeline().get(SslHandler.class);
         if (handler == null) {
@@ -91,7 +94,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
         switch (protocol) {
         case None:
             // Not done with choosing the protocol, so just return here for now,
-            return;
+            return false;
         case SpdyVersion2:
             addSpdyHandlers(ctx, 2);
             break;
@@ -105,9 +108,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
         default:
             throw new IllegalStateException("Unknown SelectedProtocol");
         }
-        // When we reached here we can remove this handler as its now clear what protocol we want to use
-        // from this point on.
-        pipeline.remove(this);
+        return true;
     }
 
     /**
