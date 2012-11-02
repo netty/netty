@@ -30,16 +30,25 @@ import io.netty.handler.codec.http.HttpResponse;
  * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends
-        MessageToMessageCodec<HttpRequest, HttpRequest, Object, Object> {
+        MessageToMessageCodec<Object, Object, HttpMessage, HttpMessage> {
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new LinkedList<Integer>();
 
     public SpdyHttpResponseStreamIdHandler() {
-        super(new Class<?>[] { HttpRequest.class, SpdyRstStreamFrame.class }, new Class<?>[] { HttpResponse.class });
+        super(new Class<?>[] { HttpMessage.class, SpdyRstStreamFrame.class }, new Class<?>[] { HttpMessage.class });
     }
 
     @Override
-    public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public HttpMessage encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+        Integer id = ids.poll();
+        if (id != null && id != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
+            SpdyHttpHeaders.setStreamId(msg, id);
+        }
+        return msg;
+    }
+
+    @Override
+    public Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpMessage) {
             boolean contains = ((HttpMessage) msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
@@ -51,15 +60,6 @@ public class SpdyHttpResponseStreamIdHandler extends
             ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
         }
 
-        return msg;
-    }
-
-    @Override
-    public HttpRequest decode(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
-        Integer id = ids.poll();
-        if (id != null && id != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
-            SpdyHttpHeaders.setStreamId(msg, id);
-        }
         return msg;
     }
 
