@@ -181,7 +181,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
         // Consolidate if the number of components will exceed the maximum by this operation.
         final int numComponents = components.size();
-        if (numComponents + cnt > maxNumComponents) {
+        if (numComponents + cnt >= maxNumComponents) {
             final ByteBuf consolidated;
             if (numComponents != 0) {
                 final int capacity = components.get(numComponents - 1).endOffset + readableBytes;
@@ -230,6 +230,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
             if (b.readable()) {
                 addComponent(cIndex ++, b);
+                int size = components.size();
+                if (cIndex > size) {
+                    // was consolidated, so adjust index. #707
+                    cIndex = size;
+                }
             }
         }
         return this;
