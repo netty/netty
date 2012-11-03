@@ -16,7 +16,6 @@
 package io.netty.example.http.upload;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -24,7 +23,6 @@ import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMessageDecoder;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
@@ -49,7 +47,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 /**
- * This class is mean to be run against {@link HttpUploadServer}.
+ * This class is meant to be run against {@link HttpUploadServer}.
  */
 public class HttpUploadClient {
 
@@ -139,7 +137,7 @@ public class HttpUploadClient {
         }
 
         // Multipart Post form: factory used
-        //formPostMultipart(b, host, port, uriFile, factory, headers, bodylist);
+        formPostMultipart(b, host, port, uriFile, factory, headers, bodylist);
 
         // Shut down executor threads to exit.
         b.shutdown();
@@ -383,6 +381,7 @@ public class HttpUploadClient {
     // use to simulate a small TEXTAREA field in a form
     private static final String textArea = "short text";
     // use to simulate a big TEXTAREA field in a form
+    /*
     private static final String textAreaLong = "lkjlkjlKJLKJLKJLKJLJlkj lklkj\r\n\r\nLKJJJJJJJJKKKKKKKKKKKKKKK ����&\r\n\r\n"
             + "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n"
             + "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n"
@@ -969,5 +968,5 @@ public class HttpUploadClient {
             + "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n"
             + "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n"
             + "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\r\n";
-
+     */
 }

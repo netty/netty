@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpTransferEncoding;
 import io.netty.handler.stream.ChunkedMessageInput;
 
 /**
@@ -80,8 +81,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     private String multipartDataBoundary;
 
     /**
-     * If multipart, there could be internal multiparts (mixed) to the global
-     * multipart. Only one level is allowed.
+     * If multipart, there could be internal multiparts (mixed) to the global multipart. Only one level is allowed.
      */
     private String multipartMixedBoundary;
     /**
@@ -175,8 +175,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     }
 
     /**
-     * Does the last non empty chunk already encoded so that next chunk will be
-     * empty (last chunk)
+     * Does the last non empty chunk already encoded so that next chunk will be empty (last chunk)
      */
     private boolean isLastChunk;
     /**
@@ -246,8 +245,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
      * @throws NullPointerException
      *             for datas
      * @throws ErrorDataEncoderException
-     *             if the encoding is in error or if the finalize were already
-     *             done
+     *             if the encoding is in error or if the finalize were already done
      */
     public void setBodyHttpDatas(List<InterfaceHttpData> datas) throws ErrorDataEncoderException {
         if (datas == null) {
@@ -273,8 +271,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
      * @throws NullPointerException
      *             for name
      * @throws ErrorDataEncoderException
-     *             if the encoding is in error or if the finalize were already
-     *             done
+     *             if the encoding is in error or if the finalize were already done
      */
     public void addBodyAttribute(String name, String value) throws ErrorDataEncoderException {
         if (name == null) {
@@ -294,18 +291,15 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
      * @param name
      *            the name of the parameter
      * @param file
-     *            the file to be uploaded (if not Multipart mode, only the
-     *            filename will be included)
+     *            the file to be uploaded (if not Multipart mode, only the filename will be included)
      * @param contentType
      *            the associated contentType for the File
      * @param isText
-     *            True if this file should be transmitted in Text format (else
-     *            binary)
+     *            True if this file should be transmitted in Text format (else binary)
      * @throws NullPointerException
      *             for name and file
      * @throws ErrorDataEncoderException
-     *             if the encoding is in error or if the finalize were already
-     *             done
+     *             if the encoding is in error or if the finalize were already done
      */
     public void addBodyFileUpload(String name, File file, String contentType, boolean isText)
             throws ErrorDataEncoderException {
@@ -338,8 +332,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     }
 
     /**
-     * Add a series of Files associated with one File parameter (implied Mixed
-     * mode in Multipart)
+     * Add a series of Files associated with one File parameter (implied Mixed mode in Multipart)
      * 
      * @param name
      *            the name of the parameter
@@ -348,13 +341,11 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
      * @param contentType
      *            the array of content Types associated with each file
      * @param isText
-     *            the array of isText attribute (False meaning binary mode) for
-     *            each file
+     *            the array of isText attribute (False meaning binary mode) for each file
      * @throws NullPointerException
      *             also throws if array have different sizes
      * @throws ErrorDataEncoderException
-     *             if the encoding is in error or if the finalize were already
-     *             done
+     *             if the encoding is in error or if the finalize were already done
      */
     public void addBodyFileUploads(String name, File[] file, String[] contentType, boolean[] isText)
             throws ErrorDataEncoderException {
@@ -373,8 +364,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
      * @throws NullPointerException
      *             for data
      * @throws ErrorDataEncoderException
-     *             if the encoding is in error or if the finalize were already
-     *             done
+     *             if the encoding is in error or if the finalize were already done
      */
     public void addBodyHttpData(InterfaceHttpData data) throws ErrorDataEncoderException {
         if (headerFinalized) {
@@ -410,24 +400,36 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
             return;
         }
         /*
-         * Logic: if not Attribute: add Data to body list if (duringMixedMode)
-         * add endmixedmultipart delimiter currentFileUpload = null
-         * duringMixedMode = false; add multipart delimiter, multipart body
-         * header and Data to multipart list reset currentFileUpload,
-         * duringMixedMode if FileUpload: take care of multiple file for one
-         * field => mixed mode if (duringMixeMode) if (currentFileUpload.name ==
-         * data.name) add mixedmultipart delimiter, mixedmultipart body header
-         * and Data to multipart list else add endmixedmultipart delimiter,
-         * multipart body header and Data to multipart list currentFileUpload =
-         * data duringMixedMode = false; else if (currentFileUpload.name ==
-         * data.name) change multipart body header of previous file into
-         * multipart list to mixedmultipart start, mixedmultipart body header
-         * add mixedmultipart delimiter, mixedmultipart body header and Data to
-         * multipart list duringMixedMode = true else add multipart delimiter,
-         * multipart body header and Data to multipart list currentFileUpload =
-         * data duringMixedMode = false; Do not add last delimiter! Could be: if
-         * duringmixedmode: endmixedmultipart + endmultipart else only
-         * endmultipart
+         * Logic:
+         * if not Attribute:
+         *      add Data to body list
+         *      if (duringMixedMode)
+         *          add endmixedmultipart delimiter
+         *          currentFileUpload = null
+         *          duringMixedMode = false;
+         *      add multipart delimiter, multipart body header and Data to multipart list
+         *      reset currentFileUpload, duringMixedMode
+         * if FileUpload: take care of multiple file for one field => mixed mode
+         *      if (duringMixeMode)
+         *          if (currentFileUpload.name == data.name)
+         *              add mixedmultipart delimiter, mixedmultipart body header and Data to multipart list
+         *          else
+         *              add endmixedmultipart delimiter, multipart body header and Data to multipart list
+         *              currentFileUpload = data
+         *              duringMixedMode = false;
+         *      else
+         *          if (currentFileUpload.name == data.name)
+         *              change multipart body header of previous file into multipart list to
+         *                      mixedmultipart start, mixedmultipart body header
+         *              add mixedmultipart delimiter, mixedmultipart body header and Data to multipart list
+         *              duringMixedMode = true
+         *          else
+         *              add multipart delimiter, multipart body header and Data to multipart list
+         *              currentFileUpload = data
+         *              duringMixedMode = false;
+         * Do not add last delimiter! Could be:
+         * if duringmixedmode: endmixedmultipart + endmultipart
+         * else only endmultipart
          */
         if (data instanceof Attribute) {
             if (duringMixedMode) {
@@ -590,16 +592,14 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     private ListIterator<InterfaceHttpData> iterator;
 
     /**
-     * Finalize the request by preparing the Header in the request and returns
-     * the request ready to be sent.<br>
+     * Finalize the request by preparing the Header in the request and returns the request ready to be sent.<br>
      * Once finalized, no data must be added.<br>
-     * If the request does not need chunk (isChunked() == false), this request
-     * is the only object to send to the remote server.
+     * If the request does not need chunk (isChunked() == false), this request is the only object to send to the remote
+     * server.
      * 
      * @return the request object (chunked or not according to size of body)
      * @throws ErrorDataEncoderException
-     *             if the encoding is in error or if the finalize were already
-     *             done
+     *             if the encoding is in error or if the finalize were already done
      */
     public HttpRequest finalizeRequest() throws ErrorDataEncoderException {
         // Finalize the multipartHttpDatas
@@ -664,7 +664,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                     }
                 }
             }
-            request.addHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+            request.setTransferEncoding(HttpTransferEncoding.CHUNKED);
             request.setContent(EMPTY_BUFFER);
         } else {
             // get the only one body and set it to the request
@@ -706,20 +706,17 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
      */
     private ByteBuf currentBuffer;
     /**
-     * The current InterfaceHttpData to encode (used if more chunks are
-     * available)
+     * The current InterfaceHttpData to encode (used if more chunks are available)
      */
     private InterfaceHttpData currentData;
     /**
-     * If not multipart, does the currentBuffer stands for the Key or for the
-     * Value
+     * If not multipart, does the currentBuffer stands for the Key or for the Value
      */
     private boolean isKey = true;
 
     /**
      * 
-     * @return the next ByteBuf to send as a HttpChunk and modifying
-     *         currentBuffer accordingly
+     * @return the next ByteBuf to send as a HttpChunk and modifying currentBuffer accordingly
      */
     private ByteBuf fillByteBuf() {
         int length = currentBuffer.readableBytes();
@@ -736,9 +733,8 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     }
 
     /**
-     * From the current context (currentBuffer and currentData), returns the
-     * next HttpChunk (if possible) trying to get sizeleft bytes more into the
-     * currentBuffer. This is the Multipart version.
+     * From the current context (currentBuffer and currentData), returns the next HttpChunk (if possible) trying to get
+     * sizeleft bytes more into the currentBuffer. This is the Multipart version.
      * 
      * @param sizeleft
      *            the number of bytes to try to get from currentData
@@ -795,9 +791,8 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     }
 
     /**
-     * From the current context (currentBuffer and currentData), returns the
-     * next HttpChunk (if possible) trying to get sizeleft bytes more into the
-     * currentBuffer. This is the UrlEncoded version.
+     * From the current context (currentBuffer and currentData), returns the next HttpChunk (if possible) trying to get
+     * sizeleft bytes more into the currentBuffer. This is the UrlEncoded version.
      * 
      * @param sizeleft
      *            the number of bytes to try to get from currentData
@@ -811,8 +806,9 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
         }
         int size = sizeleft;
         ByteBuf buffer;
+
+        // Set name=
         if (isKey) {
-            // get name
             String key = currentData.getName();
             buffer = wrappedBuffer(key.getBytes());
             isKey = false;
@@ -830,19 +826,23 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                 return new DefaultHttpChunk(buffer);
             }
         }
+
+        // Put value into buffer
         try {
             buffer = ((Attribute) currentData).getChunk(size);
         } catch (IOException e) {
             throw new ErrorDataEncoderException(e);
         }
+
+        // Figure out delimiter
         ByteBuf delimiter = null;
         if (buffer.readableBytes() < size) {
-            // delimiter
             isKey = true;
             delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes()) : null;
         }
+
+        // End for current InterfaceHttpData, need potentially more data
         if (buffer.capacity() == 0) {
-            // end for current InterfaceHttpData, need potentially more data
             currentData = null;
             if (currentBuffer == null) {
                 currentBuffer = delimiter;
@@ -857,6 +857,8 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
             }
             return null;
         }
+
+        // Put it all together: name=value&
         if (currentBuffer == null) {
             if (delimiter != null) {
                 currentBuffer = wrappedBuffer(buffer, delimiter);
@@ -870,14 +872,15 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                 currentBuffer = wrappedBuffer(currentBuffer, buffer);
             }
         }
+
+        // end for current InterfaceHttpData, need more data
         if (currentBuffer.readableBytes() < HttpPostBodyUtil.chunkSize) {
-            // end for current InterfaceHttpData, need more data
             currentData = null;
             isKey = true;
             return null;
         }
+
         buffer = fillByteBuf();
-        // size = 0
         return new DefaultHttpChunk(buffer);
     }
 
@@ -887,9 +890,8 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     }
 
     /**
-     * Returns the next available HttpChunk. The caller is responsible to test
-     * if this chunk is the last one (isLast()), in order to stop calling this
-     * method.
+     * Returns the next available HttpChunk. The caller is responsible to test if this chunk is the last one (isLast()),
+     * in order to stop calling this method.
      * 
      * @return the next available HttpChunk
      * @throws ErrorDataEncoderException
@@ -905,9 +907,8 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
     }
 
     /**
-     * Returns the next available HttpChunk. The caller is responsible to test
-     * if this chunk is the last one (isLast()), in order to stop calling this
-     * method.
+     * Returns the next available HttpChunk. The caller is responsible to test if this chunk is the last one (isLast()),
+     * in order to stop calling this method.
      * 
      * @return the next available HttpChunk
      * @throws ErrorDataEncoderException
