@@ -229,12 +229,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             }
 
             if (b.readable()) {
-                addComponent(cIndex ++, b);
-                int size = components.size();
-                if (cIndex > size) {
-                    // was consolidated, so adjust index. #707
-                    cIndex = size;
-                }
+                // Always append b to end of components so buffers are sequenced as specified
+                // in the arg list
+                addComponent(components.size(), b);
             }
         }
         return this;
