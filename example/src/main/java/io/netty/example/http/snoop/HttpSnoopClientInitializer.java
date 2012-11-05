@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslHandler;
 
 import javax.net.ssl.SSLEngine;
 
@@ -46,8 +47,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
                 SecureChatSslContextFactory.getClientContext().createSSLEngine();
             engine.setUseClientMode(true);
 
-            // FIXME: Port SslHandler to the new API
-            //p.addLast("ssl", new SslHandler(engine));
+            p.addLast("ssl", new SslHandler(engine));
         }
 
         p.addLast("codec", new HttpClientCodec());

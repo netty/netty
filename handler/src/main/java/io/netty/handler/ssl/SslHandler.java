@@ -802,6 +802,7 @@ public class SslHandler
                     break;
                 case FINISHED:
                     setHandshakeSuccess();
+                    wrapLater = true;
                     continue;
                 case NOT_HANDSHAKING:
                     break;
