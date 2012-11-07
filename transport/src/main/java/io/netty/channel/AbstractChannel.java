@@ -399,7 +399,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(EventLoop eventLoop, ChannelFuture future) {
+        public final void register(EventLoop eventLoop, final ChannelFuture future) {
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
@@ -418,6 +418,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // check if the eventLoop which was given is currently in the eventloop.
+            // if that is the case we are safe to call register, if not we need to
+            // schedule the execution as otherwise we may say some race-conditions.
+            //
+            // See https://github.com/netty/netty/issues/654
+            if (eventLoop.inEventLoop()) {
+                register0(future);
+            } else {
+                eventLoop.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        register0(future);
+                    }
+                });
+            }
+
+        }
+
+        private void register0(ChannelFuture future) {
             try {
                 Runnable postRegisterTask = doRegister();
                 registered = true;
