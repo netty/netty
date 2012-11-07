@@ -318,15 +318,8 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     protected ChannelBuffer appendToCumulation(ChannelBuffer input) {
         ChannelBuffer cumulation = this.cumulation;
         assert cumulation.readable();
-        if (cumulation instanceof CompositeChannelBuffer) {
-            // Make sure the resulting cumulation buffer has no more than the configured components.
-            CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;
-            if (composite.numComponents() >= maxCumulationBufferComponents) {
-                cumulation = composite.copy();
-            }
-        }
-
-        this.cumulation = input = ChannelBuffers.wrappedBuffer(cumulation, input);
+        this.cumulation.writeBytes(input);
+        input = this.cumulation;
         return input;
     }
 
@@ -500,7 +493,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-        return factory.getBuffer(Math.max(minimumCapacity, 256));
+        return ChannelBuffers.dynamicBuffer(factory);
     }
 
     /**
