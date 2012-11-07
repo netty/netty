@@ -23,7 +23,6 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -200,22 +199,11 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
 
     protected void appendToCumulation(ChannelBuffer input) {
         ChannelBuffer cumulation = this.currentMessage.getContent();
-        if (cumulation instanceof CompositeChannelBuffer) {
-            // Make sure the resulting cumulation buffer has no more than the configured components.
-            CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;
-            if (composite.numComponents() >= maxCumulationBufferComponents) {
-                currentMessage.setContent(ChannelBuffers.wrappedBuffer(composite.copy(), input));
-            } else {
-                List<ChannelBuffer> decomposed = composite.decompose(0, composite.readableBytes());
-                ChannelBuffer[] buffers = decomposed.toArray(new ChannelBuffer[decomposed.size() + 1]);
-                buffers[buffers.length - 1] = input;
-
-                currentMessage.setContent(ChannelBuffers.wrappedBuffer(buffers));
-            }
-        } else {
-            currentMessage.setContent(ChannelBuffers.wrappedBuffer(cumulation, input));
-        }
-
+        if(cumulation == null) {
+            cumulation = ChannelBuffers.dynamicBuffer(input.factory());            
+        }         
+        cumulation.writeBytes(input);
+        currentMessage.setContent(cumulation);        
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
