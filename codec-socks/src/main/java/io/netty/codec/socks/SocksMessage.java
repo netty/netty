@@ -53,7 +53,7 @@ public abstract class SocksMessage {
                     return code;
                 }
             }
-            return null;
+            return UNKNOWN;
         }
 
         public byte getByteValue() {
@@ -80,7 +80,7 @@ public abstract class SocksMessage {
                     return code;
                 }
             }
-            return null;
+            return UNKNOWN;
         }
 
         public byte getByteValue() {
@@ -107,7 +107,7 @@ public abstract class SocksMessage {
                     return code;
                 }
             }
-            return null;
+            return UNKNOWN;
         }
 
         public byte getByteValue() {
@@ -132,7 +132,7 @@ public abstract class SocksMessage {
                     return code;
                 }
             }
-            return null;
+            return FAILURE;
         }
 
         public byte getByteValue() {
@@ -165,7 +165,7 @@ public abstract class SocksMessage {
                     return code;
                 }
             }
-            return null;
+            return UNASSIGNED;
         }
 
         public byte getByteValue() {
