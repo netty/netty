@@ -29,7 +29,7 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksResponse, So
     private SocksMessage.ProtocolVersion version;
     private SocksMessage.AuthScheme authScheme;
 
-    private SocksResponse msg = new UnknownSocksResponse();
+    private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
 
     public SocksInitResponseDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);

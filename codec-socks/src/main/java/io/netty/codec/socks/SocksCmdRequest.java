@@ -16,7 +16,6 @@
 package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public final class SocksCmdRequest extends SocksRequest {
     private final CmdType cmdType;
@@ -57,7 +56,7 @@ public final class SocksCmdRequest extends SocksRequest {
         switch (addressType) {
 
             case IPv4: {
-                throw new NotImplementedException();
+                throw new UnsupportedOperationException();
             }
 
             case DOMAIN: {
@@ -68,7 +67,7 @@ public final class SocksCmdRequest extends SocksRequest {
             }
 
             case IPv6: {
-                throw new NotImplementedException();
+                throw new UnsupportedOperationException();
             }
         }
     }

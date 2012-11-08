@@ -18,8 +18,7 @@ package io.netty.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-
-import java.nio.charset.Charset;
+import io.netty.util.CharsetUtil;
 
 public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, SocksAuthRequestDecoder.State> {
     private static final String name = "SOCKS_AUTH_REQUEST_DECODER";
@@ -32,7 +31,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
     private int fieldLength;
     private String username;
     private String password;
-    private SocksRequest msg = new UnknownSocksRequest();
+    private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
 
     public SocksAuthRequestDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);
@@ -43,20 +42,19 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.ProtocolVersion.fromByte((byte) byteBuf.readByte());
-                System.out.println(" " + version);
                 if (version != SocksMessage.ProtocolVersion.SOCKS5) {
-                    return new UnknownSocksRequest();
+                    break;
                 }
                 checkpoint(State.READ_USERNAME);
             }
             case READ_USERNAME: {
                 fieldLength = byteBuf.readByte();
-                username = byteBuf.readBytes(fieldLength).toString(Charset.forName("US-ASCII"));
+                username = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                 checkpoint(State.READ_PASSWORD);
             }
             case READ_PASSWORD: {
                 fieldLength = byteBuf.readByte();
-                password = byteBuf.readBytes(fieldLength).toString(Charset.forName("US-ASCII"));
+                password = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                 msg = new SocksAuthRequest(username, password);
             }
         }

@@ -18,8 +18,7 @@ package io.netty.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-
-import java.nio.charset.Charset;
+import io.netty.util.CharsetUtil;
 
 public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, SocksCmdRequestDecoder.State> {
     private static final String name = "SOCKS_CMD_REQUEST_DECODER";
@@ -35,7 +34,7 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, Socks
     private byte reserved;
     private String host;
     private int port;
-    private SocksRequest msg = new UnknownSocksRequest();
+    private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
 
     public SocksCmdRequestDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);
@@ -68,7 +67,7 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, Socks
                     }
                     case DOMAIN: {
                         fieldLength = byteBuf.readByte();
-                        host = byteBuf.readBytes(fieldLength).toString(Charset.forName("US-ASCII"));
+                        host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                         port = byteBuf.readUnsignedShort();
                         msg = new SocksCmdRequest(cmdType, addressType, host, port);
                         break;
@@ -76,13 +75,12 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, Socks
                     case IPv6:
                     case UNKNOWN:
                         byteBuf.clear();
-                        msg = new UnknownSocksRequest();
                         break;
                 }
             }
         }
         ctx.pipeline().remove(this);
-        return msg;  //To change body of implemented methods use File | Settings | File Templates.
+        return msg;
     }
 
     enum State {
@@ -90,5 +88,4 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, Socks
         READ_CMD_HEADER,
         READ_CMD_ADDRESS
     }
-
 }

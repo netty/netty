@@ -18,6 +18,7 @@ package io.netty.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.util.CharsetUtil;
 
 import java.nio.charset.Charset;
 
@@ -35,8 +36,7 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, Soc
     private byte reserved;
     private String host;
     private int port;
-
-    private SocksResponse msg = new UnknownSocksResponse();
+    private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
 
 
     public SocksCmdResponseDecoder() {
@@ -70,7 +70,7 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, Soc
                     }
                     case DOMAIN: {
                         fieldLength = byteBuf.readByte();
-                        host = byteBuf.readBytes(fieldLength).toString(Charset.forName("US-ASCII"));
+                        host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
                         port = byteBuf.readUnsignedShort();
                         msg = new SocksCmdResponse(cmdStatus, addressType);
                         break;

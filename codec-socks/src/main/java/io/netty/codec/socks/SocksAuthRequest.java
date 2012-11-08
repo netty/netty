@@ -16,6 +16,7 @@
 package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
 
 public final class SocksAuthRequest extends SocksRequest {
     private final String username;
@@ -39,8 +40,8 @@ public final class SocksAuthRequest extends SocksRequest {
     public void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(getProtocolVersion().getByteValue());
         byteBuf.writeByte(username.length());
-        byteBuf.writeBytes(username.getBytes());
+        byteBuf.writeBytes(username.getBytes(CharsetUtil.US_ASCII));
         byteBuf.writeByte(password.length());
-        byteBuf.writeBytes(password.getBytes());
+        byteBuf.writeBytes(password.getBytes(CharsetUtil.US_ASCII));
     }
 }

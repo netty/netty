@@ -16,6 +16,9 @@
 package io.netty.codec.socks;
 
 class SocksCommonUtils {
+    public static final SocksRequest UNKNOWN_SOCKS_REQUEST = new UnknownSocksRequest();
+    public static final SocksResponse UNKNOWN_SOCKS_RESPONSE = new UnknownSocksResponse();
+
     private static final int SECOND_ADDRESS_OCTET_SHIFT = 16;
     private static final int FIRST_ADDRESS_OCTET_SHIFT = 24;
     private static final int THIRD_ADDRESS_OCTET_SHIFT = 8;

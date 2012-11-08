@@ -32,7 +32,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
     private SocksMessage.ProtocolVersion version;
     private List<SocksMessage.AuthScheme> authSchemes = new ArrayList<SocksMessage.AuthScheme>();
     private byte authSchemeNum;
-    private SocksRequest msg = new UnknownSocksRequest();
+    private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
 
     public SocksInitRequestDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);
