@@ -25,6 +25,6 @@ public class UnknownSocksMessage extends SocksMessage {
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        //To change body of implemented methods use File | Settings | File Templates.
+        // NOOP
     }
 }
