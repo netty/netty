@@ -134,12 +134,10 @@ public class CookieDecoder {
                         long maxAgeMillis =
                             new CookieDateFormat().parse(value).getTime() -
                             System.currentTimeMillis();
-                        if (maxAgeMillis <= 0) {
-                            maxAge = 0;
-                        } else {
-                            maxAge = (int) (maxAgeMillis / 1000) +
-                                     (maxAgeMillis % 1000 != 0? 1 : 0);
-                        }
+
+                        maxAge = (int) (maxAgeMillis / 1000) +
+                                 (maxAgeMillis % 1000 != 0? 1 : 0);
+
                     } catch (ParseException e) {
                         // Ignore.
                     }
