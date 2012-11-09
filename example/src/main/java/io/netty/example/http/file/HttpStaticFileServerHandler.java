@@ -142,7 +142,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
 
         // Cache Validation
-        String ifModifiedSince = request.getHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
+        String ifModifiedSince = request.getHeader(IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.equals("")) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
@@ -232,7 +232,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
 
     private static void sendListing(ChannelHandlerContext ctx, File dir) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
 
         StringBuilder buf = new StringBuilder();
@@ -302,7 +302,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      *            Context
      */
     private static void sendNotModified(ChannelHandlerContext ctx) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, NOT_MODIFIED);
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
@@ -320,7 +320,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
         Calendar time = new GregorianCalendar();
-        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+        response.setHeader(DATE, dateFormatter.format(time.getTime()));
     }
 
     /**
@@ -337,14 +337,14 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Date header
         Calendar time = new GregorianCalendar();
-        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+        response.setHeader(DATE, dateFormatter.format(time.getTime()));
 
         // Add cache headers
         time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
-        response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
-        response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
+        response.setHeader(EXPIRES, dateFormatter.format(time.getTime()));
+        response.setHeader(CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
         response.setHeader(
-                HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
+                LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
     }
 
     /**
@@ -357,7 +357,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      */
     private static void setContentTypeHeader(HttpResponse response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
-        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+        response.setHeader(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }
 
 }

@@ -39,7 +39,7 @@ import static com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@code "sctpInitMaxStreams"}</td>
- * <td>{@link #setInitMaxStreams(com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams)} (int)}}</td>
+ * <td>{@link #setInitMaxStreams(InitMaxStreams)} (int)}}</td>
  * </tr>
  * </table>
  */
