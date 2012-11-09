@@ -15,19 +15,15 @@
  */
 package io.netty.util;
 
-import static org.junit.Assert.*;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class NetworkConstantsTest {
 
     @Test
-    public void testLocalhost() throws UnknownHostException {
+    public void testLocalhost() {
         assertNotNull(NetworkConstants.LOCALHOST);
-        assertEquals(NetworkConstants.LOCALHOST, InetAddress.getLocalHost());
     }
 
     @Test
