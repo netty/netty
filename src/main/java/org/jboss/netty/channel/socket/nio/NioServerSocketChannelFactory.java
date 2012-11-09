@@ -22,12 +22,10 @@ import java.util.concurrent.RejectedExecutionException;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side NIO-based
@@ -87,7 +85,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     final Executor bossExecutor;
     private final WorkerPool<NioWorker> workerPool;
-    private final ChannelSink sink;
+    private final NioServerSocketPipelineSink sink;
 
     /**
      * Create a new {@link NioServerSocketChannelFactory} using {@link Executors#newCachedThreadPool()}
@@ -128,7 +126,25 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
-        this(bossExecutor, new NioWorkerPool(workerExecutor, workerCount));
+        this(bossExecutor, 1, workerExecutor, workerCount);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss threads
+     * @param bossCount
+     *        the number of boss threads
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param workerCount
+     *        the maximum number of I/O worker threads
+     */
+    public NioServerSocketChannelFactory(
+            Executor bossExecutor, int bossCount, Executor workerExecutor,
+            int workerCount) {
+        this(bossExecutor, bossCount, new NioWorkerPool(workerExecutor, workerCount));
     }
 
     /**
@@ -142,6 +158,22 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, WorkerPool<NioWorker> workerPool) {
+        this(bossExecutor, 1 , workerPool);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss threads
+     * @param bossCount
+     *        the number of boss threads
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link NioWorker} that execute
+     *        the I/O worker threads
+     */
+    public NioServerSocketChannelFactory(
+            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
         if (bossExecutor == null) {
             throw new NullPointerException("bossExecutor");
         }
@@ -151,15 +183,15 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
         this.bossExecutor = bossExecutor;
         this.workerPool = workerPool;
-        sink = new NioServerSocketPipelineSink(workerPool);
+        sink = new NioServerSocketPipelineSink(bossExecutor, bossCount, workerPool);
     }
 
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioServerSocketChannel(this, pipeline, sink);
+        return new NioServerSocketChannel(this, pipeline, sink, sink.nextBoss());
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor);
+        sink.releaseExternalResources();
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }

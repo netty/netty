@@ -19,10 +19,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.channel.AbstractServerChannel;
 import org.jboss.netty.channel.ChannelException;
@@ -41,16 +38,17 @@ class NioServerSocketChannel extends AbstractServerChannel
         InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     final ServerSocketChannel socket;
-    final Lock shutdownLock = new ReentrantLock();
-    volatile Selector selector;
+    final Runnable boss;
+
     private final ServerSocketChannelConfig config;
 
     NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink) {
+            ChannelSink sink, Runnable boss) {
 
         super(factory, pipeline, sink);
+        this.boss = boss;
 
         try {
             socket = ServerSocketChannel.open();
