@@ -20,10 +20,13 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 /**
@@ -60,30 +63,26 @@ public final class NetworkConstants {
     static {
 
         //Start the process of discovering localhost
-        InetAddress localhost = null;
-
+        InetAddress localhost;
         try {
-            //Let's start by getting localhost automatically
             localhost = InetAddress.getLocalHost();
-        } catch (UnknownHostException e) {
-            //No? That's okay.
+            validateHost(localhost);
+        } catch (IOException e) {
+            // The default local host names did not work.  Try hard-coded IPv4 address.
             try {
-                //Try to force an IPv4 localhost address
                 localhost = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
-            } catch (UnknownHostException e1) {
-                //No? Okay. You must be using IPv6
+                validateHost(localhost);
+            } catch (IOException e1) {
+                // The hard-coded IPv4 address did not work.  Try hard coded IPv6 address.
                 try {
-                    //Try to force an IPv6 localhost address
-                    localhost = InetAddress.getByAddress(
-                            new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
-                } catch (UnknownHostException e2) {
-                    //No? Okay.
-                    logger.error("Failed to resolve localhost - Incorrect network configuration?", e2);
+                    localhost = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+                    validateHost(localhost);
+                } catch (IOException e2) {
+                    throw new Error("Failed to resolve localhost - incorrect network configuration?", e2);
                 }
             }
         }
 
-        //Set the localhost constant
         LOCALHOST = localhost;
 
         //Prepare to get the local NetworkInterface
@@ -141,6 +140,41 @@ public final class NetworkConstants {
         }
 
         SOMAXCONN = somaxconn;
+    }
+
+    private static void validateHost(InetAddress host) throws IOException {
+        ServerSocket ss = null;
+        Socket s1 = null;
+        Socket s2 = null;
+        try {
+            ss = new ServerSocket();
+            ss.setReuseAddress(false);
+            ss.bind(new InetSocketAddress(host, 0));
+            s1 = new Socket(host, ss.getLocalPort());
+            s2 = ss.accept();
+        } finally {
+            if (s2 != null) {
+                try {
+                    s2.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+            if (s1 != null) {
+                try {
+                    s1.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+            if (ss != null) {
+                try {
+                    ss.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+        }
     }
 
     /**

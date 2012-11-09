@@ -30,7 +30,7 @@ public final class TestUtils {
     private static final int NUM_CANDIDATES = END_PORT - START_PORT;
 
     private static final List<Integer> PORTS = new ArrayList<Integer>();
-    private static Iterator<Integer> PORTS_ITERATOR;
+    private static Iterator<Integer> portIterator;
 
     static {
         for (int i = START_PORT; i < END_PORT; i ++) {
@@ -40,10 +40,10 @@ public final class TestUtils {
     }
 
     private static int nextCandidatePort() {
-        if (PORTS_ITERATOR == null || !PORTS_ITERATOR.hasNext()) {
-            PORTS_ITERATOR = PORTS.iterator();
+        if (portIterator == null || !portIterator.hasNext()) {
+            portIterator = PORTS.iterator();
         }
-        return PORTS_ITERATOR.next();
+        return portIterator.next();
     }
 
     /**
