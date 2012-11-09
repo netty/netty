@@ -22,12 +22,13 @@ import java.nio.channels.spi.AbstractSelectableChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public abstract class SctpServerChannel extends AbstractSelectableChannel {
     static {
         UnsupportedOperatingSystemException.raise();
     }
 
-    public static SctpServerChannel open() {
+    public static SctpServerChannel open() throws IOException {
         return null;
     }
 
