@@ -32,7 +32,7 @@ public final class CaseIgnoringComparator implements Comparator<String>, Seriali
         return o1.compareToIgnoreCase(o2);
     }
 
-    @SuppressWarnings("static-method")
+    @SuppressWarnings("MethodMayBeStatic")
     private Object readResolve() {
         return INSTANCE;
     }

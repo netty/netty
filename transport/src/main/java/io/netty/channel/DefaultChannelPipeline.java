@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.DefaultChannelHandlerContext.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
@@ -33,6 +32,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.netty.channel.DefaultChannelHandlerContext.*;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -920,7 +921,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return nextOutboundByteBuffer(tail);
     }
 
-    boolean hasNextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+    static boolean hasNextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
                 return false;
@@ -933,7 +934,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    boolean hasNextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+    static boolean hasNextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
         for (;;) {
             if (ctx == null) {
                 return false;
@@ -946,7 +947,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    ByteBuf nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+    static ByteBuf nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
         final DefaultChannelHandlerContext initialCtx = ctx;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
@@ -982,7 +983,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    MessageBuf<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+    static MessageBuf<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
         final DefaultChannelHandlerContext initialCtx = ctx;
         final Thread currentThread = Thread.currentThread();
         for (;;) {

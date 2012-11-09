@@ -108,7 +108,7 @@ public class WebSocketServerHandshakerFactory {
      * @param channel
      *            Channel
      */
-    public void sendUnsupportedWebSocketVersionResponse(Channel channel) {
+    public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
         HttpResponse res = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.SWITCHING_PROTOCOLS);
