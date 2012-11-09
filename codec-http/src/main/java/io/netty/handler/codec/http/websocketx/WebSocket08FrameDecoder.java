@@ -366,7 +366,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, String reason) throws CorruptedFrameException {
+    private void protocolViolation(ChannelHandlerContext ctx, String reason) {
         checkpoint(State.CORRUPT);
         if (ctx.channel().isActive()) {
             ctx.flush().addListener(ChannelFutureListener.CLOSE);
@@ -374,7 +374,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         throw new CorruptedFrameException(reason);
     }
 
-    private static int toFrameLength(long l) throws TooLongFrameException {
+    private static int toFrameLength(long l) {
         if (l > Integer.MAX_VALUE) {
             throw new TooLongFrameException("Length:" + l);
         } else {
@@ -382,7 +382,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void checkUTF8String(ChannelHandlerContext ctx, byte[] bytes) throws CorruptedFrameException {
+    private void checkUTF8String(ChannelHandlerContext ctx, byte[] bytes) {
         try {
             if (fragmentedFramesText == null) {
                 fragmentedFramesText = new UTF8Output(bytes);
@@ -394,8 +394,9 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
+    /** */
     protected void checkCloseFrameBody(
-            ChannelHandlerContext ctx, ByteBuf buffer) throws CorruptedFrameException {
+            ChannelHandlerContext ctx, ByteBuf buffer) {
         if (buffer == null || buffer.capacity() == 0) {
             return;
         }
