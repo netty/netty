@@ -319,7 +319,7 @@ final class SpdyCodecUtil {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             throw new IllegalArgumentException(
                     "name cannot be length zero");
         }
@@ -349,7 +349,7 @@ final class SpdyCodecUtil {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        if (value.length() == 0) {
+        if (value.isEmpty()) {
             throw new IllegalArgumentException(
                     "value cannot be length zero");
         }

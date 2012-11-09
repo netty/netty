@@ -74,7 +74,7 @@ public final class StringUtil {
             } else {
                 // Truncate trailing empty elements.
                 for (int i = res.size() - 1; i >= 0; i --) {
-                    if (res.get(i).length() == 0) {
+                    if (res.get(i).isEmpty()) {
                         res.remove(i);
                     } else {
                         break;

@@ -537,7 +537,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         String line = readHeader(buffer);
         String name = null;
         String value = null;
-        if (line.length() != 0) {
+        if (line.isEmpty()) {
             message.clearHeaders();
             do {
                 char firstChar = line.charAt(0);
@@ -553,7 +553,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                 }
 
                 line = readHeader(buffer);
-            } while (line.length() != 0);
+            } while (!line.isEmpty());
 
             // Add the last header.
             if (name != null) {
@@ -581,13 +581,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         headerSize = 0;
         String line = readHeader(buffer);
         String lastHeader = null;
-        if (line.length() != 0) {
+        if (!line.isEmpty()) {
             HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
                     List<String> current = trailer.getHeaders(lastHeader);
-                    if (current.size() != 0) {
+                    if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
                         String newString = current.get(lastPos) + line.trim();
                         current.set(lastPos, newString);
@@ -606,7 +606,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                 }
 
                 line = readHeader(buffer);
-            } while (line.length() != 0);
+            } while (!line.isEmpty());
 
             return trailer;
         }
