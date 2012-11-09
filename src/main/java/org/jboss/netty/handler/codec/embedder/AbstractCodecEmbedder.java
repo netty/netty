@@ -15,13 +15,6 @@
  */
 package org.jboss.netty.handler.codec.embedder;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.lang.reflect.Array;
-import java.util.ConcurrentModificationException;
-import java.util.LinkedList;
-import java.util.Queue;
-
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -35,6 +28,13 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+
+import java.lang.reflect.Array;
+import java.util.ConcurrentModificationException;
+import java.util.LinkedList;
+import java.util.Queue;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * A skeletal {@link CodecEmbedder} implementation.
@@ -91,7 +91,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         for (int i = 0; i < handlers.length; i ++) {
             ChannelHandler h = handlers[i];
             if (h == null) {
-                throw new NullPointerException("handlers[" + i + "]");
+                throw new NullPointerException("handlers[" + i + ']');
             }
             pipeline.addLast(String.valueOf(i), handlers[i]);
         }

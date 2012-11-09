@@ -15,6 +15,9 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,9 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.RejectedExecutionException;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is recommended
@@ -635,7 +635,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by a user handler " +
-                        "while handling an exception event (" + e + ")", t);
+                        "while handling an exception event (" + e + ')', t);
             }
 
             return;

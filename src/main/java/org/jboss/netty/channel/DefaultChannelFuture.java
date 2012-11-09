@@ -15,16 +15,16 @@
  */
 package org.jboss.netty.channel;
 
-import static java.util.concurrent.TimeUnit.*;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * The default {@link ChannelFuture} implementation.  It is recommended to
@@ -430,7 +430,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + ".", t);
+                        ChannelFutureListener.class.getSimpleName() + '.', t);
             }
         }
     }
@@ -471,7 +471,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by " +
-                        ChannelFutureProgressListener.class.getSimpleName() + ".", t);
+                        ChannelFutureProgressListener.class.getSimpleName() + '.', t);
             }
         }
     }

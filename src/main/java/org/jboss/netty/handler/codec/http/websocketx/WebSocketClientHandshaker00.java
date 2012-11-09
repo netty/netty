@@ -152,7 +152,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
         if (wsURL.getQuery() != null && wsURL.getQuery().length() > 0) {
-            path = wsURL.getPath() + "?" + wsURL.getQuery();
+            path = wsURL.getPath() + '?' + wsURL.getQuery();
         }
 
         // Format request
@@ -166,14 +166,14 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ":" + wsPort;
+            originValue = originValue + ':' + wsPort;
         }
         request.addHeader(Names.ORIGIN, originValue);
 
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
         String expectedSubprotocol = getExpectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+        if (expectedSubprotocol != null && expectedSubprotocol.length() != 0) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
@@ -283,7 +283,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             int split = WebSocketUtil.randomNumber(1, key.length() - 1);
             String part1 = key.substring(0, split);
             String part2 = key.substring(split);
-            key = part1 + " " + part2;
+            key = part1 + ' ' + part2;
         }
 
         return key;

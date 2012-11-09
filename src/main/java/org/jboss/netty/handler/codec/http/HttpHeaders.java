@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.util.internal.CaseIgnoringComparator;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 
 /**
@@ -1055,7 +1055,7 @@ public class HttpHeaders {
 
         @Override
         public String toString() {
-            return key + "=" + value;
+            return key + '=' + value;
         }
     }
 }

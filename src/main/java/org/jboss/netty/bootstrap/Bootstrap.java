@@ -15,7 +15,12 @@
  */
 package org.jboss.netty.bootstrap;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,12 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * A helper class which initializes a {@link Channel}.  This class provides
@@ -210,7 +210,7 @@ public class Bootstrap implements ExternalResourceReleasable {
             throw new IllegalArgumentException(
                     "pipelineMap is not an ordered map. " +
                     "Please use " +
-                    LinkedHashMap.class.getName() + ".");
+                    LinkedHashMap.class.getName() + '.');
         }
 
         ChannelPipeline pipeline = pipeline();

@@ -15,10 +15,10 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+
 import java.io.File;
 import java.nio.charset.Charset;
-
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 /**
  * Disk FileUpload implementation that stores file into real files
@@ -118,7 +118,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
             HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
                 "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
                 HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
-                (charset != null? "; " + HttpHeaders.Values.CHARSET + "=" + charset + "\r\n" : "\r\n") +
+                (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset + "\r\n" : "\r\n") +
                 HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
                 "Completed: " + isCompleted() +
                 "\r\nIsInMemory: " + isInMemory() + "\r\nRealFile: " +

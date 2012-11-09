@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 public class DefaultFileRegion implements FileRegion {
 
@@ -59,7 +59,7 @@ public class DefaultFileRegion implements FileRegion {
         if (count < 0 || position < 0) {
             throw new IllegalArgumentException(
                     "position out of range: " + position +
-                    " (expected: 0 - " + (this.count - 1) + ")");
+                    " (expected: 0 - " + (this.count - 1) + ')');
         }
         if (count == 0) {
             return 0L;

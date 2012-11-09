@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
-import java.io.IOException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpConstants;
+
+import java.io.IOException;
 
 /**
  * Memory implementation of Attributes
@@ -99,7 +99,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public String toString() {
-        return getName() + "=" + getValue();
+        return getName() + '=' + getValue();
     }
 
 }

@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.frame;
 
-import java.net.SocketAddress;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -33,6 +31,8 @@ import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+
+import java.net.SocketAddress;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -433,7 +433,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
             } else if (oldReaderIndex == cumulation.readerIndex()) {
                 throw new IllegalStateException(
                         "decode() method must read at least one byte " +
-                        "if it returned a frame (caused by: " + getClass() + ")");
+                        "if it returned a frame (caused by: " + getClass() + ')');
             }
 
             unfoldAndFireMessageReceived(context, remoteAddress, frame);

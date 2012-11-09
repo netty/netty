@@ -15,26 +15,6 @@
  */
 package org.jboss.netty.example.http.file;
 
-import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
-import static org.jboss.netty.handler.codec.http.HttpMethod.*;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
-import static org.jboss.netty.handler.codec.http.HttpVersion.*;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.RandomAccessFile;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.Locale;
-import java.util.TimeZone;
-
-import javax.activation.MimetypesFileTypeMap;
-
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -54,6 +34,25 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.util.CharsetUtil;
+
+import javax.activation.MimetypesFileTypeMap;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
+
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+import static org.jboss.netty.handler.codec.http.HttpMethod.*;
+import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -133,7 +132,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
         // Cache Validation
         String ifModifiedSince = request.getHeader(IF_MODIFIED_SINCE);
-        if (ifModifiedSince != null && !ifModifiedSince.equals("")) {
+        if (ifModifiedSince != null && ifModifiedSince.length() != 0) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
 
@@ -228,8 +227,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
         // Simplistic dumb security check.
         // You will have to do something serious in the production environment.
-        if (uri.contains(File.separator + ".") ||
-            uri.contains("." + File.separator) ||
+        if (uri.contains(File.separator + '.') ||
+            uri.contains('.' + File.separator) ||
             uri.startsWith(".") || uri.endsWith(".")) {
             return null;
         }

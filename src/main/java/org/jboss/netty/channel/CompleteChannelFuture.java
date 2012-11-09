@@ -15,10 +15,10 @@
  */
 package org.jboss.netty.channel;
 
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * A skeletal {@link ChannelFuture} implementation which represents a
@@ -50,7 +50,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + ".", t);
+                        ChannelFutureListener.class.getSimpleName() + '.', t);
             }
         }
     }

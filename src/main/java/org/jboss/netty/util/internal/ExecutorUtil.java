@@ -60,7 +60,7 @@ public final class ExecutorUtil {
         Executor[] executorsCopy = new Executor[executors.length];
         for (int i = 0; i < executors.length; i ++) {
             if (executors[i] == null) {
-                throw new NullPointerException("executors[" + i + "]");
+                throw new NullPointerException("executors[" + i + ']');
             }
             executorsCopy[i] = executors[i];
         }

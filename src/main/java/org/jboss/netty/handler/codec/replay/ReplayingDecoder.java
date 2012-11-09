@@ -531,7 +531,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 throw new IllegalStateException(
                         "decode() method must consume at least one byte " +
                         "if it returned a decoded message (caused by: " +
-                        getClass() + ")");
+                        getClass() + ')');
             }
 
             // A successful decode

@@ -146,7 +146,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         rule = rule.replaceAll("\\.", "\\\\.");
         rule = rule.replaceAll("\\*", ".*");
         rule = rule.replaceAll("\\?", ".");
-        pattern += "(" + rule + ")";
+        pattern += '(' + rule + ')';
         return pattern;
     }
 

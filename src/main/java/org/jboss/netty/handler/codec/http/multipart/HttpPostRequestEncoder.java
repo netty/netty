@@ -420,7 +420,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             if (localcharset != null) {
                 // Content-Type: charset=charset
                 internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " +
-                        HttpHeaders.Values.CHARSET + "=" + localcharset + "\r\n");
+                        HttpHeaders.Values.CHARSET + '=' + localcharset + "\r\n");
             }
             // CRLF between body header and data
             internal.addValue("\r\n");
@@ -488,7 +488,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                         encodeAttribute(fileUpload.getName(), charset) + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " +
                         HttpPostBodyUtil.MULTIPART_MIXED + "; " + HttpHeaders.Values.BOUNDARY +
-                        "=" + multipartMixedBoundary + "\r\n\r\n";
+                        '=' + multipartMixedBoundary + "\r\n\r\n";
                     replacement += "--" + multipartMixedBoundary + "\r\n";
                     replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FILE + "; " + HttpPostBodyUtil.FILENAME + "=\"" +
@@ -545,7 +545,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                         ": " + HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value() +
                         "\r\n\r\n");
             } else if (fileUpload.getCharset() != null) {
-                internal.addValue("; " + HttpHeaders.Values.CHARSET + "=" +
+                internal.addValue("; " + HttpHeaders.Values.CHARSET + '=' +
                         fileUpload.getCharset() + "\r\n\r\n");
             } else {
                 internal.addValue("\r\n\r\n");
@@ -611,7 +611,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         }
         if (isMultipart) {
             String value = HttpHeaders.Values.MULTIPART_FORM_DATA + "; " +
-                HttpHeaders.Values.BOUNDARY + "=" + multipartDataBoundary;
+                HttpHeaders.Values.BOUNDARY + '=' + multipartDataBoundary;
             request.addHeader(HttpHeaders.Names.CONTENT_TYPE, value);
         } else {
             // Not multipart

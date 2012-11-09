@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.util.internal.ConcurrentHashMap;
+
 import java.net.SocketAddress;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
-
-import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -327,7 +327,7 @@ public abstract class AbstractChannel implements Channel {
             answer = "00" + answer;
             break;
         case 7:
-            answer = "0" + answer;
+            answer = '0' + answer;
             break;
         }
         return answer;

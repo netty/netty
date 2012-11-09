@@ -773,6 +773,6 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public String toString() {
         String result = super.toString();
         result = result.substring(0, result.length() - 1);
-        return result + ", components=" + components.length + ")";
+        return result + ", components=" + components.length + ')';
     }
 }

@@ -15,13 +15,7 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import static org.junit.Assert.*;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-
 import junit.framework.Assert;
-
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
@@ -34,7 +28,13 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+import static org.junit.Assert.*;
+
 public abstract class AbstractCompatibleMarshallingDecoderTest {
+    @SuppressWarnings("RedundantStringConstructorCall")
     private final String testObject = new String("test");
 
     @Test

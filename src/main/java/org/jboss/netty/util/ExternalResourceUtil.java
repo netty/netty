@@ -30,7 +30,7 @@ public final class ExternalResourceUtil {
 
         for (int i = 0; i < releasables.length; i ++) {
             if (releasables[i] == null) {
-                throw new NullPointerException("releasables[" + i + "]");
+                throw new NullPointerException("releasables[" + i + ']');
             }
             releasablesCopy[i] = releasables[i];
         }

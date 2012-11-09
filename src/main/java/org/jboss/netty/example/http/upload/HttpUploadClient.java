@@ -15,14 +15,6 @@
  */
 package org.jboss.netty.example.http.upload;
 
-import java.io.File;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -43,6 +35,14 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestEncoder.Error
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.Executors;
 
 public class HttpUploadClient {
 
@@ -189,7 +189,7 @@ public class HttpUploadClient {
                 HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + "," +
+        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ',' +
                 HttpHeaders.Values.DEFLATE);
 
         request.setHeader(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");

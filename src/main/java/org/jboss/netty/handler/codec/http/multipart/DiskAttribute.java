@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
-import java.io.IOException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpConstants;
+
+import java.io.IOException;
 
 /**
  * Disk implementation of Attributes
@@ -111,7 +111,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public String toString() {
         try {
-            return getName() + "=" + getValue();
+            return getName() + '=' + getValue();
         } catch (IOException e) {
             return getName() + "=IoException";
         }

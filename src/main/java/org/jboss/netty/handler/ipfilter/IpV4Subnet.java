@@ -219,7 +219,7 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
 
     @Override
     public String toString() {
-        return inetAddress.getHostAddress() + "/" + cidrMask;
+        return inetAddress.getHostAddress() + '/' + cidrMask;
     }
 
     @Override

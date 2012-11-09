@@ -432,7 +432,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         if (e instanceof ExceptionEvent) {
             logger.warn(
                     "An exception was thrown by a user handler " +
-                    "while handling an exception event (" + e + ")", t);
+                    "while handling an exception event (" + e + ')', t);
             return;
         }
 

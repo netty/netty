@@ -86,7 +86,7 @@ public abstract class CIDR implements Comparable<CIDR> {
      * @return the generated CIDR
      */
     public static CIDR newCIDR(String cidr) throws UnknownHostException {
-        int p = cidr.indexOf("/");
+        int p = cidr.indexOf('/');
         if (p < 0) {
             throw new UnknownHostException("Invalid CIDR notation used: " + cidr);
         }
@@ -121,7 +121,7 @@ public abstract class CIDR implements Comparable<CIDR> {
     /** @return the textual CIDR notation. */
     @Override
     public String toString() {
-        return baseAddress.getHostAddress() + "/" + cidrMask;
+        return baseAddress.getHostAddress() + '/' + cidrMask;
     }
 
     /** @return the end address of this block. */

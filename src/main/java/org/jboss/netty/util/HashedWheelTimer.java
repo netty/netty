@@ -15,6 +15,14 @@
  */
 package org.jboss.netty.util;
 
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.internal.DetectionUtil;
+import org.jboss.netty.util.internal.ReusableIterator;
+import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -26,14 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.internal.DetectionUtil;
-import org.jboss.netty.util.internal.ReusableIterator;
-import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -531,7 +531,7 @@ public class HashedWheelTimer implements Timer {
                 if (logger.isWarnEnabled()) {
                     logger.warn(
                             "An exception was thrown by " +
-                            TimerTask.class.getSimpleName() + ".", t);
+                            TimerTask.class.getSimpleName() + '.', t);
                 }
 
             }

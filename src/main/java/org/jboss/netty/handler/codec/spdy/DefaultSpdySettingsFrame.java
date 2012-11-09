@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import org.jboss.netty.util.internal.StringUtil;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
-import org.jboss.netty.util.internal.StringUtil;
 
 /**
  * The default {@link SpdySettingsFrame} implementation.
@@ -130,7 +130,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             Setting setting = e.getValue();
             buf.append("--> ");
             buf.append(e.getKey().toString());
-            buf.append(":");
+            buf.append(':');
             buf.append(setting.getValue());
             buf.append(" (persist value: ");
             buf.append(setting.isPersist());
