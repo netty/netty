@@ -50,7 +50,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
     private final int maxSpdyContentLength;
     private final int maxHttpContentLength;
 
-    public SpdyOrHttpChooser(int maxSpdyContentLength, int maxHttpContentLength) {
+    protected SpdyOrHttpChooser(int maxSpdyContentLength, int maxHttpContentLength) {
         this.maxSpdyContentLength = maxSpdyContentLength;
         this.maxHttpContentLength = maxHttpContentLength;
     }

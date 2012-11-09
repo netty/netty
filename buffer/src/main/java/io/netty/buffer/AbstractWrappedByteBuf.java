@@ -32,7 +32,7 @@ public abstract class AbstractWrappedByteBuf extends AbstractByteBuf implements 
 
     @Override
     public WrappedByteBuf capacity(int newCapacity) {
-        throw new ReadOnlyBufferException();
+        throw new UnsupportedOperationException();
     }
 
     @Override
