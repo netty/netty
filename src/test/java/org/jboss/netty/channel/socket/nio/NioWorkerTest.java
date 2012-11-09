@@ -19,6 +19,7 @@ import java.util.concurrent.Executor;
 
 public class NioWorkerTest extends AbstractNioWorkerTest {
 
+    @Override
     protected AbstractNioWorker createWorker(Executor executor) {
         return new NioWorker(executor);
     }

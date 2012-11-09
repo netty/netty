@@ -101,6 +101,7 @@ public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler
 
     static ChannelHandler forbiddenHttpRequestResponder() {
         return new SimpleChannelHandler() {
+            @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
                 if (!(e.getMessage() instanceof WebSocketFrame)) {
                     DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
