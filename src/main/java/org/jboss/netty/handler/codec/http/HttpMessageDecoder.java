@@ -562,7 +562,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
                     List<String> current = trailer.getHeaders(lastHeader);
-                    if (current.size() != 0) {
+                    if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
                         String newString = current.get(lastPos) + line.trim();
                         current.set(lastPos, newString);
