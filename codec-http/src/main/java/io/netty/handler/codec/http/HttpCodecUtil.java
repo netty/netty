@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * A utility class mainly for use with HTTP codec classes

@@ -15,7 +15,6 @@
  */
 package io.netty.example.sctp;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;

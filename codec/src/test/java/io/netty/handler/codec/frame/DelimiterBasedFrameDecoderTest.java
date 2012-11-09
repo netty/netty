@@ -25,7 +25,6 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 public class DelimiterBasedFrameDecoderTest {
