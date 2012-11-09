@@ -31,7 +31,7 @@ public class StringUtilTest {
 
     @Test
     public void stripControlCharactersNull() {
-        assertNull(StringUtil.stripControlCharacters((String) null));
+        assertNull(StringUtil.stripControlCharacters(null));
     }
 
     @Test

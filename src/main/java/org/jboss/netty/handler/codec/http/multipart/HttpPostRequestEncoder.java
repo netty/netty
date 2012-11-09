@@ -725,7 +725,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         }
         ChannelBuffer buffer;
         if (currentData instanceof InternalAttribute) {
-            String internal = ((InternalAttribute) currentData).toString();
+            String internal = currentData.toString();
             byte[] bytes;
             try {
                 bytes = internal.getBytes("ASCII");
