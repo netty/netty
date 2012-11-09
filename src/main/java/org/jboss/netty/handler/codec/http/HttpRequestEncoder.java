@@ -24,7 +24,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * a {@link ChannelBuffer}.
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
-
+    private static final char SLASH = '/';
     /**
      * Creates a new instance.
      */
@@ -37,7 +37,19 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().toString().getBytes("ASCII"));
         buf.writeByte(SP);
-        buf.writeBytes(request.getUri().getBytes("UTF-8"));
+
+        // Add / as absolute path if no is present.
+        // See http://tools.ietf.org/html/rfc2616#section-5.1.2
+        String uri = request.getUri();
+        int start = uri.indexOf("://");
+        if (start != -1) {
+            int startIndex = start + 3;
+            if (uri.lastIndexOf(SLASH) <= startIndex) {
+                uri = uri + SLASH;
+            }
+        }
+
+        buf.writeBytes(uri.getBytes("UTF-8"));
         buf.writeByte(SP);
         buf.writeBytes(request.getProtocolVersion().toString().getBytes("ASCII"));
         buf.writeByte(CR);
