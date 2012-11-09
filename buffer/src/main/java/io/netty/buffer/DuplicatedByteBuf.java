@@ -109,11 +109,6 @@ public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public ByteBuf duplicate() {
-        return new DuplicatedByteBuf(this);
-    }
-
-    @Override
     public ByteBuf copy(int index, int length) {
         return buffer.copy(index, length);
     }
