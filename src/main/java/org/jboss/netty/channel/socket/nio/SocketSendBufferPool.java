@@ -15,6 +15,13 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.CompositeChannelBuffer;
+import org.jboss.netty.channel.DefaultFileRegion;
+import org.jboss.netty.channel.FileRegion;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.internal.ByteBufferUtil;
+
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.net.SocketAddress;
@@ -22,13 +29,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.CompositeChannelBuffer;
-import org.jboss.netty.channel.DefaultFileRegion;
-import org.jboss.netty.channel.FileRegion;
-import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ByteBufferUtil;
 
 final class SocketSendBufferPool implements ExternalResourceReleasable {
 
@@ -335,8 +335,7 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
             return localWrittenBytes;
         }
 
-        public long transferTo(DatagramChannel ch, SocketAddress raddr)
-                throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) {
             throw new UnsupportedOperationException();
         }
 
@@ -365,11 +364,11 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
             return 0;
         }
 
-        public long transferTo(WritableByteChannel ch) throws IOException {
+        public long transferTo(WritableByteChannel ch) {
             return 0;
         }
 
-        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) {
             return 0;
         }
 

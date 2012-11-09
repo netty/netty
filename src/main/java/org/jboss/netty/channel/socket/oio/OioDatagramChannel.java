@@ -15,7 +15,14 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.socket.DatagramChannel;
+import org.jboss.netty.channel.socket.DatagramChannelConfig;
+import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -24,15 +31,7 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.DatagramChannelConfig;
-import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
+import static org.jboss.netty.channel.Channels.*;
 
 final class OioDatagramChannel extends AbstractOioChannel
                                 implements DatagramChannel {
@@ -139,7 +138,7 @@ final class OioDatagramChannel extends AbstractOioChannel
     }
 
     @Override
-    void closeSocket() throws IOException {
+    void closeSocket() {
         socket.close();
     }
 
