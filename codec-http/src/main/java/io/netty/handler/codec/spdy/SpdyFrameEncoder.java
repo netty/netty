@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -26,6 +25,8 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.CharsetUtil;
 
 import java.util.Set;
+
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
@@ -192,7 +193,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
                     // Chromium Issue 79156
                     // SPDY setting ids are not written in network byte order
                     // Write id assuming the architecture is little endian
-                    out.writeByte(id >>  0 & 0xFF);
+                    out.writeByte(id       & 0xFF);
                     out.writeByte(id >>  8 & 0xFF);
                     out.writeByte(id >> 16 & 0xFF);
                     out.writeByte(ID_flags);

@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import sun.misc.Cleaner;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,8 +26,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-
-import sun.misc.Cleaner;
 
 /**
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link Unpooled#directBuffer(int)}
@@ -208,8 +208,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public int getUnsignedMedium(int index) {
-        return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 |
-                (getByte(index + 2) & 0xff) << 0;
+        return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
     }
 
     @Override
@@ -278,7 +277,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf setMedium(int index, int value) {
         setByte(index, (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>> 8));
-        setByte(index + 2, (byte) (value >>> 0));
+        setByte(index + 2, (byte) value);
         return this;
     }
 

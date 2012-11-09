@@ -237,7 +237,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     public int getUnsignedMedium(int index) {
         return  (array[index]     & 0xff) << 16 |
                 (array[index + 1] & 0xff) <<  8 |
-                (array[index + 2] & 0xff) <<  0;
+                 array[index + 2] & 0xff;
     }
 
     @Override
@@ -245,7 +245,7 @@ public class HeapByteBuf extends AbstractByteBuf {
         return  (array[index]     & 0xff) << 24 |
                 (array[index + 1] & 0xff) << 16 |
                 (array[index + 2] & 0xff) <<  8 |
-                (array[index + 3] & 0xff) <<  0;
+                 array[index + 3] & 0xff;
     }
 
     @Override
@@ -257,13 +257,13 @@ public class HeapByteBuf extends AbstractByteBuf {
                 ((long) array[index + 4] & 0xff) << 24 |
                 ((long) array[index + 5] & 0xff) << 16 |
                 ((long) array[index + 6] & 0xff) <<  8 |
-                ((long) array[index + 7] & 0xff) <<  0;
+                 (long) array[index + 7] & 0xff;
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
         array[index]     = (byte) (value >>> 8);
-        array[index + 1] = (byte) (value >>> 0);
+        array[index + 1] = (byte) value;
         return this;
     }
 
@@ -271,7 +271,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     public ByteBuf setMedium(int index, int   value) {
         array[index]     = (byte) (value >>> 16);
         array[index + 1] = (byte) (value >>> 8);
-        array[index + 2] = (byte) (value >>> 0);
+        array[index + 2] = (byte) value;
         return this;
     }
 
@@ -280,7 +280,7 @@ public class HeapByteBuf extends AbstractByteBuf {
         array[index]     = (byte) (value >>> 24);
         array[index + 1] = (byte) (value >>> 16);
         array[index + 2] = (byte) (value >>> 8);
-        array[index + 3] = (byte) (value >>> 0);
+        array[index + 3] = (byte) value;
         return this;
     }
 
@@ -293,7 +293,7 @@ public class HeapByteBuf extends AbstractByteBuf {
         array[index + 4] = (byte) (value >>> 24);
         array[index + 5] = (byte) (value >>> 16);
         array[index + 6] = (byte) (value >>> 8);
-        array[index + 7] = (byte) (value >>> 0);
+        array[index + 7] = (byte) value;
         return this;
     }
 
