@@ -1084,12 +1084,12 @@ public class HttpPostRequestDecoder {
             } catch (IOException e) {
                 throw new ErrorDataDecoderException(e);
             }
-            if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT7.value)) {
+            if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT7.value())) {
                 localCharset = HttpPostBodyUtil.US_ASCII;
-            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT8.value)) {
+            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT8.value())) {
                 localCharset = HttpPostBodyUtil.ISO_8859_1;
                 mechanism = TransferEncodingMechanism.BIT8;
-            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value)) {
+            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
                 // no real charset, so let the default
                 mechanism = TransferEncodingMechanism.BINARY;
             } else {
@@ -1122,7 +1122,7 @@ public class HttpPostRequestDecoder {
             }
             try {
                 currentFileUpload = factory.createFileUpload(request, nameAttribute.getValue(),
-                        filenameAttribute.getValue(), contentTypeAttribute.getValue(), mechanism.value, localCharset,
+                        filenameAttribute.getValue(), contentTypeAttribute.getValue(), mechanism.value(), localCharset,
                         size);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);
