@@ -23,7 +23,7 @@ import java.net.ServerSocket;
 import java.nio.channels.Channel;
 import java.util.*;
 
-public class TestUtils {
+public final class TestUtils {
 
     private static final int START_PORT = 32768;
     private static final int END_PORT = 65536;
