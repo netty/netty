@@ -129,7 +129,7 @@ public class LocalTransportThreadModelTest2 {
     class LocalHander extends ChannelInboundMessageHandlerAdapter<Object> {
         private final String name;
 
-        public volatile ChannelFuture lastWriteFuture = null;
+        public volatile ChannelFuture lastWriteFuture;
 
         public AtomicInteger count = new AtomicInteger(0);
 
