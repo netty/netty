@@ -146,8 +146,8 @@ public abstract class AbstractDatagramMulticastTest {
     private final class MulticastTestHandler extends SimpleChannelUpstreamHandler {
         private final CountDownLatch latch = new CountDownLatch(1);
 
-        private boolean done = false;
-        private volatile boolean fail = false;
+        private boolean done;
+        private volatile boolean fail;
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {

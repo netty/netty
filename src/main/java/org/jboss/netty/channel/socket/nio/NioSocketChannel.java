@@ -15,15 +15,15 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.SocketChannel;
 
 public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
                                 implements org.jboss.netty.channel.socket.SocketChannel {
@@ -32,6 +32,7 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
     private static final int ST_BOUND = 1;
     private static final int ST_CONNECTED = 2;
     private static final int ST_CLOSED = -1;
+    @SuppressWarnings("RedundantFieldInitialization")
     volatile int state = ST_OPEN;
 
     private final NioSocketChannelConfig config;
