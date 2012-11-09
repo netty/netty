@@ -24,7 +24,6 @@ public class UnsupportedOperatingSystemException extends RuntimeException {
     }
 
     public UnsupportedOperatingSystemException() {
-        super();
     }
 
     public UnsupportedOperatingSystemException(String message) {

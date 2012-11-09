@@ -139,7 +139,7 @@ public final class MonitorName {
         if (instance.equals(this.instance)) {
             return this;
         }
-        return new MonitorName(this.group, this.type, this.name, instance);
+        return new MonitorName(group, type, name, instance);
     }
 
     /**
@@ -251,7 +251,7 @@ public final class MonitorName {
      */
     @Override
     public String toString() {
-        return this.instance != null ? "Monitor(" + group + "/" + type + "/" + name + "/" + instance + ")" : "Monitor("
+        return instance != null ? "Monitor(" + group + "/" + type + "/" + name + "/" + instance + ")" : "Monitor("
                 + group + "/" + type + "/" + name + ")";
     }
 }

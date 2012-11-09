@@ -63,7 +63,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
      */
     @Override
     public int compareTo(final MonitorProvider o) {
-        return this.name.compareTo(o.name);
+        return name.compareTo(o.name);
     }
 
     /**

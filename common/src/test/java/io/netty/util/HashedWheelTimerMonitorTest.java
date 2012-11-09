@@ -63,12 +63,12 @@ public class HashedWheelTimerMonitorTest {
 
         @Override
         public ValueDistributionMonitor newValueDistributionMonitor(final MonitorName monitorName) {
-            return this.eventDistributionMonitor;
+            return eventDistributionMonitor;
         }
 
         @Override
         public EventRateMonitor newEventRateMonitor(final MonitorName monitorName, final TimeUnit rateUnit) {
-            return this.eventRateMonitor;
+            return eventRateMonitor;
         }
 
         @Override

@@ -68,7 +68,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
-            AioSocketChannel.this.beginRead();
+            beginRead();
         }
     };
 
