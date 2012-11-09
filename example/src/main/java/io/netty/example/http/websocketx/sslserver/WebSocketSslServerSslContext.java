@@ -31,7 +31,7 @@ public final class WebSocketSslServerSslContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSslServerSslContext.class);
     private static final String PROTOCOL = "TLS";
-    private SSLContext _serverContext;
+    private final SSLContext _serverContext;
 
     /**
      * Returns the singleton instance for this class

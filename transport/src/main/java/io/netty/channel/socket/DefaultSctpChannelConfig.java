@@ -31,7 +31,7 @@ import static io.netty.channel.ChannelOption.*;
  */
 public class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
 
-    private SctpChannel channel;
+    private final SctpChannel channel;
 
     public DefaultSctpChannelConfig(SctpChannel channel) {
         if (channel == null) {
