@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -57,7 +58,7 @@ public abstract class WebSocketServerHandshaker {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
-            String[] subprotocolArray = subprotocols.split(",");
+            String[] subprotocolArray = StringUtil.split(subprotocols, ',');
             for (int i = 0; i < subprotocolArray.length; i++) {
                 subprotocolArray[i] = subprotocolArray[i].trim();
             }
@@ -132,7 +133,7 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        String[] requestedSubprotocolArray = StringUtil.split(requestedSubprotocols, ',');
         for (String p: requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 

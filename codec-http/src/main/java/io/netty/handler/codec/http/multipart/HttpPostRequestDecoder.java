@@ -15,15 +15,6 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpConstants;
@@ -33,6 +24,17 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
+import io.netty.util.internal.StringUtil;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import static io.netty.buffer.Unpooled.*;
 
 /**
@@ -254,7 +256,7 @@ public class HttpPostRequestDecoder {
         String[] headerContentType = splitHeaderContentType(contentType);
         if (headerContentType[0].toLowerCase().startsWith(HttpHeaders.Values.MULTIPART_FORM_DATA)
                 && headerContentType[1].toLowerCase().startsWith(HttpHeaders.Values.BOUNDARY)) {
-            String[] boundary = headerContentType[1].split("=");
+            String[] boundary = StringUtil.split(headerContentType[1], '=');
             if (boundary.length != 2) {
                 throw new ErrorDataDecoderException("Needs a boundary value");
             }
@@ -955,7 +957,7 @@ public class HttpPostRequestDecoder {
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
                     for (int i = 2; i < contents.length; i++) {
-                        String[] values = contents[i].split("=");
+                        String[] values = StringUtil.split(contents[i], '=');
                         Attribute attribute;
                         try {
                             attribute = factory.createAttribute(request, values[0].trim(),
@@ -994,7 +996,7 @@ public class HttpPostRequestDecoder {
                 // Take care of possible "multipart/mixed"
                 if (contents[1].equalsIgnoreCase(HttpPostBodyUtil.MULTIPART_MIXED)) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {
-                        String[] values = contents[2].split("=");
+                        String[] values = StringUtil.split(contents[2], '=');
                         multipartMixedBoundary = "--" + values[1];
                         currentStatus = MultiPartStatus.MIXEDDELIMITER;
                         return decodeMultipart(MultiPartStatus.MIXEDDELIMITER);
@@ -1004,7 +1006,7 @@ public class HttpPostRequestDecoder {
                 } else {
                     for (int i = 1; i < contents.length; i++) {
                         if (contents[i].toLowerCase().startsWith(HttpHeaders.Values.CHARSET)) {
-                            String[] values = contents[i].split("=");
+                            String[] values = StringUtil.split(contents[i], '=');
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request, HttpHeaders.Values.CHARSET,

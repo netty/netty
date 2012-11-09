@@ -15,11 +15,6 @@
  */
 package io.netty.example.http.file;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -33,6 +28,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 
+import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
@@ -44,8 +40,13 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.regex.Pattern;
 
-import javax.activation.MimetypesFileTypeMap;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -194,6 +195,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
     }
 
+    private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
+
     private static String sanitizeUri(String uri) {
         // Decode the path.
         try {
@@ -218,13 +221,15 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         if (uri.contains(File.separator + ".") ||
             uri.contains("." + File.separator) ||
             uri.startsWith(".") || uri.endsWith(".") ||
-            uri.matches(".*[<>&\"].*")) {
+            INSECURE_URI.matcher(uri).matches()) {
             return null;
         }
 
         // Convert to absolute path.
         return System.getProperty("user.dir") + File.separator + uri;
     }
+
+    private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
 
     private static void sendListing(ChannelHandlerContext ctx, File dir) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
@@ -252,7 +257,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             }
 
             String name = f.getName();
-            if (!name.matches("[A-Za-z0-9][-_A-Za-z0-9\\.]*")) {
+            if (!ALLOWED_FILE_NAME.matcher(name).matches()) {
                 continue;
             }
 

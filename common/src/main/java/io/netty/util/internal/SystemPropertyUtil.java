@@ -20,6 +20,7 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * A collection of utility methods to retrieve and parse the values of the Java system properties.
@@ -122,6 +123,8 @@ public final class SystemPropertyUtil {
         return def;
     }
 
+    private static final Pattern INTEGER_PATTERN = Pattern.compile("-?[0-9]+");
+
     /**
      * Returns the value of the Java system property with the specified
      * {@code key}, while falling back to the specified default value if
@@ -138,7 +141,7 @@ public final class SystemPropertyUtil {
         }
 
         value = value.trim().toLowerCase();
-        if (value.matches("-?[0-9]+")) {
+        if (INTEGER_PATTERN.matcher(value).matches()) {
             try {
                 return Integer.parseInt(value);
             } catch (Exception e) {
@@ -169,7 +172,7 @@ public final class SystemPropertyUtil {
         }
 
         value = value.trim().toLowerCase();
-        if (value.matches("-?[0-9]+")) {
+        if (INTEGER_PATTERN.matcher(value).matches()) {
             try {
                 return Long.parseLong(value);
             } catch (Exception e) {

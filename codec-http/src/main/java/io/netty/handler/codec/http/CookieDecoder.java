@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.internal.StringUtil;
+
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +42,7 @@ import java.util.TreeSet;
  */
 public final class CookieDecoder {
 
-    private static final String COMMA = ",";
+    private static final char COMMA = ',';
 
     /**
      * Decodes the specified HTTP header value into {@link Cookie}s.
@@ -131,7 +133,7 @@ public final class CookieDecoder {
                 } else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
                     version = Integer.parseInt(value);
                 } else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
-                    String[] portList = value.split(COMMA);
+                    String[] portList = StringUtil.split(value, COMMA);
                     for (String s1: portList) {
                         try {
                             ports.add(Integer.valueOf(s1));
