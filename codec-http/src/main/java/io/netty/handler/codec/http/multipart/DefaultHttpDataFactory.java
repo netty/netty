@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.handler.codec.http.HttpRequest;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
-import io.netty.handler.codec.http.HttpRequest;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -35,7 +35,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Proposed default MINSIZE as 16 KB.
      */
-    public static long MINSIZE = 0x4000;
+    public static final long MINSIZE = 0x4000;
 
     private final boolean useDisk;
 
