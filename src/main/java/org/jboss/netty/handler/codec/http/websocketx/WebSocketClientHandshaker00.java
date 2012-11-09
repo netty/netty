@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Map;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -35,6 +31,10 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * <p>
@@ -178,8 +178,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         if (customHeaders != null) {
-            for (String header : customHeaders.keySet()) {
-                request.addHeader(header, customHeaders.get(header));
+            for (Map.Entry<String, String> e: customHeaders.entrySet()) {
+                request.addHeader(e.getKey(), e.getValue());
             }
         }
 
