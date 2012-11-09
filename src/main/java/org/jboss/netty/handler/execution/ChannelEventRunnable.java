@@ -38,7 +38,7 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
      * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
      * upstream via the specified {@link ChannelHandlerContext}.
      */
-    public ChannelEventRunnable(ChannelHandlerContext ctx, ChannelEvent e, Executor executor) {
+    protected ChannelEventRunnable(ChannelHandlerContext ctx, ChannelEvent e, Executor executor) {
         this.ctx = ctx;
         this.e = e;
         this.executor = executor;

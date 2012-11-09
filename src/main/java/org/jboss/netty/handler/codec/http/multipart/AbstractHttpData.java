@@ -30,7 +30,7 @@ public abstract class AbstractHttpData implements HttpData {
     protected Charset charset = HttpConstants.DEFAULT_CHARSET;
     protected boolean completed;
 
-    public AbstractHttpData(String name, Charset charset, long size) {
+    protected AbstractHttpData(String name, Charset charset, long size) {
         if (name == null) {
             throw new NullPointerException("name");
         }

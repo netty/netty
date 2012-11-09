@@ -46,7 +46,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
     private volatile boolean done;
 
-    public AbstractOioWorker(C channel) {
+    protected AbstractOioWorker(C channel) {
         this.channel = channel;
         channel.worker = this;
     }

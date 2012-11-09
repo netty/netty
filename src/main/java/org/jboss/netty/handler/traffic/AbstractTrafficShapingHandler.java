@@ -148,8 +148,8 @@ public abstract class AbstractTrafficShapingHandler extends
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed
      */
-    public AbstractTrafficShapingHandler(Timer timer, long writeLimit,
-            long readLimit, long checkInterval) {
+    protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
+                                            long readLimit, long checkInterval) {
         init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, checkInterval);
     }
 
@@ -169,7 +169,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed
      */
-    public AbstractTrafficShapingHandler(
+    protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit, long checkInterval) {
         init(objectSizeEstimator, timer, writeLimit, readLimit, checkInterval);
@@ -185,8 +185,8 @@ public abstract class AbstractTrafficShapingHandler extends
      * @param readLimit
      *          0 or a limit in bytes/s
      */
-    public AbstractTrafficShapingHandler(Timer timer, long writeLimit,
-            long readLimit) {
+    protected AbstractTrafficShapingHandler(Timer timer, long writeLimit,
+                                            long readLimit) {
         init(new DefaultObjectSizeEstimator(), timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
     }
 
@@ -203,7 +203,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * @param readLimit
      *          0 or a limit in bytes/s
      */
-    public AbstractTrafficShapingHandler(
+    protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long writeLimit, long readLimit) {
         init(objectSizeEstimator, timer, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
@@ -215,7 +215,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * @param timer
      *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
      */
-    public AbstractTrafficShapingHandler(Timer timer) {
+    protected AbstractTrafficShapingHandler(Timer timer) {
         init(new DefaultObjectSizeEstimator(), timer, 0, 0, DEFAULT_CHECK_INTERVAL);
     }
 
@@ -228,7 +228,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * @param timer
      *          created once for instance like HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024)
      */
-    public AbstractTrafficShapingHandler(
+    protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer) {
         init(objectSizeEstimator, timer, 0, 0, DEFAULT_CHECK_INTERVAL);
     }
@@ -242,7 +242,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed
      */
-    public AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
+    protected AbstractTrafficShapingHandler(Timer timer, long checkInterval) {
         init(new DefaultObjectSizeEstimator(), timer, 0, 0, checkInterval);
     }
 
@@ -258,7 +258,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed
      */
-    public AbstractTrafficShapingHandler(
+    protected AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Timer timer,
             long checkInterval) {
         init(objectSizeEstimator, timer, 0, 0, checkInterval);

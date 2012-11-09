@@ -38,7 +38,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
      *
      * @param length the length of the new byte array
      */
-    public HeapChannelBuffer(int length) {
+    protected HeapChannelBuffer(int length) {
         this(new byte[length], 0, 0);
     }
 
@@ -47,7 +47,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
      *
      * @param array the byte array to wrap
      */
-    public HeapChannelBuffer(byte[] array) {
+    protected HeapChannelBuffer(byte[] array) {
         this(array, 0, array.length);
     }
 

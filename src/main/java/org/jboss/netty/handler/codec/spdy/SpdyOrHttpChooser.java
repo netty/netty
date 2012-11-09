@@ -47,7 +47,7 @@ public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
     private final int maxSpdyContentLength;
     private final int maxHttpContentLength;
 
-    public SpdyOrHttpChooser(int maxSpdyContentLength, int maxHttpContentLength) {
+    protected SpdyOrHttpChooser(int maxSpdyContentLength, int maxHttpContentLength) {
         this.maxSpdyContentLength = maxSpdyContentLength;
         this.maxHttpContentLength = maxHttpContentLength;
     }
