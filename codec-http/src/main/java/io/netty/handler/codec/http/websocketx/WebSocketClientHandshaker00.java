@@ -161,8 +161,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
 
         if (customHeaders != null) {
-            for (String header : customHeaders.keySet()) {
-                request.addHeader(header, customHeaders.get(header));
+            for (Map.Entry<String, String> e : customHeaders.entrySet()) {
+                request.addHeader(e.getKey(), e.getValue());
             }
         }
 

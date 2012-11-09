@@ -140,9 +140,9 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
             QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> uriAttributes = decoderQuery.getParameters();
-            for (String key : uriAttributes.keySet()) {
-                for (String valuen : uriAttributes.get(key)) {
-                    responseContent.append("URI: " + key + "=" + valuen + "\r\n");
+            for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
+                for (String attrVal: attr.getValue()) {
+                    responseContent.append("URI: " + attr.getKey() + "=" + attrVal + "\r\n");
                 }
             }
             responseContent.append("\r\n\r\n");
