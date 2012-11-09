@@ -65,8 +65,8 @@ public class Base64Decoder extends OneToOneDecoder {
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg)
             throws Exception {
-        if (msg instanceof CharSequence) {
-            msg = ChannelBuffers.copiedBuffer((CharSequence) msg, CharsetUtil.US_ASCII);
+        if (msg instanceof String) {
+            msg = ChannelBuffers.copiedBuffer((String) msg, CharsetUtil.US_ASCII);
         } else if (!(msg instanceof ChannelBuffer)) {
             return msg;
         }

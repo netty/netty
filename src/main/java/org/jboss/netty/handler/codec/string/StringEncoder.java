@@ -87,10 +87,11 @@ public class StringEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof CharSequence)) {
-            return msg;
+        if (msg instanceof String) {
+            return copiedBuffer(
+                    ctx.getChannel().getConfig().getBufferFactory().getDefaultOrder(), (String) msg, charset);
         }
-        return copiedBuffer(
-                ctx.getChannel().getConfig().getBufferFactory().getDefaultOrder(), (CharSequence) msg, charset);
+        
+        return msg;
     }
 }
