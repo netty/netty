@@ -1990,10 +1990,10 @@ public class HttpPostRequestDecoder {
         headers.add(sb.substring(nameStart, nameEnd));
         String svalue = sb.substring(valueStart, valueEnd);
         String[] values = null;
-        if (svalue.indexOf(";") >= 0) {
-            values = svalue.split(";");
+        if (svalue.indexOf(';') >= 0) {
+            values = StringUtil.split(svalue, ';');
         } else {
-            values = svalue.split(",");
+            values = StringUtil.split(svalue, ',');
         }
         for (String value : values) {
             headers.add(value.trim());
