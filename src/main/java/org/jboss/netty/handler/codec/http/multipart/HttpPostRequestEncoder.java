@@ -290,7 +290,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             }
         }
         if (!isText) {
-            contentTransferEncoding = HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value;
+            contentTransferEncoding = HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value();
         }
         FileUpload fileUpload = factory.createFileUpload(request, name, file.getName(),
                 scontentType, contentTransferEncoding, null, file.length());
@@ -540,9 +540,9 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             String contentTransferEncoding = fileUpload.getContentTransferEncoding();
             if (contentTransferEncoding != null &&
                     contentTransferEncoding.equals(
-                            HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value)) {
+                            HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
                 internal.addValue("\r\n" + HttpHeaders.Names.CONTENT_TRANSFER_ENCODING +
-                        ": " + HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value +
+                        ": " + HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value() +
                         "\r\n\r\n");
             } else if (fileUpload.getCharset() != null) {
                 internal.addValue("; " + HttpHeaders.Values.CHARSET + "=" +

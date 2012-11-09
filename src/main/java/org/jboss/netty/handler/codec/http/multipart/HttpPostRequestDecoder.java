@@ -15,15 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -35,6 +26,15 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNo
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
 import org.jboss.netty.util.internal.CaseIgnoringComparator;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
@@ -1108,13 +1108,13 @@ public class HttpPostRequestDecoder {
             } catch (IOException e) {
                 throw new ErrorDataDecoderException(e);
             }
-            if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT7.value)) {
+            if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT7.value())) {
                 localCharset = HttpPostBodyUtil.US_ASCII;
-            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT8.value)) {
+            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT8.value())) {
                 localCharset = HttpPostBodyUtil.ISO_8859_1;
                 mechanism = TransferEncodingMechanism.BIT8;
             } else if (code
-                    .equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value)) {
+                    .equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
                 // no real charset, so let the default
                 mechanism = TransferEncodingMechanism.BINARY;
             } else {
@@ -1157,7 +1157,7 @@ public class HttpPostRequestDecoder {
                 currentFileUpload = factory.createFileUpload(
                         request,
                         nameAttribute.getValue(), filenameAttribute.getValue(),
-                        contentTypeAttribute.getValue(), mechanism.value,
+                        contentTypeAttribute.getValue(), mechanism.value(),
                         localCharset, size);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);

@@ -15,10 +15,10 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
-import java.nio.charset.Charset;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.util.CharsetUtil;
+
+import java.nio.charset.Charset;
 
 /**
  * Shared Static object between HttpMessageDecoder, HttpPostRequestDecoder and HttpPostRequestEncoder
@@ -97,7 +97,7 @@ final class HttpPostBodyUtil {
          */
         BINARY("binary");
 
-        public String value;
+        private final String value;
 
         TransferEncodingMechanism(String value) {
             this.value = value;
@@ -105,6 +105,10 @@ final class HttpPostBodyUtil {
 
         TransferEncodingMechanism() {
             value = name();
+        }
+
+        public String value() {
+            return value;
         }
 
         @Override
