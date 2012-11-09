@@ -47,8 +47,8 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
         return Holder.INSTANCE;
     }
 
-    private static final class Holder {
-        private static final MonitorRegistries INSTANCE = new MonitorRegistries();
+    private interface Holder {
+        MonitorRegistries INSTANCE = new MonitorRegistries();
     }
 
     private static final ServiceLoader<MonitorRegistryFactory> FACTORIES = ServiceLoader
