@@ -18,12 +18,11 @@ package io.netty.example.http.websocketx.sslserver;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.Security;
-
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 
 /**
  * Creates a {@link SSLContext} for just server certificates.
@@ -47,8 +46,8 @@ public final class WebSocketSslServerSslContext {
      *
      * See http://en.wikipedia.org/wiki/Singleton_pattern
      */
-    private static class SingletonHolder {
-        public static final WebSocketSslServerSslContext INSTANCE = new WebSocketSslServerSslContext();
+    private interface SingletonHolder {
+        WebSocketSslServerSslContext INSTANCE = new WebSocketSslServerSslContext();
     }
 
     /**
