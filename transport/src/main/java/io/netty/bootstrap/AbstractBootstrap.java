@@ -247,7 +247,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return attrs;
     }
 
-    private final class BootstrapChannelFactory implements ChannelFactory {
+    private static final class BootstrapChannelFactory implements ChannelFactory {
         private final Class<? extends Channel> clazz;
 
         BootstrapChannelFactory(Class<? extends Channel> clazz) {

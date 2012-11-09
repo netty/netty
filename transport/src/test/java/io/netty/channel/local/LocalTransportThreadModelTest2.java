@@ -126,7 +126,7 @@ public class LocalTransportThreadModelTest2 {
     }
 
     @Sharable
-    class LocalHander extends ChannelInboundMessageHandlerAdapter<Object> {
+    static class LocalHander extends ChannelInboundMessageHandlerAdapter<Object> {
         private final String name;
 
         public volatile ChannelFuture lastWriteFuture;

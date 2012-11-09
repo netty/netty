@@ -273,7 +273,7 @@ public class SpdySessionHandlerTest {
 
     // Echo Handler opens 4 half-closed streams on session connection
     // and then sets the number of concurrent streams to 3
-    private class EchoHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<Object> {
         private final int closeSignal;
         private final boolean server;
 

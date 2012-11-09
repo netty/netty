@@ -95,7 +95,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
     }
 
-    private final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+    private static final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
