@@ -32,11 +32,14 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 public class LocalTimeClientHandler extends ChannelInboundMessageHandlerAdapter<LocalTimes> {
 
     private static final Logger logger = Logger.getLogger(
             LocalTimeClientHandler.class.getName());
+
+    private static final Pattern DELIM = Pattern.compile("/");
 
     // Stateful properties
     private volatile Channel channel;
@@ -46,7 +49,7 @@ public class LocalTimeClientHandler extends ChannelInboundMessageHandlerAdapter<
         Locations.Builder builder = Locations.newBuilder();
 
         for (String c: cities) {
-            String[] components = c.split("/");
+            String[] components = DELIM.split(c);
             builder.addLocation(Location.newBuilder().
                 setContinent(Continent.valueOf(components[0].toUpperCase())).
                 setCity(components[1]).build());

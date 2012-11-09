@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 
 /**
@@ -41,6 +42,8 @@ public final class DetectionUtil {
     private static final boolean IS_ROOT;
 
     static {
+
+        Pattern PERMISSION_DENIED = Pattern.compile(".*permission.*denied.*");
         String os = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.UK);
         // windows
         IS_WINDOWS = os.contains("win");
@@ -63,7 +66,7 @@ public final class DetectionUtil {
                         message = "";
                     }
                     message = message.toLowerCase();
-                    if (message.matches(".*permission.*denied.*")) {
+                    if (PERMISSION_DENIED.matcher(message).matches()) {
                         break;
                     }
                 } finally {

@@ -15,8 +15,9 @@
  */
 package io.netty.util.internal;
 
-import static org.junit.Assert.assertNotNull;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class StringUtilTest {
     
@@ -24,5 +25,29 @@ public class StringUtilTest {
     public void ensureNewlineExists() {
         assertNotNull(StringUtil.NEWLINE);
     }
-    
+
+    @Test
+    public void splitSimple() {
+        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo:bar", ':'));
+    }
+
+    @Test
+    public void splitWithTrailingDelimiter() {
+        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo,bar,", ','));
+    }
+
+    @Test
+    public void splitWithTrailingDelimiters() {
+        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo!bar!!", '!'));
+    }
+
+    @Test
+    public void splitWithConsecutiveDelimiters() {
+        assertArrayEquals(new String[] { "foo", "", "bar" }, StringUtil.split("foo$$bar", '$'));
+    }
+
+    @Test
+    public void splitWithDelimiterAtBeginning() {
+        assertArrayEquals(new String[] { "", "foo", "bar" }, StringUtil.split("#foo#bar", '#'));
+    }
 }
