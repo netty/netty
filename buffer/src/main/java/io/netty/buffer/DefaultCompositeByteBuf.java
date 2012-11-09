@@ -1217,7 +1217,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     public String toString() {
         String result = super.toString();
         result = result.substring(0, result.length() - 1);
-        return result + ", components=" + components.size() + ")";
+        return result + ", components=" + components.size() + ')';
     }
 
     private static final class Component {

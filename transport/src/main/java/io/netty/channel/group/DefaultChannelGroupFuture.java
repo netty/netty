@@ -370,7 +370,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + ".", t);
+                        ChannelFutureListener.class.getSimpleName() + '.', t);
             }
         }
     }

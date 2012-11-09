@@ -48,7 +48,7 @@ final class SelectorUtil {
             }
         } catch (SecurityException e) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Unable to get/set System Property '" + key + "'", e);
+                logger.debug("Unable to get/set System Property '" + key + '\'', e);
             }
         }
         if (logger.isDebugEnabled()) {

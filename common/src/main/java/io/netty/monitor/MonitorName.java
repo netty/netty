@@ -251,7 +251,7 @@ public final class MonitorName {
      */
     @Override
     public String toString() {
-        return instance != null ? "Monitor(" + group + "/" + type + "/" + name + "/" + instance + ")" : "Monitor("
-                + group + "/" + type + "/" + name + ")";
+        return instance != null ? "Monitor(" + group + '/' + type + '/' + name + '/' + instance + ')' : "Monitor("
+                + group + '/' + type + '/' + name + ')';
     }
 }

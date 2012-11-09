@@ -163,7 +163,7 @@ public class QueryStringDecoder {
             hasPath = false;
         }
         // Also take care of cut of things like "http://localhost"
-        String newUri = rawPath + "?" + uri.getRawQuery();
+        String newUri = rawPath + '?' + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
         this.uri = newUri.replace(';', '&');

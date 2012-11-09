@@ -454,7 +454,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
                 // Content-Type: charset=charset
-                internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " + HttpHeaders.Values.CHARSET + "="
+                internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " + HttpHeaders.Values.CHARSET + '='
                         + localcharset + "\r\n");
             }
             // CRLF between body header and data
@@ -524,7 +524,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                             + "; " + HttpPostBodyUtil.NAME + "=\"" + encodeAttribute(fileUpload.getName(), charset)
                             + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " + HttpPostBodyUtil.MULTIPART_MIXED + "; "
-                            + HttpHeaders.Values.BOUNDARY + "=" + multipartMixedBoundary + "\r\n\r\n";
+                            + HttpHeaders.Values.BOUNDARY + '=' + multipartMixedBoundary + "\r\n\r\n";
                     replacement += "--" + multipartMixedBoundary + "\r\n";
                     replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
                             + HttpPostBodyUtil.FILENAME + "=\"" + encodeAttribute(fileUpload.getFilename(), charset)
@@ -577,7 +577,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                 internal.addValue("\r\n" + HttpHeaders.Names.CONTENT_TRANSFER_ENCODING + ": "
                         + HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value() + "\r\n\r\n");
             } else if (fileUpload.getCharset() != null) {
-                internal.addValue("; " + HttpHeaders.Values.CHARSET + "=" + fileUpload.getCharset() + "\r\n\r\n");
+                internal.addValue("; " + HttpHeaders.Values.CHARSET + '=' + fileUpload.getCharset() + "\r\n\r\n");
             } else {
                 internal.addValue("\r\n\r\n");
             }
@@ -637,7 +637,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
             }
         }
         if (isMultipart) {
-            String value = HttpHeaders.Values.MULTIPART_FORM_DATA + "; " + HttpHeaders.Values.BOUNDARY + "="
+            String value = HttpHeaders.Values.MULTIPART_FORM_DATA + "; " + HttpHeaders.Values.BOUNDARY + '='
                     + multipartDataBoundary;
             request.addHeader(HttpHeaders.Names.CONTENT_TYPE, value);
         } else {

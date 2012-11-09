@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static io.netty.buffer.Unpooled.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 
@@ -27,6 +26,8 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+
+import static io.netty.buffer.Unpooled.*;
 
 /**
  * Abstract Disk HttpData implementation
@@ -76,7 +77,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         String newpostfix = null;
         String diskFilename = getDiskFilename();
         if (diskFilename != null) {
-            newpostfix = "_" + diskFilename;
+            newpostfix = '_' + diskFilename;
         } else {
             newpostfix = getPostfix();
         }

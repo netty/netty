@@ -107,6 +107,6 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
      */
     @Override
     public String toString() {
-        return "MonitorProvider(" + name + ")";
+        return "MonitorProvider(" + name + ')';
     }
 }

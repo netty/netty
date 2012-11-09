@@ -28,7 +28,7 @@ final class ZlibUtil {
     }
 
     static CompressionException exception(ZStream z, String message, int resultCode) {
-        return new CompressionException(message + " (" + resultCode + ")" +
+        return new CompressionException(message + " (" + resultCode + ')' +
                 (z.msg != null? ": " + z.msg : ""));
     }
 

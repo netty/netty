@@ -111,7 +111,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
         if ((interestOps & ~ch.validOps()) != 0) {
             throw new IllegalArgumentException(
-                    "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ")");
+                    "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ')');
         }
         if (task == null) {
             throw new NullPointerException("task");

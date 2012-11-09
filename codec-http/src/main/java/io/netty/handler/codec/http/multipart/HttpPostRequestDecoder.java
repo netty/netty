@@ -706,7 +706,7 @@ public class HttpPostRequestDecoder {
         } catch (UnsupportedEncodingException e) {
             throw new ErrorDataDecoderException(charset.toString(), e);
         } catch (IllegalArgumentException e) {
-            throw new ErrorDataDecoderException("Bad string: '" + s + "'", e);
+            throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
         }
     }
 

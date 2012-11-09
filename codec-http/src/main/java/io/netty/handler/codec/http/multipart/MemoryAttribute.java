@@ -103,7 +103,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public String toString() {
-        return getName() + "=" + getValue();
+        return getName() + '=' + getValue();
     }
 
 }

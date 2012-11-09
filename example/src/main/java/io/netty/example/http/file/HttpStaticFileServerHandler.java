@@ -143,7 +143,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Cache Validation
         String ifModifiedSince = request.getHeader(IF_MODIFIED_SINCE);
-        if (ifModifiedSince != null && !ifModifiedSince.equals("")) {
+        if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
 
@@ -218,8 +218,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Simplistic dumb security check.
         // You will have to do something serious in the production environment.
-        if (uri.contains(File.separator + ".") ||
-            uri.contains("." + File.separator) ||
+        if (uri.contains(File.separator + '.') ||
+            uri.contains('.' + File.separator) ||
             uri.startsWith(".") || uri.endsWith(".") ||
             INSECURE_URI.matcher(uri).matches()) {
             return null;

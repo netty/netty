@@ -34,7 +34,7 @@ public final class WebSocketServerIndexPage {
                 "var socket;" + NEWLINE +
                 "if (!window.WebSocket) {" + NEWLINE +
                 "  window.WebSocket = window.MozWebSocket;" + NEWLINE +
-                "}" + NEWLINE +
+                '}' + NEWLINE +
                 "if (window.WebSocket) {" + NEWLINE +
                 "  socket = new WebSocket(\"" + webSocketLocation + "\");" + NEWLINE +
                 "  socket.onmessage = function(event) {" + NEWLINE +
@@ -51,7 +51,7 @@ public final class WebSocketServerIndexPage {
                 "  };" + NEWLINE +
                 "} else {" + NEWLINE +
                 "  alert(\"Your browser does not support Web Socket.\");" + NEWLINE +
-                "}" + NEWLINE +
+                '}' + NEWLINE +
                 NEWLINE +
                 "function send(message) {" + NEWLINE +
                 "  if (!window.WebSocket) { return; }" + NEWLINE +
@@ -60,7 +60,7 @@ public final class WebSocketServerIndexPage {
                 "  } else {" + NEWLINE +
                 "    alert(\"The socket is not open.\");" + NEWLINE +
                 "  }" + NEWLINE +
-                "}" + NEWLINE +
+                '}' + NEWLINE +
                 "</script>" + NEWLINE +
                 "<form onsubmit=\"return false;\">" + NEWLINE +
                 "<input type=\"text\" name=\"message\" value=\"Hello, World!\"/>" +

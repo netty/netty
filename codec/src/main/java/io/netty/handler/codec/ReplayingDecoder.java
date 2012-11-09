@@ -429,7 +429,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
                     throw new IllegalStateException(
                             "decode() method must consume at least one byte " +
                             "if it returned a decoded message (caused by: " +
-                            getClass() + ")");
+                            getClass() + ')');
                 }
 
                 // A successful decode

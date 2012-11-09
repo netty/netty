@@ -84,6 +84,6 @@ class YammerCounterMonitor implements CounterMonitor {
      */
     @Override
     public String toString() {
-        return "YammerCounterMonitor(delegate=" + delegate + ")";
+        return "YammerCounterMonitor(delegate=" + delegate + ')';
     }
 }

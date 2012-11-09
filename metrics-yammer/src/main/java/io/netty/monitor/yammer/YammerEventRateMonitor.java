@@ -62,6 +62,6 @@ class YammerEventRateMonitor implements EventRateMonitor {
      */
     @Override
     public String toString() {
-        return "YammerEventRateMonitor(delegate=" + delegate + ")";
+        return "YammerEventRateMonitor(delegate=" + delegate + ')';
     }
 }

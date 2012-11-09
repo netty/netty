@@ -31,7 +31,7 @@ class OsgiLogger extends AbstractInternalLogger {
         this.parent = parent;
         this.name = name;
         this.fallback = fallback;
-        prefix = "[" + name + "] ";
+        prefix = '[' + name + "] ";
     }
 
     @Override
