@@ -142,8 +142,8 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
 
         if (customHeaders != null) {
-            for (String header : customHeaders.keySet()) {
-                request.addHeader(header, customHeaders.get(header));
+            for (Map.Entry<String, String> e : customHeaders.entrySet()) {
+                request.addHeader(e.getKey(), e.getValue());
             }
         }
 
