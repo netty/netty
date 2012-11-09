@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.StringUtil;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.StringTokenizer;
-import java.util.Vector;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * This class allows to check if an IP-V4-Address is contained in a subnet.<BR>
@@ -99,18 +99,17 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      * @param netAddress a network address as string.
      */
     private void setNetAddress(String netAddress) throws UnknownHostException {
-        Vector<Object> vec = new Vector<Object>();
-        StringTokenizer st = new StringTokenizer(netAddress, "/");
-        while (st.hasMoreTokens()) {
-            vec.add(st.nextElement());
+        String[] tokens = StringUtil.split(netAddress, '/');
+        if (tokens.length != 2) {
+            throw new IllegalArgumentException("netAddress: " + netAddress + " (expected: CIDR or Decimal Notation)");
         }
 
-        if (vec.get(1).toString().length() < 3) {
-            setNetId(vec.get(0).toString());
-            setCidrNetMask(Integer.parseInt(vec.get(1).toString()));
+        if (tokens[1].length() < 3) {
+            setNetId(tokens[0]);
+            setCidrNetMask(Integer.parseInt(tokens[1]));
         } else {
-            setNetId(vec.get(0).toString());
-            setNetMask(vec.get(1).toString());
+            setNetId(tokens[0]);
+            setNetMask(tokens[1]);
         }
     }
 

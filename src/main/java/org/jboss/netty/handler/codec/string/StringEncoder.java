@@ -91,7 +91,7 @@ public class StringEncoder extends OneToOneEncoder {
             return copiedBuffer(
                     ctx.getChannel().getConfig().getBufferFactory().getDefaultOrder(), (String) msg, charset);
         }
-        
+
         return msg;
     }
 }
