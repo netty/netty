@@ -198,7 +198,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
 
         @SuppressWarnings("unchecked")
         K key() {
-            return ((WeakReference<K>) keyRef).get();
+            return ((Reference<K>) keyRef).get();
         }
 
         V value() {

@@ -15,9 +15,9 @@
  */
 package org.jboss.netty.util.internal;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Unit test for {@link StringUtil}.
@@ -37,8 +37,8 @@ public class StringUtilTest {
     @Test
     public void stripControlCharactersRightTrim() {
         final char controlCode = 0x0000;
-        final Object object = "abbb" + controlCode;
-        assertEquals(5, ((String) object).length());
+        final String object = "abbb" + controlCode;
+        assertEquals(5, object.length());
 
         final String stripped = StringUtil.stripControlCharacters(object);
         assertFalse(object.equals(stripped));

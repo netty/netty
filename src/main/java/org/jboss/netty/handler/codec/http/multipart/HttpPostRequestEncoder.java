@@ -15,16 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Random;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
@@ -34,6 +24,16 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.stream.ChunkedInput;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Random;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -743,7 +743,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                 }
             } else {
                 try {
-                    buffer = ((FileUpload) currentData).getChunk(sizeleft);
+                    buffer = ((HttpData) currentData).getChunk(sizeleft);
                 } catch (IOException e) {
                     throw new ErrorDataEncoderException(e);
                 }
@@ -805,7 +805,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             }
         }
         try {
-            buffer = ((Attribute) currentData).getChunk(size);
+            buffer = ((HttpData) currentData).getChunk(size);
         } catch (IOException e) {
             throw new ErrorDataEncoderException(e);
         }

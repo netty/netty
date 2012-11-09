@@ -147,7 +147,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
 
     private static void connect(
             NioDatagramChannel channel, ChannelFuture future,
-            SocketAddress remoteAddress) {
+            InetSocketAddress remoteAddress) {
 
         boolean bound = channel.isBound();
         boolean connected = false;

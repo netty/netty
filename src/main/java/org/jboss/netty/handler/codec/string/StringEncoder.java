@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.codec.string;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
-
-import java.nio.charset.Charset;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
@@ -28,6 +24,10 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+
+import java.nio.charset.Charset;
+
+import static org.jboss.netty.buffer.ChannelBuffers.*;
 
 /**
  * Encodes the requested {@link String} into a {@link ChannelBuffer}.
@@ -87,9 +87,10 @@ public class StringEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof String)) {
+        if (!(msg instanceof CharSequence)) {
             return msg;
         }
-        return copiedBuffer(ctx.getChannel().getConfig().getBufferFactory().getDefaultOrder(), (String) msg, charset);
+        return copiedBuffer(
+                ctx.getChannel().getConfig().getBufferFactory().getDefaultOrder(), (CharSequence) msg, charset);
     }
 }

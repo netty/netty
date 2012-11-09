@@ -15,14 +15,6 @@
  */
 package org.jboss.netty.example.http.upload;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -61,6 +53,14 @@ import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataTy
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -292,10 +292,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                     if (fileUpload.length() < 10000) {
                         responseContent.append("\tContent of file\r\n");
                         try {
-                            responseContent
-                                    .append(((FileUpload) data)
-                                            .getString(((FileUpload) data)
-                                                    .getCharset()));
+                            responseContent.append(fileUpload.getString(fileUpload.getCharset()));
                         } catch (IOException e1) {
                             // do nothing for the example
                             e1.printStackTrace();
