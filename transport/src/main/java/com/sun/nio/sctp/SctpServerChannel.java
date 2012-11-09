@@ -27,7 +27,7 @@ public abstract class SctpServerChannel extends AbstractSelectableChannel {
         UnsupportedOperatingSystemException.raise();
     }
 
-    public static SctpServerChannel open() throws IOException {
+    public static SctpServerChannel open() {
         return null;
     }
 

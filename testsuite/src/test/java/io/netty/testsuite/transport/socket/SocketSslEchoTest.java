@@ -43,7 +43,6 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Security;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -275,14 +274,12 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             @Override
-            public void checkClientTrusted(
-                    X509Certificate[] chain, String authType) throws CertificateException {
+            public void checkClientTrusted(X509Certificate[] chain, String authType) {
                 // NOOP
             }
 
             @Override
-            public void checkServerTrusted(
-                    X509Certificate[] chain, String authType) throws CertificateException {
+            public void checkServerTrusted(X509Certificate[] chain, String authType) {
                 // NOOP
             }
         };
