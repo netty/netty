@@ -24,9 +24,10 @@ import org.osgi.util.tracker.ServiceTracker;
  * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
  * {@link LogService} logger.
  */
+@SuppressWarnings("all")
 public class OsgiLoggerFactory extends InternalLoggerFactory {
 
-    private final ServiceTracker<LogService, LogService> logServiceTracker;
+    private final ServiceTracker logServiceTracker;
     private final InternalLoggerFactory fallback;
     volatile LogService logService;
 
@@ -46,17 +47,17 @@ public class OsgiLoggerFactory extends InternalLoggerFactory {
         }
 
         this.fallback = fallback;
-        logServiceTracker = new ServiceTracker<LogService, LogService>(
+        logServiceTracker = new ServiceTracker(
                 ctx, "org.osgi.service.log.LogService", null) {
                     @Override
-                    public LogService addingService(ServiceReference<LogService> reference) {
-                        LogService service = super.addingService(reference);
+                    public Object addingService(ServiceReference reference) {
+                        LogService service = (LogService) super.addingService(reference);
                         logService = service;
                         return service;
                     }
 
                     @Override
-                    public void removedService(ServiceReference<LogService> reference, LogService service) {
+                    public void removedService(ServiceReference reference, Object service) {
                         logService = null;
                     }
         };
