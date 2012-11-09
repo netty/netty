@@ -136,7 +136,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
         DefaultThreadFactory() {
             String typeName = MultithreadEventExecutorGroup.this.getClass().getSimpleName();
-            typeName = "" + Character.toLowerCase(typeName.charAt(0)) + typeName.substring(1);
+            typeName = Character.toLowerCase(typeName.charAt(0)) + typeName.substring(1);
             prefix = typeName + '-' + poolId.incrementAndGet() + '-';
         }
 
