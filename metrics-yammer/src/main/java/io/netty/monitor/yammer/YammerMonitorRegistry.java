@@ -117,6 +117,6 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
      */
     @Override
     public String toString() {
-        return "YammerMonitorRegistry(delegate=" + delegate + ")";
+        return "YammerMonitorRegistry(delegate=" + delegate + ')';
     }
 }

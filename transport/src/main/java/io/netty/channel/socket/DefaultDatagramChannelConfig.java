@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket;
 
-import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -30,6 +29,8 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Map;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
@@ -151,7 +152,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
                         "A non-root user can't receive a broadcast packet if the socket " +
                         "is not bound to a wildcard address; setting the SO_BROADCAST flag " +
                         "anyway as requested on the socket which is bound to " +
-                        socket.getLocalSocketAddress() + ".");
+                        socket.getLocalSocketAddress() + '.');
             }
 
             socket.setBroadcast(broadcast);

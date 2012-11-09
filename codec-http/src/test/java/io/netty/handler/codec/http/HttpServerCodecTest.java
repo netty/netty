@@ -65,7 +65,7 @@ public class HttpServerCodecTest {
     private static ByteBuf prepareDataChunk(int size) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; ++i) {
-            sb.append("a");
+            sb.append('a');
         }
         return Unpooled.copiedBuffer(sb.toString(), CharsetUtil.UTF_8);
     }

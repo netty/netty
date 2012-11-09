@@ -60,6 +60,6 @@ final class YammerValueDistributionMonitor implements ValueDistributionMonitor {
      */
     @Override
     public String toString() {
-        return "YammerEventDistributionMonitor(delegate=" + delegate + ")";
+        return "YammerEventDistributionMonitor(delegate=" + delegate + ')';
     }
 }

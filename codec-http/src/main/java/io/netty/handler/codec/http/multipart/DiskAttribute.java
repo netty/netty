@@ -15,10 +15,11 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import java.io.IOException;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
+
+import java.io.IOException;
+
 import static io.netty.buffer.Unpooled.*;
 
 /**
@@ -115,7 +116,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public String toString() {
         try {
-            return getName() + "=" + getValue();
+            return getName() + '=' + getValue();
         } catch (IOException e) {
             return getName() + "=IoException";
         }

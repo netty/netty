@@ -18,21 +18,20 @@ package io.netty.handler.codec.marshalling;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-
-import java.io.IOException;
-
 import junit.framework.Assert;
-
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public abstract class AbstractCompatibleMarshallingEncoderTest {
 
     @Test
     public void testMarshalling() throws IOException, ClassNotFoundException {
+        @SuppressWarnings("RedundantStringConstructorCall")
         String testObject = new String("test");
 
         final MarshallerFactory marshallerFactory = createMarshallerFactory();

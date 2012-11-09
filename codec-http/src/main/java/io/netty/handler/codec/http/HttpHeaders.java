@@ -1245,7 +1245,7 @@ public class HttpHeaders {
 
         @Override
         public String toString() {
-            return key + "=" + value;
+            return key + '=' + value;
         }
     }
 }

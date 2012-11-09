@@ -32,6 +32,10 @@ import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.DefaultEventExecutorGroup;
 import io.netty.channel.EventExecutorGroup;
 import io.netty.channel.EventLoopGroup;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Queue;
@@ -42,11 +46,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 public class LocalTransportThreadModelTest {
 
@@ -369,7 +368,7 @@ public class LocalTransportThreadModelTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
-            System.err.print("[" + Thread.currentThread().getName() + "] ");
+            System.err.print('[' + Thread.currentThread().getName() + "] ");
             cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
         }
@@ -604,7 +603,7 @@ public class LocalTransportThreadModelTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
-            System.err.print("[" + Thread.currentThread().getName() + "] ");
+            System.err.print('[' + Thread.currentThread().getName() + "] ");
             cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
         }

@@ -71,6 +71,6 @@ public class YammerMonitorRegistryFactory implements MonitorRegistryFactory {
      */
     @Override
     public String toString() {
-        return "YammerMonitorRegistryFactory(metricsRegistry=" + metricsRegistry + ")";
+        return "YammerMonitorRegistryFactory(metricsRegistry=" + metricsRegistry + ')';
     }
 }

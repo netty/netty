@@ -108,7 +108,7 @@ public class LocalTimeClient {
         List<String> cities = new ArrayList<String>();
         for (int i = offset; i < args.length; i ++) {
             if (!CITY_PATTERN.matcher(args[i]).matches()) {
-                System.err.println("Syntax error: '" + args[i] + "'");
+                System.err.println("Syntax error: '" + args[i] + '\'');
                 printUsage();
                 return null;
             }

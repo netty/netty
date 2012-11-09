@@ -102,7 +102,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
         if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
-            path = wsURL.getPath() + "?" + wsURL.getQuery();
+            path = wsURL.getPath() + '?' + wsURL.getQuery();
         }
 
         // Get 16 bit nonce and base 64 encode it
@@ -130,12 +130,12 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ":" + wsPort;
+            originValue = originValue + ':' + wsPort;
         }
         request.addHeader(Names.SEC_WEBSOCKET_ORIGIN, originValue);
 
         String expectedSubprotocol = getExpectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 

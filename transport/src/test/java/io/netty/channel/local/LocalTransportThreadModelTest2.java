@@ -141,7 +141,7 @@ public class LocalTransportThreadModelTest2 {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             for (int i = 0; i < messageCountPerRun; i ++) {
-                lastWriteFuture = ctx.channel().write(name + " " + i);
+                lastWriteFuture = ctx.channel().write(name + ' ' + i);
             }
         }
 

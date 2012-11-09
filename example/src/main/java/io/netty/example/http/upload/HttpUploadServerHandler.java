@@ -121,7 +121,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             // new method
             List<Entry<String, String>> headers = request.getHeaders();
             for (Entry<String, String> entry : headers) {
-                responseContent.append("HEADER: " + entry.getKey() + "=" + entry.getValue() + "\r\n");
+                responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
@@ -142,7 +142,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             Map<String, List<String>> uriAttributes = decoderQuery.getParameters();
             for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
                 for (String attrVal: attr.getValue()) {
-                    responseContent.append("URI: " + attr.getKey() + "=" + attrVal + "\r\n");
+                    responseContent.append("URI: " + attr.getKey() + '=' + attrVal + "\r\n");
                 }
             }
             responseContent.append("\r\n\r\n");
@@ -189,7 +189,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 ctx.channel().close();
                 return;
             }
-            responseContent.append("o");
+            responseContent.append('o');
             // example of reading chunk by chunk (minimize memory usage due to
             // Factory)
             readHttpDataChunkByChunk(ctx.channel());

@@ -134,7 +134,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             Setting setting = e.getValue();
             buf.append("--> ");
             buf.append(e.getKey().toString());
-            buf.append(":");
+            buf.append(':');
             buf.append(setting.getValue());
             buf.append(" (persist value: ");
             buf.append(setting.isPersist());
