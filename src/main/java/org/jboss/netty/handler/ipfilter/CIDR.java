@@ -94,7 +94,7 @@ public abstract class CIDR implements Comparable<CIDR> {
         String maskString = cidr.substring(p + 1);
         InetAddress addr = addressStringToInet(addrString);
         int mask = 0;
-        if (maskString.indexOf(".") < 0) {
+        if (maskString.indexOf('.') < 0) {
             mask = parseInt(maskString, -1);
         } else {
             mask = getNetMask(maskString);

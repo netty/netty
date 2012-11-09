@@ -15,6 +15,10 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.SystemPropertyUtil;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
@@ -28,10 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Provides information which is specific to a NIO service provider
@@ -141,38 +141,38 @@ final class NioProviderMetadata {
 //        System.out.println(provider);
 
         // Sun JVM
-        if (vendor.indexOf("sun") >= 0) {
+        if (vendor.contains("sun")) {
             // Linux
-            if (os.indexOf("linux") >= 0) {
+            if (os.contains("linux")) {
                 if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
                     provider.equals("sun.nio.ch.PollSelectorProvider")) {
                     return 0;
                 }
 
             // Windows
-            } else if (os.indexOf("windows") >= 0) {
+            } else if (os.contains("windows")) {
                 if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
                     return 0;
                 }
 
             // Solaris
-            } else if (os.indexOf("sun") >= 0 || os.indexOf("solaris") >= 0) {
+            } else if (os.contains("sun") || os.contains("solaris")) {
                 if (provider.equals("sun.nio.ch.DevPollSelectorProvider")) {
                     return 0;
                 }
             }
         // Apple JVM
-        } else if (vendor.indexOf("apple") >= 0) {
+        } else if (vendor.contains("apple")) {
             // Mac OS
-            if (os.indexOf("mac") >= 0 && os.indexOf("os") >= 0) {
+            if (os.contains("mac") && os.contains("os")) {
                 if (provider.equals("sun.nio.ch.KQueueSelectorProvider")) {
                     return 0;
                 }
             }
         // IBM
-        } else if (vendor.indexOf("ibm") >= 0) {
+        } else if (vendor.contains("ibm")) {
             // Linux or AIX
-            if (os.indexOf("linux") >= 0 || os.indexOf("aix") >= 0) {
+            if (os.contains("linux") || os.contains("aix")) {
                 if (version.equals("1.5") || version.matches("^1\\.5\\D.*$")) {
                     if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
                         return 1;
@@ -206,22 +206,22 @@ final class NioProviderMetadata {
                 }
             }
         // BEA
-        } else if (vendor.indexOf("bea") >= 0 || vendor.indexOf("oracle") >= 0) {
+        } else if (vendor.contains("bea") || vendor.contains("oracle")) {
             // Linux
-            if (os.indexOf("linux") >= 0) {
+            if (os.contains("linux")) {
                 if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
                     provider.equals("sun.nio.ch.PollSelectorProvider")) {
                     return 0;
                 }
 
             // Windows
-            } else if (os.indexOf("windows") >= 0) {
+            } else if (os.contains("windows")) {
                 if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
                     return 0;
                 }
             }
         // Apache Software Foundation
-        } else if (vendor.indexOf("apache") >= 0) {
+        } else if (vendor.contains("apache")) {
             if (provider.equals("org.apache.harmony.nio.internal.SelectorProviderImpl")) {
                 return 1;
             }

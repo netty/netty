@@ -150,11 +150,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
                     q = 0.0f;
                 }
             }
-            if (encoding.indexOf("*") >= 0) {
+            if (encoding.indexOf('*') >= 0) {
                 starQ = q;
-            } else if (encoding.indexOf("gzip") >= 0 && q > gzipQ) {
+            } else if (encoding.contains("gzip") && q > gzipQ) {
                 gzipQ = q;
-            } else if (encoding.indexOf("deflate") >= 0 && q > deflateQ) {
+            } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
         }

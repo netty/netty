@@ -40,7 +40,7 @@ public final class DetectionUtil {
     static {
         String os = SystemPropertyUtil.get("os.name", "").toLowerCase();
         // windows
-        IS_WINDOWS =  os.indexOf("win") >= 0;
+        IS_WINDOWS =  os.contains("win");
     }
 
     /**
