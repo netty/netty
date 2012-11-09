@@ -127,12 +127,12 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
 
         @Override
         public boolean hasNext() {
-            return this.factories.hasNext();
+            return factories.hasNext();
         }
 
         @Override
         public MonitorRegistry next() {
-            return this.factories.next().newMonitorRegistry();
+            return factories.next().newMonitorRegistry();
         }
 
         @Override

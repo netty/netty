@@ -44,7 +44,7 @@ final class YammerValueDistributionMonitor implements ValueDistributionMonitor {
      */
     @Override
     public void reset() {
-        this.delegate.clear();
+        delegate.clear();
     }
 
     /**
@@ -52,7 +52,7 @@ final class YammerValueDistributionMonitor implements ValueDistributionMonitor {
      */
     @Override
     public void update(final long value) {
-        this.delegate.update(value);
+        delegate.update(value);
     }
 
     /**

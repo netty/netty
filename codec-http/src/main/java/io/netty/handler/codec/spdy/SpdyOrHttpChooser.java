@@ -39,7 +39,7 @@ import io.netty.handler.ssl.SslHandler;
  */
 public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements ChannelInboundByteHandler {
 
-    public static enum SelectedProtocol {
+    public enum SelectedProtocol {
         SpdyVersion2,
         SpdyVersion3,
         HttpVersion1_1,

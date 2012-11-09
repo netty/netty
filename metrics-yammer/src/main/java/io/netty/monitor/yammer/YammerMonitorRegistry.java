@@ -68,7 +68,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
      */
     @Override
     public ValueDistributionMonitor newValueDistributionMonitor(final MonitorName monitorName) {
-        final Histogram histogram = this.delegate.newHistogram(Utils.toMetricName(monitorName), true);
+        final Histogram histogram = delegate.newHistogram(Utils.toMetricName(monitorName), true);
         return new YammerValueDistributionMonitor(histogram);
     }
 
@@ -80,7 +80,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
      */
     @Override
     public EventRateMonitor newEventRateMonitor(final MonitorName monitorName, final TimeUnit rateUnit) {
-        final Meter meter = this.delegate.newMeter(Utils.toMetricName(monitorName), monitorName.getName(), rateUnit);
+        final Meter meter = delegate.newMeter(Utils.toMetricName(monitorName), monitorName.getName(), rateUnit);
         return new YammerEventRateMonitor(meter);
     }
 
@@ -92,7 +92,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
      */
     @Override
     public <T> ValueMonitor<T> registerValueMonitor(final MonitorName monitorName, final ValueMonitor<T> valueMonitor) {
-        this.delegate.newGauge(Utils.toMetricName(monitorName), new Gauge<T>() {
+        delegate.newGauge(Utils.toMetricName(monitorName), new Gauge<T>() {
             @Override
             public T value() {
                 return valueMonitor.currentValue();
@@ -108,7 +108,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
      */
     @Override
     public CounterMonitor newCounterMonitor(MonitorName monitorName) {
-        final Counter counter = this.delegate.newCounter(Utils.toMetricName(monitorName));
+        final Counter counter = delegate.newCounter(Utils.toMetricName(monitorName));
         return new YammerCounterMonitor(counter);
     }
 

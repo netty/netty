@@ -56,7 +56,7 @@ public enum HttpTransferEncoding {
 
     private final boolean single;
 
-    private HttpTransferEncoding(boolean single) {
+    HttpTransferEncoding(boolean single) {
         this.single = single;
     }
 

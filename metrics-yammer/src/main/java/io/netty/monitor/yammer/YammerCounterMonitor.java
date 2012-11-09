@@ -44,7 +44,7 @@ class YammerCounterMonitor implements CounterMonitor {
      */
     @Override
     public void inc() {
-        this.delegate.inc();
+        delegate.inc();
     }
 
     /**
@@ -52,7 +52,7 @@ class YammerCounterMonitor implements CounterMonitor {
      */
     @Override
     public void inc(final long delta) {
-        this.delegate.inc(delta);
+        delegate.inc(delta);
     }
 
     /**
@@ -60,7 +60,7 @@ class YammerCounterMonitor implements CounterMonitor {
      */
     @Override
     public void decr() {
-        this.delegate.dec();
+        delegate.dec();
     }
 
     /**
@@ -68,7 +68,7 @@ class YammerCounterMonitor implements CounterMonitor {
      */
     @Override
     public void decr(final long delta) {
-        this.delegate.dec(delta);
+        delegate.dec(delta);
     }
 
     /**
@@ -76,7 +76,7 @@ class YammerCounterMonitor implements CounterMonitor {
      */
     @Override
     public void reset() {
-        this.delegate.clear();
+        delegate.clear();
     }
 
     /**

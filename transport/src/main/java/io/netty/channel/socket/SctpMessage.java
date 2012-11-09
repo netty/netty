@@ -45,8 +45,8 @@ public final class SctpMessage {
 
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
         this.msgInfo = msgInfo;
-        this.streamIdentifier = msgInfo.streamNumber();
-        this.protocolIdentifier = msgInfo.payloadProtocolID();
+        streamIdentifier = msgInfo.streamNumber();
+        protocolIdentifier = msgInfo.payloadProtocolID();
         this.payloadBuffer = payloadBuffer;
     }
 

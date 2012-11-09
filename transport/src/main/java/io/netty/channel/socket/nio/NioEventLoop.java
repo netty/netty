@@ -132,7 +132,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     // selector to the new one
     private Selector recreateSelector() {
         final Selector newSelector = openSelector();
-        final Selector oldSelector = this.selector;
+        final Selector oldSelector = selector;
 
         // Register all channels to the new Selector.
         boolean success = false;
@@ -166,7 +166,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         logger.info("Selector migration complete.");
-        return this.selector = newSelector;
+        return selector = newSelector;
     }
 
     @Override

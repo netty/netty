@@ -76,17 +76,17 @@ public class WebSocketRequestBuilder {
     }
     
     public WebSocketRequestBuilder version13() {
-        this.version = WebSocketVersion.V13;
+        version = WebSocketVersion.V13;
         return this;
     }
     
     public WebSocketRequestBuilder version8() {
-        this.version = WebSocketVersion.V08;
+        version = WebSocketVersion.V08;
         return this;
     }
     
     public WebSocketRequestBuilder version00() {
-        this.version = null;
+        version = null;
         return this;
     }
     
