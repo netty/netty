@@ -15,13 +15,6 @@
  */
 package org.jboss.netty.example.localtime;
 
-import static java.util.Calendar.*;
-
-import java.util.Calendar;
-import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -34,6 +27,13 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Location;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
+
+import java.util.Calendar;
+import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static java.util.Calendar.*;
 
 public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -87,6 +87,6 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private static String toString(Continent c) {
-        return "" + c.name().charAt(0) + c.name().toLowerCase().substring(1);
+        return c.name().charAt(0) + c.name().toLowerCase().substring(1);
     }
 }
