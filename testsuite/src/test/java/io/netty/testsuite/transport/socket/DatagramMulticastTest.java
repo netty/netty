@@ -31,7 +31,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 

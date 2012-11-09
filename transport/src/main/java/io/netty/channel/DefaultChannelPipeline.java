@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.DefaultChannelHandlerContext.ByteBridge;
-import io.netty.channel.DefaultChannelHandlerContext.MessageBridge;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 

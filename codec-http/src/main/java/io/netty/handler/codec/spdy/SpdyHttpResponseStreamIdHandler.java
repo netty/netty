@@ -21,7 +21,6 @@ import java.util.Queue;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
 /**
