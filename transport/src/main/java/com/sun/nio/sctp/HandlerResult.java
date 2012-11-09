@@ -21,5 +21,5 @@ package com.sun.nio.sctp;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public enum HandlerResult {
-    CONTINUE, RETURN;
+    CONTINUE, RETURN
 }

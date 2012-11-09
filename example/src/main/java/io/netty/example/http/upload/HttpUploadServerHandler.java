@@ -91,7 +91,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         if (decoder != null) {
             decoder.cleanFiles();
         }
-    };
+    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {

@@ -245,7 +245,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             if (buf.hasNioBuffers()) {
                 ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
                 javaChannel().write(buffers, 0, buffers.length, config.getReadTimeout(),
-                        TimeUnit.MILLISECONDS, AioSocketChannel.this, GATHERING_WRITE_HANDLER);
+                        TimeUnit.MILLISECONDS, this, GATHERING_WRITE_HANDLER);
             } else {
                 javaChannel().write(buf.nioBuffer(), config.getReadTimeout(), TimeUnit.MILLISECONDS,
                         this, WRITE_HANDLER);
@@ -276,12 +276,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         if (byteBuf.hasNioBuffers()) {
             ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());
             javaChannel().read(buffers, 0, buffers.length, config.getWriteTimeout(),
-                    TimeUnit.MILLISECONDS, AioSocketChannel.this, SCATTERING_READ_HANDLER);
+                    TimeUnit.MILLISECONDS, this, SCATTERING_READ_HANDLER);
         } else {
             // Get a ByteBuffer view on the ByteBuf
             ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
             javaChannel().read(buffer, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                    AioSocketChannel.this, READ_HANDLER);
+                    this, READ_HANDLER);
         }
     }
 
