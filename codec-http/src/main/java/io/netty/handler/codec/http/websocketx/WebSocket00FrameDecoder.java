@@ -70,7 +70,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
         }
     }
 
-    private WebSocketFrame decodeBinaryFrame(byte type, ByteBuf buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeBinaryFrame(byte type, ByteBuf buffer) {
         long frameSize = 0;
         int lengthFieldSize = 0;
         byte b;
@@ -96,7 +96,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
         return new BinaryWebSocketFrame(buffer.readBytes((int) frameSize));
     }
 
-    private WebSocketFrame decodeTextFrame(ByteBuf buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeTextFrame(ByteBuf buffer) {
         int ridx = buffer.readerIndex();
         int rbytes = actualReadableBytes();
         int delimPos = buffer.indexOf(ridx, ridx + rbytes, (byte) 0xFF);

@@ -531,7 +531,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         }
     }
 
-    private State readHeaders(ByteBuf buffer) throws TooLongFrameException {
+    private State readHeaders(ByteBuf buffer) {
         headerSize = 0;
         final HttpMessage message = this.message;
         String line = readHeader(buffer);
@@ -577,7 +577,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return nextState;
     }
 
-    private HttpChunkTrailer readTrailingHeaders(ByteBuf buffer) throws TooLongFrameException {
+    private HttpChunkTrailer readTrailingHeaders(ByteBuf buffer) {
         headerSize = 0;
         String line = readHeader(buffer);
         String lastHeader = null;
@@ -614,7 +614,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return HttpChunk.LAST_CHUNK;
     }
 
-    private String readHeader(ByteBuf buffer) throws TooLongFrameException {
+    private String readHeader(ByteBuf buffer) {
         StringBuilder sb = new StringBuilder(64);
         int headerSize = this.headerSize;
 
@@ -672,7 +672,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         return Integer.parseInt(hex, 16);
     }
 
-    private static String readLine(ByteBuf buffer, int maxLineLength) throws TooLongFrameException {
+    private static String readLine(ByteBuf buffer, int maxLineLength) {
         StringBuilder sb = new StringBuilder(64);
         int lineLength = 0;
         while (true) {

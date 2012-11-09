@@ -182,7 +182,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
+    public void finishHandshake(Channel channel, HttpResponse response) {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
 
         if (!response.getStatus().equals(status)) {
