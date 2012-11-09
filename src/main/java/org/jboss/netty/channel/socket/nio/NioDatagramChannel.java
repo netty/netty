@@ -36,7 +36,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.channel.socket.InternetProtocolFamily;
 import org.jboss.netty.util.internal.DetectionUtil;

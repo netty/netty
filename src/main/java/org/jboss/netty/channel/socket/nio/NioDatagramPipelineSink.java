@@ -18,7 +18,6 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.ChannelEvent;
