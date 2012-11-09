@@ -17,6 +17,7 @@ package org.jboss.netty.util.internal;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Conversion utility class to parse a property represented as a string or
@@ -64,6 +65,8 @@ public final class ConversionUtil {
         }
     }
 
+    private static final Pattern ARRAY_DELIM = Pattern.compile("[, \\t\\n\\r\\f\\e\\a]");
+
     /**
      * Converts the specified object into an array of strings.
      */
@@ -84,7 +87,7 @@ public final class ConversionUtil {
             return answer.toArray(new String[answer.size()]);
         }
 
-        return String.valueOf(value).split("[, \\t\\n\\r\\f\\e\\a]");
+        return ARRAY_DELIM.split(String.valueOf(value));
     }
 
     private static final String[] INTEGERS = {

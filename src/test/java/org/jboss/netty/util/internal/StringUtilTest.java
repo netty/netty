@@ -79,4 +79,29 @@ public class StringUtilTest {
         final String stripped = StringUtil.stripControlCharacters(string);
         assertEquals("The string should be unchanged", string, stripped);
     }
+
+    @Test
+    public void splitSimple() {
+        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo:bar", ':'));
+    }
+
+    @Test
+    public void splitWithTrailingDelimiter() {
+        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo,bar,", ','));
+    }
+
+    @Test
+    public void splitWithTrailingDelimiters() {
+        assertArrayEquals(new String[] { "foo", "bar" }, StringUtil.split("foo!bar!!", '!'));
+    }
+
+    @Test
+    public void splitWithConsecutiveDelimiters() {
+        assertArrayEquals(new String[] { "foo", "", "bar" }, StringUtil.split("foo$$bar", '$'));
+    }
+
+    @Test
+    public void splitWithDelimiterAtBeginning() {
+        assertArrayEquals(new String[] { "", "foo", "bar" }, StringUtil.split("#foo#bar", '#'));
+    }
 }

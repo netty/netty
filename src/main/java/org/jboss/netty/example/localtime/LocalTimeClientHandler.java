@@ -15,15 +15,6 @@
  */
 package org.jboss.netty.example.localtime;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Formatter;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -37,10 +28,22 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Location;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Formatter;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+
 public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
             LocalTimeClientHandler.class.getName());
+
+    private static final Pattern DELIM = Pattern.compile("/");
 
     // Stateful properties
     private volatile Channel channel;
@@ -50,7 +53,7 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
         Locations.Builder builder = Locations.newBuilder();
 
         for (String c: cities) {
-            String[] components = c.split("/");
+            String[] components = DELIM.split(c);
             builder.addLocation(Location.newBuilder().
                 setContinent(Continent.valueOf(components[0].toUpperCase())).
                 setCity(components[1]).build());

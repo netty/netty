@@ -21,6 +21,7 @@ import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.jboss.netty.util.internal.DetectionUtil;
+import org.jboss.netty.util.internal.StringUtil;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
@@ -138,7 +139,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         float starQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
-        for (String encoding : acceptEncoding.split(",")) {
+        for (String encoding: StringUtil.split(acceptEncoding, ',')) {
             float q = 1.0f;
             int equalsPos = encoding.indexOf('=');
             if (equalsPos != -1) {

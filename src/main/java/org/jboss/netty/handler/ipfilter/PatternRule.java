@@ -16,12 +16,13 @@
 
 package org.jboss.netty.handler.ipfilter;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.StringUtil;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.regex.Pattern;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * The Class PatternRule represents an IP filter rule using string patterns.
@@ -113,7 +114,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
             return;
         }
 
-        String[] acls = pattern.split(",");
+        String[] acls = StringUtil.split(pattern, ',');
 
         String ip = "";
         String name = "";

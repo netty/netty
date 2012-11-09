@@ -15,11 +15,12 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.StringUtil;
+
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 /**
  * The Class IpFilterRuleList is a helper class to generate a List of Rules from a string.
@@ -58,7 +59,7 @@ public class IpFilterRuleList extends ArrayList<IpFilterRule> {
     }
 
     private void parseRules(String rules) {
-        String[] ruless = rules.split(",");
+        String[] ruless = StringUtil.split(rules, ',');
         for (String rule : ruless) {
             parseRule(rule.trim());
         }

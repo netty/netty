@@ -15,17 +15,18 @@
  */
 package org.jboss.netty.example.localtime;
 
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
-
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import java.util.regex.Pattern;
 
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
@@ -108,10 +109,12 @@ public class LocalTimeClient {
                 " localhost 8080 America/New_York Asia/Seoul");
     }
 
+    private static final Pattern CITY_PATTERN = Pattern.compile("^[_A-Za-z]+/[_A-Za-z]+$");
+
     private static List<String> parseCities(String[] args, int offset) {
         List<String> cities = new ArrayList<String>();
         for (int i = offset; i < args.length; i ++) {
-            if (!args[i].matches("^[_A-Za-z]+/[_A-Za-z]+$")) {
+            if (!CITY_PATTERN.matcher(args[i]).matches()) {
                 System.err.println("Syntax error: '" + args[i] + "'");
                 printUsage();
                 return null;

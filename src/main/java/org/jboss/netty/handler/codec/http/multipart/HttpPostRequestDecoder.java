@@ -26,6 +26,7 @@ import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNo
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
 import org.jboss.netty.util.internal.CaseIgnoringComparator;
+import org.jboss.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -966,7 +967,7 @@ public class HttpPostRequestDecoder {
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
                     for (int i = 2; i < contents.length; i ++) {
-                        String[] values = contents[i].split("=");
+                        String[] values = StringUtil.split(contents[i], '=');
                         Attribute attribute;
                         try {
                             attribute = factory.createAttribute(request, values[0].trim(),
@@ -1012,7 +1013,7 @@ public class HttpPostRequestDecoder {
                 // Take care of possible "multipart/mixed"
                 if (contents[1].equalsIgnoreCase(HttpPostBodyUtil.MULTIPART_MIXED)) {
                     if (currentStatus == MultiPartStatus.DISPOSITION) {
-                        String[] values = contents[2].split("=");
+                        String[] values = StringUtil.split(contents[2], '=');
                         multipartMixedBoundary = "--" + values[1];
                         currentStatus = MultiPartStatus.MIXEDDELIMITER;
                         return decodeMultipart(MultiPartStatus.MIXEDDELIMITER);
@@ -1024,7 +1025,7 @@ public class HttpPostRequestDecoder {
                     for (int i = 1; i < contents.length; i ++) {
                         if (contents[i].toLowerCase().startsWith(
                                 HttpHeaders.Values.CHARSET)) {
-                            String[] values = contents[i].split("=");
+                            String[] values = StringUtil.split(contents[i], '=');
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
@@ -1995,10 +1996,10 @@ public class HttpPostRequestDecoder {
         headers.add(sb.substring(nameStart, nameEnd));
         String svalue = sb.substring(valueStart, valueEnd);
         String[] values = null;
-        if (svalue.indexOf(";") >= 0) {
-            values = svalue.split(";");
+        if (svalue.indexOf(';') >= 0) {
+            values = StringUtil.split(svalue, ';');
         } else {
-            values = svalue.split(",");
+            values = StringUtil.split(svalue, ',');
         }
         for (String value: values) {
             headers.add(value.trim());

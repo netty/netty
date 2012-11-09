@@ -15,15 +15,16 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.util.internal.StringUtil;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -90,7 +91,7 @@ public abstract class WebSocketServerHandshaker {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
-            String[] subprotocolArray = subprotocols.split(",");
+            String[] subprotocolArray = StringUtil.split(subprotocols, ',');
             for (int i = 0; i < subprotocolArray.length; i++) {
                 subprotocolArray[i] = subprotocolArray[i].trim();
             }
@@ -163,7 +164,7 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        String[] requestedSubprotocolArray = StringUtil.split(requestedSubprotocols, ',');
         for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 

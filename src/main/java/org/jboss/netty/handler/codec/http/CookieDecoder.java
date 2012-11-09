@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.util.internal.StringUtil;
+
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +41,7 @@ import java.util.TreeSet;
  */
 public class CookieDecoder {
 
-    private static final String COMMA = ",";
+    private static final char COMMA = ',';
 
     /**
      * Creates a new decoder.
@@ -146,7 +148,7 @@ public class CookieDecoder {
                 } else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
                     version = Integer.parseInt(value);
                 } else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
-                    String[] portList = value.split(COMMA);
+                    String[] portList = StringUtil.split(value, COMMA);
                     for (String s1: portList) {
                         try {
                             ports.add(Integer.valueOf(s1));
