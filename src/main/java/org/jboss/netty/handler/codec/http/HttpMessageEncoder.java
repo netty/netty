@@ -83,7 +83,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                 transferEncodingChunked = contentMustBeEmpty = HttpCodecUtil.isTransferEncodingChunked(m);
             }
 
-            ChannelBuffer header = ChannelBuffers.dynamicBuffer(
+            ChannelBuffer header = dynamicBuffer(
                     channel.getConfig().getBufferFactory());
             encodeInitialLine(header, m);
             encodeHeaders(header, m);
@@ -108,7 +108,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                 if (chunk.isLast()) {
                     transferEncodingChunked = false;
                     if (chunk instanceof HttpChunkTrailer) {
-                        ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
+                        ChannelBuffer trailer = dynamicBuffer(
                                 channel.getConfig().getBufferFactory());
                         trailer.writeByte((byte) '0');
                         trailer.writeByte(CR);

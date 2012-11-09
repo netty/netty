@@ -352,7 +352,7 @@ public class ServerBootstrap extends Bootstrap {
             try {
                 e.getChildChannel().getConfig().setOptions(childOptions);
             } catch (Throwable t) {
-                Channels.fireExceptionCaught(e.getChildChannel(), t);
+                fireExceptionCaught(e.getChildChannel(), t);
             }
             ctx.sendUpstream(e);
         }

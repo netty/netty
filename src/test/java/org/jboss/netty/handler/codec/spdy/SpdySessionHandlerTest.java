@@ -31,7 +31,7 @@ import org.junit.Test;
 
 public class SpdySessionHandlerTest {
 
-    private static final int closeSignal = SpdyCodecUtil.SPDY_SETTINGS_MAX_ID;
+    private static final int closeSignal = SPDY_SETTINGS_MAX_ID;
     private static final SpdySettingsFrame closeMessage = new DefaultSpdySettingsFrame();
 
     static {

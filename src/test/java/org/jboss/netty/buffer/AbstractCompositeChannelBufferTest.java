@@ -47,30 +47,30 @@ public abstract class AbstractCompositeChannelBufferTest extends
     protected ChannelBuffer newBuffer(int length) {
         buffers = new ArrayList<ChannelBuffer>();
         for (int i = 0; i < length; i += 10) {
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[1]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[2]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[3]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[4]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[5]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[6]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[7]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[8]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(order, new byte[9]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[1]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[2]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[3]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[4]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[5]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[6]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[7]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[8]));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(wrappedBuffer(order, new byte[9]));
+            buffers.add(EMPTY_BUFFER);
         }
 
-        buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
+        buffer = wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
         buffer.writerIndex(length);
-        buffer = ChannelBuffers.wrappedBuffer(buffer);
+        buffer = wrappedBuffer(buffer);
         assertEquals(length, buffer.capacity());
         assertEquals(length, buffer.readableBytes());
         assertFalse(buffer.writable());
@@ -92,7 +92,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
     @Test
     public void testGetBuffer() {
-        CompositeChannelBuffer buf = (CompositeChannelBuffer) ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5 }, new byte[] {4, 5, 6, 7, 8, 9, 26});
+        CompositeChannelBuffer buf = (CompositeChannelBuffer) wrappedBuffer(new byte[]{1, 2, 3, 4, 5}, new byte[]{4, 5, 6, 7, 8, 9, 26});
 
         //Ensure that a random place will be fine
         assertEquals(buf.getBuffer(2).capacity(), 5);

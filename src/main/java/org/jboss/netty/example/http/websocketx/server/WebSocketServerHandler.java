@@ -143,6 +143,6 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private static String getWebSocketLocation(HttpRequest req) {
-        return "ws://" + req.getHeader(HttpHeaders.Names.HOST) + WEBSOCKET_PATH;
+        return "ws://" + req.getHeader(HOST) + WEBSOCKET_PATH;
     }
 }

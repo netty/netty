@@ -177,9 +177,9 @@ public class ChunkedWriteHandler
 
         if (cause != null) {
             if (fireNow) {
-                Channels.fireExceptionCaught(ctx.getChannel(), cause);
+                fireExceptionCaught(ctx.getChannel(), cause);
             } else {
-                Channels.fireExceptionCaughtLater(ctx.getChannel(), cause);
+                fireExceptionCaughtLater(ctx.getChannel(), cause);
             }
         }
     }
@@ -277,7 +277,7 @@ public class ChunkedWriteHandler
                                     });
                                 }
 
-                                Channels.write(
+                                write(
                                         ctx, writeFuture, chunk,
                                         currentEvent.getRemoteAddress());
                             }
@@ -369,7 +369,7 @@ public class ChunkedWriteHandler
         }
 
         if (fireExceptionCaught) {
-            Channels.fireExceptionCaughtLater(ctx.getChannel(), cause);
+            fireExceptionCaughtLater(ctx.getChannel(), cause);
         }
     }
 }

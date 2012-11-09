@@ -68,7 +68,7 @@ public class WebSocketServerProtocolHandlerTest {
         HttpResponseInterceptor responseInterceptor = addHttpResponseInterceptor(embedder);
         
         embedder.offer(WebSocketRequestBuilder.sucessful());
-        embedder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "path"));
+        embedder.offer(new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "path"));
         
         assertEquals(SWITCHING_PROTOCOLS, responseInterceptor.getHttpResponse().getStatus());
         assertEquals(FORBIDDEN, responseInterceptor.getHttpResponse().getStatus());

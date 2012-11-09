@@ -40,24 +40,24 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1)) instanceof ReadOnlyChannelBuffer);
+        assertTrue(unmodifiableBuffer(buffer(1)) instanceof ReadOnlyChannelBuffer);
     }
 
     @Test
     public void testUnwrap() {
-        ChannelBuffer buf = ChannelBuffers.buffer(1);
+        ChannelBuffer buf = buffer(1);
         assertSame(buf, ((WrappedChannelBuffer) ChannelBuffers.unmodifiableBuffer(buf)).unwrap());
     }
 
     @Test
     public void shouldHaveSameByteOrder() {
-        ChannelBuffer buf = ChannelBuffers.buffer(ChannelBuffers.LITTLE_ENDIAN, 1);
-        assertSame(ChannelBuffers.LITTLE_ENDIAN, ChannelBuffers.unmodifiableBuffer(buf).order());
+        ChannelBuffer buf = buffer(LITTLE_ENDIAN, 1);
+        assertSame(LITTLE_ENDIAN, ChannelBuffers.unmodifiableBuffer(buf).order());
     }
 
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
-        ChannelBuffer buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
+        ChannelBuffer buf = unmodifiableBuffer(buffer(1));
         assertTrue(buf.duplicate() instanceof ReadOnlyChannelBuffer);
         assertTrue(buf.slice() instanceof ReadOnlyChannelBuffer);
         assertTrue(buf.slice(0, 1) instanceof ReadOnlyChannelBuffer);
@@ -66,7 +66,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldReturnWritableCopy() {
-        ChannelBuffer buf = ChannelBuffers.unmodifiableBuffer(ChannelBuffers.buffer(1));
+        ChannelBuffer buf = unmodifiableBuffer(buffer(1));
         assertFalse(buf.copy() instanceof ReadOnlyChannelBuffer);
     }
 

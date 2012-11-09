@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.buffer;
 
+import org.jboss.netty.util.CharsetUtil;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
@@ -25,8 +27,6 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.jboss.netty.util.CharsetUtil;
 
 
 /**
@@ -832,7 +832,7 @@ public final class ChannelBuffers {
 
     private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
         CharBuffer src = buffer;
-        ByteBuffer dst = ChannelBuffers.encodeString(src, charset);
+        ByteBuffer dst = encodeString(src, charset);
         ChannelBuffer result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.remaining());
         return result;

@@ -1437,7 +1437,7 @@ public class SslHandler extends FrameDecoder
 
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (!future.isSuccess()) {
-                        Channels.fireExceptionCaught(future.getChannel(), future.getCause());
+                        fireExceptionCaught(future.getChannel(), future.getCause());
                     } else {
                         // Send the event upstream after the handshake was completed without an error.
                         //

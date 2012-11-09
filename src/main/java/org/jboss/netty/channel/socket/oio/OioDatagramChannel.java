@@ -74,9 +74,9 @@ final class OioDatagramChannel extends AbstractOioChannel
         ensureBound();
         try {
             socket.joinGroup(multicastAddress);
-            return Channels.succeededFuture(this);
+            return succeededFuture(this);
         } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
     }
 
@@ -85,9 +85,9 @@ final class OioDatagramChannel extends AbstractOioChannel
         ensureBound();
         try {
             socket.joinGroup(multicastAddress, networkInterface);
-            return Channels.succeededFuture(this);
+            return succeededFuture(this);
         } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
     }
 
@@ -102,9 +102,9 @@ final class OioDatagramChannel extends AbstractOioChannel
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
         try {
             socket.leaveGroup(multicastAddress);
-            return Channels.succeededFuture(this);
+            return succeededFuture(this);
         } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
     }
 
@@ -112,9 +112,9 @@ final class OioDatagramChannel extends AbstractOioChannel
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         try {
             socket.leaveGroup(multicastAddress, networkInterface);
-            return Channels.succeededFuture(this);
+            return succeededFuture(this);
         } catch (IOException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
     }
 

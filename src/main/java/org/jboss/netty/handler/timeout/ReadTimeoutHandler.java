@@ -233,7 +233,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     }
 
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
-        Channels.fireExceptionCaught(ctx, EXCEPTION);
+        fireExceptionCaught(ctx, EXCEPTION);
     }
 
     private final class ReadTimeoutTask implements TimerTask {

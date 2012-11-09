@@ -69,7 +69,7 @@ public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler
         if (e.getMessage() instanceof WebSocketFrame) {
             WebSocketFrame frame = (WebSocketFrame) e.getMessage();
             if (frame instanceof CloseWebSocketFrame) {
-                WebSocketServerHandshaker handshaker = WebSocketServerProtocolHandler.getHandshaker(ctx);
+                WebSocketServerHandshaker handshaker = getHandshaker(ctx);
                 handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
                 return;
             } else if (frame instanceof PingWebSocketFrame) {

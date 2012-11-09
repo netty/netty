@@ -350,7 +350,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
             }
         }
 
-        Channels.fireWriteComplete(channel, writtenBytes);
+        fireWriteComplete(channel, writtenBytes);
     }
 
 }

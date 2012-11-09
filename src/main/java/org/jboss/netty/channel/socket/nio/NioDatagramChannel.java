@@ -133,7 +133,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             return joinGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
     }
 
@@ -179,10 +179,10 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                     keys.add(key);
                 }
             } catch (Throwable e) {
-                return Channels.failedFuture(this, e);
+                return failedFuture(this, e);
             }
         }
-        return Channels.succeededFuture(this);
+        return succeededFuture(this);
     }
 
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
@@ -190,7 +190,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
 
     }
@@ -239,7 +239,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                     }
                 }
             }
-            return Channels.succeededFuture(this);
+            return succeededFuture(this);
         }
     }
 
@@ -270,13 +270,13 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                             try {
                                 key.block(sourceToBlock);
                             } catch (IOException e) {
-                                return Channels.failedFuture(this, e);
+                                return failedFuture(this, e);
                             }
                         }
                     }
                 }
             }
-            return Channels.succeededFuture(this);
+            return succeededFuture(this);
 
 
         }
@@ -290,9 +290,9 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         try {
             block(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), sourceToBlock);
         } catch (SocketException e) {
-            return Channels.failedFuture(this, e);
+            return failedFuture(this, e);
         }
-        return Channels.succeededFuture(this);
+        return succeededFuture(this);
 
     }
     @Override

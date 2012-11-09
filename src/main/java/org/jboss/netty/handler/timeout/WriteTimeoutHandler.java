@@ -160,7 +160,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
     }
 
     protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
-       Channels.fireExceptionCaught(ctx, EXCEPTION);
+       fireExceptionCaught(ctx, EXCEPTION);
     }
 
     private final class WriteTimeoutTask implements TimerTask {

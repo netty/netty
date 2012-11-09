@@ -190,7 +190,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
                         String.valueOf(content.readableBytes()));
 
                 // All done - generate the event.
-                Channels.fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
+                fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
             }
         } else {
             // Neither HttpMessage or HttpChunk

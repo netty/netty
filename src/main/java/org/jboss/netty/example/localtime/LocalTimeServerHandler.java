@@ -60,7 +60,7 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
         for (Location l: locations.getLocationList()) {
             TimeZone tz = TimeZone.getTimeZone(
                     toString(l.getContinent()) + '/' + l.getCity());
-            Calendar calendar = Calendar.getInstance(tz);
+            Calendar calendar = getInstance(tz);
             calendar.setTimeInMillis(currentTime);
 
             builder.addLocalTime(LocalTime.newBuilder().

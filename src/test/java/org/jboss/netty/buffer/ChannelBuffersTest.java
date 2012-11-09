@@ -199,14 +199,14 @@ public class ChannelBuffersTest {
 
     @Test
     public void testCompare2() {
-        assertTrue(ChannelBuffers.compare(
-                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}),
-                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}))
+        assertTrue(compare(
+                wrappedBuffer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}),
+                wrappedBuffer(new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}))
                 > 0);
 
-        assertTrue(ChannelBuffers.compare(
-                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0xFF}),
-                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0x00}))
+        assertTrue(compare(
+                wrappedBuffer(new byte[]{(byte) 0xFF}),
+                wrappedBuffer(new byte[]{(byte) 0x00}))
                 > 0);
     }
 
@@ -432,12 +432,12 @@ public class ChannelBuffersTest {
      */
     @Test
     public void testHexDumpOperations() {
-        ChannelBuffer buffer = ChannelBuffers.copiedBuffer("This is some testdata", CharsetUtil.ISO_8859_1);
-        String hexDump = ChannelBuffers.hexDump(buffer);
-        ChannelBuffer buffer2 = ChannelBuffers.hexDump(hexDump);
+        ChannelBuffer buffer = copiedBuffer("This is some testdata", CharsetUtil.ISO_8859_1);
+        String hexDump = hexDump(buffer);
+        ChannelBuffer buffer2 = hexDump(hexDump);
         assertEquals(buffer, buffer2);
         
-        String hexDump2 = ChannelBuffers.hexDump(buffer2);
+        String hexDump2 = hexDump(buffer2);
         assertEquals(hexDump, hexDump2);
     }
 }

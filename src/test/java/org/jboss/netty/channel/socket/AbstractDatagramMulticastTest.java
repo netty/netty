@@ -156,7 +156,7 @@ public abstract class AbstractDatagramMulticastTest {
                 fail = true;
             }
 
-            Assert.assertEquals(1, ((ChannelBuffer)e.getMessage()).readInt());
+            assertEquals(1, ((ChannelBuffer) e.getMessage()).readInt());
 
             latch.countDown();
 
@@ -174,7 +174,7 @@ public abstract class AbstractDatagramMulticastTest {
             boolean success = latch.await(10, TimeUnit.SECONDS);
             if (fail) {
                 // fail if we receive an message after we are done
-                Assert.fail();
+                fail();
             }
             return success;
         }

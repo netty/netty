@@ -219,9 +219,9 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
             try {
                 task.run();
-                return Channels.succeededFuture(pipeline.getChannel());
+                return succeededFuture(pipeline.getChannel());
             } catch (Throwable t) {
-                return Channels.failedFuture(pipeline.getChannel(), t);
+                return failedFuture(pipeline.getChannel(), t);
             }
         }
     }

@@ -66,7 +66,7 @@ public abstract class AbstractDatagramTest {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
                 super.messageReceived(ctx, e);
-                Assert.assertEquals(1,((ChannelBuffer)e.getMessage()).readInt());
+                assertEquals(1, ((ChannelBuffer) e.getMessage()).readInt());
 
                 latch.countDown();
             }
