@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.List;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -24,6 +22,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+
+import java.util.List;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link HttpMessage}s and
@@ -465,7 +465,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (toRead > actualReadableBytes()) {
             toRead = actualReadableBytes();
         }
-        contentRead = contentRead + toRead;
+        contentRead += toRead;
         if (length < contentRead) {
             if (!message.isChunked()) {
                 message.setChunked(true);

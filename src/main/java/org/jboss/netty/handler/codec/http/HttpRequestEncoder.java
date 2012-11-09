@@ -15,9 +15,9 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.jboss.netty.handler.codec.http.HttpConstants.*;
-
 import org.jboss.netty.buffer.ChannelBuffer;
+
+import static org.jboss.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an {@link HttpRequest} or an {@link HttpChunk} into
@@ -45,7 +45,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         if (start != -1) {
             int startIndex = start + 3;
             if (uri.lastIndexOf(SLASH) <= startIndex) {
-                uri = uri + SLASH;
+                uri += SLASH;
             }
         }
 
