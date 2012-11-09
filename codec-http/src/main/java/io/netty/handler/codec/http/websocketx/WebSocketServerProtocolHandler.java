@@ -66,7 +66,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     @Override
     public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
-            WebSocketServerHandshaker handshaker = WebSocketServerProtocolHandler.getHandshaker(ctx);
+            WebSocketServerHandshaker handshaker = getHandshaker(ctx);
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         } else if (frame instanceof PingWebSocketFrame) {

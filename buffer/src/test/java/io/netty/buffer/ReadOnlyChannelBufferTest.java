@@ -40,26 +40,26 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(Unpooled.unmodifiableBuffer(Unpooled.buffer(1)) instanceof ReadOnlyByteBuf);
+        assertTrue(unmodifiableBuffer(buffer(1)) instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void testUnwrap() {
-        ByteBuf buf = Unpooled.buffer(1);
+        ByteBuf buf = buffer(1);
         assertSame(buf, ((WrappedByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
     }
 
     @Test
     public void shouldHaveSameByteOrder() {
-        ByteBuf buf = Unpooled.buffer(1);
-        assertSame(Unpooled.BIG_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        ByteBuf buf = buffer(1);
+        assertSame(BIG_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
         buf = buf.order(LITTLE_ENDIAN);
-        assertSame(Unpooled.LITTLE_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        assertSame(LITTLE_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
     }
 
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
-        ByteBuf buf = Unpooled.unmodifiableBuffer(Unpooled.buffer(1));
+        ByteBuf buf = unmodifiableBuffer(buffer(1));
         assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
@@ -68,7 +68,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldReturnWritableCopy() {
-        ByteBuf buf = Unpooled.unmodifiableBuffer(Unpooled.buffer(1));
+        ByteBuf buf = unmodifiableBuffer(buffer(1));
         assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
     }
 

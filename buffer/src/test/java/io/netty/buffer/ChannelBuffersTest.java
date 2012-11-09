@@ -194,13 +194,13 @@ public class ChannelBuffersTest {
     @Test
     public void testCompare2() {
         assertTrue(ByteBufUtil.compare(
-                Unpooled.wrappedBuffer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}),
-                Unpooled.wrappedBuffer(new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}))
+                wrappedBuffer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}),
+                wrappedBuffer(new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}))
                 > 0);
 
         assertTrue(ByteBufUtil.compare(
-                Unpooled.wrappedBuffer(new byte[]{(byte) 0xFF}),
-                Unpooled.wrappedBuffer(new byte[]{(byte) 0x00}))
+                wrappedBuffer(new byte[]{(byte) 0xFF}),
+                wrappedBuffer(new byte[]{(byte) 0x00}))
                 > 0);
     }
 
@@ -403,7 +403,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapSingleInt() {
-        ByteBuf buffer = Unpooled.copyInt(42);
+        ByteBuf buffer = copyInt(42);
         assertEquals(4, buffer.capacity());
         assertEquals(42, buffer.readInt());
         assertFalse(buffer.readable());
@@ -411,7 +411,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapInt() {
-        ByteBuf buffer = Unpooled.copyInt(1, 4);
+        ByteBuf buffer = copyInt(1, 4);
         assertEquals(8, buffer.capacity());
         assertEquals(1, buffer.readInt());
         assertEquals(4, buffer.readInt());
@@ -423,7 +423,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapSingleShort() {
-        ByteBuf buffer = Unpooled.copyShort(42);
+        ByteBuf buffer = copyShort(42);
         assertEquals(2, buffer.capacity());
         assertEquals(42, buffer.readShort());
         assertFalse(buffer.readable());
@@ -431,7 +431,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapShortFromShortArray() {
-        ByteBuf buffer = Unpooled.copyShort(new short[] { 1, 4 });
+        ByteBuf buffer = copyShort(new short[]{1, 4});
         assertEquals(4, buffer.capacity());
         assertEquals(1, buffer.readShort());
         assertEquals(4, buffer.readShort());
@@ -443,7 +443,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapShortFromIntArray() {
-        ByteBuf buffer = Unpooled.copyShort(1, 4);
+        ByteBuf buffer = copyShort(1, 4);
         assertEquals(4, buffer.capacity());
         assertEquals(1, buffer.readShort());
         assertEquals(4, buffer.readShort());
@@ -455,7 +455,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapSingleMedium() {
-        ByteBuf buffer = Unpooled.copyMedium(42);
+        ByteBuf buffer = copyMedium(42);
         assertEquals(3, buffer.capacity());
         assertEquals(42, buffer.readMedium());
         assertFalse(buffer.readable());
@@ -463,7 +463,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapMedium() {
-        ByteBuf buffer = Unpooled.copyMedium(1, 4);
+        ByteBuf buffer = copyMedium(1, 4);
         assertEquals(6, buffer.capacity());
         assertEquals(1, buffer.readMedium());
         assertEquals(4, buffer.readMedium());
@@ -475,7 +475,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapSingleLong() {
-        ByteBuf buffer = Unpooled.copyLong(42);
+        ByteBuf buffer = copyLong(42);
         assertEquals(8, buffer.capacity());
         assertEquals(42, buffer.readLong());
         assertFalse(buffer.readable());
@@ -483,7 +483,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapLong() {
-        ByteBuf buffer = Unpooled.copyLong(1, 4);
+        ByteBuf buffer = copyLong(1, 4);
         assertEquals(16, buffer.capacity());
         assertEquals(1, buffer.readLong());
         assertEquals(4, buffer.readLong());
@@ -495,7 +495,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapSingleFloat() {
-        ByteBuf buffer = Unpooled.copyFloat(42);
+        ByteBuf buffer = copyFloat(42);
         assertEquals(4, buffer.capacity());
         assertEquals(42, buffer.readFloat(), 0.01);
         assertFalse(buffer.readable());
@@ -503,7 +503,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapFloat() {
-        ByteBuf buffer = Unpooled.copyFloat(1, 4);
+        ByteBuf buffer = copyFloat(1, 4);
         assertEquals(8, buffer.capacity());
         assertEquals(1, buffer.readFloat(), 0.01);
         assertEquals(4, buffer.readFloat(), 0.01);
@@ -515,7 +515,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapSingleDouble() {
-        ByteBuf buffer = Unpooled.copyDouble(42);
+        ByteBuf buffer = copyDouble(42);
         assertEquals(8, buffer.capacity());
         assertEquals(42, buffer.readDouble(), 0.01);
         assertFalse(buffer.readable());
@@ -523,7 +523,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapDouble() {
-        ByteBuf buffer = Unpooled.copyDouble(1, 4);
+        ByteBuf buffer = copyDouble(1, 4);
         assertEquals(16, buffer.capacity());
         assertEquals(1, buffer.readDouble(), 0.01);
         assertEquals(4, buffer.readDouble(), 0.01);
@@ -535,7 +535,7 @@ public class ChannelBuffersTest {
 
     @Test
     public void testWrapBoolean() {
-        ByteBuf buffer = Unpooled.copyBoolean(true, false);
+        ByteBuf buffer = copyBoolean(true, false);
         assertEquals(2, buffer.capacity());
         assertEquals(true, buffer.readBoolean());
         assertEquals(false, buffer.readBoolean());

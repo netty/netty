@@ -146,6 +146,6 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
     }
 
     private static String getWebSocketLocation(HttpRequest req) {
-        return "wss://" + req.getHeader(HttpHeaders.Names.HOST) + WEBSOCKET_PATH;
+        return "wss://" + req.getHeader(HOST) + WEBSOCKET_PATH;
     }
 }

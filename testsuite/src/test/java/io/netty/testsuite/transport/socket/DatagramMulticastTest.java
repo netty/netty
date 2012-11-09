@@ -110,7 +110,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                 fail = true;
             }
 
-            Assert.assertEquals(1, msg.data().readInt());
+            assertEquals(1, msg.data().readInt());
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message
@@ -121,7 +121,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             boolean success = latch.await(10, TimeUnit.SECONDS);
             if (fail) {
                 // fail if we receive an message after we are done
-                Assert.fail();
+                fail();
             }
             return success;
         }
