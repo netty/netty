@@ -18,8 +18,8 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.Notification;
 
 public final class SctpNotificationEvent {
-    private Notification notification;
-    private Object attachment;
+    private final Notification notification;
+    private final Object attachment;
 
 
     public SctpNotificationEvent(Notification notification, Object attachment) {
