@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
-
-import java.util.List;
-
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -29,6 +25,10 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
+
+import java.util.List;
+
+import static org.junit.Assert.*;
 
 public class HttpChunkAggregatorTest {
 
@@ -59,7 +59,7 @@ public class HttpChunkAggregatorTest {
 
     }
 
-    private void checkContentBuffer(HttpMessage aggregatedMessage) {
+    private static void checkContentBuffer(HttpMessage aggregatedMessage) {
         CompositeChannelBuffer buffer = (CompositeChannelBuffer) aggregatedMessage.getContent();
         assertEquals(2, buffer.numComponents());
         List<ChannelBuffer> buffers = buffer.decompose(0, buffer.capacity());

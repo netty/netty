@@ -58,7 +58,7 @@ public class HttpServerCodecTest {
         Assert.assertEquals(offeredContentLength, totalBytesPolled);
     }
 
-    private ChannelBuffer prepareDataChunk(int size) {
+    private static ChannelBuffer prepareDataChunk(int size) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; ++i) {
             sb.append("a");

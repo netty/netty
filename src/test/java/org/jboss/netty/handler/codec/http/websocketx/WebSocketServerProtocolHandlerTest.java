@@ -15,17 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
-import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.LinkedList;
-import java.util.Queue;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
@@ -39,6 +28,14 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.junit.Test;
+
+import java.util.LinkedList;
+import java.util.Queue;
+
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Values.*;
+import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
+import static org.junit.Assert.*;
 
 public class WebSocketServerProtocolHandlerTest {
 
@@ -55,7 +52,7 @@ public class WebSocketServerProtocolHandlerTest {
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(ctx));
     }
     
-    private HttpResponseInterceptor addHttpResponseInterceptor(DecoderEmbedder<Object> embedder) {
+    private static HttpResponseInterceptor addHttpResponseInterceptor(DecoderEmbedder<Object> embedder) {
         HttpResponseInterceptor interceptor = new HttpResponseInterceptor();
         embedder.getPipeline().addLast("httpEncoder", interceptor);
         return interceptor;
@@ -110,7 +107,7 @@ public class WebSocketServerProtocolHandlerTest {
         }
     }
     
-    private void assertWebSocketHandshakeException(Exception e) {
+    private static void assertWebSocketHandshakeException(Exception e) {
         assertTrue(e instanceof CodecEmbedderException);
         assertTrue(e.getCause() instanceof WebSocketHandshakeException);
     }
@@ -132,7 +129,7 @@ public class WebSocketServerProtocolHandlerTest {
         return decoder;
     }
 
-    private DecoderEmbedder<Object> decoderEmbedder() {
+    private static DecoderEmbedder<Object> decoderEmbedder() {
         DecoderEmbedder<Object> decoder = new DecoderEmbedder<Object>(
                 new HttpRequestDecoder(),
                 new WebSocketServerProtocolHandler("path"));
