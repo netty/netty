@@ -15,8 +15,6 @@
  */
 package io.netty.example.http.upload;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.handler.codec.http.HttpHeaders.Names.SET_COOKIE;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -58,6 +56,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
 public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
@@ -273,7 +274,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                     if (fileUpload.length() < 10000) {
                         responseContent.append("\tContent of file\r\n");
                         try {
-                            responseContent.append(((FileUpload) data).getString(((FileUpload) data).getCharset()));
+                            responseContent.append(fileUpload.getString(fileUpload.getCharset()));
                         } catch (IOException e1) {
                             // do nothing for the example
                             e1.printStackTrace();
