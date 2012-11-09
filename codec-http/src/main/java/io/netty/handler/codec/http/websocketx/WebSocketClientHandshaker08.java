@@ -101,7 +101,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         // Get path
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
-        if (wsURL.getQuery() != null && wsURL.getQuery().length() > 0) {
+        if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
             path = wsURL.getPath() + "?" + wsURL.getQuery();
         }
 

@@ -48,7 +48,7 @@ public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<Str
         // Generate and write a response.
         String response;
         boolean close = false;
-        if (request.length() == 0) {
+        if (request.isEmpty()) {
             response = "Please type something.\r\n";
         } else if (request.toLowerCase().equals("bye")) {
             response = "Have a good day!\r\n";

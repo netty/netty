@@ -442,7 +442,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                 duringMixedMode = false;
             }
             InternalAttribute internal = new InternalAttribute();
-            if (multipartHttpDatas.size() > 0) {
+            if (!multipartHttpDatas.isEmpty()) {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
             }
@@ -465,7 +465,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
         } else if (data instanceof FileUpload) {
             FileUpload fileUpload = (FileUpload) data;
             InternalAttribute internal = new InternalAttribute();
-            if (multipartHttpDatas.size() > 0) {
+            if (!multipartHttpDatas.isEmpty()) {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
             }

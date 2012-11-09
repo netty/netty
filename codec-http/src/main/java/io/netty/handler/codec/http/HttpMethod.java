@@ -110,7 +110,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         name = name.trim();
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
 
@@ -137,7 +137,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         name = name.trim();
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
 

@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import java.nio.charset.Charset;
-
 import io.netty.handler.codec.http.HttpConstants;
+
+import java.nio.charset.Charset;
 
 /**
  * Abstract HttpData implementation
@@ -35,7 +35,7 @@ public abstract class AbstractHttpData implements HttpData {
             throw new NullPointerException("name");
         }
         name = name.trim();
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
 

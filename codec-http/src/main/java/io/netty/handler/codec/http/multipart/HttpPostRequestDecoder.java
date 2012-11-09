@@ -379,7 +379,7 @@ public class HttpPostRequestDecoder {
                 throw new EndOfDataDecoderException();
             }
         }
-        return bodyListHttpData.size() > 0 && bodyListHttpDataRank < bodyListHttpData.size();
+        return !bodyListHttpData.isEmpty() && bodyListHttpDataRank < bodyListHttpData.size();
     }
 
     /**
