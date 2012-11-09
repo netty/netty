@@ -15,10 +15,10 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import java.nio.ByteBuffer;
-
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ByteBufferUtil;
+
+import java.nio.ByteBuffer;
 
 final class SocketReceiveBufferAllocator implements ExternalResourceReleasable {
 
@@ -42,7 +42,7 @@ final class SocketReceiveBufferAllocator implements ExternalResourceReleasable {
             return newBuffer(size);
         } else if (buf.capacity() < size) {
             return newBuffer(size);
-        } else if (((buf.capacity() / 100) * percentual) > size) {
+        } else if (buf.capacity() * percentual / 100 > size) {
             if (++exceedCount == maxExceedCount) {
                return newBuffer(size);
             } else {

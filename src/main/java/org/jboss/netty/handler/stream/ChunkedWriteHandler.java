@@ -299,7 +299,7 @@ public class ChunkedWriteHandler
 
         }
 
-        if (acquired && ((!channel.isConnected() || channel.isWritable() && !queue.isEmpty() && !suspend)
+        if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty() && !suspend
                 || flushNeeded)) {
             flush(ctx, fireNow);
         }

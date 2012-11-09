@@ -109,5 +109,5 @@ public enum ChannelState {
      * Represents a {@link Channel}'s {@link Channel#getInterestOps() interestOps}
      * property
      */
-    INTEREST_OPS;
+    INTEREST_OPS
 }

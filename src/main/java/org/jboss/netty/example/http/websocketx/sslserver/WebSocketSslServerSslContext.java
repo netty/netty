@@ -31,6 +31,7 @@ public final class WebSocketSslServerSslContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSslServerSslContext.class);
     private static final String PROTOCOL = "TLS";
+
     private final SSLContext _serverContext;
 
     /**
@@ -54,6 +55,7 @@ public final class WebSocketSslServerSslContext {
      * Constructor for singleton
      */
     private WebSocketSslServerSslContext() {
+        SSLContext serverContext = null;
         try {
             // Key store (Server side certificate)
             String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
@@ -61,7 +63,6 @@ public final class WebSocketSslServerSslContext {
                 algorithm = "SunX509";
             }
 
-            SSLContext serverContext = null;
             try {
                 String keyStoreFilePath = System.getProperty("keystore.file.path");
                 String keyStoreFilePassword = System.getProperty("keystore.file.password");
@@ -82,13 +83,13 @@ public final class WebSocketSslServerSslContext {
             } catch (Exception e) {
                 throw new Error("Failed to initialize the server-side SSLContext", e);
             }
-            _serverContext = serverContext;
         } catch (Exception ex) {
             if (logger.isErrorEnabled()) {
                 logger.error("Error initializing SslContextManager. " + ex.getMessage(), ex);
             }
             System.exit(1);
-
+        } finally {
+            _serverContext = serverContext;
         }
     }
 

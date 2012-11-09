@@ -103,7 +103,7 @@ public final class JZlib {
     static final int MAX_BL_BITS = 7;
 
     static enum WrapperType {
-        NONE, ZLIB, GZIP, ZLIB_OR_NONE;
+        NONE, ZLIB, GZIP, ZLIB_OR_NONE
     }
 
     private JZlib() {

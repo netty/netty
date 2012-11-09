@@ -251,7 +251,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                         for (SelectionKey key: selector.keys()) {
                             SelectableChannel ch = key.channel();
                             try {
-                                if ((ch instanceof DatagramChannel && !((DatagramChannel) ch).isConnected()) ||
+                                if (ch instanceof DatagramChannel && !((DatagramChannel) ch).isConnected() ||
                                         ch instanceof SocketChannel && !((SocketChannel) ch).isConnected()) {
                                     notConnected = true;
                                     // cancel the key just to be on the safe side
