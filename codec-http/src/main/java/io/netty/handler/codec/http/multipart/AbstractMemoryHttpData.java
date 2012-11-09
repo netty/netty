@@ -43,6 +43,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         super(name, charset, size);
     }
 
+    @Override
     public void setContent(ByteBuf buffer) throws IOException {
         if (buffer == null) {
             throw new NullPointerException("buffer");
@@ -57,6 +58,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         completed = true;
     }
 
+    @Override
     public void setContent(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream");
@@ -78,6 +80,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         completed = true;
     }
 
+    @Override
     public void addContent(ByteBuf buffer, boolean last)
             throws IOException {
         if (buffer != null) {
@@ -102,6 +105,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
     }
 
+    @Override
     public void setContent(File file) throws IOException {
         if (file == null) {
             throw new NullPointerException("file");
@@ -127,10 +131,12 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         completed = true;
     }
 
+    @Override
     public void delete() {
         // nothing to do
     }
 
+    @Override
     public byte[] get() {
         if (byteBuf == null) {
             return new byte[0];
@@ -140,10 +146,12 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         return array;
     }
 
+    @Override
     public String getString() {
         return getString(HttpConstants.DEFAULT_CHARSET);
     }
 
+    @Override
     public String getString(Charset encoding) {
         if (byteBuf == null) {
             return "";
@@ -159,10 +167,12 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
      * to a Disk (or another implementation) FileUpload
      * @return the attached ByteBuf containing the actual bytes
      */
+    @Override
     public ByteBuf getByteBuf() {
         return byteBuf;
     }
 
+    @Override
     public ByteBuf getChunk(int length) throws IOException {
         if (byteBuf == null || length == 0 || byteBuf.readableBytes() == 0) {
             chunkPosition = 0;
@@ -182,10 +192,12 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         return chunk;
     }
 
+    @Override
     public boolean isInMemory() {
         return true;
     }
 
+    @Override
     public boolean renameTo(File dest) throws IOException {
         if (dest == null) {
             throw new NullPointerException("dest");
@@ -211,6 +223,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         return written == length;
     }
 
+    @Override
     public File getFile() throws IOException {
         throw new IOException("Not represented by a file");
     }

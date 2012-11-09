@@ -53,15 +53,18 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         setValue(value);
     }
 
+    @Override
     public HttpDataType getHttpDataType() {
         return HttpDataType.Attribute;
     }
 
+    @Override
     public String getValue() throws IOException {
         byte [] bytes = get();
         return new String(bytes, charset.name());
     }
 
+    @Override
     public void setValue(String value) throws IOException {
         if (value == null) {
             throw new NullPointerException("value");
@@ -96,6 +99,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
+    @Override
     public int compareTo(InterfaceHttpData arg0) {
         if (!(arg0 instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +

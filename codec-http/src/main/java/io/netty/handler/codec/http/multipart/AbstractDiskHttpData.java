@@ -94,6 +94,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return tmpFile;
     }
 
+    @Override
     public void setContent(ByteBuf buffer) throws IOException {
         if (buffer == null) {
             throw new NullPointerException("buffer");
@@ -124,6 +125,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         completed = true;
     }
 
+    @Override
     public void addContent(ByteBuf buffer, boolean last)
             throws IOException {
         if (buffer != null) {
@@ -166,6 +168,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
     }
 
+    @Override
     public void setContent(File file) throws IOException {
         if (this.file != null) {
             delete();
@@ -176,6 +179,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         completed = true;
     }
 
+    @Override
     public void setContent(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream");
@@ -207,6 +211,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         completed = true;
     }
 
+    @Override
     public void delete() {
         if (! isRenamed) {
             if (file != null) {
@@ -215,6 +220,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
     }
 
+    @Override
     public byte[] get() throws IOException {
         if (file == null) {
             return new byte[0];
@@ -222,6 +228,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return readFrom(file);
     }
 
+    @Override
     public ByteBuf getByteBuf() throws IOException {
         if (file == null) {
             return EMPTY_BUFFER;
@@ -230,6 +237,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return wrappedBuffer(array);
     }
 
+    @Override
     public ByteBuf getChunk(int length) throws IOException {
         if (file == null || length == 0) {
             return EMPTY_BUFFER;
@@ -260,10 +268,12 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return buffer;
     }
 
+    @Override
     public String getString() throws IOException {
         return getString(HttpConstants.DEFAULT_CHARSET);
     }
 
+    @Override
     public String getString(Charset encoding) throws IOException {
         if (file == null) {
             return "";
@@ -276,10 +286,12 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return new String(array, encoding.name());
     }
 
+    @Override
     public boolean isInMemory() {
         return false;
     }
 
+    @Override
     public boolean renameTo(File dest) throws IOException {
         if (dest == null) {
             throw new NullPointerException("dest");
@@ -339,6 +351,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return array;
     }
 
+    @Override
     public File getFile() throws IOException {
         return file;
     }
