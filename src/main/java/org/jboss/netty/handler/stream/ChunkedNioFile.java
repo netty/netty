@@ -15,7 +15,7 @@
  */
 package org.jboss.netty.handler.stream;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
+import org.jboss.netty.channel.FileRegion;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.jboss.netty.channel.FileRegion;
+import static org.jboss.netty.buffer.ChannelBuffers.*;
 
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk using
@@ -36,7 +36,7 @@ import org.jboss.netty.channel.FileRegion;
 public class ChunkedNioFile implements ChunkedInput {
 
     private final FileChannel in;
-    private long startOffset;
+    private final long startOffset;
     private final long endOffset;
     private final int chunkSize;
     private long offset;

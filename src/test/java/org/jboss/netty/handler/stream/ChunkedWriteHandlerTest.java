@@ -99,7 +99,7 @@ public class ChunkedWriteHandlerTest {
                 
         ChunkedInput input = new ChunkedInput() {
             private boolean done;
-            private ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
+            private final ChannelBuffer buffer = ChannelBuffers.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
             
             public Object nextChunk() throws Exception {
                 done = true;

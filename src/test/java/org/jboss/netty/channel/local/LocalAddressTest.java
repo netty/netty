@@ -28,7 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class LocalAddressTest {
-    private static String LOCAL_ADDR_ID = "test.id";
+    private static final String LOCAL_ADDR_ID = "test.id";
 
     @Test
     public void localConnectOK()

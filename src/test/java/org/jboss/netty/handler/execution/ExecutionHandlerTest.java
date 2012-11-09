@@ -75,7 +75,7 @@ public class ExecutionHandlerTest {
 
         private final CountDownLatch latch;
         private final ExecutionHandler handler;
-        private Channel channel;
+        private final Channel channel;
 
         public TestChannelHandlerContext(Channel channel, ExecutionHandler handler, CountDownLatch latch) {
             this.latch = latch;

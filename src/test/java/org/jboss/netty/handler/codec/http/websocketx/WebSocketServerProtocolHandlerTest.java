@@ -159,7 +159,7 @@ public class WebSocketServerProtocolHandlerTest {
     
     private static class HttpResponseInterceptor extends HttpResponseEncoder {
         
-        private Queue<HttpResponse> responses = new LinkedList<HttpResponse>();
+        private final Queue<HttpResponse> responses = new LinkedList<HttpResponse>();
 
         @Override
         protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
