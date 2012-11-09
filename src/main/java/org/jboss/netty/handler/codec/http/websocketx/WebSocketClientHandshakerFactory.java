@@ -40,7 +40,7 @@ public class WebSocketClientHandshakerFactory {
      * @throws WebSocketHandshakeException
      */
     public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders) throws WebSocketHandshakeException {
+            boolean allowExtensions, Map<String, String> customHeaders) {
         return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
     }
 
@@ -61,11 +61,11 @@ public class WebSocketClientHandshakerFactory {
      * @param maxFramePayloadLength
      *            Maximum allowable frame payload length. Setting this value to your application's
      *            requirement may reduce denial of service attacks using long data frames.
+     * @throws WebSocketHandshakeException
      */
     public WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength)
-                    throws WebSocketHandshakeException {
+            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength) {
         if (version == WebSocketVersion.V13) {
             return new WebSocketClientHandshaker13(
                     webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);

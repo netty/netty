@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.buffer;
 
+import org.jboss.netty.util.internal.DetectionUtil;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -25,8 +27,6 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.jboss.netty.util.internal.DetectionUtil;
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
@@ -605,7 +605,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     * @throws IndexOutOfBoundsException when the specified {@code index} is
     * less than zero, or larger than {@code capacity()}
     */
-    public ChannelBuffer getBuffer(int index) throws IndexOutOfBoundsException {
+    public ChannelBuffer getBuffer(int index) {
         if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException("Invalid index: " + index
                     + " - Bytes needed: " + index + ", maximum is "
