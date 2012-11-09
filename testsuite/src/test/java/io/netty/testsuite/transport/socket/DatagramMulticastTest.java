@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -26,13 +25,14 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.util.NetworkConstants;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class DatagramMulticastTest extends AbstractDatagramTest {
 
@@ -42,7 +42,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         run();
     }
 
-    public void testMulticast(AbstractBootstrap sb, AbstractBootstrap cb) throws Throwable {
+    public void testMulticast(AbstractBootstrap<?> sb, AbstractBootstrap<?> cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
         sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {

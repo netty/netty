@@ -15,18 +15,18 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.socket.DatagramPacket;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class DatagramUnicastTest extends AbstractDatagramTest {
 
@@ -35,7 +35,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         run();
     }
 
-    public void testSimpleSend(AbstractBootstrap sb, AbstractBootstrap cb) throws Throwable {
+    public void testSimpleSend(AbstractBootstrap<?> sb, AbstractBootstrap<?> cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
         sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {

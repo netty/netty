@@ -26,7 +26,7 @@ import org.osgi.util.tracker.ServiceTracker;
  */
 public class OsgiLoggerFactory extends InternalLoggerFactory {
 
-    private final ServiceTracker logServiceTracker;
+    private final ServiceTracker<LogService, LogService> logServiceTracker;
     private final InternalLoggerFactory fallback;
     volatile LogService logService;
 
@@ -46,18 +46,17 @@ public class OsgiLoggerFactory extends InternalLoggerFactory {
         }
 
         this.fallback = fallback;
-        logServiceTracker = new ServiceTracker(
+        logServiceTracker = new ServiceTracker<LogService, LogService>(
                 ctx, "org.osgi.service.log.LogService", null) {
                     @Override
-                    public Object addingService(ServiceReference reference) {
-                        LogService service = (LogService) super.addingService(reference);
+                    public LogService addingService(ServiceReference<LogService> reference) {
+                        LogService service = super.addingService(reference);
                         logService = service;
                         return service;
                     }
 
                     @Override
-                    public void removedService(ServiceReference reference,
-                            Object service) {
+                    public void removedService(ServiceReference<LogService> reference, LogService service) {
                         logService = null;
                     }
         };
