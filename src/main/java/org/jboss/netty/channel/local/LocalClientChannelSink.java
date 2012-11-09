@@ -38,10 +38,6 @@ final class LocalClientChannelSink extends AbstractChannelSink {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalClientChannelSink.class);
 
-    LocalClientChannelSink() {
-        super();
-    }
-
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;

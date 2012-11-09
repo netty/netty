@@ -30,13 +30,6 @@ public class DefaultServerChannelConfig implements ChannelConfig {
     private volatile ChannelPipelineFactory pipelineFactory;
     private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultServerChannelConfig() {
-        super();
-    }
-
     public void setOptions(Map<String, Object> options) {
         for (Entry<String, Object> e: options.entrySet()) {
             setOption(e.getKey(), e.getValue());

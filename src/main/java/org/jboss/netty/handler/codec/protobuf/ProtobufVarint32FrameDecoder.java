@@ -43,13 +43,6 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
     // TODO maxFrameLength + safe skip + fail-fast option
     //      (just like LengthFieldBasedFrameDecoder)
 
-    /**
-     * Creates a new instance.
-     */
-    public ProtobufVarint32FrameDecoder() {
-        super();
-    }
-
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         buffer.markReaderIndex();

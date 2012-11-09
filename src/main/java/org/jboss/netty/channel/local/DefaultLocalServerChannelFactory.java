@@ -28,13 +28,6 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
     private final DefaultChannelGroup group = new DefaultChannelGroup();
     private final ChannelSink sink = new LocalServerChannelSink();
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultLocalServerChannelFactory() {
-        super();
-    }
-
     public LocalServerChannel newChannel(ChannelPipeline pipeline) {
         LocalServerChannel channel = new DefaultLocalServerChannel(this, pipeline, sink);
         group.add(channel);

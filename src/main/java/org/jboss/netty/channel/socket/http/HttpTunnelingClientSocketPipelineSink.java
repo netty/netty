@@ -28,10 +28,6 @@ import org.jboss.netty.channel.MessageEvent;
 
 final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
 
-    HttpTunnelingClientSocketPipelineSink() {
-        super();
-    }
-
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         HttpTunnelingClientSocketChannel channel = (HttpTunnelingClientSocketChannel) e.getChannel();

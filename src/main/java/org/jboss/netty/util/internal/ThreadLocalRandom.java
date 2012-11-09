@@ -82,16 +82,6 @@ final class ThreadLocalRandom extends Random {
             }
     };
 
-
-    /**
-     * Constructor called only by localRandom.initialValue.
-     * We rely on the fact that the superclass no-arg constructor
-     * invokes setSeed exactly once to initialize.
-     */
-    ThreadLocalRandom() {
-        super();
-    }
-
     /**
      * Returns the current thread's {@code ThreadLocalRandom}.
      *
@@ -109,6 +99,8 @@ final class ThreadLocalRandom extends Random {
      */
     @Override
     public void setSeed(long seed) {
+        // We rely on the fact that the superclass no-arg constructor
+        // invokes setSeed exactly once to initialize.
         if (initialized) {
             throw new UnsupportedOperationException();
         }

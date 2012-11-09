@@ -59,13 +59,6 @@ public class SimpleChannelUpstreamHandler implements ChannelUpstreamHandler {
         InternalLoggerFactory.getInstance(SimpleChannelUpstreamHandler.class.getName());
 
     /**
-     * Creates a new instance.
-     */
-    public SimpleChannelUpstreamHandler() {
-        super();
-    }
-
-    /**
      * {@inheritDoc}  Down-casts the received upstream event into more
      * meaningful sub-type event and calls an appropriate handler method with
      * the down-casted event.

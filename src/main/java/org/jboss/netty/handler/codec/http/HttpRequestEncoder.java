@@ -25,12 +25,6 @@ import static org.jboss.netty.handler.codec.http.HttpConstants.*;
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
     private static final char SLASH = '/';
-    /**
-     * Creates a new instance.
-     */
-    public HttpRequestEncoder() {
-        super();
-    }
 
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {

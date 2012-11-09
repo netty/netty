@@ -25,13 +25,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {
 
-    /**
-     * Creates a new instance.
-     */
-    public HttpResponseEncoder() {
-        super();
-    }
-
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpResponse response = (HttpResponse) message;

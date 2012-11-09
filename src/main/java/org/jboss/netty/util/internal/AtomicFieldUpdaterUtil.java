@@ -24,9 +24,6 @@ final class AtomicFieldUpdaterUtil {
 
     static final class Node {
         volatile Node next;
-        Node() {
-            super();
-        }
     }
 
     static {

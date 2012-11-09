@@ -139,9 +139,6 @@ public class LocalAddressTest {
     public static class TestHandler
         extends SimpleChannelUpstreamHandler {
 
-        public TestHandler() {
-        }
-
         @Override
         public void handleUpstream(ChannelHandlerContext ctx,
                                                      ChannelEvent e)

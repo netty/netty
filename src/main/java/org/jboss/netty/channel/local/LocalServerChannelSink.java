@@ -29,10 +29,6 @@ import org.jboss.netty.channel.MessageEvent;
 
 final class LocalServerChannelSink extends AbstractChannelSink {
 
-    LocalServerChannelSink() {
-        super();
-    }
-
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         Channel channel = e.getChannel();
         if (channel instanceof DefaultLocalServerChannel) {

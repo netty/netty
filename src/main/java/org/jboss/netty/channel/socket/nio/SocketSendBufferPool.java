@@ -41,10 +41,6 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
     PreallocationRef poolHead;
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
-    SocketSendBufferPool() {
-        super();
-    }
-
     SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
@@ -356,10 +352,6 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
     }
 
     static final class EmptySendBuffer implements SendBuffer {
-
-        EmptySendBuffer() {
-            super();
-        }
 
         public boolean finished() {
             return true;

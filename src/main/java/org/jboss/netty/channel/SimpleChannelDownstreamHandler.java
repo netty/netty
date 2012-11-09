@@ -59,13 +59,6 @@ import java.net.SocketAddress;
 public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler {
 
     /**
-     * Creates a new instance.
-     */
-    public SimpleChannelDownstreamHandler() {
-        super();
-    }
-
-    /**
      * {@inheritDoc}  Down-casts the received downstream event into more
      * meaningful sub-type event and calls an appropriate handler method with
      * the down-casted event.

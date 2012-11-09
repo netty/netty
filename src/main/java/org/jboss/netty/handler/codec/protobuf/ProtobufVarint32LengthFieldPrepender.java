@@ -43,13 +43,6 @@ import com.google.protobuf.CodedOutputStream;
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
 
-    /**
-     * Creates a new instance.
-     */
-    public ProtobufVarint32LengthFieldPrepender() {
-        super();
-    }
-
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel,
             Object msg) throws Exception {

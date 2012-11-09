@@ -43,13 +43,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
 
-    /**
-     * Creates a new empty pipeline.
-     */
-    public DefaultChannelPipeline() {
-        super();
-    }
-
     public Channel getChannel() {
         return channel;
     }
