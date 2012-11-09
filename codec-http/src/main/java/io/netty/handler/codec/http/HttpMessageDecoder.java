@@ -537,7 +537,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         String line = readHeader(buffer);
         String name = null;
         String value = null;
-        if (line.isEmpty()) {
+        if (!line.isEmpty()) {
             message.clearHeaders();
             do {
                 char firstChar = line.charAt(0);

@@ -20,11 +20,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
-
-import java.util.Random;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Random;
 
 public class HttpInvalidMessageTest {
 
