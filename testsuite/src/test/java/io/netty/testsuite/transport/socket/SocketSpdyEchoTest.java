@@ -229,7 +229,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class SpdyEchoTestServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class SpdyEchoTestServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
@@ -245,7 +245,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
+    private static class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         final ByteBuf frames;
         volatile int counter;

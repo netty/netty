@@ -117,7 +117,7 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
         return new MonitorRegistryIterator(FACTORIES.iterator());
     }
 
-    private final class MonitorRegistryIterator implements Iterator<MonitorRegistry> {
+    private static final class MonitorRegistryIterator implements Iterator<MonitorRegistry> {
 
         private final Iterator<MonitorRegistryFactory> factories;
 
