@@ -15,23 +15,12 @@
  */
 package org.jboss.netty.handler.codec.frame;
 
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -42,6 +31,16 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Random;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.*;
 
 public abstract class AbstractSocketFixedLengthEchoTest {
 
@@ -83,10 +82,8 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(TestUtil.getLocalHost(), port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
-
-        Channel cc = ccf.getChannel();
+        Channel cc = cb.connect(
+                new InetSocketAddress(TestUtil.getLocalHost(), port)).syncUninterruptibly().getChannel();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 3), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));

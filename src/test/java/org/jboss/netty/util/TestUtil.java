@@ -15,39 +15,83 @@
  */
 package org.jboss.netty.util;
 
+import org.junit.Ignore;
+
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.UnknownHostException;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 
 /**
  */
-@org.junit.Ignore
+@Ignore
 public final class TestUtil {
 
     private static final InetAddress LOCALHOST;
-    private final static int START_PORT = 20000;
-    private final static int END_PORT = 30000;
 
     static {
-        InetAddress localhost = null;
+        InetAddress localhost;
         try {
             localhost = InetAddress.getLocalHost();
-        } catch (UnknownHostException e) {
+            validateHost(localhost);
+        } catch (IOException e) {
+            // The default local host names did not work.  Try hard-coded IPv4 address.
             try {
                 localhost = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
-            } catch (UnknownHostException e1) {
+                validateHost(localhost);
+            } catch (IOException e1) {
+                // The hard-coded IPv4 address did not work.  Try hard coded IPv6 address.
                 try {
                     localhost = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
-                } catch (UnknownHostException e2) {
-                    System.err.println("Failed to get the localhost.");
-                    e2.printStackTrace();
+                    validateHost(localhost);
+                } catch (IOException e2) {
+                    throw new Error("Failed to resolve localhost - incorrect network configuration?", e2);
                 }
             }
         }
 
         LOCALHOST = localhost;
+    }
+
+    private static void validateHost(InetAddress host) throws IOException {
+        ServerSocket ss = null;
+        Socket s1 = null;
+        Socket s2 = null;
+        try {
+            ss = new ServerSocket();
+            ss.setReuseAddress(false);
+            ss.bind(new InetSocketAddress(host, 0));
+            s1 = new Socket(host, ss.getLocalPort());
+            s2 = ss.accept();
+        } finally {
+            if (s2 != null) {
+                try {
+                    s2.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+            if (s1 != null) {
+                try {
+                    s1.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+            if (ss != null) {
+                try {
+                    ss.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+        }
     }
 
     public static InetAddress getLocalHost() {
@@ -57,6 +101,26 @@ public final class TestUtil {
         return LOCALHOST;
     }
 
+    private static final int START_PORT = 32768;
+    private static final int END_PORT = 65536;
+    private static final int NUM_CANDIDATES = END_PORT - START_PORT;
+
+    private static final List<Integer> PORTS = new ArrayList<Integer>();
+    private static Iterator<Integer> portIterator;
+
+    static {
+        for (int i = START_PORT; i < END_PORT; i ++) {
+            PORTS.add(i);
+        }
+        Collections.shuffle(PORTS);
+    }
+
+    private static int nextCandidatePort() {
+        if (portIterator == null || !portIterator.hasNext()) {
+            portIterator = PORTS.iterator();
+        }
+        return portIterator.next();
+    }
 
     /**
      * Return a free port which can be used to bind to
@@ -64,19 +128,30 @@ public final class TestUtil {
      * @return port
      */
     public static int getFreePort() {
-        for(int start = START_PORT; start <= END_PORT; start++) {
+        for (int i = 0; i < NUM_CANDIDATES; i ++) {
+            int port = nextCandidatePort();
             try {
-                ServerSocket socket = new ServerSocket(start);
-                socket.setReuseAddress(true);
-                socket.close();
-                return start;
+                // Ensure it is possible to bind on both wildcard and loopback.
+                ServerSocket ss;
+                ss = new ServerSocket();
+                ss.setReuseAddress(false);
+                ss.bind(new InetSocketAddress(port));
+                ss.close();
+
+                ss = new ServerSocket();
+                ss.setReuseAddress(false);
+                ss.bind(new InetSocketAddress(LOCALHOST, port));
+                ss.close();
+
+                return port;
             } catch (IOException e) {
                 // ignore
             }
-
         }
-        throw new RuntimeException("Unable to find a free port....");
+
+        throw new RuntimeException("unable to find a free port");
     }
+
     private TestUtil() {
         // Unused
     }
