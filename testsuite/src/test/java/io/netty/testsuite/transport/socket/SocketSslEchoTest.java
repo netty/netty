@@ -252,6 +252,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             CLIENT_CONTEXT = clientContext;
         }
 
+        @SuppressWarnings("all")
+        private BogusSslContextFactory() { }
+
         public static SSLContext getServerContext() {
             return SERVER_CONTEXT;
         }
@@ -593,5 +596,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         public static char[] getKeyStorePassword() {
             return "secret".toCharArray();
         }
+
+        @SuppressWarnings("all")
+        private BogusKeyStore() { }
     }
 }
