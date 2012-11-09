@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
-import static org.jboss.netty.handler.codec.http.HttpConstants.*;
-
-import java.io.UnsupportedEncodingException;
-import java.util.Map;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -29,6 +23,12 @@ import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.jboss.netty.util.CharsetUtil;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Map;
+
+import static org.jboss.netty.buffer.ChannelBuffers.*;
+import static org.jboss.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpChunk} into
@@ -46,7 +46,7 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
-    private static final byte[] CRLF = new byte[] { CR, LF };
+    private static final byte[] CRLF = { CR, LF };
     private static final ChannelBuffer LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
 
