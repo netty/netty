@@ -110,28 +110,6 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         return new AioEventLoop(this, threadFactory, scheduler);
     }
 
-    private void executeAioTask(Runnable command) {
-        AbstractAioChannel ch = null;
-        try {
-            ch = CHANNEL_FINDER.findChannel(command);
-        } catch (Throwable t) {
-            // Ignore
-        }
-
-        EventExecutor l;
-        if (ch != null) {
-            l = ch.eventLoop();
-        } else {
-            l = next();
-        }
-
-        if (l.isShutdown()) {
-            command.run();
-        } else {
-            l.execute(command);
-        }
-    }
-
     private final class AioExecutorService extends AbstractExecutorService {
 
         // It does not shut down the underlying EventExecutor - it merely pretends to be shut down.
@@ -171,6 +149,28 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
                 executeAioTask(command);
             } else {
                 next().execute(command);
+            }
+        }
+
+        private void executeAioTask(Runnable command) {
+            AbstractAioChannel ch = null;
+            try {
+                ch = CHANNEL_FINDER.findChannel(command);
+            } catch (Throwable t) {
+                // Ignore
+            }
+
+            EventExecutor l;
+            if (ch != null) {
+                l = ch.eventLoop();
+            } else {
+                l = next();
+            }
+
+            if (l.isShutdown()) {
+                command.run();
+            } else {
+                l.execute(command);
             }
         }
     }
