@@ -28,11 +28,6 @@ import java.util.Map;
 public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAdapter<SctpMessage> {
     private Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
 
-    /**
-     */
-    public SctpMessageCompletionHandler() {
-    }
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
 

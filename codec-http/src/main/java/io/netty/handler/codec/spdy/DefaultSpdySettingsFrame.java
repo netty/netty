@@ -29,12 +29,6 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     private boolean clear;
     private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultSpdySettingsFrame() {
-    }
-
     @Override
     public Set<Integer> getIds() {
         return settingsMap.keySet();

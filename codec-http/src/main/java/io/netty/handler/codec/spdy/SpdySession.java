@@ -29,9 +29,6 @@ final class SpdySession {
     private final Map<Integer, StreamState> activeStreams =
         new ConcurrentHashMap<Integer, StreamState>();
 
-    SpdySession() {
-    }
-
     int numActiveStreams() {
         return activeStreams.size();
     }

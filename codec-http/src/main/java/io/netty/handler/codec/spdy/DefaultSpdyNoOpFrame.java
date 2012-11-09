@@ -20,12 +20,6 @@ package io.netty.handler.codec.spdy;
  */
 public class DefaultSpdyNoOpFrame implements SpdyNoOpFrame {
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultSpdyNoOpFrame() {
-    }
-
     @Override
     public String toString() {
         return getClass().getSimpleName();

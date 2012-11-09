@@ -25,12 +25,6 @@ import io.netty.util.CharsetUtil;
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
 
-    /**
-     * Creates a new instance.
-     */
-    public HttpRequestEncoder() {
-    }
-
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception {
         HttpRequest request = (HttpRequest) message;
