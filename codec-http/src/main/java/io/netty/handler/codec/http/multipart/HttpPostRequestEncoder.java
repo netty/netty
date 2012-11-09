@@ -15,6 +15,17 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.handler.codec.http.DefaultHttpChunk;
+import io.netty.handler.codec.http.HttpChunk;
+import io.netty.handler.codec.http.HttpConstants;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpTransferEncoding;
+import io.netty.handler.stream.ChunkedMessageInput;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -26,16 +37,6 @@ import java.util.ListIterator;
 import java.util.Random;
 
 import static io.netty.buffer.Unpooled.*;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
-import io.netty.handler.codec.http.DefaultHttpChunk;
-import io.netty.handler.codec.http.HttpChunk;
-import io.netty.handler.codec.http.HttpConstants;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpTransferEncoding;
-import io.netty.handler.stream.ChunkedMessageInput;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -766,7 +767,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                 }
             } else {
                 try {
-                    buffer = ((FileUpload) currentData).getChunk(sizeleft);
+                    buffer = ((HttpData) currentData).getChunk(sizeleft);
                 } catch (IOException e) {
                     throw new ErrorDataEncoderException(e);
                 }
@@ -829,7 +830,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
 
         // Put value into buffer
         try {
-            buffer = ((Attribute) currentData).getChunk(size);
+            buffer = ((HttpData) currentData).getChunk(size);
         } catch (IOException e) {
             throw new ErrorDataEncoderException(e);
         }
