@@ -15,16 +15,14 @@
  */
 package io.netty.example.securechat;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509TrustManager;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.cert.X509Certificate;
 
 /**
  * Bogus {@link TrustManagerFactorySpi} which accepts any certificate
@@ -39,8 +37,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
         }
 
         @Override
-        public void checkClientTrusted(
-                X509Certificate[] chain, String authType) throws CertificateException {
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {
             // Always trust - it is an example.
             // You should do something in the real world.
             // You will reach here only if you enabled client certificate auth,
@@ -50,8 +47,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
         }
 
         @Override
-        public void checkServerTrusted(
-                X509Certificate[] chain, String authType) throws CertificateException {
+        public void checkServerTrusted(X509Certificate[] chain, String authType) {
             // Always trust - it is an example.
             // You should do something in the real world.
             System.err.println(
