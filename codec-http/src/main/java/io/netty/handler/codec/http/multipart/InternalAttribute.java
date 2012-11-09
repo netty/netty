@@ -25,6 +25,7 @@ import java.util.List;
 public class InternalAttribute implements InterfaceHttpData {
     protected List<String> value = new ArrayList<String>();
 
+    @Override
     public HttpDataType getHttpDataType() {
         return HttpDataType.InternalAttribute;
     }
@@ -68,6 +69,7 @@ public class InternalAttribute implements InterfaceHttpData {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
+    @Override
     public int compareTo(InterfaceHttpData arg0) {
         if (!(arg0 instanceof InternalAttribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
@@ -96,6 +98,7 @@ public class InternalAttribute implements InterfaceHttpData {
         return result.toString();
     }
 
+    @Override
     public String getName() {
         return "InternalAttribute";
     }
