@@ -481,7 +481,7 @@ public class SslHandler extends FrameDecoder
         if (ctx != null) {
             throw new IllegalStateException("Can only get changed before attached to ChannelPipeline");
         }
-        this.closeOnSSLException = closeOnSslException;
+        closeOnSSLException = closeOnSslException;
     }
 
     public boolean getCloseOnSSLException() {

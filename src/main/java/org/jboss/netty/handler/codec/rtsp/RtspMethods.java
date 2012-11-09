@@ -136,6 +136,5 @@ public final class RtspMethods {
     }
 
     private RtspMethods() {
-        super();
     }
 }

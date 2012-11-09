@@ -113,7 +113,6 @@ public class ClientBootstrap extends Bootstrap {
      * operation is requested.
      */
     public ClientBootstrap() {
-        super();
     }
 
     /**

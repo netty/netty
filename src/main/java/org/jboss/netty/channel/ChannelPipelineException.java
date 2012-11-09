@@ -30,7 +30,6 @@ public class ChannelPipelineException extends ChannelException {
      * Creates a new instance.
      */
     public ChannelPipelineException() {
-        super();
     }
 
     /**

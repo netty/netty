@@ -498,7 +498,6 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         volatile Timeout allIdleTimeout;
 
         State() {
-            super();
         }
     }
 }

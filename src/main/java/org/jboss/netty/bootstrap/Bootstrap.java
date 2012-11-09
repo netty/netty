@@ -55,7 +55,6 @@ public class Bootstrap implements ExternalResourceReleasable {
      * I/O operation is requested.
      */
     protected Bootstrap() {
-        super();
     }
 
     /**

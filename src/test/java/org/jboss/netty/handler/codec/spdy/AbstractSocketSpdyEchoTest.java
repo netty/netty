@@ -259,7 +259,6 @@ public abstract class AbstractSocketSpdyEchoTest {
         final boolean server;
 
         EchoHandler(ChannelBuffer frames, boolean server) {
-            super();
             this.frames = frames;
             this.server = server;
         }

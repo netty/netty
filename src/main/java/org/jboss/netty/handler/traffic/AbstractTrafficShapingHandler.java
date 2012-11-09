@@ -273,8 +273,8 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public void configure(long newWriteLimit, long newReadLimit,
             long newCheckInterval) {
-        this.configure(newWriteLimit, newReadLimit);
-        this.configure(newCheckInterval);
+        configure(newWriteLimit, newReadLimit);
+        configure(newCheckInterval);
     }
 
     /**

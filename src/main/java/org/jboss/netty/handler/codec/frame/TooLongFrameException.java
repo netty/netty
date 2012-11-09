@@ -29,7 +29,6 @@ public class TooLongFrameException extends Exception {
      * Creates a new instance.
      */
     public TooLongFrameException() {
-        super();
     }
 
     /**

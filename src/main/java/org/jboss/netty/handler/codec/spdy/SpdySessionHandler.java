@@ -87,7 +87,6 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(int version, boolean server) {
-        super();
         if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);

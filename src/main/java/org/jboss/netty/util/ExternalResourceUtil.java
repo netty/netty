@@ -41,6 +41,5 @@ public final class ExternalResourceUtil {
     }
 
     private ExternalResourceUtil() {
-        super();
     }
 }

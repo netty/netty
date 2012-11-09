@@ -192,8 +192,8 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
                 ReferenceQueue<Object> refQueue) {
             this.hash = hash;
             this.next = next;
-            this.keyRef = new WeakKeyReference<K>(key, hash, refQueue);
-            this.valueRef = value;
+            keyRef = new WeakKeyReference<K>(key, hash, refQueue);
+            valueRef = value;
         }
 
         @SuppressWarnings("unchecked")
@@ -215,7 +215,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         void setValue(V value) {
-            this.valueRef = value;
+            valueRef = value;
         }
 
         @SuppressWarnings("unchecked")
@@ -675,7 +675,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
         segmentShift = 32 - sshift;
         segmentMask = ssize - 1;
-        this.segments = Segment.newArray(ssize);
+        segments = Segment.newArray(ssize);
 
         if (initialCapacity > MAXIMUM_CAPACITY) {
             initialCapacity = MAXIMUM_CAPACITY;
@@ -689,8 +689,8 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             cap <<= 1;
         }
 
-        for (int i = 0; i < this.segments.length; ++ i) {
-            this.segments[i] = new Segment<K, V>(cap, loadFactor);
+        for (int i = 0; i < segments.length; ++ i) {
+            segments[i] = new Segment<K, V>(cap, loadFactor);
         }
     }
 
@@ -1258,11 +1258,11 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             extends HashIterator implements ReusableIterator<K>, Enumeration<K> {
 
         public K next() {
-            return super.nextEntry().key();
+            return nextEntry().key();
         }
 
         public K nextElement() {
-            return super.nextEntry().key();
+            return nextEntry().key();
         }
     }
 
@@ -1270,11 +1270,11 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             extends HashIterator implements ReusableIterator<V>, Enumeration<V> {
 
         public V next() {
-            return super.nextEntry().value();
+            return nextEntry().value();
         }
 
         public V nextElement() {
-            return super.nextEntry().value();
+            return nextEntry().value();
         }
     }
 
@@ -1294,8 +1294,8 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         public SimpleEntry(Entry<? extends K, ? extends V> entry) {
-            this.key = entry.getKey();
-            this.value = entry.getValue();
+            key = entry.getKey();
+            value = entry.getValue();
 
         }
 
@@ -1363,7 +1363,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
                 throw new NullPointerException();
             }
             V v = super.setValue(value);
-            ConcurrentIdentityWeakKeyHashMap.this.put(getKey(), value);
+            put(getKey(), value);
             return v;
         }
 
@@ -1372,7 +1372,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     final class EntryIterator extends HashIterator implements
             ReusableIterator<Entry<K, V>> {
         public Map.Entry<K, V> next() {
-            HashEntry<K, V> e = super.nextEntry();
+            HashEntry<K, V> e = nextEntry();
             return new WriteThroughEntry(e.key(), e.value());
         }
     }
@@ -1396,7 +1396,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentIdentityWeakKeyHashMap.this.containsKey(o);
+            return containsKey(o);
         }
 
         @Override
@@ -1429,7 +1429,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentIdentityWeakKeyHashMap.this.containsValue(o);
+            return containsValue(o);
         }
 
         @Override
@@ -1450,7 +1450,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            V v = ConcurrentIdentityWeakKeyHashMap.this.get(e.getKey());
+            V v = get(e.getKey());
             return v != null && v.equals(e.getValue());
         }
 

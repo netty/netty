@@ -52,7 +52,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
     private int numHeaders;
     private ChannelBuffer decompressed;
 
-    private static enum State {
+    private enum State {
         READ_COMMON_HEADER,
         READ_CONTROL_FRAME,
         READ_SETTINGS_FRAME,

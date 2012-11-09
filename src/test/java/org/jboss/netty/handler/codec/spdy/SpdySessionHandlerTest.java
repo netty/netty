@@ -273,7 +273,6 @@ public class SpdySessionHandlerTest {
         private final boolean server;
 
         EchoHandler(int closeSignal, boolean server) {
-            super();
             this.closeSignal = closeSignal;
             this.server = server;
         }

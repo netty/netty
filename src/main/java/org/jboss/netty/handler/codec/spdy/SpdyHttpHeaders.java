@@ -52,7 +52,6 @@ public final class SpdyHttpHeaders {
         public static final String SCHEME = "X-SPDY-Scheme";
 
         private Names() {
-            super();
         }
     }
 

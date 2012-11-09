@@ -28,7 +28,6 @@ public class WriteTimeoutException extends TimeoutException {
      * Creates a new instance.
      */
     public WriteTimeoutException() {
-        super();
     }
 
     /**

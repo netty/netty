@@ -130,6 +130,5 @@ final class HttpCodecUtil {
     }
 
     private HttpCodecUtil() {
-        super();
     }
 }

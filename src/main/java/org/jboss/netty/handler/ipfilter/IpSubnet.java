@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * This class allows to check if an IP V4 or V6 Address is contained in a subnet.<BR>
@@ -101,7 +101,7 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
      */
     public boolean contains(String ipAddr) throws UnknownHostException {
         InetAddress inetAddress1 = InetAddress.getByName(ipAddr);
-        return this.contains(inetAddress1);
+        return contains(inetAddress1);
     }
 
     /**

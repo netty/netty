@@ -133,7 +133,7 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      */
     private void setNetId(String netId) throws UnknownHostException {
         InetAddress inetAddress1 = InetAddress.getByName(netId);
-        this.setNetId(inetAddress1);
+        setNetId(inetAddress1);
     }
 
     /**
@@ -199,7 +199,7 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      */
     public boolean contains(String ipAddr) throws UnknownHostException {
         InetAddress inetAddress1 = InetAddress.getByName(ipAddr);
-        return this.contains(inetAddress1);
+        return contains(inetAddress1);
     }
 
     /**

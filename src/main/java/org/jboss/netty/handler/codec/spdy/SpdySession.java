@@ -256,7 +256,6 @@ final class SpdySession {
     private final class PriorityComparator implements Comparator<Integer> {
 
         PriorityComparator() {
-            super();
         }
 
         public int compare(Integer id1, Integer id2) {

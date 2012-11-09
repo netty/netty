@@ -59,7 +59,6 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler
      * Creates a new instance.
      */
     protected HttpContentEncoder() {
-        super();
     }
 
     @Override

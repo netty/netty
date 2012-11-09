@@ -25,7 +25,6 @@ public final class CaseIgnoringComparator implements Comparator<String>, Seriali
     public static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
 
     private CaseIgnoringComparator() {
-        super();
     }
 
     public int compare(String o1, String o2) {

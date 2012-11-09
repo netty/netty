@@ -207,7 +207,6 @@ public final class RtspHeaders {
         public static final String WWW_AUTHENTICATE = HttpHeaders.Names.WWW_AUTHENTICATE;
 
         private Names() {
-            super();
         }
     }
 
@@ -385,11 +384,9 @@ public final class RtspHeaders {
         public static final String URL = "url";
 
         protected Values() {
-            super();
         }
     }
 
     private RtspHeaders() {
-        super();
     }
 }

@@ -30,7 +30,6 @@ public class BlockingReadTimeoutException extends InterruptedIOException {
      * Creates a new instance.
      */
     public BlockingReadTimeoutException() {
-        super();
     }
 
     /**

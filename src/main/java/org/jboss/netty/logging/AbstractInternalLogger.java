@@ -26,7 +26,6 @@ public abstract class AbstractInternalLogger implements InternalLogger {
      * Creates a new instance.
      */
     protected AbstractInternalLogger() {
-        super();
     }
 
     public boolean isEnabled(InternalLogLevel level) {

@@ -78,10 +78,10 @@ public class IpFilterRuleList extends ArrayList<IpFilterRule> {
 
         boolean allow = rule.startsWith("+");
         if (rule.charAt(1) == 'n' || rule.charAt(1) == 'i') {
-            this.add(new PatternRule(allow, rule.substring(1)));
+            add(new PatternRule(allow, rule.substring(1)));
         } else if (rule.charAt(1) == 'c') {
             try {
-                this.add(new IpSubnetFilterRule(allow, rule.substring(3)));
+                add(new IpSubnetFilterRule(allow, rule.substring(3)));
             } catch (UnknownHostException e) {
                 if (logger.isErrorEnabled()) {
                     logger.error("error parsing ip filter " + rule, e);

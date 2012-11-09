@@ -53,7 +53,6 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler
      * Creates a new instance.
      */
     protected HttpContentDecoder() {
-        super();
     }
 
     @Override

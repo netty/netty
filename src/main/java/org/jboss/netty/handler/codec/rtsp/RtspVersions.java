@@ -48,6 +48,5 @@ public final class RtspVersions {
     }
 
     private RtspVersions() {
-        super();
     }
 }

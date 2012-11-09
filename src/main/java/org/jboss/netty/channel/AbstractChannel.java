@@ -146,7 +146,7 @@ public abstract class AbstractChannel implements Channel {
      */
     @Override
     public final int hashCode() {
-        return this.id;
+        return id;
     }
 
     /**

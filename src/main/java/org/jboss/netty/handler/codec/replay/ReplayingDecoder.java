@@ -310,7 +310,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
     protected ReplayingDecoder(T initialState, boolean unfold) {
         super(unfold);
-        this.state = initialState;
+        state = initialState;
     }
 
     @Override

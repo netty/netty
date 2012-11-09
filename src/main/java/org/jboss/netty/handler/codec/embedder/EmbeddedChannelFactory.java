@@ -26,7 +26,6 @@ final class EmbeddedChannelFactory implements ChannelFactory {
     static final ChannelFactory INSTANCE = new EmbeddedChannelFactory();
 
     private EmbeddedChannelFactory() {
-        super();
     }
 
     public Channel newChannel(ChannelPipeline pipeline) {

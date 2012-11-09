@@ -33,7 +33,6 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyHeadersFrame(int streamId) {
-        super();
         setStreamId(streamId);
     }
 

@@ -60,7 +60,6 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     public HttpRequestDecoder() {
-        super();
     }
 
     /**

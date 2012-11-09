@@ -290,6 +290,5 @@ public final class RtspResponseStatuses {
     }
 
     private RtspResponseStatuses() {
-        super();
     }
 }

@@ -289,7 +289,6 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         volatile long lastReadTime = System.currentTimeMillis();
 
         State() {
-            super();
         }
     }
 }

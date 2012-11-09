@@ -15,15 +15,15 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.bootstrap.Bootstrap;
+import org.jboss.netty.channel.group.ChannelGroup;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import org.jboss.netty.bootstrap.Bootstrap;
-import org.jboss.netty.channel.group.ChannelGroup;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a
@@ -224,7 +224,7 @@ public interface ChannelHandler {
     @Documented
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
-    public @interface Sharable {
+    @interface Sharable {
         // no value
     }
 }

@@ -87,7 +87,6 @@ public class ThreadRenamingRunnableTest {
     private static class ImmediateExecutor implements Executor {
 
         ImmediateExecutor() {
-            super();
         }
 
         public void execute(Runnable command) {

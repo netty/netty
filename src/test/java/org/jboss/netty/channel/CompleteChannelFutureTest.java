@@ -114,7 +114,6 @@ public class CompleteChannelFutureTest {
         private static final long serialVersionUID = 7059276744882005047L;
 
         ExpectedError() {
-            super();
         }
     }
 }

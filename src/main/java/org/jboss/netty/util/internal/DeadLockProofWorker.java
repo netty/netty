@@ -48,6 +48,5 @@ public final class DeadLockProofWorker {
     }
 
     private DeadLockProofWorker() {
-        super();
     }
 }

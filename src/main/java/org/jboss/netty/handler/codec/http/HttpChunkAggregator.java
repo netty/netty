@@ -199,7 +199,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
     }
 
     protected void appendToCumulation(ChannelBuffer input) {
-        ChannelBuffer cumulation = this.currentMessage.getContent();
+        ChannelBuffer cumulation = currentMessage.getContent();
         if (cumulation instanceof CompositeChannelBuffer) {
             // Make sure the resulting cumulation buffer has no more than the configured components.
             CompositeChannelBuffer composite = (CompositeChannelBuffer) cumulation;

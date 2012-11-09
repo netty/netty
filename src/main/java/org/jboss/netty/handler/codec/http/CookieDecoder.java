@@ -47,7 +47,6 @@ public class CookieDecoder {
      * Creates a new decoder.
      */
     public CookieDecoder() {
-        super();
     }
 
     /**
@@ -55,7 +54,6 @@ public class CookieDecoder {
      */
     @Deprecated
     public CookieDecoder(@SuppressWarnings("unused") boolean lenient) {
-        super();
     }
 
     /**

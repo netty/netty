@@ -15,7 +15,15 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
@@ -27,15 +35,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.ThreadLocalBoolean;
+import static org.jboss.netty.channel.Channels.*;
 
 abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel {
 
@@ -103,7 +103,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             ChannelSink sink, AbstractNioWorker worker, C ch) {
         super(id, parent, factory, pipeline, sink);
         this.worker = worker;
-        this.channel = ch;
+        channel = ch;
     }
 
     protected AbstractNioChannel(
@@ -111,7 +111,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, C ch)  {
         super(parent, factory, pipeline, sink);
         this.worker = worker;
-        this.channel = ch;
+        channel = ch;
     }
 
     /**
@@ -164,7 +164,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     }
 
     void setRawInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
+        setInterestOpsNow(interestOps);
     }
 
 
@@ -214,7 +214,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         private final Queue<MessageEvent> queue;
 
         public WriteRequestQueue() {
-            this.queue = new ConcurrentLinkedQueue<MessageEvent>();
+            queue = new ConcurrentLinkedQueue<MessageEvent>();
         }
 
         public MessageEvent remove() {

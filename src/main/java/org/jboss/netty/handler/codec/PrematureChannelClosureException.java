@@ -26,7 +26,6 @@ public class PrematureChannelClosureException extends Exception {
     private static final long serialVersionUID = 233460005724966593L;
 
     public PrematureChannelClosureException() {
-        super();
     }
 
     public PrematureChannelClosureException(String msg) {

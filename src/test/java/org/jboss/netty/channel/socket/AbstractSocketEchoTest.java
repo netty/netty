@@ -145,7 +145,6 @@ public abstract class AbstractSocketEchoTest {
         volatile int counter;
 
         EchoHandler() {
-            super();
         }
 
         @Override

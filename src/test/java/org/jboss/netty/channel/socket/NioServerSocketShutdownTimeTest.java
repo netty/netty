@@ -89,7 +89,6 @@ public class NioServerSocketShutdownTimeTest {
         volatile boolean closed;
 
         DummyHandler() {
-            super();
         }
 
         @Override

@@ -27,7 +27,6 @@ public class ReadTimeoutException extends TimeoutException {
      * Creates a new instance.
      */
     public ReadTimeoutException() {
-        super();
     }
 
     /**

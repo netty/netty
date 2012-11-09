@@ -717,11 +717,11 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         // New readerIndex and writerIndex will become 0 and
         // (previous writerIndex - previous readerIndex) respectively.
 
-        final int localReaderIndex = this.readerIndex();
+        final int localReaderIndex = readerIndex();
         if (localReaderIndex == 0) {
             return;
         }
-        int localWriterIndex = this.writerIndex();
+        int localWriterIndex = writerIndex();
 
         final int bytesToMove = capacity() - localReaderIndex;
         List<ChannelBuffer> list = decompose(localReaderIndex, bytesToMove);
@@ -744,14 +744,14 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int localMarkedReaderIndex = localReaderIndex;
         try {
             resetReaderIndex();
-            localMarkedReaderIndex = this.readerIndex();
+            localMarkedReaderIndex = readerIndex();
         } catch (IndexOutOfBoundsException e) {
             // ignore
         }
         int localMarkedWriterIndex = localWriterIndex;
         try {
             resetWriterIndex();
-            localMarkedWriterIndex = this.writerIndex();
+            localMarkedWriterIndex = writerIndex();
         } catch (IndexOutOfBoundsException e) {
             // ignore
         }

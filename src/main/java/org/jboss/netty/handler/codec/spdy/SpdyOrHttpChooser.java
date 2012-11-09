@@ -36,7 +36,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  */
 public abstract class SpdyOrHttpChooser implements ChannelUpstreamHandler {
 
-    public static enum SelectedProtocol {
+    public enum SelectedProtocol {
         SpdyVersion2,
         SpdyVersion3,
         HttpVersion1_1,

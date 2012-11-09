@@ -31,7 +31,6 @@ public class UnreplayableOperationException extends
      * Creates a new instance.
      */
     public UnreplayableOperationException() {
-        super();
     }
 
     /**

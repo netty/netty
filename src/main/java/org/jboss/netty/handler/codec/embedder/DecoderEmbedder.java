@@ -68,6 +68,6 @@ public class DecoderEmbedder<E> extends AbstractCodecEmbedder<E> {
 
     public boolean offer(Object input) {
         fireMessageReceived(getChannel(), input);
-        return !super.isEmpty();
+        return !isEmpty();
     }
 }

@@ -63,7 +63,6 @@ public class SpdyHeaders {
         public static final String VERSION = ":version";
 
         private HttpNames() {
-            super();
         }
     }
 
@@ -94,7 +93,6 @@ public class SpdyHeaders {
         public static final String VERSION = "version";
 
         private Spdy2HttpNames() {
-            super();
         }
     }
 

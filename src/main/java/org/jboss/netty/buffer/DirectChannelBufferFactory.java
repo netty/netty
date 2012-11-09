@@ -99,7 +99,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
                     "preallocatedBufCapacity must be greater than 0: " + preallocatedBufferCapacity);
         }
 
-        this.preallocatedBufCapacity = preallocatedBufferCapacity;
+        preallocatedBufCapacity = preallocatedBufferCapacity;
     }
 
     public ChannelBuffer getBuffer(ByteOrder order, int capacity) {

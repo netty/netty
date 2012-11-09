@@ -363,7 +363,6 @@ public class HashedWheelTimer implements Timer {
         private long tick;
 
         Worker() {
-            super();
         }
 
         public void run() {

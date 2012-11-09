@@ -46,7 +46,6 @@ import org.jboss.netty.handler.codec.frame.Delimiters;
 public abstract class OneToOneEncoder implements ChannelDownstreamHandler {
 
     protected OneToOneEncoder() {
-        super();
     }
 
     public void handleDownstream(

@@ -54,6 +54,5 @@ final class ZlibUtil {
     }
 
     private ZlibUtil() {
-        super();
     }
 }

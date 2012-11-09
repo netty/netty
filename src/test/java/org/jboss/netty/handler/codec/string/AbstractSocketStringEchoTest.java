@@ -160,7 +160,6 @@ public abstract class AbstractSocketStringEchoTest {
         volatile int counter;
 
         EchoHandler() {
-            super();
         }
 
         @Override
