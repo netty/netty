@@ -17,6 +17,7 @@ package com.sun.nio.sctp;
 
 import java.net.SocketAddress;
 
+@SuppressWarnings("all")
 public class SctpStandardSocketOptions {
     static {
         UnsupportedOperatingSystemException.raise();
