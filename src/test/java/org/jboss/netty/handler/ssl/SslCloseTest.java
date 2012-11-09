@@ -66,6 +66,8 @@ public class SslCloseTest {
 
         Assert.assertTrue(cc.getCloseFuture().awaitUninterruptibly(5000));
 
+        serverChannel.close();
+
         cb.releaseExternalResources();
         sb.releaseExternalResources();
     }
