@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
@@ -35,6 +31,10 @@ import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.util.concurrent.TimeUnit;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Raises a {@link ReadTimeoutException} when no data was read within a certain
@@ -232,19 +232,6 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         return state;
     }
 
-    private void fireReadTimedOut(final ChannelHandlerContext ctx) throws Exception {
-        ctx.getPipeline().execute(new Runnable() {
-
-            public void run() {
-                try {
-                    readTimedOut(ctx);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
-            }
-        });
-    }
-
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
         Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
@@ -279,6 +266,19 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
                 state.timeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
+        }
+
+        private void fireReadTimedOut(final ChannelHandlerContext ctx) throws Exception {
+            ctx.getPipeline().execute(new Runnable() {
+
+                public void run() {
+                    try {
+                        readTimedOut(ctx);
+                    } catch (Throwable t) {
+                        fireExceptionCaught(ctx, t);
+                    }
+                }
+            });
         }
     }
 

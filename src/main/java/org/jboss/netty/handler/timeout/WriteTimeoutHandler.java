@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -34,6 +30,10 @@ import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.util.concurrent.TimeUnit;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Raises a {@link WriteTimeoutException} when no data was written within a
@@ -159,19 +159,6 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         super.writeRequested(ctx, e);
     }
 
-    private void fireWriteTimeOut(final ChannelHandlerContext ctx) {
-        ctx.getPipeline().execute(new Runnable() {
-
-            public void run() {
-                try {
-                    writeTimedOut(ctx);
-                } catch (Throwable t) {
-                    fireExceptionCaught(ctx, t);
-                }
-            }
-        });
-    }
-
     protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
        Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
@@ -200,6 +187,19 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
                 // If succeeded to mark as failure, notify the pipeline, too.
                 fireWriteTimeOut(ctx);
             }
+        }
+
+        private void fireWriteTimeOut(final ChannelHandlerContext ctx) {
+            ctx.getPipeline().execute(new Runnable() {
+
+                public void run() {
+                    try {
+                        writeTimedOut(ctx);
+                    } catch (Throwable t) {
+                        fireExceptionCaught(ctx, t);
+                    }
+                }
+            });
         }
     }
 
