@@ -142,7 +142,7 @@ public abstract class AbstractDatagramMulticastTest {
         return buf;
     }
 
-    private final class MulticastTestHandler extends SimpleChannelUpstreamHandler {
+    private static final class MulticastTestHandler extends SimpleChannelUpstreamHandler {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;

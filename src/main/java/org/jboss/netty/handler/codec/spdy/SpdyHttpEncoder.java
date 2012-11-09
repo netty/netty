@@ -15,11 +15,6 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import java.util.List;
-import java.util.Map;
-
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -33,6 +28,11 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes {@link HttpRequest}s, {@link HttpResponse}s, and {@link HttpChunk}s
@@ -234,7 +234,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         return future;
     }
 
-    private class SpdyFrameWriter implements ChannelFutureListener {
+    private static class SpdyFrameWriter implements ChannelFutureListener {
 
         private final ChannelHandlerContext ctx;
         private final MessageEvent e;

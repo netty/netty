@@ -71,7 +71,7 @@ public class ReplayingDecoderBufferTest {
         assertEquals(10, i);
     }
     
-    private class ReplayDecoderImpl extends ReplayingDecoder<VoidEnum> {
+    private static class ReplayDecoderImpl extends ReplayingDecoder<VoidEnum> {
         private final ChannelBuffer internal = ChannelBuffers.copiedBuffer("TestBuffer", CharsetUtil.ISO_8859_1);
         
         @Override

@@ -60,7 +60,7 @@ public class LocalClientTest {
         cb.releaseExternalResources();
     }
 
-    final class ExceptionHandler extends SimpleChannelUpstreamHandler {
+    static final class ExceptionHandler extends SimpleChannelUpstreamHandler {
         private final CountDownLatch latch = new CountDownLatch(1);
         private Throwable t;
 

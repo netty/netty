@@ -744,7 +744,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    protected void cleanUpWriteBuffer(AbstractNioChannel<?> channel) {
+    protected static void cleanUpWriteBuffer(AbstractNioChannel<?> channel) {
         Exception cause = null;
         boolean fireExceptionCaught = false;
 

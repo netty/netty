@@ -148,7 +148,7 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
         return q << ALIGN_SHIFT;
     }
 
-    private final class Preallocation {
+    private static final class Preallocation {
         final ByteBuffer buffer;
         int refCnt;
 
@@ -177,7 +177,7 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
         void release();
     }
 
-    class UnpooledSendBuffer implements SendBuffer {
+    static class UnpooledSendBuffer implements SendBuffer {
 
         final ByteBuffer buffer;
         final int initialPos;
@@ -233,7 +233,7 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
         }
     }
 
-    class GatheringSendBuffer implements SendBuffer {
+    static class GatheringSendBuffer implements SendBuffer {
 
         private final ByteBuffer[] buffers;
         private final int last;
