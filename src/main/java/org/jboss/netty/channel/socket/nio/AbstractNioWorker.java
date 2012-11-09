@@ -15,7 +15,17 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.socket.Worker;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousCloseException;
@@ -23,12 +33,11 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -41,17 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.Worker;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
+import static org.jboss.netty.channel.Channels.*;
 
 abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
 
@@ -538,7 +537,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         write0(ch);
     }
 
-    protected abstract boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel);
+    protected abstract boolean scheduleWriteIfNecessary(AbstractNioChannel<?> channel);
 
     protected void write0(AbstractNioChannel<?> channel) {
         boolean open = true;
