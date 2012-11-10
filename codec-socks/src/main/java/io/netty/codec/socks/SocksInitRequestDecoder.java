@@ -29,8 +29,8 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
         return name;
     }
 
+    private final List<SocksMessage.AuthScheme> authSchemes = new ArrayList<SocksMessage.AuthScheme>();
     private SocksMessage.ProtocolVersion version;
-    private List<SocksMessage.AuthScheme> authSchemes = new ArrayList<SocksMessage.AuthScheme>();
     private byte authSchemeNum;
     private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
 
