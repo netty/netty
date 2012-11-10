@@ -17,7 +17,7 @@ package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 
-public class UnknownSocksRequest extends SocksRequest {
+public final class UnknownSocksRequest extends SocksRequest {
 
     public UnknownSocksRequest() {
         super(SocksRequestType.UNKNOWN);

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 public final class SocksAuthResponse extends SocksResponse {
 
-    private AuthStatus authStatus;
+    private final AuthStatus authStatus;
 
     public SocksAuthResponse(AuthStatus authStatus) {
         super(SocksResponseType.AUTH);

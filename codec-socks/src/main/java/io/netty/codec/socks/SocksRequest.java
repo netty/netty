@@ -16,7 +16,7 @@
 package io.netty.codec.socks;
 
 public abstract class SocksRequest extends SocksMessage {
-    private SocksRequestType socksRequestType;
+    private final SocksRequestType socksRequestType;
 
     public SocksRequest(SocksRequestType socksRequestType) {
         super(MessageType.REQUEST);

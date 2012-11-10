@@ -16,7 +16,7 @@
 package io.netty.codec.socks;
 
 public abstract class SocksResponse extends SocksMessage {
-    private SocksResponseType socksResponseType;
+    private final SocksResponseType socksResponseType;
 
     public SocksResponse(SocksResponseType socksResponseType) {
         super(MessageType.RESPONSE);

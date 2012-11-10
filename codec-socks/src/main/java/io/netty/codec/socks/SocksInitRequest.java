@@ -17,10 +17,11 @@ package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 
+import java.util.Collections;
 import java.util.List;
 
 public final class SocksInitRequest extends SocksRequest {
-    private List<AuthScheme> authSchemes;
+    private final List<AuthScheme> authSchemes;
 
     public SocksInitRequest(List<AuthScheme> authSchemes) {
         super(SocksRequestType.INIT);
@@ -28,7 +29,7 @@ public final class SocksInitRequest extends SocksRequest {
     }
 
     public List<AuthScheme> getAuthSchemes() {
-        return authSchemes;
+        return Collections.unmodifiableList(authSchemes);
     }
 
     @Override

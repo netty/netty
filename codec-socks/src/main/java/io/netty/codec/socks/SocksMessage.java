@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 public abstract class SocksMessage {
     private final MessageType messageType;
-    private ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
+    private final ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
 
     public SocksMessage(MessageType messageType) {
         this.messageType = messageType;
@@ -201,10 +201,6 @@ public abstract class SocksMessage {
 
     public ProtocolVersion getProtocolVersion() {
         return protocolVersion;
-    }
-
-    public void setProtocolVersion(ProtocolVersion protocolVersion) {
-        this.protocolVersion = protocolVersion;
     }
 
     public abstract void encodeAsByteBuf(ByteBuf byteBuf);
