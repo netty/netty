@@ -16,6 +16,10 @@
 package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
+import sun.net.util.IPAddressUtil;
+
+import java.net.Inet4Address;
 
 public final class SocksCmdRequest extends SocksRequest {
     private final CmdType cmdType;
@@ -54,20 +58,23 @@ public final class SocksCmdRequest extends SocksRequest {
         byteBuf.writeByte(0x00);
         byteBuf.writeByte(addressType.getByteValue());
         switch (addressType) {
-
             case IPv4: {
-                throw new UnsupportedOperationException();
+                byteBuf.writeBytes(IPAddressUtil.textToNumericFormatV4(host));
+                byteBuf.writeShort(port);
+                break;
             }
 
             case DOMAIN: {
                 byteBuf.writeByte(host.length());
-                byteBuf.writeBytes(host.getBytes());
+                byteBuf.writeBytes(host.getBytes(CharsetUtil.US_ASCII));
                 byteBuf.writeShort(port);
                 break;
             }
 
             case IPv6: {
-                throw new UnsupportedOperationException();
+                byteBuf.writeBytes(IPAddressUtil.textToNumericFormatV6(host));
+                byteBuf.writeShort(port);
+                break;
             }
         }
     }
