@@ -72,7 +72,12 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, Socks
                         msg = new SocksCmdRequest(cmdType, addressType, host, port);
                         break;
                     }
-                    case IPv6:
+                    case IPv6:{
+                        host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
+                        port = byteBuf.readUnsignedShort();
+                        msg = new SocksCmdRequest(cmdType, addressType, host, port);
+                        break;
+                    }
                     case UNKNOWN:
                         byteBuf.clear();
                         break;
