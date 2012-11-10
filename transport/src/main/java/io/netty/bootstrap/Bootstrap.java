@@ -20,6 +20,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.aio.AioEventLoopGroup;
+import io.netty.channel.socket.aio.AioSocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
@@ -176,5 +178,23 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
         b.options().putAll(options());
         b.attrs().putAll(attrs());
         return b;
+    }
+
+    @Override
+    public Bootstrap channel(Class<? extends Channel> channelClass) {
+        if (channelClass == null) {
+            throw new NullPointerException("channelClass");
+        }
+        if (channelClass == AioSocketChannel.class) {
+            return channelFactory(new AioSocketChannelFactory());
+        }
+        return super.channel(channelClass);
+    }
+
+    private final class AioSocketChannelFactory implements ChannelFactory {
+        @Override
+        public Channel newChannel() {
+            return new AioSocketChannel((AioEventLoopGroup) group());
+        }
     }
 }
