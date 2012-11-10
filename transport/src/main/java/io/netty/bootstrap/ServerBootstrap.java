@@ -30,6 +30,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.aio.AioEventLoopGroup;
+import io.netty.channel.socket.aio.AioServerSocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
@@ -97,6 +99,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
         if (!ServerChannel.class.isAssignableFrom(channelClass)) {
             throw new IllegalArgumentException();
+        }
+        if (channelClass == AioServerSocketChannel.class) {
+            channelFactory(new AioServerSocketChannelFactory());
         }
         return super.channel(channelClass);
     }
@@ -258,4 +263,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             }
         }
     }
+
+    private final class AioServerSocketChannelFactory implements ChannelFactory {
+        @Override
+        public Channel newChannel() {
+            return new AioServerSocketChannel((AioEventLoopGroup) group(),  (AioEventLoopGroup) childGroup);
+        }
+    }
 }
+
