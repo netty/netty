@@ -84,7 +84,8 @@
               !io.netty.monitor.spi
               !io.netty.util,
               !io.netty.util.internal,
-              !io.netty.util.internal.zlib,              
+              !io.netty.util.internal.zlib,   
+              sun.misc;resolution:=optional,           
               *
             </Import-Package>
             <Export-Package>

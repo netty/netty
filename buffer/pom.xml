@@ -47,6 +47,7 @@
           <instructions>
             <Import-Package>
               !io.netty.buffer.*,
+              sun.misc;resolution:=optional,              
               *
             </Import-Package>
             <Export-Package>
