@@ -47,19 +47,19 @@ public class HttpSnoopClient {
         String host = uri.getHost() == null? "localhost" : uri.getHost();
         int port = uri.getPort();
         if (port == -1) {
-            if (scheme.equalsIgnoreCase("http")) {
+            if ("http".equalsIgnoreCase(scheme)) {
                 port = 80;
-            } else if (scheme.equalsIgnoreCase("https")) {
+            } else if ("https".equalsIgnoreCase(scheme)) {
                 port = 443;
             }
         }
 
-        if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
+        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
             System.err.println("Only HTTP(S) is supported.");
             return;
         }
 
-        boolean ssl = scheme.equalsIgnoreCase("https");
+        boolean ssl = "https".equalsIgnoreCase(scheme);
 
         // Configure the client.
         Bootstrap b = new Bootstrap();

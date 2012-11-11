@@ -109,11 +109,11 @@ public final class SystemPropertyUtil {
             return true;
         }
 
-        if (value.equals("true") || value.equals("yes") || value.equals("1")) {
+        if ("true".equals(value) || "yes".equals(value) || "1".equals(value)) {
             return true;
         }
 
-        if (value.equals("false") || value.equals("no") || value.equals("0")) {
+        if ("false".equals(value) || "no".equals(value) || "0".equals(value)) {
             return false;
         }
 

@@ -73,7 +73,7 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
 
         // Send the demo page and favicon.ico
-        if (req.getUri().equals("/")) {
+        if ("/".equals(req.getUri())) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
 
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
@@ -84,7 +84,7 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
             res.setContent(content);
             sendHttpResponse(ctx, req, res);
             return;
-        } else if (req.getUri().equals("/favicon.ico")) {
+        } else if ("/favicon.ico".equals(req.getUri())) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;

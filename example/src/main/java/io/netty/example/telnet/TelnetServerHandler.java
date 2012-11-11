@@ -50,7 +50,7 @@ public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<Str
         boolean close = false;
         if (request.isEmpty()) {
             response = "Please type something.\r\n";
-        } else if (request.toLowerCase().equals("bye")) {
+        } else if ("bye".equals(request.toLowerCase())) {
             response = "Have a good day!\r\n";
             close = true;
         } else {

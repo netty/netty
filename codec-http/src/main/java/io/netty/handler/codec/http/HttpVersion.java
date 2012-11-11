@@ -53,10 +53,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         text = text.trim().toUpperCase();
-        if (text.equals("HTTP/1.1")) {
+        if ("HTTP/1.1".equals(text)) {
             return HTTP_1_1;
         }
-        if (text.equals("HTTP/1.0")) {
+        if ("HTTP/1.0".equals(text)) {
             return HTTP_1_0;
         }
         return new HttpVersion(text, true);
