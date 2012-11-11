@@ -40,7 +40,7 @@ public final class RtspVersions {
         }
 
         text = text.trim().toUpperCase();
-        if (text.equals("RTSP/1.0")) {
+        if ("RTSP/1.0".equals(text)) {
             return RTSP_1_0;
         }
 

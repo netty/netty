@@ -83,19 +83,19 @@ public class HttpUploadClient {
         String host = uriSimple.getHost() == null ? "localhost" : uriSimple.getHost();
         int port = uriSimple.getPort();
         if (port == -1) {
-            if (scheme.equalsIgnoreCase("http")) {
+            if ("http".equalsIgnoreCase(scheme)) {
                 port = 80;
-            } else if (scheme.equalsIgnoreCase("https")) {
+            } else if ("https".equalsIgnoreCase(scheme)) {
                 port = 443;
             }
         }
 
-        if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
+        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
             logger.error("Only HTTP(S) is supported.");
             return;
         }
 
-        boolean ssl = scheme.equalsIgnoreCase("https");
+        boolean ssl = "https".equalsIgnoreCase(scheme);
 
         URI uriFile;
         try {

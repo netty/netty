@@ -82,7 +82,7 @@ public final class TestUtils {
      */
     public static boolean isSctpSupported() {
         String os = System.getProperty("os.name").toLowerCase(Locale.UK);
-        if (os.equals("unix") || os.equals("linux") || os.equals("sun") || os.equals("solaris")) {
+        if ("unix".equals(os) || "linux".equals(os) || "sun".equals(os) || "solaris".equals(os)) {
             try {
                 // Try to open a SCTP Channel, by using reflection to make it compile also on
                 // operation systems that not support SCTP like OSX and Windows
