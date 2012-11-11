@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/All-in-One</name>
 
@@ -320,6 +320,25 @@
           <locale>en_US</locale>
         </configuration>
       </plugin>
+      
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>
+              !io.netty.*,
+              sun.misc;resolution:=optional,
+              *
+            </Import-Package>
+            <Export-Package>
+              !io.netty.example.*,            
+              io.netty.*
+            </Export-Package>
+          </instructions>
+        </configuration>
+      </plugin>      
     </plugins>
   </build>
 </project>

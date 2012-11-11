@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-buffer</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Buffer</name>
 
@@ -35,5 +35,30 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
+  
+  <build>
+    <plugins>
+    
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>
+              !io.netty.buffer.*,
+              sun.misc;resolution:=optional,              
+              *
+            </Import-Package>
+            <Export-Package>
+              io.netty.bufer
+            </Export-Package>
+          </instructions>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  </build>
+
 </project>
 
