@@ -329,6 +329,7 @@
           <instructions>
             <Import-Package>
               !io.netty.*,
+              sun.misc;resolution:=optional,
               *
             </Import-Package>
             <Export-Package>

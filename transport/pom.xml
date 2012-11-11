@@ -55,6 +55,7 @@
               !io.netty.channel.socket.aio,
               !io.netty.channel.socket.nio,
               !io.netty.channel.socket.oio,
+              sun.misc;resolution:=optional,
               *
             </Import-Package>
             <Export-Package>
