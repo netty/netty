@@ -17,6 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+  
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
@@ -24,7 +25,7 @@
   </parent>
 
   <artifactId>netty-common</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Common</name>
 
@@ -67,5 +68,42 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
+  
+  <build>
+    <plugins>
+    
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>
+              !io.netty.logging,
+              !io.netty.monitor,
+              !io.netty.monitor.spi
+              !io.netty.util,
+              !io.netty.util.internal,
+              !io.netty.util.internal.zlib,   
+              sun.misc;resolution:=optional,           
+              *
+            </Import-Package>
+            <Export-Package>
+              io.netty.logging,
+              io.netty.monitor,
+              io.netty.monitor.spi,
+              io.netty.util,
+              io.netty.util.internal,
+              io.netty.util.internal.zlib              
+            </Export-Package>
+          </instructions>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  </build>
+  
+  
+  
 </project>
 

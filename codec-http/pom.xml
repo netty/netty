@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-codec-http</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Codec/HTTP</name>
 
@@ -40,5 +40,37 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
+  
+  <build>
+    <plugins>
+    
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>
+              !io.netty.handler.codec.http,
+              !io.netty.handler.codec.http.multipart,
+              !io.netty.handler.codec.http.websocket,
+              !io.netty.handler.codec.rtsp,
+              !io.netty.handler.codec.spdy,
+              *
+            </Import-Package>
+            <Export-Package>
+              io.netty.handler.codec.http,
+              io.netty.handler.codec.http.multipart,
+              io.netty.handler.codec.http.websocket,
+              io.netty.handler.codec.rtsp,
+              io.netty.handler.codec.spdy
+            </Export-Package>
+          </instructions>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  </build>
+  
 </project>
 
