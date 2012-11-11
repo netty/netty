@@ -332,6 +332,7 @@
               *
             </Import-Package>
             <Export-Package>
+              !io.netty.example.*            
               io.netty.*
             </Export-Package>
           </instructions>
