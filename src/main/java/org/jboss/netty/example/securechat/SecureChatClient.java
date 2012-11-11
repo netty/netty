@@ -15,17 +15,17 @@
  */
 package org.jboss.netty.example.securechat;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.example.telnet.TelnetClient;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Simple SSL chat client modified from {@link TelnetClient}.
@@ -75,7 +75,7 @@ public class SecureChatClient {
 
             // If user typed the 'bye' command, wait until the server closes
             // the connection.
-            if (line.toLowerCase().equals("bye")) {
+            if ("bye".equals(line.toLowerCase())) {
                 channel.getCloseFuture().awaitUninterruptibly();
                 break;
             }

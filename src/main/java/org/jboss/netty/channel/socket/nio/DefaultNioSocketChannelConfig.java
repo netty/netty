@@ -72,15 +72,15 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             return true;
         }
 
-        if (key.equals("writeBufferHighWaterMark")) {
+        if ("writeBufferHighWaterMark".equals(key)) {
             setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
-        } else if (key.equals("writeBufferLowWaterMark")) {
+        } else if ("writeBufferLowWaterMark".equals(key)) {
             setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
-        } else if (key.equals("writeSpinCount")) {
+        } else if ("writeSpinCount".equals(key)) {
             setWriteSpinCount(ConversionUtil.toInt(value));
-        } else if (key.equals("receiveBufferSizePredictorFactory")) {
+        } else if ("receiveBufferSizePredictorFactory".equals(key)) {
             setReceiveBufferSizePredictorFactory((ReceiveBufferSizePredictorFactory) value);
-        } else if (key.equals("receiveBufferSizePredictor")) {
+        } else if ("receiveBufferSizePredictor".equals(key)) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else {
             return false;

@@ -47,11 +47,11 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
             return true;
         }
 
-        if (key.equals("receiveBufferSize")) {
+        if ("receiveBufferSize".equals(key)) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("reuseAddress")) {
+        } else if ("reuseAddress".equals(key)) {
             setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("backlog")) {
+        } else if ("backlog".equals(key)) {
             setBacklog(ConversionUtil.toInt(value));
         } else {
             return false;

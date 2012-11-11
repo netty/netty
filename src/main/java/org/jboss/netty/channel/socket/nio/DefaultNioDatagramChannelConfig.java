@@ -73,11 +73,11 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             return true;
         }
 
-        if (key.equals("writeBufferHighWaterMark")) {
+        if ("writeBufferHighWaterMark".equals(key)) {
             setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
-        } else if (key.equals("writeBufferLowWaterMark")) {
+        } else if ("writeBufferLowWaterMark".equals(key)) {
             setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
-        } else if (key.equals("writeSpinCount")) {
+        } else if ("writeSpinCount".equals(key)) {
             setWriteSpinCount(ConversionUtil.toInt(value));
         } else {
             return false;

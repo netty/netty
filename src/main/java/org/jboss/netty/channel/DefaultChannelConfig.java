@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.channel;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
+
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
@@ -38,11 +38,15 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     public boolean setOption(String key, Object value) {
-        if (key.equals("pipelineFactory")) {
+        if (key == null) {
+            throw new NullPointerException("key");
+        }
+
+        if ("pipelineFactory".equals(key)) {
             setPipelineFactory((ChannelPipelineFactory) value);
-        } else if (key.equals("connectTimeoutMillis")) {
+        } else if ("connectTimeoutMillis".equals(key)) {
             setConnectTimeoutMillis(ConversionUtil.toInt(value));
-        } else if (key.equals("bufferFactory")) {
+        } else if ("bufferFactory".equals(key)) {
             setBufferFactory((ChannelBufferFactory) value);
         } else {
             return false;

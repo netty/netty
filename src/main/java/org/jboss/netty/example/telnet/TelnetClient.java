@@ -74,7 +74,7 @@ public class TelnetClient {
 
             // If user typed the 'bye' command, wait until the server closes
             // the connection.
-            if (line.toLowerCase().equals("bye")) {
+            if ("bye".equals(line.toLowerCase())) {
                 channel.getCloseFuture().awaitUninterruptibly();
                 break;
             }

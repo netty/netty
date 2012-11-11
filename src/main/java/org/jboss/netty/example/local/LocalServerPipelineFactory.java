@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.example.local;
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -28,6 +26,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
+
+import java.util.concurrent.Executor;
 
 public class LocalServerPipelineFactory implements ChannelPipelineFactory {
 
@@ -52,7 +52,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
             if (e instanceof MessageEvent) {
                 final MessageEvent evt = (MessageEvent) e;
                 String msg = (String) evt.getMessage();
-                if (msg.equalsIgnoreCase("quit")) {
+                if ("quit".equalsIgnoreCase(msg)) {
                     Channels.close(e.getChannel());
                     return;
                 }
@@ -64,7 +64,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
             if (e instanceof MessageEvent) {
                 final MessageEvent evt = (MessageEvent) e;
                 String msg = (String) evt.getMessage();
-                if (msg.equalsIgnoreCase("quit")) {
+                if ("quit".equalsIgnoreCase(msg)) {
                     Channels.close(e.getChannel());
                     return;
                 }

@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.channel.socket;
 
-import java.net.Socket;
-import java.net.SocketException;
-
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
+
+import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
@@ -46,19 +46,19 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
             return true;
         }
 
-        if (key.equals("receiveBufferSize")) {
+        if ("receiveBufferSize".equals(key)) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sendBufferSize")) {
+        } else if ("sendBufferSize".equals(key)) {
             setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("tcpNoDelay")) {
+        } else if ("tcpNoDelay".equals(key)) {
             setTcpNoDelay(ConversionUtil.toBoolean(value));
-        } else if (key.equals("keepAlive")) {
+        } else if ("keepAlive".equals(key)) {
             setKeepAlive(ConversionUtil.toBoolean(value));
-        } else if (key.equals("reuseAddress")) {
+        } else if ("reuseAddress".equals(key)) {
             setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("soLinger")) {
+        } else if ("soLinger".equals(key)) {
             setSoLinger(ConversionUtil.toInt(value));
-        } else if (key.equals("trafficClass")) {
+        } else if ("trafficClass".equals(key)) {
             setTrafficClass(ConversionUtil.toInt(value));
         } else {
             return false;

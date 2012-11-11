@@ -144,20 +144,20 @@ final class NioProviderMetadata {
         if (vendor.contains("sun")) {
             // Linux
             if (os.contains("linux")) {
-                if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
-                    provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                if ("sun.nio.ch.EPollSelectorProvider".equals(provider) ||
+                        "sun.nio.ch.PollSelectorProvider".equals(provider)) {
                     return 0;
                 }
 
             // Windows
             } else if (os.contains("windows")) {
-                if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
+                if ("sun.nio.ch.WindowsSelectorProvider".equals(provider)) {
                     return 0;
                 }
 
             // Solaris
             } else if (os.contains("sun") || os.contains("solaris")) {
-                if (provider.equals("sun.nio.ch.DevPollSelectorProvider")) {
+                if ("sun.nio.ch.DevPollSelectorProvider".equals(provider)) {
                     return 0;
                 }
             }
@@ -165,7 +165,7 @@ final class NioProviderMetadata {
         } else if (vendor.contains("apple")) {
             // Mac OS
             if (os.contains("mac") && os.contains("os")) {
-                if (provider.equals("sun.nio.ch.KQueueSelectorProvider")) {
+                if ("sun.nio.ch.KQueueSelectorProvider".equals(provider)) {
                     return 0;
                 }
             }
@@ -173,11 +173,11 @@ final class NioProviderMetadata {
         } else if (vendor.contains("ibm")) {
             // Linux or AIX
             if (os.contains("linux") || os.contains("aix")) {
-                if (version.equals("1.5") || version.matches("^1\\.5\\D.*$")) {
-                    if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                if ("1.5".equals(version) || version.matches("^1\\.5\\D.*$")) {
+                    if ("sun.nio.ch.PollSelectorProvider".equals(provider)) {
                         return 1;
                     }
-                } else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
+                } else if ("1.6".equals(version) || version.matches("^1\\.6\\D.*$")) {
                     // IBM JDK 1.6 has different constraint level for different
                     // version.  The exact version can be determined only by its
                     // build date.
@@ -196,9 +196,9 @@ final class NioProviderMetadata {
                             return 2;
                         } else {
                             // SR3 and later
-                            if (provider.equals("sun.nio.ch.EPollSelectorProvider")) {
+                            if ("sun.nio.ch.EPollSelectorProvider".equals(provider)) {
                                 return 0;
-                            } else if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                            } else if ("sun.nio.ch.PollSelectorProvider".equals(provider)) {
                                 return 1;
                             }
                         }
@@ -209,20 +209,20 @@ final class NioProviderMetadata {
         } else if (vendor.contains("bea") || vendor.contains("oracle")) {
             // Linux
             if (os.contains("linux")) {
-                if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
-                    provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                if ("sun.nio.ch.EPollSelectorProvider".equals(provider) ||
+                        "sun.nio.ch.PollSelectorProvider".equals(provider)) {
                     return 0;
                 }
 
             // Windows
             } else if (os.contains("windows")) {
-                if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
+                if ("sun.nio.ch.WindowsSelectorProvider".equals(provider)) {
                     return 0;
                 }
             }
         // Apache Software Foundation
         } else if (vendor.contains("apache")) {
-            if (provider.equals("org.apache.harmony.nio.internal.SelectorProviderImpl")) {
+            if ("org.apache.harmony.nio.internal.SelectorProviderImpl".equals(provider)) {
                 return 1;
             }
         }

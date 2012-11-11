@@ -15,19 +15,18 @@
  */
 package org.jboss.netty.channel.socket.http;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSession;
-
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * The {@link ChannelConfig} of a client-side HTTP tunneling
@@ -211,17 +210,17 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
             return true;
         }
 
-        if (key.equals("serverName")) {
+        if ("serverName".equals(key)) {
             setServerName(String.valueOf(value));
-        } else if (key.equals("serverPath")) {
+        } else if ("serverPath".equals(key)) {
             setServerPath(String.valueOf(value));
-        } else if (key.equals("sslContext")) {
+        } else if ("sslContext".equals(key)) {
             setSslContext((SSLContext) value);
-        } else if (key.equals("enabledSslCipherSuites")) {
+        } else if ("enabledSslCipherSuites".equals(key)) {
             setEnabledSslCipherSuites(ConversionUtil.toStringArray(value));
-        } else if (key.equals("enabledSslProtocols")) {
+        } else if ("enabledSslProtocols".equals(key)) {
             setEnabledSslProtocols(ConversionUtil.toStringArray(value));
-        } else if (key.equals("enableSslSessionCreation")) {
+        } else if ("enableSslSessionCreation".equals(key)) {
             setEnableSslSessionCreation(ConversionUtil.toBoolean(value));
         } else {
             return false;

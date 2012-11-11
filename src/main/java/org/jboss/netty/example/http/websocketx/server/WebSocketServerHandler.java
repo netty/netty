@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.example.http.websocketx.server;
 
-import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
-import static org.jboss.netty.handler.codec.http.HttpMethod.*;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
-import static org.jboss.netty.handler.codec.http.HttpVersion.*;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -42,6 +36,12 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFa
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
+
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+import static org.jboss.netty.handler.codec.http.HttpMethod.*;
+import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * Handles handshakes and messages
@@ -71,7 +71,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Send the demo page and favicon.ico
-        if (req.getUri().equals("/")) {
+        if ("/".equals(req.getUri())) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
 
             ChannelBuffer content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
@@ -82,7 +82,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
             res.setContent(content);
             sendHttpResponse(ctx, req, res);
             return;
-        } else if (req.getUri().equals("/favicon.ico")) {
+        } else if ("/favicon.ico".equals(req.getUri())) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;

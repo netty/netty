@@ -626,7 +626,7 @@ public class SslHandler extends FrameDecoder
                 }
 
                 // check if the method name is read if not skip it
-                if (!methodname.equals("read")) {
+                if (!"read".equals(methodname)) {
                     continue;
                 }
 

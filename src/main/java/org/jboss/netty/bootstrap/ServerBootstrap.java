@@ -15,17 +15,6 @@
  */
 package org.jboss.netty.bootstrap;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelException;
@@ -41,6 +30,17 @@ import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * A helper class which creates a new server-side {@link Channel} and accepts
@@ -328,7 +328,7 @@ public class ServerBootstrap extends Bootstrap {
                         childOptions.put(
                                 e.getKey().substring(6),
                                 e.getValue());
-                    } else if (!e.getKey().equals("pipelineFactory")) {
+                    } else if (!"pipelineFactory".equals(e.getKey())) {
                         parentOptions.put(e.getKey(), e.getValue());
                     }
                 }

@@ -57,7 +57,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
             throw new IllegalArgumentException("empty id");
         }
         this.id = id;
-        ephemeral = id.equals("ephemeral");
+        ephemeral = "ephemeral".equals(id);
     }
 
     /**

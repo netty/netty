@@ -58,27 +58,27 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
             return true;
         }
 
-        if (key.equals("broadcast")) {
+        if ("broadcast".equals(key)) {
             setBroadcast(ConversionUtil.toBoolean(value));
-        } else if (key.equals("receiveBufferSize")) {
+        } else if ("receiveBufferSize".equals(key)) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sendBufferSize")) {
+        } else if ("sendBufferSize".equals(key)) {
             setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("receiveBufferSizePredictorFactory")) {
+        } else if ("receiveBufferSizePredictorFactory".equals(key)) {
             setReceiveBufferSizePredictorFactory((ReceiveBufferSizePredictorFactory) value);
-        } else if (key.equals("receiveBufferSizePredictor")) {
+        } else if ("receiveBufferSizePredictor".equals(key)) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
-        } else if (key.equals("reuseAddress")) {
+        } else if ("reuseAddress".equals(key)) {
             setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("loopbackModeDisabled")) {
+        } else if ("loopbackModeDisabled".equals(key)) {
             setLoopbackModeDisabled(ConversionUtil.toBoolean(value));
-        } else if (key.equals("interface")) {
+        } else if ("interface".equals(key)) {
             setInterface((InetAddress) value);
-        } else if (key.equals("networkInterface")) {
+        } else if ("networkInterface".equals(key)) {
             setNetworkInterface((NetworkInterface) value);
-        } else if (key.equals("timeToLive")) {
+        } else if ("timeToLive".equals(key)) {
             setTimeToLive(ConversionUtil.toInt(value));
-        } else if (key.equals("trafficClass")) {
+        } else if ("trafficClass".equals(key)) {
             setTrafficClass(ConversionUtil.toInt(value));
         } else {
             return false;

@@ -120,7 +120,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         String name = "";
         for (String c : acls) {
             c = c.trim();
-            if (c.equals("n:localhost")) {
+            if ("n:localhost".equals(c)) {
                 localhost = true;
             } else if (c.startsWith("n:")) {
                 name = addRule(name, c.substring(2));

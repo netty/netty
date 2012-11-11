@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.example.securechat;
 
-import java.net.InetAddress;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -31,6 +27,10 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.handler.ssl.SslHandler;
+
+import java.net.InetAddress;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Handles a server-side channel.
@@ -90,7 +90,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Close the connection if the client has sent 'bye'.
-        if (request.toLowerCase().equals("bye")) {
+        if ("bye".equals(request.toLowerCase())) {
             e.getChannel().close();
         }
     }
