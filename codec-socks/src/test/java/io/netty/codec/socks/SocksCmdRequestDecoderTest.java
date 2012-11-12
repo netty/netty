@@ -1,222 +1,93 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.codec.socks;
 
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 import sun.net.util.IPAddressUtil;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
-/**
- * Created by IntelliJ IDEA.
- * User: alexey
- * Date: 11/12/12
- * Time: 6:41 PM
- * To change this template use File | Settings | File Templates.
- */
 public class SocksCmdRequestDecoderTest {
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksCmdRequestDecoderTest.class);
 
-//    private void testSocksCmdResponseDecoderWithDifferentParams(SocksMessage.CmdStatus cmdStatus, SocksMessage.AddressType addressType) {
-//        System.out.println("Testing SocksCmdResponseDecoderTest with cmdStatus: " + cmdStatus + " addressType: " + addressType);
-//        SocksResponse msg = new SocksCmdResponse(cmdStatus, addressType);
-//        SocksCmdResponseDecoder decoder = new SocksCmdResponseDecoder();
-//        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-//        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-//        if (addressType == SocksMessage.AddressType.UNKNOWN) {
-//            assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
-//        } else {
-//            msg = (SocksCmdResponse) embedder.readInbound();
-//            assertTrue(((SocksCmdResponse) msg).getCmdStatus().equals(cmdStatus));
-//            assertNull(embedder.readInbound());
-//        }
-//    }
-//
-//    @Test
-//    public void testSocksCmdResponseDecoderTest() {
-//        for (SocksMessage.CmdStatus cmdStatus : SocksMessage.CmdStatus.values()) {
-//            for (SocksMessage.AddressType addressType : SocksMessage.AddressType.values()) {
-//                testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, addressType);
-//            }
-//        }
-//    }
-
-    @Test
-    public void testCmdRequestDecoderConnectIPv4() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.CONNECT;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv4;
-        String host = "127.0.0.1";
-        int port = 80;
+    private void testSocksCmdRequestDecoderWithDifferentParams(SocksMessage.CmdType cmdType, SocksMessage.AddressType addressType, String host, int port) {
+        logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
         SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
+        if (msg.getAddressType() == SocksMessage.AddressType.UNKNOWN) {
+            assertTrue(embedder.readInbound() instanceof UnknownSocksRequest);
+        } else {
+            msg = (SocksCmdRequest) embedder.readInbound();
+            assertTrue(msg.getCmdType().equals(cmdType));
+            assertTrue(msg.getAddressType().equals(addressType));
+            assertTrue(msg.getHost().equals(host));
+            assertTrue(msg.getPort() == port);
+        }
         assertNull(embedder.readInbound());
     }
 
     @Test
-    public void testCmdRequestDecoderBindIPv4() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.BIND;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv4;
-        String host = "127.0.0.1";
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
+    public void testCmdRequestDecoderIPv4() {
+        String[] hosts = {"127.0.0.1",};
+        int[] ports = {0, 32769, 65535 };
+        for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
+            for (String host : hosts) {
+                for (int port : ports) {
+                    testSocksCmdRequestDecoderWithDifferentParams(cmdType, SocksMessage.AddressType.IPv4, host, port);
+                }
+            }
+        }
     }
 
     @Test
-    public void testCmdRequestDecoderUdpIPv4() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.UDP;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv4;
-        String host = "127.0.0.1";
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
+    public void testCmdRequestDecoderIPv6() {
+        String[] hosts = {SocksCommonUtils.ipv6toStr(IPAddressUtil.textToNumericFormatV6("::1"))};
+        int[] ports = {0, 32769, 65535};
+        for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
+            for (String host : hosts) {
+                for (int port : ports) {
+                    testSocksCmdRequestDecoderWithDifferentParams(cmdType, SocksMessage.AddressType.IPv6, host, port);
+                }
+            }
+        }
     }
 
     @Test
-    public void testCmdRequestDecoderConnectDomain() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.CONNECT;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.DOMAIN;
+    public void testCmdRequestDecoderDomain() {
+        String[] hosts = {"google.com"};
+        int[] ports = {0, 32769, 65535};
+        for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
+            for (String host : hosts) {
+                for (int port : ports) {
+                    testSocksCmdRequestDecoderWithDifferentParams(cmdType, SocksMessage.AddressType.DOMAIN, host, port);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testCmdRequestDecoderUnknown() {
         String host = "google.com";
         int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
-    }
-
-    @Test
-    public void testCmdRequestDecoderBindDomain() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.BIND;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.DOMAIN;
-        String host = "google.com";
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
-    }
-
-    @Test
-    public void testCmdRequestDecoderUdpDomain() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.UDP;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.DOMAIN;
-        String host = "google.com";
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
-    }
-
-    @Test
-    public void testCmdRequestDecoderConnectIPv6() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.CONNECT;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv6;
-        String host = SocksCommonUtils.ipv6toStr(IPAddressUtil.textToNumericFormatV6("::1"));
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
-    }
-
-    @Test
-    public void testCmdRequestDecoderBindIPv6() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.BIND;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv6;
-        String host = SocksCommonUtils.ipv6toStr(IPAddressUtil.textToNumericFormatV6("::1"));
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
-    }
-
-    @Test
-    public void testCmdRequestDecoderUdpIPv6() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.UDP;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv6;
-        String host = SocksCommonUtils.ipv6toStr(IPAddressUtil.textToNumericFormatV6("::1"));
-        int port = 80;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
-    }
-
-    @Test
-    public void testCmdRequestDecoderUdpIPv6Port50000() {
-        SocksMessage.CmdType cmdType = SocksMessage.CmdType.UDP;
-        SocksMessage.AddressType addressType = SocksMessage.AddressType.IPv6;
-        String host = SocksCommonUtils.ipv6toStr(IPAddressUtil.textToNumericFormatV6("::1"));
-        int port = 50000;
-        SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
-        SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
-        EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
-        SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        msg = (SocksCmdRequest) embedder.readInbound();
-        assertTrue(msg.getCmdType().equals(cmdType));
-        assertTrue(msg.getAddressType().equals(addressType));
-        assertTrue(msg.getHost().equals(host));
-        assertTrue(msg.getPort() == port);
-        assertNull(embedder.readInbound());
+        for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
+            testSocksCmdRequestDecoderWithDifferentParams(cmdType, SocksMessage.AddressType.UNKNOWN, host, port);
+        }
     }
 }
