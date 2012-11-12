@@ -458,7 +458,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                             this.cumulation = cumulation = newCumulationBuffer(ctx, bytesToPreserve);
                             cumulation.writeBytes(input, checkpoint, bytesToPreserve);
                         } else {
-                            this.cumulation = cumulation = input.slice(checkpoint, bytesToPreserve);
+                            this.cumulation = input.slice(checkpoint, bytesToPreserve);
                         }
                     } else if (checkpoint == 0) {
                         if (copy) {
@@ -474,7 +474,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                             this.cumulation = cumulation = newCumulationBuffer(ctx, input.readableBytes());
                             cumulation.writeBytes(input);
                         } else {
-                            this.cumulation = cumulation = input;
+                            this.cumulation = input;
                         }
                     }
                 } else {

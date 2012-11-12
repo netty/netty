@@ -123,7 +123,7 @@ public class WebSocketServerProtocolHandlerTest {
         assertEquals("processed: payload", customTextFrameHandler.getContent());
     }
     
-    private DecoderEmbedder<Object> decoderEmbedder(SimpleChannelHandler handler) {
+    private static DecoderEmbedder<Object> decoderEmbedder(SimpleChannelHandler handler) {
         DecoderEmbedder<Object> decoder = decoderEmbedder();
         decoder.getPipeline().addFirst("someHandler", handler);
         return decoder;

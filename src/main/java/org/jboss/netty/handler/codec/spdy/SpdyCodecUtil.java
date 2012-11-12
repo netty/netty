@@ -251,12 +251,12 @@ final class SpdyCodecUtil {
         ".1statusversionurl ";
     static final byte[] SPDY2_DICT;
     static {
-        byte[] SPDY2_DICT_ = null;
+        byte[] SPDY2_DICT_;
 
         try {
             SPDY2_DICT_ = SPDY2_DICT_S.getBytes("US-ASCII");
             // dictionary is null terminated
-            SPDY2_DICT_[SPDY2_DICT_.length - 1] = (byte) 0;
+            SPDY2_DICT_[SPDY2_DICT_.length - 1] = 0;
         } catch (Exception e) {
             SPDY2_DICT_ = new byte[1];
         }

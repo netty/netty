@@ -15,7 +15,12 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -28,12 +33,7 @@ import java.nio.channels.Selector;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * A class responsible for registering channels with {@link Selector}.
@@ -328,7 +328,10 @@ public class NioDatagramWorker extends AbstractNioWorker {
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
+                    // Mark the event object for garbage collection.
+                    //noinspection UnusedAssignment
                     buf = null;
+                    //noinspection UnusedAssignment
                     evt = null;
                     future.setFailure(t);
                     fireExceptionCaught(channel, t);

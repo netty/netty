@@ -15,6 +15,13 @@
  */
 package org.jboss.netty.handler.execution;
 
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.util.ObjectSizeEstimator;
+import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
+
 import java.util.IdentityHashMap;
 import java.util.Queue;
 import java.util.Set;
@@ -25,13 +32,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.util.ObjectSizeEstimator;
-import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which makes sure the events from the
@@ -294,7 +294,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         }
 
         public void run() {
-            boolean acquired = false;
+            boolean acquired;
 
             // check if its already running by using CAS. If so just return here. So in the worst case the thread
             // is executed and do nothing

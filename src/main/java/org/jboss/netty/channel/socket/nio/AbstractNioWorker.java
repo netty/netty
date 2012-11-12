@@ -585,6 +585,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                         buf.release();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
+                        // Mark the event object for garbage collection.
+                        //noinspection UnusedAssignment
                         evt = null;
                         buf = null;
                         future.setSuccess();
@@ -609,7 +611,10 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                     }
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
+                    // Mark the event object for garbage collection.
+                    //noinspection UnusedAssignment
                     buf = null;
+                    //noinspection UnusedAssignment
                     evt = null;
                     future.setFailure(t);
                     if (iothread) {
@@ -762,6 +767,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 channel.currentWriteBuffer.release();
                 channel.currentWriteBuffer = null;
                 channel.currentWriteEvent = null;
+                // Mark the event object for garbage collection.
+                //noinspection UnusedAssignment
                 evt = null;
                 future.setFailure(cause);
                 fireExceptionCaught = true;

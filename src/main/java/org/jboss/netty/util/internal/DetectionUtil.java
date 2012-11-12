@@ -66,7 +66,7 @@ public final class DetectionUtil {
         }
 
         // Legacy properties
-        boolean tryUnsafe = false;
+        boolean tryUnsafe;
         if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
             tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
         } else {

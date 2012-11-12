@@ -433,8 +433,8 @@ public class HttpPostRequestDecoder {
     private void parseBodyAttributesStandard() throws ErrorDataDecoderException {
         int firstpos = undecodedChunk.readerIndex();
         int currentpos = firstpos;
-        int equalpos = firstpos;
-        int ampersandpos = firstpos;
+        int equalpos;
+        int ampersandpos;
         if (currentStatus == MultiPartStatus.NOTSTARTED) {
             currentStatus = MultiPartStatus.DISPOSITION;
         }
@@ -486,7 +486,6 @@ public class HttpPostRequestDecoder {
                                 contRead = false;
                             } else {
                                 // Error
-                                contRead = false;
                                 throw new ErrorDataDecoderException("Bad end of line");
                             }
                         } else {
@@ -550,7 +549,7 @@ public class HttpPostRequestDecoder {
      * other errors
      */
     private void parseBodyAttributes() throws ErrorDataDecoderException {
-        SeekAheadOptimize sao = null;
+        SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e1) {
@@ -559,8 +558,8 @@ public class HttpPostRequestDecoder {
         }
         int firstpos = undecodedChunk.readerIndex();
         int currentpos = firstpos;
-        int equalpos = firstpos;
-        int ampersandpos = firstpos;
+        int equalpos;
+        int ampersandpos;
         if (currentStatus == MultiPartStatus.NOTSTARTED) {
             currentStatus = MultiPartStatus.DISPOSITION;
         }
@@ -616,7 +615,6 @@ public class HttpPostRequestDecoder {
                             } else {
                                 // Error
                                 sao.setReadPosition(0);
-                                contRead = false;
                                 throw new ErrorDataDecoderException("Bad end of line");
                             }
                         } else {
@@ -843,7 +841,7 @@ public class HttpPostRequestDecoder {
      * @throws NotEnoughDataDecoderException
      */
     void skipControlCharacters() throws NotEnoughDataDecoderException {
-        SeekAheadOptimize sao = null;
+        SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e) {
@@ -945,7 +943,7 @@ public class HttpPostRequestDecoder {
             }
             String[] contents = splitMultipartHeader(newline);
             if (contents[0].equalsIgnoreCase(HttpPostBodyUtil.CONTENT_DISPOSITION)) {
-                boolean checkSecondArg = false;
+                boolean checkSecondArg;
                 if (currentStatus == MultiPartStatus.DISPOSITION) {
                     checkSecondArg = contents[1]
                             .equalsIgnoreCase(HttpPostBodyUtil.FORM_DATA);
@@ -1249,7 +1247,7 @@ public class HttpPostRequestDecoder {
      * reset the readerInder to the previous value
      */
     private String readLine() throws NotEnoughDataDecoderException {
-        SeekAheadOptimize sao = null;
+        SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e1) {
@@ -1385,7 +1383,7 @@ public class HttpPostRequestDecoder {
      * reset the readerInder to the previous value
      */
     private String readDelimiter(String delimiter) throws NotEnoughDataDecoderException {
-        SeekAheadOptimize sao = null;
+        SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e1) {
@@ -1583,7 +1581,7 @@ public class HttpPostRequestDecoder {
      */
     private void readFileUploadByteMultipart(String delimiter)
             throws NotEnoughDataDecoderException, ErrorDataDecoderException {
-        SeekAheadOptimize sao = null;
+        SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e1) {
@@ -1595,7 +1593,7 @@ public class HttpPostRequestDecoder {
         boolean newLine = true;
         int index = 0;
         int lastrealpos = sao.pos;
-        int lastPosition = undecodedChunk.readerIndex();
+        int lastPosition;
         boolean found = false;
 
         while (sao.pos < sao.limit) {
@@ -1778,7 +1776,7 @@ public class HttpPostRequestDecoder {
      */
     private void loadFieldMultipart(String delimiter)
             throws NotEnoughDataDecoderException, ErrorDataDecoderException {
-        SeekAheadOptimize sao = null;
+        SeekAheadOptimize sao;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
         } catch (SeekAheadNoBackArrayException e1) {
@@ -1790,7 +1788,7 @@ public class HttpPostRequestDecoder {
             // found the decoder limit
             boolean newLine = true;
             int index = 0;
-            int lastPosition = undecodedChunk.readerIndex();
+            int lastPosition;
             int lastrealpos = sao.pos;
             boolean found = false;
 
@@ -1880,8 +1878,7 @@ public class HttpPostRequestDecoder {
      */
     private static String cleanString(String field) {
         StringBuilder sb = new StringBuilder(field.length());
-        int i = 0;
-        for (i = 0; i < field.length(); i ++) {
+        for (int i = 0; i < field.length(); i ++) {
             char nextChar = field.charAt(i);
             if (nextChar == HttpConstants.COLON) {
                 sb.append(HttpConstants.SP);
@@ -1983,7 +1980,7 @@ public class HttpPostRequestDecoder {
         valueEnd = HttpPostBodyUtil.findEndOfString(sb);
         headers.add(sb.substring(nameStart, nameEnd));
         String svalue = sb.substring(valueStart, valueEnd);
-        String[] values = null;
+        String[] values;
         if (svalue.indexOf(';') >= 0) {
             values = StringUtil.split(svalue, ';');
         } else {

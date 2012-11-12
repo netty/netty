@@ -15,7 +15,10 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.DefaultFileRegion;
+import org.jboss.netty.channel.FileRegion;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,10 +29,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
 import java.util.regex.Pattern;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.DefaultFileRegion;
-import org.jboss.netty.channel.FileRegion;
+import static org.jboss.netty.channel.Channels.*;
 
 class OioWorker extends AbstractOioWorker<OioSocketChannel> {
 
@@ -102,7 +102,7 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                     synchronized (out) {
                         WritableByteChannel  bchannel = Channels.newChannel(out);
 
-                        long i = 0;
+                        long i;
                         while ((i = fr.transferTo(bchannel, length)) > 0) {
                             length += i;
                             if (length >= fr.getCount()) {

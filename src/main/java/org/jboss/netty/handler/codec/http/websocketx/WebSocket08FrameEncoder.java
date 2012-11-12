@@ -53,8 +53,6 @@
 
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import java.nio.ByteBuffer;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -63,6 +61,8 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+
+import java.nio.ByteBuffer;
 
 /**
  * <p>
@@ -173,7 +173,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
                 int counter = 0;
                 while (data.readableBytes() > 0) {
                     byte byteData = data.readByte();
-                    body.writeByte(byteData ^ mask[+counter++ % 4]);
+                    body.writeByte(byteData ^ mask[counter++ % 4]);
                 }
             } else {
                 body = data;

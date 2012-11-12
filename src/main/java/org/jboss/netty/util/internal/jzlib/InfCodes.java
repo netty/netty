@@ -100,9 +100,9 @@ final class InfCodes {
         int j; // temporary storage
         int tindex; // temporary pointer
         int e; // extra bits or operation
-        int b = 0; // bit buffer
-        int k = 0; // bits in bit buffer
-        int p = 0; // input data pointer
+        int b; // bit buffer
+        int k; // bits in bit buffer
+        int p; // input data pointer
         int n; // bytes available there
         int q; // output window write pointer
         int m; // bytes to end of window or read pointer
@@ -587,7 +587,6 @@ final class InfCodes {
                                                 q, e);
                                         q += e;
                                         r += e;
-                                        e = 0;
                                     }
                                     r = 0; // copy rest from start of window
                                 }
@@ -603,7 +602,6 @@ final class InfCodes {
                                 System.arraycopy(s.window, r, s.window, q, c);
                                 q += c;
                                 r += c;
-                                c = 0;
                             }
                             break;
                         } else if ((e & 64) == 0) {

@@ -169,8 +169,6 @@ public class ChunkedWriteHandler
                 cause = new ClosedChannelException();
             }
             currentEvent.getFuture().setFailure(cause);
-
-            currentEvent = null;
         }
 
 
@@ -184,7 +182,7 @@ public class ChunkedWriteHandler
     }
 
     private void flush(ChannelHandlerContext ctx, boolean fireNow) throws Exception {
-        boolean acquired = false;
+        boolean acquired;
         final Channel channel = ctx.getChannel();
         boolean suspend = false;
         flushNeeded = true;
@@ -363,8 +361,6 @@ public class ChunkedWriteHandler
             }
             currentEvent.getFuture().setFailure(cause);
             fireExceptionCaught = true;
-
-            currentEvent = null;
         }
 
         if (fireExceptionCaught) {

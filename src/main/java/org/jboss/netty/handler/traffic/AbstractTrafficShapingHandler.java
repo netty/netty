@@ -355,7 +355,7 @@ public abstract class AbstractTrafficShapingHandler extends
             long curtime = System.currentTimeMillis();
             long size = objectSizeEstimator.estimateSize(evt.getMessage());
             if (trafficCounter != null) {
-                trafficCounter.bytesRecvFlowControl(ctx, size);
+                trafficCounter.bytesRecvFlowControl(size);
                 if (readLimit == 0) {
                     // no action
                     return;

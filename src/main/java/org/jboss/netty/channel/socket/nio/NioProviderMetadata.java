@@ -55,7 +55,7 @@ final class NioProviderMetadata {
     static final int CONSTRAINT_LEVEL;
 
     static {
-        int constraintLevel = -1;
+        int constraintLevel;
 
         // Use the system property if possible.
         constraintLevel = SystemPropertyUtil.getInt(CONSTRAINT_LEVEL_PROPERTY, -1);

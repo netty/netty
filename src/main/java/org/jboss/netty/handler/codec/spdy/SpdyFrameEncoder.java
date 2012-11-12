@@ -234,7 +234,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             frame.writeInt(numEntries);
             for (Integer ID: IDs) {
                 int id = ID.intValue();
-                byte ID_flags = (byte) 0;
+                byte ID_flags = 0;
                 if (spdySettingsFrame.isPersistValue(id)) {
                     ID_flags |= SPDY_SETTINGS_PERSIST_VALUE;
                 }

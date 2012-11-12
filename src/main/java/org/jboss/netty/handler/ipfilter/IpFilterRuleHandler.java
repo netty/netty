@@ -15,16 +15,16 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
+import org.jboss.netty.channel.ChannelHandlerContext;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * Implementation of Filter of IP based on ALLOW and DENY rules.<br>
@@ -245,7 +245,7 @@ public class IpFilterRuleHandler extends IpFilteringHandlerImpl {
         }
         InetAddress inetAddress = inetSocketAddress.getAddress();
         Iterator<IpFilterRule> iterator = ipFilterRuleList.iterator();
-        IpFilterRule ipFilterRule = null;
+        IpFilterRule ipFilterRule;
         while (iterator.hasNext()) {
             ipFilterRule = iterator.next();
             if (ipFilterRule.contains(inetAddress)) {

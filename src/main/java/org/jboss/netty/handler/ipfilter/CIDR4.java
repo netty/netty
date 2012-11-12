@@ -131,7 +131,7 @@ public class CIDR4 extends CIDR {
      *                                  IPv6 address.
      */
     private static int ipv4AddressToInt(InetAddress addr) {
-        byte[] address = null;
+        byte[] address;
         if (addr instanceof Inet6Address) {
             address = getIpV4FromIpV6((Inet6Address) addr);
         } else {

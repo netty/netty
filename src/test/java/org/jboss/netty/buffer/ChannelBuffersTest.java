@@ -15,8 +15,9 @@
  */
 package org.jboss.netty.buffer;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
-import static org.junit.Assert.*;
+import org.easymock.EasyMock;
+import org.jboss.netty.util.CharsetUtil;
+import org.junit.Test;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -27,9 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.easymock.EasyMock;
-import org.jboss.netty.util.CharsetUtil;
-import org.junit.Test;
+import static org.jboss.netty.buffer.ChannelBuffers.*;
+import static org.junit.Assert.*;
 
 /**
  * Tests channel buffers
@@ -174,10 +174,10 @@ public class ChannelBuffersTest {
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[][] { new byte[0] }));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[0]));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0), ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocate(0), ByteBuffer.allocate(0)));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[0]));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[] { buffer(0) }));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(buffer(0), buffer(0)));
 
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]));
         assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[0]));
@@ -191,10 +191,10 @@ public class ChannelBuffersTest {
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[][] { new byte[0] }));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[0]));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0), ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocate(0), ByteBuffer.allocate(0)));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[0]));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0) }));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(buffer(0), buffer(0)));
     }
 
     @Test

@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
@@ -151,8 +150,8 @@ public class TrafficCounter {
             if (trafficShapingHandler1 != null) {
                 trafficShapingHandler1.doAccounting(counter);
             }
-            timeout =
-                counter.timer.newTimeout(this, counter.checkInterval.get(), TimeUnit.MILLISECONDS);
+
+            counter.timer.newTimeout(this, counter.checkInterval.get(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -254,12 +253,10 @@ public class TrafficCounter {
     /**
      * Computes counters for Read.
      *
-     * @param ctx
-     *            the associated channelHandlerContext
      * @param recv
      *            the size in bytes to read
      */
-    void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv) {
+    void bytesRecvFlowControl(long recv) {
         currentReadBytes.addAndGet(recv);
         cumulativeReadBytes.addAndGet(recv);
     }

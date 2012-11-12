@@ -216,7 +216,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         }
     }
 
-    private ChannelFuture getContentFuture(
+    private static ChannelFuture getContentFuture(
             ChannelHandlerContext ctx, MessageEvent e, int streamID, HttpMessage httpMessage) {
         if (httpMessage.getContent().readableBytes() == 0) {
             return e.getFuture();

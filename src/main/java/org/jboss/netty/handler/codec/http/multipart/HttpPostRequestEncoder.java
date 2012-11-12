@@ -432,7 +432,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
             }
-            boolean localMixed = false;
+            boolean localMixed;
             if (duringMixedMode) {
                 if (currentFileUpload != null &&
                         currentFileUpload.getName().equals(fileUpload.getName())) {
@@ -873,7 +873,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             isLastChunkSent = true;
             return new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
         }
-        ChannelBuffer buffer = null;
+        ChannelBuffer buffer;
         int size = HttpPostBodyUtil.chunkSize;
         // first test if previous buffer is not empty
         if (currentBuffer != null) {

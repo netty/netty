@@ -39,29 +39,30 @@ final class CombinedIterator<E> implements Iterator<E> {
     }
 
     public boolean hasNext() {
-        boolean hasNext = currentIterator.hasNext();
-        if (hasNext) {
-            return true;
-        }
+        for (;;) {
+            if (currentIterator.hasNext()) {
+                return true;
+            }
 
-        if (currentIterator == i1) {
-            currentIterator = i2;
-            return hasNext();
-        } else {
-            return false;
+            if (currentIterator == i1) {
+                currentIterator = i2;
+            } else {
+                return false;
+            }
         }
     }
 
     public E next() {
-        try {
-            E e = currentIterator.next();
-            return e;
-        } catch (NoSuchElementException e) {
-            if (currentIterator == i1) {
-                currentIterator = i2;
-                return next();
-            } else {
-                throw e;
+        for (;;) {
+            try {
+                E e = currentIterator.next();
+                return e;
+            } catch (NoSuchElementException e) {
+                if (currentIterator == i1) {
+                    currentIterator = i2;
+                } else {
+                    throw e;
+                }
             }
         }
     }

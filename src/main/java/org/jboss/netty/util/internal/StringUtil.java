@@ -31,7 +31,7 @@ public final class StringUtil {
     public static final String NEWLINE;
 
     static {
-        String newLine = null;
+        String newLine;
 
         try {
             newLine = new Formatter().format("%n").toString();
