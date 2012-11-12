@@ -30,21 +30,21 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast("handler1", handler1);
         pipeline.addLast("handler2", handler1);
         pipeline.addLast("handler3", handler1);
-        assertTrue(pipeline.get("handler1") == handler1);
-        assertTrue(pipeline.get("handler2") == handler1);
-        assertTrue(pipeline.get("handler3") == handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+        assertSame(pipeline.get("handler2"), handler1);
+        assertSame(pipeline.get("handler3"), handler1);
 
         ChannelHandler newHandler1 = newHandler();
         pipeline.replace("handler1", "handler1", newHandler1);
-        assertTrue(pipeline.get("handler1") == newHandler1);
+        assertSame(pipeline.get("handler1"), newHandler1);
 
         ChannelHandler newHandler3 = newHandler();
         pipeline.replace("handler3", "handler3", newHandler3);
-        assertTrue(pipeline.get("handler3") == newHandler3);
+        assertSame(pipeline.get("handler3"), newHandler3);
 
         ChannelHandler newHandler2 = newHandler();
         pipeline.replace("handler2", "handler2", newHandler2);
-        assertTrue(pipeline.get("handler2") == newHandler2);
+        assertSame(pipeline.get("handler2"), newHandler2);
     }
 
     private static ChannelHandler newHandler() {

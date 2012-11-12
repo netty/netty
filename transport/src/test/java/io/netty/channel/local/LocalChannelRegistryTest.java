@@ -23,9 +23,9 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class LocalChannelRegistryTest {
 
@@ -76,10 +76,9 @@ public class LocalChannelRegistryTest {
 
             sc.closeFuture().sync();
 
-            Assert.assertTrue(String.format(
+            assertNull(String.format(
                     "Expected null, got channel '%s' for local address '%s'",
-                    LocalChannelRegistry.get(addr), addr),
-                    LocalChannelRegistry.get(addr) == null);
+                    LocalChannelRegistry.get(addr), addr), LocalChannelRegistry.get(addr));
         }
     }
 
