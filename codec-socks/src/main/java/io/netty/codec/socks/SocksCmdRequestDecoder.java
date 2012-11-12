@@ -79,7 +79,6 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksRequest, Socks
                         break;
                     }
                     case UNKNOWN:
-                        byteBuf.clear();
                         break;
                 }
             }

@@ -20,8 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.CharsetUtil;
 
-import java.nio.charset.Charset;
-
 public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, SocksCmdResponseDecoder.State> {
     private static final String name = "SOCKS_CMD_RESPONSE_DECODER";
 
@@ -82,7 +80,6 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, Soc
                         break;
                     }
                     case UNKNOWN:
-                        byteBuf.clear();
                         break;
                 }
             }
