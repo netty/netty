@@ -46,15 +46,6 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.bootstrap,
-              !io.netty.channel,
-              !io.netty.channel.embedded,
-              !io.netty.channel.group,
-              !io.netty.channel.local,
-              !io.netty.channel.socket,
-              !io.netty.channel.socket.aio,
-              !io.netty.channel.socket.nio,
-              !io.netty.channel.socket.oio,
               sun.misc;resolution:=optional,
               *
             </Import-Package>

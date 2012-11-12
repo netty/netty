@@ -68,15 +68,6 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.handler.codec,
-              !io.netty.handler.codec.base64,
-              !io.netty.handler.codec.bytes,
-              !io.netty.handler.codec.compression,
-              !io.netty.handler.codec.marshalling,
-              !io.netty.handler.codec.protobuf,
-              !io.netty.handler.codec.sctp
-              !io.netty.handler.codec.serialization,
-              !io.netty.handler.codec.string,
               *
             </Import-Package>
             <Export-Package>
@@ -86,7 +77,7 @@
               io.netty.handler.codec.compression,
               io.netty.handler.codec.marshalling,
               io.netty.handler.codec.protobuf,
-              io.netty.handler.codec.sctp
+              io.netty.handler.codec.sctp,
               io.netty.handler.codec.serialization,
               io.netty.handler.codec.string
             </Export-Package>
