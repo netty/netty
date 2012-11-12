@@ -15,17 +15,17 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.socket.Worker;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.Worker;
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Abstract base class for Oio-Worker implementations
@@ -85,10 +85,10 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
                 }
             } finally {
                 processEventQueue();
+            }
 
-                if (!cont) {
-                    break;
-                }
+            if (!cont) {
+                break;
             }
         }
 
