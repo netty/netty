@@ -22,7 +22,6 @@
 
 package org.jboss.netty.util.internal;
 
-import java.lang.Math;
 import java.util.Random;
 
 /**

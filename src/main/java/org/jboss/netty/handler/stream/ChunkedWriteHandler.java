@@ -15,15 +15,6 @@
  */
 package org.jboss.netty.handler.stream;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.io.IOException;
-import java.lang.OutOfMemoryError;
-import java.nio.channels.ClosedChannelException;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -39,6 +30,14 @@ import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
