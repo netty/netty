@@ -16,6 +16,8 @@
 package io.netty.logging;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Logger factory which creates a <a href="http://www.slf4j.org/">SLF4J</a>
@@ -25,8 +27,8 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        final org.slf4j.Logger logger =
-            org.slf4j.LoggerFactory.getLogger(name);
+        final Logger logger =
+            LoggerFactory.getLogger(name);
         return new Slf4JLogger(logger);
     }
 }

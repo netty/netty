@@ -16,6 +16,8 @@
 package io.netty.monitor.spi;
 
 import java.io.Serializable;
+import java.lang.Comparable;
+import java.lang.Object;
 
 /**
  * <p>
@@ -59,7 +61,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
     }
 
     /**
-     * @see java.lang.Comparable#compareTo(java.lang.Object)
+     * @see Comparable#compareTo(Object)
      */
     @Override
     public int compareTo(final MonitorProvider o) {
@@ -67,7 +69,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
     }
 
     /**
-     * @see java.lang.Object#hashCode()
+     * @see Object#hashCode()
      */
     @Override
     public int hashCode() {
@@ -78,7 +80,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
     }
 
     /**
-     * @see java.lang.Object#equals(java.lang.Object)
+     * @see Object#equals(Object)
      */
     @Override
     public boolean equals(final Object obj) {
@@ -103,7 +105,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

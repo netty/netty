@@ -19,6 +19,7 @@ import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.junit.Test;
 
@@ -28,8 +29,8 @@ public class JdkLoggerTest {
     @Test
     public void testIsTraceEnabled() {
 
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isLoggable(Level.FINEST)).andReturn(true);
         replay(mock);
@@ -42,8 +43,8 @@ public class JdkLoggerTest {
     @Test
     public void testIsDebugEnabled() {
 
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isLoggable(Level.FINE)).andReturn(true);
         replay(mock);
@@ -55,8 +56,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testIsInfoEnabled() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isLoggable(Level.INFO)).andReturn(true);
         replay(mock);
@@ -68,8 +69,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testIsWarnEnabled() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isLoggable(Level.WARNING)).andReturn(true);
         replay(mock);
@@ -81,8 +82,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testIsErrorEnabled() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isLoggable(Level.SEVERE)).andReturn(true);
         replay(mock);
@@ -94,8 +95,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testTrace() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.FINEST, "foo", null, "a");
         replay(mock);
@@ -107,8 +108,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testTraceWithException() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.FINEST, "foo", null, "a", e);
         replay(mock);
@@ -120,8 +121,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testDebug() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.FINE, "foo", null, "a");
         replay(mock);
@@ -133,8 +134,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testDebugWithException() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.FINE, "foo", null, "a", e);
         replay(mock);
@@ -146,8 +147,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testInfo() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.INFO, "foo", null, "a");
         replay(mock);
@@ -159,8 +160,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testInfoWithException() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.INFO, "foo", null, "a", e);
         replay(mock);
@@ -172,8 +173,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testWarn() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.WARNING, "foo", null, "a");
         replay(mock);
@@ -185,8 +186,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testWarnWithException() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.WARNING, "foo", null, "a", e);
         replay(mock);
@@ -198,8 +199,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testError() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.SEVERE, "foo", null, "a");
         replay(mock);
@@ -211,8 +212,8 @@ public class JdkLoggerTest {
 
     @Test
     public void testErrorWithException() {
-        java.util.logging.Logger mock =
-            createStrictMock(java.util.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.logp(Level.SEVERE, "foo", null, "a", e);
         replay(mock);

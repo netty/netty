@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 
 /**
  * An arbitrary task that can be executed by {@link NioEventLoop} when a {@link SelectableChannel} becomes ready.
@@ -25,7 +26,7 @@ import java.nio.channels.SelectionKey;
  */
 public interface NioTask<C extends SelectableChannel> {
     /**
-     * Invoked when the {@link SelectableChannel} has been selected by the {@link java.nio.channels.Selector}.
+     * Invoked when the {@link SelectableChannel} has been selected by the {@link Selector}.
      */
     void channelReady(C ch, SelectionKey key) throws Exception;
 

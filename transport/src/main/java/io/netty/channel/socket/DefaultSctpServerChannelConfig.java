@@ -40,7 +40,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     /**
      * Creates a new instance.
      */
-    public DefaultSctpServerChannelConfig(com.sun.nio.sctp.SctpServerChannel serverChannel) {
+    public DefaultSctpServerChannelConfig(SctpServerChannel serverChannel) {
         if (serverChannel == null) {
             throw new NullPointerException("serverChannel");
         }

@@ -20,11 +20,11 @@ import io.netty.channel.ChannelConfig;
 import static com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 
 /**
- * A {@link io.netty.channel.ChannelConfig} for a {@link SctpChannel}.
+ * A {@link ChannelConfig} for a {@link SctpChannel}.
  * <p/>
  * <h3>Available options</h3>
  * <p/>
- * In addition to the options provided by {@link io.netty.channel.ChannelConfig},
+ * In addition to the options provided by {@link ChannelConfig},
  * {@link SctpChannelConfig} allows the following options in the option map:
  * <p/>
  * <table border="1" cellspacing="0" cellpadding="6">

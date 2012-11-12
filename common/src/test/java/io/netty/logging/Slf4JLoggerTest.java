@@ -19,14 +19,15 @@ import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
+import org.slf4j.Logger;
 
 public class Slf4JLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
     public void testIsTraceEnabled() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isTraceEnabled()).andReturn(true);
         replay(mock);
@@ -38,8 +39,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testIsDebugEnabled() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
@@ -51,8 +52,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testIsInfoEnabled() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isInfoEnabled()).andReturn(true);
         replay(mock);
@@ -64,8 +65,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testIsWarnEnabled() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isWarnEnabled()).andReturn(true);
         replay(mock);
@@ -77,8 +78,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testIsErrorEnabled() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isErrorEnabled()).andReturn(true);
         replay(mock);
@@ -90,8 +91,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testTrace() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.trace("a");
         replay(mock);
@@ -103,8 +104,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testTraceWithException() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.trace("a", e);
         replay(mock);
@@ -116,8 +117,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testDebug() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.debug("a");
         replay(mock);
@@ -129,8 +130,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testDebugWithException() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.debug("a", e);
         replay(mock);
@@ -142,8 +143,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testInfo() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.info("a");
         replay(mock);
@@ -155,8 +156,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testInfoWithException() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.info("a", e);
         replay(mock);
@@ -168,8 +169,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testWarn() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.warn("a");
         replay(mock);
@@ -181,8 +182,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testWarnWithException() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.warn("a", e);
         replay(mock);
@@ -194,8 +195,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testError() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.error("a");
         replay(mock);
@@ -207,8 +208,8 @@ public class Slf4JLoggerTest {
 
     @Test
     public void testErrorWithException() {
-        org.slf4j.Logger mock =
-            createStrictMock(org.slf4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.error("a", e);
         replay(mock);
