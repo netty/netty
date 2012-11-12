@@ -87,7 +87,7 @@ public final class TestUtils {
                 // Try to open a SCTP Channel, by using reflection to make it compile also on
                 // operation systems that not support SCTP like OSX and Windows
                 Class<?> sctpChannelClass = Class.forName("com.sun.nio.sctp.SctpChannel");
-                Channel channel = (Channel) sctpChannelClass.getMethod("open", null).invoke(null, null);
+                Channel channel = (Channel) sctpChannelClass.getMethod("open").invoke(null);
                 try {
                     channel.close();
                 } catch (IOException e) {
