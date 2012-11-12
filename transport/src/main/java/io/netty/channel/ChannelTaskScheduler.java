@@ -342,8 +342,7 @@ public final class ChannelTaskScheduler {
         ScheduledFutureTask(EventExecutor executor, Runnable runnable, V result, long nanoTime, long period) {
             super(runnable, result);
             if (period == 0) {
-                throw new IllegalArgumentException(
-                        String.format("period: %d (expected: != 0)", period));
+                throw new IllegalArgumentException("period: 0 (expected: != 0)");
             }
             this.executor = executor;
             deadlineNanos = nanoTime;

@@ -243,7 +243,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
         final int threshold = 1048576 * 4; // 4 MiB page
 
         if (minNewCapacity == threshold) {
-            return minNewCapacity;
+            return threshold;
         }
 
         // If over threshold, do not double but just increase by threshold.

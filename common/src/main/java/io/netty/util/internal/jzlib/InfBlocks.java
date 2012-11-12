@@ -253,7 +253,7 @@ final class InfBlocks {
                 if (n == 0) {
                     bitb = b;
                     bitk = k;
-                    z.avail_in = n;
+                    z.avail_in = 0;
                     z.total_in += p - z.next_in_index;
                     z.next_in_index = p;
                     write = q;
