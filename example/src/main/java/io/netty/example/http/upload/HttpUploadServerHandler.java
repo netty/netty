@@ -192,7 +192,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             responseContent.append('o');
             // example of reading chunk by chunk (minimize memory usage due to
             // Factory)
-            readHttpDataChunkByChunk(ctx.channel());
+            readHttpDataChunkByChunk();
             // example of reading only if at the end
             if (chunk.isLast()) {
                 readHttpDataAllReceive(ctx.channel());
@@ -206,7 +206,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
      * Example of reading all InterfaceHttpData from finished transfer
      */
     private void readHttpDataAllReceive(Channel channel) {
-        List<InterfaceHttpData> datas = null;
+        List<InterfaceHttpData> datas;
         try {
             datas = decoder.getBodyHttpDatas();
         } catch (NotEnoughDataDecoderException e1) {
@@ -226,7 +226,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
     /**
      * Example of reading request by chunk and getting values from chunk to chunk
      */
-    private void readHttpDataChunkByChunk(Channel channel) {
+    private void readHttpDataChunkByChunk() {
         try {
             while (decoder.hasNext()) {
                 InterfaceHttpData data = decoder.next();

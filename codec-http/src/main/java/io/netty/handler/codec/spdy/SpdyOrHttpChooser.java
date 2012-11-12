@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-import javax.net.ssl.SSLEngine;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
@@ -30,6 +28,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
+
+import javax.net.ssl.SSLEngine;
 
 /**
  * {@link ChannelInboundByteHandler} which is responsible to setup the {@link ChannelPipeline} either for
@@ -89,7 +89,6 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
             throw new IllegalStateException("SslHandler is needed for SPDY");
         }
 
-        ChannelPipeline pipeline = ctx.pipeline();
         SelectedProtocol protocol = getProtocol(handler.getEngine());
         switch (protocol) {
         case None:

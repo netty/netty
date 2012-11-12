@@ -15,9 +15,6 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.buffer;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 
@@ -29,6 +26,8 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+
+import static io.netty.buffer.Unpooled.*;
 
 /**
  * Abstract Memory HttpData implementation
@@ -157,7 +156,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             return "";
         }
         if (encoding == null) {
-            return getString(HttpConstants.DEFAULT_CHARSET);
+            encoding = HttpConstants.DEFAULT_CHARSET;
         }
         return byteBuf.toString(encoding);
     }

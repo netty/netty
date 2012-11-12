@@ -26,6 +26,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.junit.Assert.*;
+
 public abstract class AbstractCompatibleMarshallingEncoderTest {
 
     @Test
@@ -39,18 +41,18 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(createEncoder());
 
         ch.writeOutbound(testObject);
-        Assert.assertTrue(ch.finish());
+        assertTrue(ch.finish());
 
         ByteBuf buffer = ch.readOutbound();
 
         Unmarshaller unmarshaller = marshallerFactory.createUnmarshaller(configuration);
         unmarshaller.start(Marshalling.createByteInput(truncate(buffer).nioBuffer()));
         String read = (String) unmarshaller.readObject();
-        Assert.assertEquals(testObject, read);
+        assertEquals(testObject, read);
 
-        Assert.assertEquals(-1, unmarshaller.read());
+        assertEquals(-1, unmarshaller.read());
 
-        Assert.assertNull(ch.readOutbound());
+        assertNull(ch.readOutbound());
 
         unmarshaller.finish();
         unmarshaller.close();

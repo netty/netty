@@ -72,7 +72,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
      * @return a new Temp File from getDiskFilename(), default prefix, postfix and baseDirectory
      */
     private File tempFile() throws IOException {
-        String newpostfix = null;
+        String newpostfix;
         String diskFilename = getDiskFilename();
         if (diskFilename != null) {
             newpostfix = '_' + diskFilename;
