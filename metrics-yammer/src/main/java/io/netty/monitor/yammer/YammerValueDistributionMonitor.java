@@ -28,9 +28,6 @@ final class YammerValueDistributionMonitor implements ValueDistributionMonitor {
 
     private final Histogram delegate;
 
-    /**
-     * @param delegate
-     */
     YammerValueDistributionMonitor(final Histogram delegate) {
         if (delegate == null) {
             throw new NullPointerException("delegate");
@@ -38,25 +35,16 @@ final class YammerValueDistributionMonitor implements ValueDistributionMonitor {
         this.delegate = delegate;
     }
 
-    /**
-     * @see io.netty.monitor.EventDistributionMonitor#reset()
-     */
     @Override
     public void reset() {
         delegate.clear();
     }
 
-    /**
-     * @see io.netty.monitor.EventDistributionMonitor#update(long)
-     */
     @Override
     public void update(final long value) {
         delegate.update(value);
     }
 
-    /**
-     * @see Object#toString()
-     */
     @Override
     public String toString() {
         return "YammerEventDistributionMonitor(delegate=" + delegate + ')';

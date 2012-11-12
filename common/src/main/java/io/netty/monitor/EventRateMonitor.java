@@ -48,7 +48,6 @@ public interface EventRateMonitor {
 
     /**
      * Record {@code count} event occurrences.
-     * @param count
      */
     void events(long count);
 }

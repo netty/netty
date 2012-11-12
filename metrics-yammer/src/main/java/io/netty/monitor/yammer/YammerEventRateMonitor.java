@@ -28,9 +28,6 @@ class YammerEventRateMonitor implements EventRateMonitor {
 
     private final Meter delegate;
 
-    /**
-     * @param delegate
-     */
     YammerEventRateMonitor(final Meter delegate) {
         if (delegate == null) {
             throw new NullPointerException("delegate");
@@ -39,7 +36,6 @@ class YammerEventRateMonitor implements EventRateMonitor {
     }
 
     /**
-     * @see EventRateMonitor#event()
      * @see Meter#mark()
      */
     @Override
@@ -48,7 +44,6 @@ class YammerEventRateMonitor implements EventRateMonitor {
     }
 
     /**
-     * @see EventRateMonitor#events(long)
      * @see Meter#mark(long)
      */
     @Override
@@ -56,9 +51,6 @@ class YammerEventRateMonitor implements EventRateMonitor {
         delegate.mark(count);
     }
 
-    /**
-     * @see Object#toString()
-     */
     @Override
     public String toString() {
         return "YammerEventRateMonitor(delegate=" + delegate + ')';

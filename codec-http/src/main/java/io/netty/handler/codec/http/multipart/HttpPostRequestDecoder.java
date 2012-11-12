@@ -247,9 +247,6 @@ public class HttpPostRequestDecoder {
     /**
      * Check from the request ContentType if this request is a Multipart
      * request.
-     *
-     * @param contentType
-     * @throws ErrorDataDecoderException
      */
     private void checkMultipart(String contentType) throws ErrorDataDecoderException {
         // Check if Post using "multipart/form-data; boundary=--89421926422648"
@@ -301,7 +298,6 @@ public class HttpPostRequestDecoder {
      * If chunked, all chunks must have been offered using offer() method. If
      * not, NotEnoughDataDecoderException will be raised.
      *
-     * @param name
      * @return All Body HttpDatas with the given name (ignore case)
      * @throws NotEnoughDataDecoderException
      *             need more chunks
@@ -320,7 +316,6 @@ public class HttpPostRequestDecoder {
      * If chunked, all chunks must have been offered using offer() method. If
      * not, NotEnoughDataDecoderException will be raised.
      *
-     * @param name
      * @return The first Body InterfaceHttpData with the given name (ignore
      *         case)
      * @throws NotEnoughDataDecoderException
@@ -421,8 +416,6 @@ public class HttpPostRequestDecoder {
 
     /**
      * Utility function to add a new decoded data
-     *
-     * @param data
      */
     private void addHttpData(InterfaceHttpData data) {
         if (data == null) {
@@ -692,10 +685,7 @@ public class HttpPostRequestDecoder {
     /**
      * Decode component
      *
-     * @param s
-     * @param charset
      * @return the decoded component
-     * @throws ErrorDataDecoderException
      */
     private static String decodeAttribute(String s, Charset charset) throws ErrorDataDecoderException {
         if (s == null) {
@@ -744,7 +734,6 @@ public class HttpPostRequestDecoder {
      *
      * Inspired from HttpMessageDecoder
      *
-     * @param state
      * @return the next decoded InterfaceHttpData or null if none until now.
      * @throws ErrorDataDecoderException
      *             if an error occurs
@@ -1480,7 +1469,6 @@ public class HttpPostRequestDecoder {
      * Read a FileUpload data as Byte (Binary) and add the bytes directly to the
      * FileUpload. If the delimiter is found, the FileUpload is completed.
      *
-     * @param delimiter
      * @throws NotEnoughDataDecoderException
      *             Need more chunks but do not reset the readerInder since some
      *             values will be already added to the FileOutput
@@ -1577,7 +1565,6 @@ public class HttpPostRequestDecoder {
      * Read a FileUpload data as Byte (Binary) and add the bytes directly to the
      * FileUpload. If the delimiter is found, the FileUpload is completed.
      *
-     * @param delimiter
      * @throws NotEnoughDataDecoderException
      *             Need more chunks but do not reset the readerInder since some
      *             values will be already added to the FileOutput
@@ -1938,7 +1925,6 @@ public class HttpPostRequestDecoder {
     /**
      * Split the very first line (Content-Type value) in 2 Strings
      *
-     * @param sb
      * @return the array of 2 Strings
      */
     private static String[] splitHeaderContentType(String sb) {
@@ -1963,7 +1949,6 @@ public class HttpPostRequestDecoder {
     /**
      * Split one header in Multipart
      *
-     * @param sb
      * @return an array of String where rank 0 is the name of the header,
      *         follows by several values that were separated by ';' or ','
      */
@@ -2012,35 +1997,21 @@ public class HttpPostRequestDecoder {
      * enough data are available (need more chunks)
      */
     public static class NotEnoughDataDecoderException extends Exception {
-        /**
- */
         private static final long serialVersionUID = -7846841864603865638L;
 
-        /**
- */
         public NotEnoughDataDecoderException() {
         }
 
-        /**
-         * @param arg0
-         */
-        public NotEnoughDataDecoderException(String arg0) {
-            super(arg0);
+        public NotEnoughDataDecoderException(String msg) {
+            super(msg);
         }
 
-        /**
-         * @param arg0
-         */
-        public NotEnoughDataDecoderException(Throwable arg0) {
-            super(arg0);
+        public NotEnoughDataDecoderException(Throwable cause) {
+            super(cause);
         }
 
-        /**
-         * @param arg0
-         * @param arg1
-         */
-        public NotEnoughDataDecoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public NotEnoughDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 
@@ -2058,33 +2029,19 @@ public class HttpPostRequestDecoder {
      * Exception when an error occurs while decoding
      */
     public static class ErrorDataDecoderException extends Exception {
-        /**
- */
         private static final long serialVersionUID = 5020247425493164465L;
 
-        /**
- */
         public ErrorDataDecoderException() {
         }
 
-        /**
-         * @param arg0
-         */
         public ErrorDataDecoderException(String arg0) {
             super(arg0);
         }
 
-        /**
-         * @param arg0
-         */
         public ErrorDataDecoderException(Throwable arg0) {
             super(arg0);
         }
 
-        /**
-         * @param arg0
-         * @param arg1
-         */
         public ErrorDataDecoderException(String arg0, Throwable arg1) {
             super(arg0, arg1);
         }
@@ -2094,35 +2051,21 @@ public class HttpPostRequestDecoder {
      * Exception when an unappropriated method was called on a request
      */
     public static class IncompatibleDataDecoderException extends Exception {
-        /**
- */
         private static final long serialVersionUID = -953268047926250267L;
 
-        /**
- */
         public IncompatibleDataDecoderException() {
         }
 
-        /**
-         * @param arg0
-         */
-        public IncompatibleDataDecoderException(String arg0) {
-            super(arg0);
+        public IncompatibleDataDecoderException(String msg) {
+            super(msg);
         }
 
-        /**
-         * @param arg0
-         */
-        public IncompatibleDataDecoderException(Throwable arg0) {
-            super(arg0);
+        public IncompatibleDataDecoderException(Throwable cause) {
+            super(cause);
         }
 
-        /**
-         * @param arg0
-         * @param arg1
-         */
-        public IncompatibleDataDecoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public IncompatibleDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 }

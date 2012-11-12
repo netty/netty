@@ -30,7 +30,6 @@ public interface FileUpload extends HttpData {
 
     /**
      * Set the original filename
-     * @param filename
      */
     void setFilename(String filename);
 
@@ -48,7 +47,6 @@ public interface FileUpload extends HttpData {
 
     /**
      * Set the Content-Transfer-Encoding type from String as 7bit, 8bit or binary
-     * @param contentTransferEncoding
      */
     void setContentTransferEncoding(String contentTransferEncoding);
 

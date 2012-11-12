@@ -49,7 +49,6 @@ public interface ValueDistributionMonitor {
 
     /**
      * Record {@code value}.
-     * @param value
      */
     void update(long value);
 }

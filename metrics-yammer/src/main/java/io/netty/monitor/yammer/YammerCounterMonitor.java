@@ -28,9 +28,6 @@ class YammerCounterMonitor implements CounterMonitor {
 
     private final Counter delegate;
 
-    /**
-     * @param delegate
-     */
     YammerCounterMonitor(final Counter delegate) {
         if (delegate == null) {
             throw new NullPointerException("delegate");
@@ -38,49 +35,31 @@ class YammerCounterMonitor implements CounterMonitor {
         this.delegate = delegate;
     }
 
-    /**
-     * @see CounterMonitor#inc()
-     */
     @Override
     public void inc() {
         delegate.inc();
     }
 
-    /**
-     * @see CounterMonitor#inc(long)
-     */
     @Override
     public void inc(final long delta) {
         delegate.inc(delta);
     }
 
-    /**
-     * @see CounterMonitor#decr()
-     */
     @Override
     public void decr() {
         delegate.dec();
     }
 
-    /**
-     * @see CounterMonitor#decr(long)
-     */
     @Override
     public void decr(final long delta) {
         delegate.dec(delta);
     }
 
-    /**
-     * @see CounterMonitor#reset()
-     */
     @Override
     public void reset() {
         delegate.clear();
     }
 
-    /**
-     * @see Object#toString()
-     */
     @Override
     public String toString() {
         return "YammerCounterMonitor(delegate=" + delegate + ')';

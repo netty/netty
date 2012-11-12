@@ -80,7 +80,7 @@ public interface HttpMessage extends HttpObject {
     /**
      * Returns the protocol version of this {@link HttpMessage}
      *
-     * @returns The protocol version
+     * @return The protocol version
      */
     HttpVersion getProtocolVersion();
 

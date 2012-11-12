@@ -28,7 +28,6 @@ public interface Attribute extends HttpData {
 
     /**
      * Sets the value of this HttpData.
-     * @param value
      */
     void setValue(String value) throws IOException;
 }

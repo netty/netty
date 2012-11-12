@@ -36,19 +36,11 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
 
     /**
      * Constructor used for huge Attribute
-     * @param name
      */
     public DiskAttribute(String name) {
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
-    /**
-     *
-     * @param name
-     * @param value
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
-     * @throws IOException
-     */
+
     public DiskAttribute(String name, String value) throws IOException {
         super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
