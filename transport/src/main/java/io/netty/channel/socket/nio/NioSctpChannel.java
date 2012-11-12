@@ -151,9 +151,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : javaChannel().getAllLocalAddresses()) {
-                return address;
-            }
+            return javaChannel().getAllLocalAddresses().iterator().next();
         } catch (IOException e) {
             // ignore
         }
@@ -163,9 +161,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected SocketAddress remoteAddress0() {
         try {
-            for (SocketAddress address : javaChannel().getRemoteAddresses()) {
-                return address;
-            }
+            return javaChannel().getRemoteAddresses().iterator().next();
         } catch (IOException e) {
             // ignore
         }
