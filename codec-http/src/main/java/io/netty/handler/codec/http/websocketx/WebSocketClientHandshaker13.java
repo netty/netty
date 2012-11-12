@@ -105,6 +105,10 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             path = wsURL.getPath() + '?' + wsURL.getQuery();
         }
 
+        if (path == null || path.isEmpty()) {
+            path = "/";
+        }
+
         // Get 16 bit nonce and base 64 encode it
         byte[] nonce = WebSocketUtil.randomBytes(16);
         String key = WebSocketUtil.base64(nonce);
