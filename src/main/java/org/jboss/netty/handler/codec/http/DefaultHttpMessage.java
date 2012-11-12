@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.internal.StringUtil;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -143,7 +143,7 @@ public class DefaultHttpMessage implements HttpMessage {
         buf.append("(version: ");
         buf.append(getProtocolVersion().getText());
         buf.append(", keepAlive: ");
-        buf.append(isKeepAlive());
+        buf.append(HttpHeaders.isKeepAlive(this));
         buf.append(", chunked: ");
         buf.append(isChunked());
         buf.append(')');

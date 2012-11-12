@@ -15,9 +15,8 @@
  */
 package org.jboss.netty.handler.ssl;
 
-import java.nio.ByteBuffer;
-
 import javax.net.ssl.SSLEngine;
+import java.nio.ByteBuffer;
 
 /**
  * A {@link ByteBuffer} pool dedicated for {@link SslHandler} performance
@@ -93,8 +92,12 @@ public class SslBufferPool {
      * Acquire a new {@link ByteBuffer} out of the {@link SslBufferPool}
      *
      */
-    public ByteBuffer acquireBuffer() {
-        return acquire();
+    public synchronized ByteBuffer acquireBuffer() {
+        if (index == 0) {
+            return ByteBuffer.allocate(MAX_PACKET_SIZE);
+        } else {
+            return (ByteBuffer) pool[-- index].clear();
+        }
     }
 
     /**
@@ -102,12 +105,8 @@ public class SslBufferPool {
      *
      */
     @Deprecated
-    synchronized ByteBuffer acquire() {
-        if (index == 0) {
-            return ByteBuffer.allocate(MAX_PACKET_SIZE);
-        } else {
-            return (ByteBuffer) pool[-- index].clear();
-        }
+    ByteBuffer acquire() {
+        return acquireBuffer();
     }
 
 
@@ -116,8 +115,10 @@ public class SslBufferPool {
      *
      * @param buffer
      */
-    public void releaseBuffer(ByteBuffer buffer) {
-        release(buffer);
+    public synchronized void releaseBuffer(ByteBuffer buffer) {
+        if (index < maxBufferCount) {
+            pool[index ++] = buffer;
+        }
     }
 
     /**
@@ -127,9 +128,7 @@ public class SslBufferPool {
      *
      */
     @Deprecated
-    synchronized void release(ByteBuffer buffer) {
-        if (index < maxBufferCount) {
-            pool[index ++] = buffer;
-        }
+    void release(ByteBuffer buffer) {
+        releaseBuffer(buffer);
     }
 }
