@@ -15,12 +15,13 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
@@ -74,7 +75,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
-        } else if (option == WRITE_SPIN_COUNT) {
+        }
+        if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
         }
 

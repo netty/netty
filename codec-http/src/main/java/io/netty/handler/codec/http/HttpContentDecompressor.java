@@ -29,7 +29,8 @@ public class HttpContentDecompressor extends HttpContentDecoder {
     protected EmbeddedByteChannel newContentDecoder(String contentEncoding) throws Exception {
         if ("gzip".equalsIgnoreCase(contentEncoding) || "x-gzip".equalsIgnoreCase(contentEncoding)) {
             return new EmbeddedByteChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
-        } else if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
+        }
+        if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedByteChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
         }

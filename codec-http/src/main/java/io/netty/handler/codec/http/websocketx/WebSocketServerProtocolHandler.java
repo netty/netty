@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -25,6 +24,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
+
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * Handles WebSocket control frames (Close, Ping, Pong) and data frames (Text and Binary) are passed
@@ -69,7 +70,8 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
-        } else if (frame instanceof PingWebSocketFrame) {
+        }
+        if (frame instanceof PingWebSocketFrame) {
             ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
             return;
         }

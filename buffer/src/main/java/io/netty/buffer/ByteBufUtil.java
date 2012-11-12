@@ -172,7 +172,8 @@ public final class ByteBufUtil {
                 long vb = bufferB.getUnsignedInt(bIndex);
                 if (va > vb) {
                     return 1;
-                } else if (va < vb) {
+                }
+                if (va < vb) {
                     return -1;
                 }
                 aIndex += 4;
@@ -184,7 +185,8 @@ public final class ByteBufUtil {
                 long vb = swapInt(bufferB.getInt(bIndex)) & 0xFFFFFFFFL;
                 if (va > vb) {
                     return 1;
-                } else if (va < vb) {
+                }
+                if (va < vb) {
                     return -1;
                 }
                 aIndex += 4;
@@ -197,7 +199,8 @@ public final class ByteBufUtil {
             short vb = bufferB.getUnsignedByte(bIndex);
             if (va > vb) {
                 return 1;
-            } else if (va < vb) {
+            }
+            if (va < vb) {
                 return -1;
             }
             aIndex ++;

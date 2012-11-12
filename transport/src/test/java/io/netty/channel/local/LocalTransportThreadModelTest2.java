@@ -15,7 +15,6 @@
  */
 package io.netty.channel.local;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.MessageBuf;
@@ -24,11 +23,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class LocalTransportThreadModelTest2 {
 
@@ -100,14 +100,14 @@ public class LocalTransportThreadModelTest2 {
 
             localChannel.close();
             return;
-        } else {
-            localChannel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    close(localChannel, localRegistrationHandler);
-                }
-            });
         }
+
+        localChannel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                close(localChannel, localRegistrationHandler);
+            }
+        });
 
         // Wait until the connection is closed or the connection attempt fails.
         localChannel.closeFuture().awaitUninterruptibly();

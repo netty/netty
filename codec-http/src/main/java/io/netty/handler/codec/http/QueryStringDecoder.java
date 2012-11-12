@@ -346,7 +346,8 @@ public class QueryStringDecoder {
                     if (c == '%') {
                         buf[pos++] = '%';  // "%%" -> "%"
                         break;
-                    } else if (i == size - 1) {
+                    }
+                    if (i == size - 1) {
                         throw new IllegalArgumentException("partial escape"
                                 + " sequence at end of string: " + s);
                     }

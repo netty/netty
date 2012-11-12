@@ -909,7 +909,8 @@ public class HttpPostRequestDecoder {
         if (newline.equals(delimiter)) {
             currentStatus = dispositionStatus;
             return decodeMultipart(dispositionStatus);
-        } else if (newline.equals(delimiter + "--")) {
+        }
+        if (newline.equals(delimiter + "--")) {
             // CLOSEDELIMITER or MIXED CLOSEDELIMITER found
             currentStatus = closeDelimiterStatus;
             if (currentStatus == MultiPartStatus.HEADERDELIMITER) {
@@ -1926,7 +1927,8 @@ public class HttpPostRequestDecoder {
             }
             undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 2);
             return false;
-        } else if (nextByte == HttpConstants.LF) {
+        }
+        if (nextByte == HttpConstants.LF) {
             return true;
         }
         undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);

@@ -56,7 +56,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;
-        } else if (msg instanceof HttpMessage) {
+        }
+        if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
             cleanup();

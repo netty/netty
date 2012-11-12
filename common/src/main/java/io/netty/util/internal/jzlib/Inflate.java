@@ -303,7 +303,8 @@ final class Inflate {
                 if (z.istate.wrapperType == WrapperType.NONE) {
                     z.istate.mode = DONE;
                     break;
-                } else if (z.istate.wrapperType == WrapperType.ZLIB) {
+                }
+                if (z.istate.wrapperType == WrapperType.ZLIB) {
                     z.istate.mode = CHECK4;
                 } else if (z.istate.wrapperType == WrapperType.GZIP) {
                     gzipCRC32 = 0;
@@ -317,7 +318,7 @@ final class Inflate {
                     z.istate.marker = 0;
                     break;
                 }
-            case CHECK4:
+                case CHECK4:
                 if (z.avail_in == 0) {
                     return r;
                 }

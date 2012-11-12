@@ -1351,15 +1351,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             flush0(ctx, future);
             return future;
-        } else {
-            final DefaultChannelHandlerContext ctx0 = ctx;
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    write(ctx0, message, future);
-                }
-            });
         }
+        
+        final DefaultChannelHandlerContext ctx0 = ctx;
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                write(ctx0, message, future);
+            }
+        });
 
         return future;
     }
