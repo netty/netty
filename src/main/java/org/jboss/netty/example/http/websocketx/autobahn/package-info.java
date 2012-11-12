@@ -36,7 +36,7 @@
  * <p>06. Create a directory for test configuration and results: <tt>mkdir autobahn</tt> <tt>cd autobahn</tt>.
  *
  * <p>07. Create <tt>fuzzing_clinet_spec.json</tt> in the above directory
- * <code>
+ * {@code
  * {
  *    "options": {"failByDrop": false},
  *    "outdir": "./reports/servers",
@@ -51,7 +51,7 @@
  *    "exclude-cases": [],
  *    "exclude-agent-cases": {}
  * }
- * </code>
+ * }
  *
  * <p>08. Run the <tt>AutobahnServer</tt> located in this package. If you are in Eclipse IDE, right click on
  * <tt>AutobahnServer.java</tt> and select Run As > Java Application.

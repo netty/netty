@@ -33,7 +33,7 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  */
 public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
 
-    private static final int DEFAULT_MAX_FRAME_SIZE = 16384;
+    private static final long DEFAULT_MAX_FRAME_SIZE = 16384;
 
     private final long maxFrameSize;
     private boolean receivedClosingHandshake;

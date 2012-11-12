@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <br>
  * You can disable the use of {@code sun.misc.Unsafe} if you specify
  * the System property <strong>org.jboss.netty.tryUnsafe</strong> with
- * value of <code>false</code>. Default is <code>true</code>.
+ * value of {@code false}. Default is {@code true}.
  */
 public final class DetectionUtil {
 
@@ -44,7 +44,7 @@ public final class DetectionUtil {
     }
 
     /**
-     * Return <code>true</code> if the JVM is running on Windows
+     * Return {@code true} if the JVM is running on Windows
      *
      */
     public static boolean isWindows() {

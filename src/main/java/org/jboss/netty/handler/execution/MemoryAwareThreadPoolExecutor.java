@@ -15,22 +15,6 @@
  */
 package org.jboss.netty.handler.execution;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -47,6 +31,22 @@ import org.jboss.netty.util.DefaultObjectSizeEstimator;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
 import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
+
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A {@link ThreadPoolExecutor} which blocks the task submission when there's
@@ -282,11 +282,11 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     /**
      * See {@link ThreadPoolExecutor#shutdownNow()} for how it handles the shutdown.
-     * If <code>true</code> is given to this method it also notifies all {@link ChannelFuture}'s
+     * If {@code true} is given to this method it also notifies all {@link ChannelFuture}'s
      * of the not executed {@link ChannelEventRunnable}'s.
      *
      * <p>
-     * Be aware that if you call this with <code>false</code> you will need to handle the
+     * Be aware that if you call this with {@code false} you will need to handle the
      * notification of the {@link ChannelFuture}'s by your self. So only use this if you
      * really have a use-case for it.
      * </p>
@@ -404,13 +404,13 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     /**
-     * If set to <code>false</code> no queued {@link ChannelEventRunnable}'s {@link ChannelFuture}
-     * will get notified once {@link #shutdownNow()} is called.  If set to <code>true</code> every
+     * If set to {@code false} no queued {@link ChannelEventRunnable}'s {@link ChannelFuture}
+     * will get notified once {@link #shutdownNow()} is called.  If set to {@code true} every
      * queued {@link ChannelEventRunnable} will get marked as failed via {@link ChannelFuture#setFailure(Throwable)}.
      *
      * <p>
-     * Please only set this to <code>false</code> if you want to handle the notification by yourself
-     * and know what you are doing. Default is <code>true</code>.
+     * Please only set this to {@code false} if you want to handle the notification by yourself
+     * and know what you are doing. Default is {@code true}.
      * </p>
      */
     public void setNotifyChannelFuturesOnShutdown(boolean notifyOnShutdown) {

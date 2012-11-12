@@ -227,7 +227,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
      * cost of a higher memory usage if big {@link ChannelBuffer}'s will be
      * received.
      *
-     * By default a threshold of <code>0</code> is used, which means it will
+     * By default a threshold of {@code 0} is used, which means it will
      * always copy to try to reduce memory usage
      *
      *

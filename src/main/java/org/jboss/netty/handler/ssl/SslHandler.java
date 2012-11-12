@@ -15,26 +15,6 @@
  */
 package org.jboss.netty.handler.ssl;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SocketChannel;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLEngineResult.Status;
-import javax.net.ssl.SSLException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -56,6 +36,25 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.DetectionUtil;
 import org.jboss.netty.util.internal.NonReentrantLock;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.SocketChannel;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
+
+import static org.jboss.netty.channel.Channels.*;
+
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
  * &middot; TLS</a> and StartTLS support to a {@link Channel}.  Please refer
@@ -75,7 +74,7 @@ import org.jboss.netty.util.internal.NonReentrantLock;
  * If {@link #isIssueHandshake()} is {@code false}
  * (default) you will need to take care of calling {@link #handshake()} by your own. In most
  * situations were {@link SslHandler} is used in 'client mode' you want to issue a handshake once
- * the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code>
+ * the connection was established. if {@link #setIssueHandshake(boolean)} is set to {@code true}
  * you don't need to worry about this as the {@link SslHandler} will take care of it.
  * <p>
  *
@@ -449,7 +448,7 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
-     * Returns <code>true</code> if the automatic handshake is enabled
+     * Returns {@code true} if the automatic handshake is enabled
      */
     public boolean isIssueHandshake() {
         return issueHandshake;
@@ -469,12 +468,12 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
-     * If set to <code>true</code>, the {@link Channel} will automatically get closed
+     * If set to {@code true}, the {@link Channel} will automatically get closed
      * one a {@link SSLException} was caught. This is most times what you want, as after this
      * its almost impossible to recover.
      *
-     * Anyway the default is <code>false</code> to not break compatibility with older releases. This
-     * will be changed to <code>true</code> in the next major release.
+     * Anyway the default is {@code false} to not break compatibility with older releases. This
+     * will be changed to {@code true} in the next major release.
      *
      */
     public void setCloseOnSSLException(boolean closeOnSslException) {
@@ -663,14 +662,14 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
-     * Returns <code>true</code> if the given {@link ChannelBuffer} is encrypted. Be aware that this method
+     * Returns {@code true} if the given {@link ChannelBuffer} is encrypted. Be aware that this method
      * will not increase the readerIndex of the given {@link ChannelBuffer}.
      *
      * @param   buffer
      *                  The {@link ChannelBuffer} to read from. Be aware that it must have at least 5 bytes to read,
      *                  otherwise it will throw an {@link IllegalArgumentException}.
-     * @return  encrypted
-     *                  <code>true</code> if the {@link ChannelBuffer} is encrypted, <code>false</code> otherwise.
+     * @return encrypted
+     *                  {@code true} if the {@link ChannelBuffer} is encrypted, {@code false} otherwise.
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link ChannelBuffer} has not at least 5 bytes to read.
      */
@@ -685,9 +684,9 @@ public class SslHandler extends FrameDecoder
      * @param   buffer
      *                  The {@link ChannelBuffer} to read from. Be aware that it must have at least 5 bytes to read,
      *                  otherwise it will throw an {@link IllegalArgumentException}.
-     * @return  length
+     * @return length
      *                  The length of the encrypted packet that is included in the buffer. This will
-     *                  return <code>-1</code> if the given {@link ChannelBuffer} is not encrypted at all.
+     *                  return {@code -1} if the given {@link ChannelBuffer} is not encrypted at all.
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link ChannelBuffer} has not at least 5 bytes to read.
      */

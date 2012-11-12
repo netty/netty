@@ -200,7 +200,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             }
             return;
 
-        } else if (msg instanceof SpdyRstStreamFrame) {
+        }
+
+        if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
             ChannelBuffer frame = ChannelBuffers.buffer(

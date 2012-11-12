@@ -399,7 +399,7 @@ public final class ChannelBuffers {
      * Creates a new composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
-     * If gathering is <code>true</code> then gathering writes will be used when ever
+     * If gathering is {@code true} then gathering writes will be used when ever
      * possible.
      *
      * @throws IllegalArgumentException
@@ -465,7 +465,7 @@ public final class ChannelBuffers {
      * Creates a new composite buffer which wraps the slices of the specified
      * NIO buffers without copying them.  A modification on the content of the
      * specified buffers will be visible to the returned buffer.
-     * If gathering is <code>true</code> then gathering writes will be used when ever
+     * If gathering is {@code true} then gathering writes will be used when ever
      * possible.
      *
      * @throws IllegalArgumentException

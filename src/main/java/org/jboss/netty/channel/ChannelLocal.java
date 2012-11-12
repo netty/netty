@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
-
-import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * A global variable that is local to a {@link Channel}.  Think of this as a
@@ -49,7 +49,7 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
 
     /**
      * Creates a {@link Channel} local variable by calling {@link #ChannelLocal(boolean)} with
-     * <code>false</code> as parameter
+     * {@code false} as parameter
      */
     public ChannelLocal() {
         this(false);
@@ -58,7 +58,7 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
     /**
      * Creates a {@link Channel} local variable.
      *
-     * @param removeOnClose if <code>true</code> the {@link ChannelLocal} will remove a
+     * @param removeOnClose if {@code true} the {@link ChannelLocal} will remove a
      *                      {@link Channel} from it own once the {@link Channel} was closed.
      */
     public ChannelLocal(boolean removeOnClose) {

@@ -48,7 +48,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     /**
-     * Return <code>true</code> if gathering writes / reads should be used
+     * Return {@code true} if gathering writes / reads should be used
      * for this {@link CompositeChannelBuffer}
      */
     public boolean useGathering() {

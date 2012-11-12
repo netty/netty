@@ -15,17 +15,17 @@
  */
 package org.jboss.netty.handler.execution;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.util.ObjectSizeEstimator;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link Executor} which should be used for downstream {@link ChannelEvent}'s. This implementation
@@ -75,7 +75,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
 
 
     /**
-     * Return <code>null</code>
+     * Return {@code null}
      */
     @Override
     public ObjectSizeEstimator getObjectSizeEstimator() {
@@ -92,7 +92,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Returns <code>0L</code>
+     * Returns {@code 0L}
      */
     @Override
     public long getMaxChannelMemorySize() {
@@ -109,7 +109,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Returns <code>0L</code>
+     * Returns {@code 0L}
      */
     @Override
     public long getMaxTotalMemorySize() {
@@ -126,7 +126,7 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Return <code>false</code> as we not need to cound the memory in this implementation
+     * Return {@code false} as we not need to cound the memory in this implementation
      */
     @Override
     protected boolean shouldCount(Runnable task) {
