@@ -98,7 +98,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             throw new NullPointerException("channelClass");
         }
         if (!ServerChannel.class.isAssignableFrom(channelClass)) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(
+                    "channelClass must be subtype of " + ServerChannel.class.getSimpleName() + '.');
         }
         if (channelClass == AioServerSocketChannel.class) {
             return channelFactory(new AioServerSocketChannelFactory());
