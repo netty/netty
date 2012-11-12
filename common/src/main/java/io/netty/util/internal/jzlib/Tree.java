@@ -47,7 +47,6 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package io.netty.util.internal.jzlib;
 
-@SuppressWarnings("MethodParameterNamingConvention")
 final class Tree {
     // extra bits for each length code
     static final int[] extra_lbits = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2,
