@@ -47,7 +47,6 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package io.netty.util.internal.jzlib;
 
-@SuppressWarnings("MethodParameterNamingConvention")
 final class StaticTree {
     static final short[] static_ltree = { 12, 8, 140, 8, 76, 8, 204, 8, 44, 8,
             172, 8, 108, 8, 236, 8, 28, 8, 156, 8, 92, 8, 220, 8, 60, 8, 188,
