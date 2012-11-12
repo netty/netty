@@ -20,8 +20,12 @@ import io.netty.buffer.ByteBuf;
 public final class SocksCmdResponse extends SocksResponse {
     private final CmdStatus cmdStatus;
     private final AddressType addressType;
-    private static final byte IPv4_HOSTNAME_ZEROED[] = {0x00, 0x00, 0x00, 0x00};
-    private static final byte IPv6_HOSTNAME_ZEROED[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    // All arrays are initialized on construction time to 0/false/null remove array Initialization
+    private static final byte[] IPv4_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00};
+    private static final byte[] IPv6_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00};
 
     public SocksCmdResponse(CmdStatus cmdStatus, AddressType addressType) {
         super(SocksResponseType.CMD);

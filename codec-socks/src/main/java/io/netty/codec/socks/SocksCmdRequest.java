@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import sun.net.util.IPAddressUtil;
 
-import java.net.Inet4Address;
-
 public final class SocksCmdRequest extends SocksRequest {
     private final CmdType cmdType;
     private final AddressType addressType;

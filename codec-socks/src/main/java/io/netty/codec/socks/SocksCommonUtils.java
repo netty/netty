@@ -15,7 +15,7 @@
  */
 package io.netty.codec.socks;
 
-class SocksCommonUtils {
+final class SocksCommonUtils {
     public static final SocksRequest UNKNOWN_SOCKS_REQUEST = new UnknownSocksRequest();
     public static final SocksResponse UNKNOWN_SOCKS_RESPONSE = new UnknownSocksResponse();
 
@@ -23,6 +23,13 @@ class SocksCommonUtils {
     private static final int FIRST_ADDRESS_OCTET_SHIFT = 24;
     private static final int THIRD_ADDRESS_OCTET_SHIFT = 8;
     private static final int XOR_DEFAULT_VALUE = 0xff;
+
+    /**
+     * A constructor to stop this class being constructed.
+     */
+    private SocksCommonUtils() {
+        //NOOP
+    }
 
     public static String intToIp(int i) {
         return new StringBuilder().append((i >> FIRST_ADDRESS_OCTET_SHIFT) & XOR_DEFAULT_VALUE).append(".")
@@ -41,9 +48,11 @@ class SocksCommonUtils {
     public static String ipv6toCompressedForm(byte[] src) {
         assert src.length == 16;
         //Find the longest sequence of 0's
-        int cmprHextet = -1; //start of compressed region (hextet index)
-        int cmprSize = 0; //length of compressed region
-        for (int hextet = 0; hextet < 8; ) {
+        //start of compressed region (hextet index)
+        int cmprHextet = -1;
+        //length of compressed region
+        int cmprSize = 0;
+        for (int hextet = 0; hextet < 8;) {
             int curByte = hextet * 2;
             int size = 0;
             while (curByte < src.length && src[curByte] == 0
@@ -81,7 +90,7 @@ class SocksCommonUtils {
         return sb.toString();
     }
 
-    private static final void ipv6toStr(StringBuilder sb, byte[] src,
+    private static void ipv6toStr(StringBuilder sb, byte[] src,
                                         int fromHextet, int toHextet) {
         for (int i = fromHextet; i < toHextet; i++) {
             sb.append(Integer.toHexString(((src[i << 1] << 8) & 0xff00)
