@@ -15,15 +15,15 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.ConversionUtil;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * A {@link ChannelPipeline} that might perform better at the cost of
@@ -408,7 +408,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
-    StaticChannelHandlerContext getActualUpstreamContext(int index) {
+    private StaticChannelHandlerContext getActualUpstreamContext(int index) {
         for (int i = index; i < contexts.length; i ++) {
             StaticChannelHandlerContext ctx = contexts[i];
             if (ctx.canHandleUpstream()) {
@@ -418,7 +418,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         return null;
     }
 
-    StaticChannelHandlerContext getActualDownstreamContext(int index) {
+    private StaticChannelHandlerContext getActualDownstreamContext(int index) {
         for (int i = index; i >= 0; i --) {
             StaticChannelHandlerContext ctx = contexts[i];
             if (ctx.canHandleDownstream()) {

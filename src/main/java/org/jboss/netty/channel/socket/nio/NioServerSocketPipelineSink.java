@@ -159,7 +159,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink implements Exte
         }
     }
 
-    private final class Boss implements Runnable {
+    final class Boss implements Runnable {
         volatile Selector selector;
         private final Executor bossExecutor;
         /**

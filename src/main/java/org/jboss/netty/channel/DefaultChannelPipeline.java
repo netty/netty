@@ -594,7 +594,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    DefaultChannelHandlerContext getActualUpstreamContext(DefaultChannelHandlerContext ctx) {
+    private DefaultChannelHandlerContext getActualUpstreamContext(DefaultChannelHandlerContext ctx) {
         if (ctx == null) {
             return null;
         }
@@ -610,7 +610,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return realCtx;
     }
 
-    DefaultChannelHandlerContext getActualDownstreamContext(DefaultChannelHandlerContext ctx) {
+    private DefaultChannelHandlerContext getActualDownstreamContext(DefaultChannelHandlerContext ctx) {
         if (ctx == null) {
             return null;
         }

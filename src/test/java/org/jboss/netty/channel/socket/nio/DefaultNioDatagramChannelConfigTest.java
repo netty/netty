@@ -16,7 +16,6 @@
 package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.util.internal.DetectionUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;

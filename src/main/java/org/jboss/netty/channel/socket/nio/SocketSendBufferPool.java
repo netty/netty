@@ -38,8 +38,8 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
     private static final int ALIGN_SHIFT = 4;
     private static final int ALIGN_MASK = 15;
 
-    PreallocationRef poolHead;
-    Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
+    private PreallocationRef poolHead;
+    private Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
