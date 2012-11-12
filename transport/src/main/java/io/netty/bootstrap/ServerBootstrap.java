@@ -108,7 +108,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they get created
-     * (after the acceptor accepted the {@link Channel}). Use a value of <code>null</code> to remove a previous set
+     * (after the acceptor accepted the {@link Channel}). Use a value of {@code null} to remove a previous set
      * {@link ChannelOption}.
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {

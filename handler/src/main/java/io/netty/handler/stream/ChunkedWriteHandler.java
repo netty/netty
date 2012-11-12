@@ -309,7 +309,7 @@ public class ChunkedWriteHandler
      * Read the next {@link ChunkedInput} and transfer it the the outbound buffer.
      * @param ctx           the {@link ChannelHandlerContext} this handler is bound to
      * @param chunks        the {@link ChunkedInput} to read from
-     * @return read         <code>true</code> if something could be transfered to the outbound buffer
+     * @return read         {@code true} if something could be transfered to the outbound buffer
      * @throws Exception    if something goes wrong
      */
     @SuppressWarnings("unchecked")

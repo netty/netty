@@ -85,7 +85,7 @@ public final class DetectionUtil {
     }
 
     /**
-     * Return <code>true</code> if the JVM is running on Windows
+     * Return {@code true} if the JVM is running on Windows
      */
     public static boolean isWindows() {
         return IS_WINDOWS;

@@ -34,7 +34,7 @@ public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorServ
 
     /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
-     * or <code>null</code> if it has no parent
+     * or {@code null} if it has no parent
 
      */
     EventExecutorGroup parent();
@@ -45,8 +45,8 @@ public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorServ
     boolean inEventLoop();
 
     /**
-     * Return <code>true</code> if the given {@link Thread} is executed in the event loop,
-     * <code>false</code> otherwise.
+     * Return {@code true} if the given {@link Thread} is executed in the event loop,
+     * {@code false} otherwise.
      */
     boolean inEventLoop(Thread thread);
 }

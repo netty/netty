@@ -41,7 +41,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
     private final boolean allocateFullBuffer;
 
     /**
-     * Calls {@link #FixedLengthFrameDecoder(int, boolean)} with <code>false</code>
+     * Calls {@link #FixedLengthFrameDecoder(int, boolean)} with {@code false}
      */
     public FixedLengthFrameDecoder(int frameLength) {
         this(frameLength, false);
@@ -53,7 +53,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
      * @param frameLength
      *        the length of the frame
      * @param allocateFullBuffer
-     *        <code>true</code> if the cumulative {@link ByteBuf} should use the
+     *        {@code true} if the cumulative {@link ByteBuf} should use the
      *        {@link #frameLength} as its initial size
      */
     public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {

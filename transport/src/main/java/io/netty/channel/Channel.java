@@ -205,13 +205,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
 
         /**
          * Return the {@link SocketAddress} to which is bound local or
-         * <code>null</code> if none.
+         * {@code null} if none.
          */
         SocketAddress localAddress();
 
         /**
          * Return the {@link SocketAddress} to which is bound remote or
-         * <code>null</code> if none is bound yet.
+         * {@code null} if none is bound yet.
          */
         SocketAddress remoteAddress();
 
@@ -230,7 +230,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
         /**
          * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
          * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
-         * pass <code>null</code> to it.
+         * pass {@code null} to it.
          *
          * The {@link ChannelFuture} will get notified once the connect operation was complete.
          */

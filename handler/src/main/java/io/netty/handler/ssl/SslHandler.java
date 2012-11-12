@@ -68,7 +68,7 @@ import javax.net.ssl.SSLException;
  * If {@link #isIssueHandshake()} is {@code false}
  * (default) you will need to take care of calling {@link #handshake()} by your own. In most
  * situations were {@link SslHandler} is used in 'client mode' you want to issue a handshake once
- * the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code>
+ * the connection was established. if {@link #setIssueHandshake(boolean)} is set to {@code true}
  * you don't need to worry about this as the {@link SslHandler} will take care of it.
  * <p>
  *
@@ -656,14 +656,14 @@ public class SslHandler
     }
 
     /**
-     * Returns <code>true</code> if the given {@link ByteBuf} is encrypted. Be aware that this method
+     * Returns {@code true} if the given {@link ByteBuf} is encrypted. Be aware that this method
      * will not increase the readerIndex of the given {@link ByteBuf}.
      *
      * @param   buffer
      *                  The {@link ByteBuf} to read from. Be aware that it must have at least 5 bytes to read,
      *                  otherwise it will throw an {@link IllegalArgumentException}.
-     * @return  encrypted
-     *                  <code>true</code> if the {@link ByteBuf} is encrypted, <code>false</code> otherwise.
+     * @return encrypted
+     *                  {@code true} if the {@link ByteBuf} is encrypted, {@code false} otherwise.
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
      */
@@ -678,9 +678,9 @@ public class SslHandler
      * @param   buffer
      *                  The {@link ByteBuf} to read from. Be aware that it must have at least 5 bytes to read,
      *                  otherwise it will throw an {@link IllegalArgumentException}.
-     * @return  length
+     * @return length
      *                  The length of the encrypted packet that is included in the buffer. This will
-     *                  return <code>-1</code> if the given {@link ByteBuf} is not encrypted at all.
+     *                  return {@code -1} if the given {@link ByteBuf} is not encrypted at all.
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
      */

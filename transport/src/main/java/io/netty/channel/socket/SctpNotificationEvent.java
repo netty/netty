@@ -36,7 +36,7 @@ public final class SctpNotificationEvent {
 
     /**
      * Return the attachment of this {@link SctpNotificationEvent}, or
-     * <code>null</code> if no attachment was provided
+     * {@code null} if no attachment was provided
      */
     public Object attachment() {
         return attachment;

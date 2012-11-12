@@ -28,14 +28,14 @@ public interface ChannelFutureFactory {
 
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}
-     * will return <code>true</code>. All {@link ChannelFutureListener} added to it will be notified directly. Also
+     * will return {@code true}. All {@link ChannelFutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
     ChannelFuture newSucceededFuture();
 
     /**
      * Create a new {@link ChannelFuture} which is marked as fakued already. So {@link ChannelFuture#isSuccess()}
-     * will return <code>false</code>. All {@link ChannelFutureListener} added to it will be notified directly. Also
+     * will return {@code false}. All {@link ChannelFutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
     ChannelFuture newFailedFuture(Throwable cause);

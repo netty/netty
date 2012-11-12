@@ -124,7 +124,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
 
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
-     * created. Use a value of <code>null</code> to remove a previous set {@link ChannelOption}.
+     * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     @SuppressWarnings("unchecked")
     public <T> B option(ChannelOption<T> option, T value) {
