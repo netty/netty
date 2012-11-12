@@ -40,6 +40,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class OioSctpChannel extends AbstractOioMessageChannel
@@ -169,7 +170,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            return ch.getAllLocalAddresses().iterator().next();
+            Iterator<SocketAddress> i = ch.getAllLocalAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
+            }
         } catch (IOException e) {
             // ignore
         }
@@ -193,7 +197,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress remoteAddress0() {
         try {
-            return ch.getRemoteAddresses().iterator().next();
+            Iterator<SocketAddress> i = ch.getRemoteAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
+            }
         } catch (IOException e) {
             // ignore
         }
