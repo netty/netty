@@ -151,18 +151,6 @@
               <outputDirectory>${project.build.directory}/src</outputDirectory>
             </configuration>
           </execution>
-          <execution>
-            <id>unpack-jars</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <includes>io/netty/**</includes>
-              <excludes>io/netty/example/**</excludes>
-              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -328,8 +316,9 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.*,
+              com.sun.nio.sctp;resolution:=optional,
               sun.misc;resolution:=optional,
+              sun.net.util;resolution:=optional,
               *
             </Import-Package>
             <Export-Package>
