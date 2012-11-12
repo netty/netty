@@ -46,7 +46,5 @@ public class HttpUploadServerInitializer extends ChannelInitializer<SocketChanne
         pipeline.addLast("deflater", new HttpContentCompressor());
 
         pipeline.addLast("handler", new HttpUploadServerHandler());
-
-        return;
     }
 }
