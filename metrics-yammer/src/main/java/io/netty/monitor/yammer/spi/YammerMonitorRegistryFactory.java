@@ -15,16 +15,13 @@
  */
 package io.netty.monitor.yammer.spi;
 
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.MetricsRegistry;
 import io.netty.monitor.MonitorRegistry;
 import io.netty.monitor.spi.MonitorProvider;
 import io.netty.monitor.spi.MonitorRegistryFactory;
 import io.netty.monitor.yammer.YammerMonitorRegistry;
 import io.netty.monitor.yammer.YammerProvider;
-
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.MetricsRegistry;
-
-import java.lang.Object;
 
 /**
  * <p>

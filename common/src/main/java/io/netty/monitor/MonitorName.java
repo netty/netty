@@ -15,8 +15,6 @@
  */
 package io.netty.monitor;
 
-import java.lang.Object;
-
 /**
  * <p>
  * Represents a {@code Monitor}'s unique name. This name is composed of

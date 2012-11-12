@@ -15,6 +15,12 @@
  */
 package io.netty.monitor.yammer;
 
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.core.MetricsRegistry;
 import io.netty.monitor.CounterMonitor;
 import io.netty.monitor.EventRateMonitor;
 import io.netty.monitor.MonitorName;
@@ -22,15 +28,7 @@ import io.netty.monitor.MonitorRegistry;
 import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.monitor.ValueMonitor;
 
-import java.lang.Object;
 import java.util.concurrent.TimeUnit;
-
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.Meter;
-import com.yammer.metrics.core.MetricsRegistry;
 
 /**
  * <p>

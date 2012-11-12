@@ -18,7 +18,6 @@ package io.netty.monitor;
 import io.netty.monitor.spi.MonitorProvider;
 import io.netty.monitor.spi.MonitorRegistryFactory;
 
-import java.lang.Iterable;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 
