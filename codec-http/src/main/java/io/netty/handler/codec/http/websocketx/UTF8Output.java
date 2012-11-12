@@ -60,6 +60,7 @@ final class UTF8Output {
             12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
             12, 12, 12, 12, 12, 12 };
 
+    @SuppressWarnings("RedundantFieldInitialization")
     private int state = UTF8_ACCEPT;
     private int codep;
 

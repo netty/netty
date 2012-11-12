@@ -17,10 +17,10 @@ package io.netty.util;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.monitor.EventRateMonitor;
 import io.netty.monitor.MonitorName;
 import io.netty.monitor.MonitorRegistry;
+import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.util.internal.DetectionUtil;
 import io.netty.util.internal.SharedResourceMisuseDetector;
 
@@ -508,7 +508,7 @@ public class HashedWheelTimer implements Timer {
                         // it to a temporary list - we will reschedule it in a
                         // separate loop.
                         if (slipped == null) {
-                            slipped = new ArrayList<HashedWheelTimer.HashedWheelTimeout>();
+                            slipped = new ArrayList<HashedWheelTimeout>();
                         }
                         slipped.add(timeout);
                     }
