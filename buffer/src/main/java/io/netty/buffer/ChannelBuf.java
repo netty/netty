@@ -22,7 +22,7 @@ public interface ChannelBuf {
     ChannelBufType type();
 
     /**
-     * Return <code>true</code> if the ChannelBuf is pooled.
+     * Return {@code true} if the ChannelBuf is pooled.
      *
      */
     boolean isPooled();

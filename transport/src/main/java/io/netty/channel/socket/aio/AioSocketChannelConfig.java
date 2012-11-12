@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.aio;
 
-import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -26,6 +25,8 @@ import java.net.StandardSocketOptions;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.channels.NetworkChannel;
 import java.util.Map;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
@@ -262,7 +263,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
      * Once such an exception was detected it will get propagated to the handlers first. After that the channel
      * will get closed as it may be in an unknown state.
      *
-     * To disable it just use <code>0</code>.
+     * To disable it just use {@code 0}.
      */
     public void setReadTimeout(long readTimeoutInMillis) {
         if (readTimeoutInMillis < 0) {
@@ -276,7 +277,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
      * Once such an exception was detected it will get propagated to the handlers first. After that the channel
      * will get closed as it may be in an unknown state.
      *
-     * To disable it just use <code>0</code>.
+     * To disable it just use {@code 0}.
      */
     public void setWriteTimeout(long writeTimeoutInMillis) {
         if (writeTimeoutInMillis < 0) {
@@ -288,7 +289,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
     /**
      * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
      *
-     * The default is <code>0</code>
+     * The default is {@code 0}
      */
     public long getReadTimeout() {
         return readTimeoutInMillis;
@@ -297,7 +298,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
     /**
      * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
      *
-     * The default is <code>0</code>
+     * The default is {@code 0}
      */
     public long getWriteTimeout() {
         return writeTimeoutInMillis;

@@ -247,6 +247,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             final int capacity = components.get(numComponents - 1).endOffset;
 
             ByteBuf consolidated = components.get(numComponents - 1).buf.unsafe().newBuffer(capacity);
+
+            // We're not using foreach to avoid creating an iterator.
+            // noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < numComponents; i ++) {
                 ByteBuf b = components.get(i).buf;
                 consolidated.writeBytes(b);

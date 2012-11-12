@@ -77,7 +77,7 @@ public final class TestUtils {
     }
 
     /**
-     * Return <code>true</code> if SCTP is supported by the running os.
+     * Return {@code true} if SCTP is supported by the running os.
      *
      */
     public static boolean isSctpSupported() {

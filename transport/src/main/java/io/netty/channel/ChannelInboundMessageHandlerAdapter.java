@@ -88,10 +88,10 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     /**
      * Will get notified once {@link #inboundBufferUpdated(ChannelHandlerContext)} was called.
      *
-     * If this method returns <code>false</code> no further processing of the {@link MessageBuf}
+     * If this method returns {@code false} no further processing of the {@link MessageBuf}
      * will be done until the next call of {@link #inboundBufferUpdated(ChannelHandlerContext)}.
      *
-     * This will return <code>true</code> by default, and may get overriden by sub-classes for
+     * This will return {@code true} by default, and may get overriden by sub-classes for
      * special handling.
      */
     public boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
