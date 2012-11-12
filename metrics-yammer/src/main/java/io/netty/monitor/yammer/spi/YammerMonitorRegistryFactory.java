@@ -33,15 +33,10 @@ public class YammerMonitorRegistryFactory implements MonitorRegistryFactory {
 
     private final MetricsRegistry metricsRegistry;
 
-    /**
-     */
     public YammerMonitorRegistryFactory() {
         this(Metrics.defaultRegistry());
     }
 
-    /**
-     * @param metricsRegistry
-     */
     public YammerMonitorRegistryFactory(final MetricsRegistry metricsRegistry) {
         if (metricsRegistry == null) {
             throw new NullPointerException("metricsRegistry");
@@ -49,25 +44,16 @@ public class YammerMonitorRegistryFactory implements MonitorRegistryFactory {
         this.metricsRegistry = metricsRegistry;
     }
 
-    /**
-     * @see MonitorRegistryFactory#provider()
-     */
     @Override
     public MonitorProvider provider() {
         return YammerProvider.PROVIDER;
     }
 
-    /**
-     * @see MonitorRegistryFactory#newMonitorRegistry()
-     */
     @Override
     public MonitorRegistry newMonitorRegistry() {
         return new YammerMonitorRegistry(metricsRegistry);
     }
 
-    /**
-     * @see Object#toString()
-     */
     @Override
     public String toString() {
         return "YammerMonitorRegistryFactory(metricsRegistry=" + metricsRegistry + ')';

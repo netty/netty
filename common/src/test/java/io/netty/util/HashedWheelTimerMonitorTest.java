@@ -1,18 +1,18 @@
 package io.netty.util;
 
-import static org.junit.Assert.assertTrue;
 import io.netty.monitor.CounterMonitor;
 import io.netty.monitor.EventRateMonitor;
 import io.netty.monitor.MonitorName;
 import io.netty.monitor.MonitorRegistry;
 import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.monitor.ValueMonitor;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class HashedWheelTimerMonitorTest {
 
@@ -51,10 +51,6 @@ public class HashedWheelTimerMonitorTest {
 
         private final EventRateMonitor eventRateMonitor;
 
-        /**
-         * @param eventDistributionMonitor
-         * @param eventRateMonitor
-         */
         RecordingMonitorRegistry(final ValueDistributionMonitor eventDistributionMonitor,
                 final EventRateMonitor eventRateMonitor) {
             this.eventDistributionMonitor = eventDistributionMonitor;

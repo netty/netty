@@ -336,7 +336,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * buf.readerIndex(2);
      * </pre>
      *
-     * By contrast, {@link #setIndex(int, int)} guarantees that it never
+     * By contrast, this method guarantees that it never
      * throws an {@link IndexOutOfBoundsException} as long as the specified
      * indexes meet basic constraints, regardless what the current index
      * values of the buffer are:

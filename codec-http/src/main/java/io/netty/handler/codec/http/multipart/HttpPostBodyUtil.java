@@ -140,9 +140,6 @@ final class HttpPostBodyUtil {
         int limit;
         ByteBuf buffer;
 
-        /**
-        * @param buffer
-        */
         SeekAheadOptimize(ByteBuf buffer) throws SeekAheadNoBackArrayException {
             if (!buffer.hasArray()) {
                 throw new SeekAheadNoBackArrayException();
@@ -185,8 +182,6 @@ final class HttpPostBodyUtil {
 
     /**
      * Find the first non whitespace
-     * @param sb
-     * @param offset
      * @return the rank of the first non whitespace
      */
     static int findNonWhitespace(String sb, int offset) {
@@ -201,8 +196,6 @@ final class HttpPostBodyUtil {
 
     /**
      * Find the first whitespace
-     * @param sb
-     * @param offset
      * @return the rank of the first whitespace
      */
     static int findWhitespace(String sb, int offset) {
@@ -217,7 +210,6 @@ final class HttpPostBodyUtil {
 
     /**
      * Find the end of String
-     * @param sb
      * @return the rank of the end of string
      */
     static int findEndOfString(String sb) {

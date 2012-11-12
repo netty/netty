@@ -105,10 +105,8 @@ public interface HttpData extends InterfaceHttpData {
      * read. Once it arrives at the end, it returns an EMPTY_BUFFER and it
      * resets the current position to 0.
      *
-     * @param length
      * @return a ChannelBuffer for the content from the current position or an
      *         EMPTY_BUFFER if there is no more data to return
-     * @throws IOException
      */
     ByteBuf getChunk(int length) throws IOException;
 

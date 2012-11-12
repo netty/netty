@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import java.nio.charset.Charset;
-
 import io.netty.handler.codec.http.HttpRequest;
+
+import java.nio.charset.Charset;
 
 /**
  * Interface to enable creation of InterfaceHttpData objects
@@ -26,31 +26,18 @@ public interface HttpDataFactory {
     /**
     *
     * @param request associated request
-    * @param name
     * @return a new Attribute with no value
-    * @throws NullPointerException
-    * @throws IllegalArgumentException
     */
     Attribute createAttribute(HttpRequest request, String name);
 
     /**
-     *
      * @param request associated request
-     * @param name
-     * @param value
      * @return a new Attribute
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
      */
     Attribute createAttribute(HttpRequest request, String name, String value);
 
     /**
-     *
      * @param request associated request
-     * @param name
-     * @param filename
-     * @param contentType
-     * @param charset
      * @param size the size of the Uploaded file
      * @return a new FileUpload
      */
@@ -62,7 +49,6 @@ public interface HttpDataFactory {
      * Remove the given InterfaceHttpData from clean list (will not delete the file, except if the file
      * is still a temporary one as setup at construction)
      * @param request associated request
-     * @param data
      */
     void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data);
 

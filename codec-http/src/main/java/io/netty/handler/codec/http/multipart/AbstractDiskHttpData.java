@@ -69,9 +69,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     protected abstract boolean deleteOnExit();
 
     /**
-     *
      * @return a new Temp File from getDiskFilename(), default prefix, postfix and baseDirectory
-     * @throws IOException
      */
     private File tempFile() throws IOException {
         String newpostfix = null;
@@ -330,9 +328,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     /**
      * Utility function
-     * @param src
      * @return the array of bytes
-     * @throws IOException
      */
     private static byte[] readFrom(File src) throws IOException {
         long srcsize = src.length();

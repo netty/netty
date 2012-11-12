@@ -15,10 +15,11 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import java.io.IOException;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
+
+import java.io.IOException;
+
 import static io.netty.buffer.Unpooled.*;
 
 /**
@@ -29,14 +30,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     public MemoryAttribute(String name) {
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
-    /**
-     *
-     * @param name
-     * @param value
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
-     * @throws IOException
-     */
+
     public MemoryAttribute(String name, String value) throws IOException {
         super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
@@ -89,12 +83,12 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     }
 
     @Override
-    public int compareTo(InterfaceHttpData arg0) {
-        if (!(arg0 instanceof Attribute)) {
+    public int compareTo(InterfaceHttpData other) {
+        if (!(other instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + arg0.getHttpDataType());
+                    " with " + other.getHttpDataType());
         }
-        return compareTo((Attribute) arg0);
+        return compareTo((Attribute) other);
     }
 
     public int compareTo(Attribute o) {
