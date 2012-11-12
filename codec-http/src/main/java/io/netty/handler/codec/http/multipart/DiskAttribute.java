@@ -93,12 +93,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     }
 
     @Override
-    public int compareTo(InterfaceHttpData arg0) {
-        if (!(arg0 instanceof Attribute)) {
+    public int compareTo(InterfaceHttpData o) {
+        if (!(o instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + arg0.getHttpDataType());
+                    " with " + o.getHttpDataType());
         }
-        return compareTo((Attribute) arg0);
+        return compareTo((Attribute) o);
     }
 
     public int compareTo(Attribute o) {

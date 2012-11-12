@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LocalTransportThreadModelTest {
 
     private static ServerBootstrap sb;
-    private static LocalAddress ADDR;
+    private static LocalAddress localAddr;
 
     @BeforeClass
     public static void init() {
@@ -71,7 +71,7 @@ public class LocalTransportThreadModelTest {
               }
           });
 
-        ADDR = (LocalAddress) sb.bind().syncUninterruptibly().channel().localAddress();
+        localAddr = (LocalAddress) sb.bind().syncUninterruptibly().channel().localAddress();
     }
 
     @AfterClass
@@ -103,7 +103,7 @@ public class LocalTransportThreadModelTest {
         // h3 will be always invoked by EventExecutor 'e2'.
         ch.pipeline().addLast(e2, h3);
 
-        l.register(ch).sync().channel().connect(ADDR).sync();
+        l.register(ch).sync().channel().connect(localAddr).sync();
 
         // Fire inbound events from all possible starting points.
         ch.pipeline().fireInboundBufferUpdated();
@@ -231,7 +231,7 @@ public class LocalTransportThreadModelTest {
                          .addLast(e4, h5)
                          .addLast(e5, h6);
 
-            l.register(ch).sync().channel().connect(ADDR).sync();
+            l.register(ch).sync().channel().connect(localAddr).sync();
 
             final int ROUNDS = 1024;
             final int ELEMS_PER_ROUNDS = 8192;

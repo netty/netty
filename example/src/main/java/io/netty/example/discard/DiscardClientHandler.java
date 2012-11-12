@@ -83,10 +83,10 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
 
         // Flush the outbound buffer to the socket.
         // Once flushed, generate the same amount of traffic again.
-        ctx.flush().addListener(GENERATE_TRAFFIC);
+        ctx.flush().addListener(trafficGenerator);
     }
 
-    private final ChannelFutureListener GENERATE_TRAFFIC = new ChannelFutureListener() {
+    private final ChannelFutureListener trafficGenerator = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {

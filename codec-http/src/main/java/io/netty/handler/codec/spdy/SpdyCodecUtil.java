@@ -254,7 +254,7 @@ final class SpdyCodecUtil {
         try {
             SPDY2_DICT_ = SPDY2_DICT_S.getBytes(CharsetUtil.US_ASCII);
             // dictionary is null terminated
-            SPDY2_DICT_[SPDY2_DICT_.length - 1] = (byte) 0;
+            SPDY2_DICT_[SPDY2_DICT_.length - 1] = 0;
         } catch (Exception e) {
             SPDY2_DICT_ = new byte[1];
         }
@@ -307,9 +307,9 @@ final class SpdyCodecUtil {
     /**
      * Returns {@code true} if ID is for a server initiated stream or ping.
      */
-    static boolean isServerId(int ID) {
+    static boolean isServerId(int id) {
         // Server initiated streams and pings have even IDs
-        return ID % 2 == 0;
+        return id % 2 == 0;
     }
 
     /**

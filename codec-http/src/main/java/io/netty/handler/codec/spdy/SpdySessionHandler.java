@@ -38,6 +38,7 @@ public class SpdySessionHandler
     private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");
 
     static {
+        @SuppressWarnings("ZeroLengthArrayAllocation")
         StackTraceElement[] emptyTrace = new StackTraceElement[0];
         PROTOCOL_EXCEPTION.setStackTrace(emptyTrace);
         STREAM_CLOSED.setStackTrace(emptyTrace);
@@ -695,8 +696,8 @@ public class SpdySessionHandler
      * Helper functions
      */
 
-    private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = SpdyCodecUtil.isServerId(ID);
+    private boolean isRemoteInitiatedID(int id) {
+        boolean serverID = SpdyCodecUtil.isServerId(id);
         return server && !serverID || !server && serverID;
     }
 
