@@ -27,6 +27,8 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.junit.Assert.assertNull;
+
 public class LocalAddressTest {
     private static final String LOCAL_ADDR_ID = "test.id";
 
@@ -80,7 +82,7 @@ public class LocalAddressTest {
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 
-        Assert.assertTrue(String.format("Expected null, got channel '%s' for local address '%s'", LocalChannelRegistry.getChannel(addr), addr), LocalChannelRegistry.getChannel(addr) == null);
+        assertNull(String.format("Expected null, got channel '%s' for local address '%s'", LocalChannelRegistry.getChannel(addr), addr), LocalChannelRegistry.getChannel(addr));
     }
 
     @Test
@@ -133,7 +135,7 @@ public class LocalAddressTest {
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 
-        Assert.assertTrue(String.format("Expected null, got channel '%s' for local address '%s'", LocalChannelRegistry.getChannel(addr), addr), LocalChannelRegistry.getChannel(addr) == null);
+        assertNull(String.format("Expected null, got channel '%s' for local address '%s'", LocalChannelRegistry.getChannel(addr), addr), LocalChannelRegistry.getChannel(addr));
      }
 
     public static class TestHandler

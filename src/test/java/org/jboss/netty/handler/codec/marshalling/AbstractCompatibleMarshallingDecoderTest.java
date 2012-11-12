@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import junit.framework.Assert;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
@@ -58,9 +57,9 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
 
         String unmarshalled = (String) decoder.poll();
 
-        Assert.assertEquals(testObject, unmarshalled);
+        assertEquals(testObject, unmarshalled);
 
-        Assert.assertNull(decoder.poll());
+        assertNull(decoder.poll());
     }
 
     protected ChannelBuffer input(byte[] input) {
@@ -93,9 +92,9 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
 
         String unmarshalled = (String) decoder.poll();
 
-        Assert.assertEquals(testObject, unmarshalled);
+        assertEquals(testObject, unmarshalled);
 
-        Assert.assertNull(decoder.poll());
+        assertNull(decoder.poll());
     }
 
     @Test

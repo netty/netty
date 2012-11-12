@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
-import junit.framework.TestCase;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelEvent;
@@ -32,7 +26,13 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.junit.Test;
 
-public class IpFilterRuleTest extends TestCase {
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
+import static org.junit.Assert.*;
+
+public class IpFilterRuleTest {
     public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception {
         return h.accept(new ChannelHandlerContext() {
 
@@ -172,6 +172,14 @@ public class IpFilterRuleTest extends TestCase {
 
             public int compareTo(Channel o) {
                 return 0;
+            }
+
+            public int hashCode() {
+                return 0;
+            }
+
+            public boolean equals(Object o) {
+                return this == o;
             }
 
             public Object getAttachment() {

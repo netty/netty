@@ -15,15 +15,15 @@
  */
 package org.jboss.netty.buffer;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
+import static org.jboss.netty.buffer.ChannelBuffers.*;
+import static org.junit.Assert.*;
 
 /**
  * An abstract test class for composite channel buffers
@@ -95,7 +95,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         CompositeChannelBuffer buf = (CompositeChannelBuffer) wrappedBuffer(new byte[]{1, 2, 3, 4, 5}, new byte[]{4, 5, 6, 7, 8, 9, 26});
 
         //Ensure that a random place will be fine
-        assertEquals(buf.getBuffer(2).capacity(), 5);
+        assertEquals(5, buf.getBuffer(2).capacity());
 
         //Loop through each byte
         byte index = 0;
@@ -158,8 +158,8 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
         ChannelBuffer buffer = wrappedBuffer(header, payload);
 
-        assertTrue(header.readableBytes() == 12);
-        assertTrue(payload.readableBytes() == 512);
+        assertEquals(12, header.readableBytes());
+        assertEquals(512, payload.readableBytes());
 
         assertEquals(12 + 512, buffer.readableBytes());
 

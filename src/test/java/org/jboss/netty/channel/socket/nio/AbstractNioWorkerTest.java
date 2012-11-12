@@ -16,7 +16,6 @@
 package org.jboss.netty.channel.socket.nio;
 
 import static org.easymock.EasyMock.*;
-import static junit.framework.Assert.*;
 
 
 import java.util.concurrent.Executor;
@@ -26,6 +25,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 
 import org.jboss.netty.channel.ChannelFuture;
+import org.junit.Assert;
 import org.junit.Test;
 
 public abstract class AbstractNioWorkerTest {
@@ -48,7 +48,7 @@ public abstract class AbstractNioWorkerTest {
         Thread.sleep(SelectorUtil.DEFAULT_SELECT_TIMEOUT * 10);
         try {
             worker.register(mockChannel, mockFuture);
-            fail();
+            Assert.fail();
         } catch (RejectedExecutionException e) {
             // expected
         }

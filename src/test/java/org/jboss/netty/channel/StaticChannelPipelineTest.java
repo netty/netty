@@ -15,11 +15,10 @@
  */
 package org.jboss.netty.channel;
 
-import java.util.Map;
-
-import junit.framework.Assert;
-
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class StaticChannelPipelineTest {

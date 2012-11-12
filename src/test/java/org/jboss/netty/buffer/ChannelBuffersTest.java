@@ -46,8 +46,8 @@ public class ChannelBuffersTest {
 
         ChannelBuffer buffer = wrappedBuffer(header, payload);
 
-        assertTrue(header.readableBytes() == 12);
-        assertTrue(payload.readableBytes() == 512);
+        assertEquals(12, header.readableBytes());
+        assertEquals(512, payload.readableBytes());
 
         assertEquals(12 + 512, buffer.readableBytes());
 

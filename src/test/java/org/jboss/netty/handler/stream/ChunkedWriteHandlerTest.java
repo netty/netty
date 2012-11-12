@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.stream;
 
-import junit.framework.Assert;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -25,6 +24,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.jboss.netty.util.CharsetUtil;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -172,7 +172,7 @@ public class ChunkedWriteHandlerTest {
             embedder.offer(input);
         }
 
-        Assert.assertTrue(embedder.finish());
+        assertTrue(embedder.finish());
 
         int i = 0;
         int read = 0;
@@ -182,7 +182,7 @@ public class ChunkedWriteHandlerTest {
                 break;
             }
             while (buffer.readable()) {
-                Assert.assertEquals(BYTES[i++], buffer.readByte());
+                assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {
                     i = 0;
@@ -190,6 +190,6 @@ public class ChunkedWriteHandlerTest {
             }
         }
 
-        Assert.assertEquals(BYTES.length * inputs.length, read);
+        assertEquals(BYTES.length * inputs.length, read);
     }
 }

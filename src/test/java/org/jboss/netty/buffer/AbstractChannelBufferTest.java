@@ -1267,7 +1267,7 @@ public abstract class AbstractChannelBufferTest {
 
         // Make sure if it is a sliced buffer.
         slice.setByte(0, (byte) (slice.getByte(0) + 1));
-        assertTrue(buffer.getByte(0) == slice.getByte(0));
+        assertEquals(buffer.getByte(0), slice.getByte(0));
     }
 
     @Test
@@ -1462,9 +1462,9 @@ public abstract class AbstractChannelBufferTest {
 
         // Make sure the buffer content is shared.
         buffer.setByte(readerIndex, (byte) (buffer.getByte(readerIndex) + 1));
-        assertTrue(buffer.getByte(readerIndex) == duplicate.getByte(readerIndex));
+        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(readerIndex));
         duplicate.setByte(1, (byte) (duplicate.getByte(1) + 1));
-        assertTrue(buffer.getByte(1) == duplicate.getByte(1));
+        assertEquals(buffer.getByte(1), duplicate.getByte(1));
     }
 
     @Test

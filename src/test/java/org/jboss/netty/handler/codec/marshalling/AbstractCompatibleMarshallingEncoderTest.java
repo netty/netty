@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import junit.framework.Assert;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;

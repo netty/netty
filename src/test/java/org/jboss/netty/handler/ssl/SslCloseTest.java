@@ -19,8 +19,6 @@ import java.net.InetSocketAddress;
 
 import javax.net.ssl.SSLEngine;
 
-import junit.framework.Assert;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -32,6 +30,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.util.CharsetUtil;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class SslCloseTest {
