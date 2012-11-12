@@ -19,6 +19,8 @@ import io.netty.monitor.CounterMonitor;
 
 import com.yammer.metrics.core.Counter;
 
+import java.lang.Object;
+
 /**
  * <p>
  * An {@link CounterMonitor} that delegates to a <a
@@ -40,7 +42,7 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     /**
-     * @see io.netty.monitor.CounterMonitor#inc()
+     * @see CounterMonitor#inc()
      */
     @Override
     public void inc() {
@@ -48,7 +50,7 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     /**
-     * @see io.netty.monitor.CounterMonitor#inc(long)
+     * @see CounterMonitor#inc(long)
      */
     @Override
     public void inc(final long delta) {
@@ -56,7 +58,7 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     /**
-     * @see io.netty.monitor.CounterMonitor#decr()
+     * @see CounterMonitor#decr()
      */
     @Override
     public void decr() {
@@ -64,7 +66,7 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     /**
-     * @see io.netty.monitor.CounterMonitor#decr(long)
+     * @see CounterMonitor#decr(long)
      */
     @Override
     public void decr(final long delta) {
@@ -72,7 +74,7 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     /**
-     * @see io.netty.monitor.CounterMonitor#reset()
+     * @see CounterMonitor#reset()
      */
     @Override
     public void reset() {
@@ -80,7 +82,7 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

@@ -19,6 +19,8 @@ import io.netty.monitor.EventRateMonitor;
 
 import com.yammer.metrics.core.Meter;
 
+import java.lang.Object;
+
 /**
  * <p>
  * An {@link EventRateMonitor} that delegates to a <a
@@ -40,8 +42,8 @@ class YammerEventRateMonitor implements EventRateMonitor {
     }
 
     /**
-     * @see io.netty.monitor.EventRateMonitor#event()
-     * @see com.yammer.metrics.core.Meter#mark()
+     * @see EventRateMonitor#event()
+     * @see Meter#mark()
      */
     @Override
     public void event() {
@@ -49,8 +51,8 @@ class YammerEventRateMonitor implements EventRateMonitor {
     }
 
     /**
-     * @see io.netty.monitor.EventRateMonitor#events(long)
-     * @see com.yammer.metrics.core.Meter#mark(long)
+     * @see EventRateMonitor#events(long)
+     * @see Meter#mark(long)
      */
     @Override
     public void events(final long count) {
@@ -58,7 +60,7 @@ class YammerEventRateMonitor implements EventRateMonitor {
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

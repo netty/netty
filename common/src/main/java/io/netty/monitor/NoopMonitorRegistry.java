@@ -28,7 +28,7 @@ final class NoopMonitorRegistry implements MonitorRegistry {
     static final NoopMonitorRegistry INSTANCE = new NoopMonitorRegistry();
 
     /**
-     * @see io.netty.monitor.MonitorRegistry#newValueDistributionMonitor(io.netty.monitor.MonitorName)
+     * @see MonitorRegistry#newValueDistributionMonitor(MonitorName)
      */
     @Override
     public ValueDistributionMonitor newValueDistributionMonitor(final MonitorName monitorName) {
@@ -36,8 +36,8 @@ final class NoopMonitorRegistry implements MonitorRegistry {
     }
 
     /**
-     * @see io.netty.monitor.MonitorRegistry#newEventRateMonitor(io.netty.monitor.MonitorName,
-     *      java.util.concurrent.TimeUnit)
+     * @see MonitorRegistry#newEventRateMonitor(MonitorName,
+     *      TimeUnit)
      */
     @Override
     public EventRateMonitor newEventRateMonitor(final MonitorName monitorName, final TimeUnit rateUnit) {
@@ -45,8 +45,8 @@ final class NoopMonitorRegistry implements MonitorRegistry {
     }
 
     /**
-     * @see io.netty.monitor.MonitorRegistry#registerValueMonitor(io.netty.monitor.MonitorName,
-     *      io.netty.monitor.ValueMonitor)
+     * @see MonitorRegistry#registerValueMonitor(MonitorName,
+     *      ValueMonitor)
      */
     @Override
     public <T> ValueMonitor<T> registerValueMonitor(final MonitorName monitorName, final ValueMonitor<T> valueMonitor) {
@@ -54,7 +54,7 @@ final class NoopMonitorRegistry implements MonitorRegistry {
     }
 
     /**
-     * @see io.netty.monitor.MonitorRegistry#newCounterMonitor(io.netty.monitor.MonitorName)
+     * @see MonitorRegistry#newCounterMonitor(MonitorName)
      */
     @Override
     public CounterMonitor newCounterMonitor(final MonitorName monitorName) {

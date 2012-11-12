@@ -24,7 +24,7 @@ import java.net.SocketAddress;
 import java.util.Set;
 
 /**
- * A SCTP/IP  {@link io.netty.channel.Channel}
+ * A SCTP/IP  {@link Channel}
  */
 public interface SctpChannel extends Channel {
     /**

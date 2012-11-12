@@ -19,6 +19,8 @@ import io.netty.monitor.ValueDistributionMonitor;
 
 import com.yammer.metrics.core.Histogram;
 
+import java.lang.Object;
+
 /**
  * <p>
  * An {@link ValueDistributionMonitor} that delegates to a <a
@@ -56,7 +58,7 @@ final class YammerValueDistributionMonitor implements ValueDistributionMonitor {
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

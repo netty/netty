@@ -24,6 +24,8 @@ import io.netty.monitor.yammer.YammerProvider;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.MetricsRegistry;
 
+import java.lang.Object;
+
 /**
  * <p>
  * A {@link MonitorRegistryFactory} that produces {@link YammerMonitorRegistry
@@ -51,7 +53,7 @@ public class YammerMonitorRegistryFactory implements MonitorRegistryFactory {
     }
 
     /**
-     * @see io.netty.monitor.spi.MonitorRegistryFactory#provider()
+     * @see MonitorRegistryFactory#provider()
      */
     @Override
     public MonitorProvider provider() {
@@ -59,7 +61,7 @@ public class YammerMonitorRegistryFactory implements MonitorRegistryFactory {
     }
 
     /**
-     * @see io.netty.monitor.spi.MonitorRegistryFactory#newMonitorRegistry()
+     * @see MonitorRegistryFactory#newMonitorRegistry()
      */
     @Override
     public MonitorRegistry newMonitorRegistry() {
@@ -67,7 +69,7 @@ public class YammerMonitorRegistryFactory implements MonitorRegistryFactory {
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

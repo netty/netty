@@ -15,6 +15,8 @@
  */
 package io.netty.monitor;
 
+import java.lang.Object;
+
 /**
  * <p>
  * Represents a {@code Monitor}'s unique name. This name is composed of
@@ -187,7 +189,7 @@ public final class MonitorName {
     }
 
     /**
-     * @see java.lang.Object#hashCode()
+     * @see Object#hashCode()
      */
     @Override
     public int hashCode() {
@@ -201,7 +203,7 @@ public final class MonitorName {
     }
 
     /**
-     * @see java.lang.Object#equals(java.lang.Object)
+     * @see Object#equals(Object)
      */
     @Override
     public boolean equals(final Object obj) {
@@ -247,7 +249,7 @@ public final class MonitorName {
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

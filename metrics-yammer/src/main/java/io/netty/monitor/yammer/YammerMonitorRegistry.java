@@ -22,6 +22,7 @@ import io.netty.monitor.MonitorRegistry;
 import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.monitor.ValueMonitor;
 
+import java.lang.Object;
 import java.util.concurrent.TimeUnit;
 
 import com.yammer.metrics.Metrics;
@@ -64,7 +65,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
     /**
      * Create a new {@link ValueDistributionMonitor} that is backed by a
      * {@code Yammer} {@link Histogram}.
-     * @see io.netty.monitor.MonitorRegistry#newValueDistributionMonitor(io.netty.monitor.MonitorName)
+     * @see MonitorRegistry#newValueDistributionMonitor(MonitorName)
      */
     @Override
     public ValueDistributionMonitor newValueDistributionMonitor(final MonitorName monitorName) {
@@ -75,8 +76,8 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
     /**
      * Create a new {@link EventRateMonitor} that is backed by a {@code Yammer}
      * {@link Meter}.
-     * @see io.netty.monitor.MonitorRegistry#newEventRateMonitor(io.netty.monitor.MonitorName,
-     *      java.util.concurrent.TimeUnit)
+     * @see MonitorRegistry#newEventRateMonitor(MonitorName,
+     *      TimeUnit)
      */
     @Override
     public EventRateMonitor newEventRateMonitor(final MonitorName monitorName, final TimeUnit rateUnit) {
@@ -87,8 +88,8 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
     /**
      * Register the supplied {@link ValueMonitor valueMonitor}, using it
      * internally to create a {@code Yammer} {@link Gauge}.
-     * @see io.netty.monitor.MonitorRegistry#registerValueMonitor(io.netty.monitor.MonitorName,
-     *      io.netty.monitor.ValueMonitor)
+     * @see MonitorRegistry#registerValueMonitor(MonitorName,
+     *      ValueMonitor)
      */
     @Override
     public <T> ValueMonitor<T> registerValueMonitor(final MonitorName monitorName, final ValueMonitor<T> valueMonitor) {
@@ -104,7 +105,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
     /**
      * Create a new {@link CounterMonitor} that is backed by a {@code Yammer}
      * {@link Counter}.
-     * @see io.netty.monitor.MonitorRegistry#newCounterMonitor(io.netty.monitor.MonitorName)
+     * @see MonitorRegistry#newCounterMonitor(MonitorName)
      */
     @Override
     public CounterMonitor newCounterMonitor(MonitorName monitorName) {
@@ -113,7 +114,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
     }
 
     /**
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {
