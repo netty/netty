@@ -60,7 +60,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     /**
      * HttpData will be always on Disk if useDisk is True, else always in Memory if False
-     * @param useDisk
      */
     public DefaultHttpDataFactory(boolean useDisk) {
         this.useDisk = useDisk;
@@ -70,7 +69,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * HttpData will be on Disk if the size of the file is greater than minSize, else it
      * will be in memory. The type will be Mixed.
-     * @param minSize
      */
     public DefaultHttpDataFactory(long minSize) {
         useDisk = false;
@@ -79,8 +77,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /**
-     *
-     * @param request
      * @return the associated list of Files for the request
      */
     private List<HttpData> getList(HttpRequest request) {

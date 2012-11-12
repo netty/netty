@@ -15,14 +15,14 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * TrafficCounter is associated with {@link AbstractTrafficShapingHandler}.<br>
@@ -135,10 +135,6 @@ public class TrafficCounter {
          */
         private final TrafficCounter counter;
 
-        /**
-         * @param trafficShapingHandler
-         * @param counter
-         */
         protected TrafficMonitoringTask(
                 AbstractTrafficShapingHandler trafficShapingHandler,
                 TrafficCounter counter) {
@@ -199,8 +195,6 @@ public class TrafficCounter {
 
     /**
      * Reset the accounting on Read and Write
-     *
-     * @param newLastTime
      */
     void resetAccounting(long newLastTime) {
         synchronized (lastTime) {
@@ -241,8 +235,6 @@ public class TrafficCounter {
     /**
      * Change checkInterval between
      * two computations in millisecond
-     *
-     * @param newcheckInterval
      */
     public void configure(long newcheckInterval) {
         long newInterval = newcheckInterval / 10 * 10;

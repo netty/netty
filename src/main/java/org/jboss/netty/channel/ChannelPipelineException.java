@@ -20,7 +20,7 @@ package org.jboss.netty.channel;
  * failed to process a {@link ChannelEvent} or when a {@link ChannelPipelineFactory}
  * failed to initialize a {@link ChannelPipeline}.
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
 public class ChannelPipelineException extends ChannelException {
 

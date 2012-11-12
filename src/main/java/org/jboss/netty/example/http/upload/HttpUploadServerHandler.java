@@ -214,8 +214,6 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     /**
      * Example of reading all InterfaceHttpData from finished transfer
-     *
-     * @param channel
      */
     private void readHttpDataAllReceive(Channel channel) {
         List<InterfaceHttpData> datas = null;
@@ -238,8 +236,6 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
     /**
      * Example of reading request by chunk and getting values from chunk to
      * chunk
-     *
-     * @param channel
      */
     private void readHttpDataChunkByChunk(Channel channel) {
         try {

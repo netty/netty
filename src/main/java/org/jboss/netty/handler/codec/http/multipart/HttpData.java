@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-
-import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * Extended interface for InterfaceHttpData
@@ -105,10 +105,8 @@ public interface HttpData extends InterfaceHttpData {
      * read. Once it arrives at the end, it returns an EMPTY_BUFFER and it
      * resets the current position to 0.
      *
-     * @param length
      * @return a ChannelBuffer for the content from the current position or an
      *         EMPTY_BUFFER if there is no more data to return
-     * @throws IOException
      */
     ChannelBuffer getChunk(int length) throws IOException;
 
@@ -118,7 +116,6 @@ public interface HttpData extends InterfaceHttpData {
      *
      * @return the contents of the file item as a String, using the default
      *         character encoding.
-     * @exception IOException
      */
     String getString() throws IOException;
 

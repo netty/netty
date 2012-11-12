@@ -29,10 +29,6 @@ public class CIDR4 extends CIDR {
     /** The integer for the end address */
     private final int addressEndInt;
 
-    /**
-     * @param newaddr
-     * @param mask
-     */
     protected CIDR4(Inet4Address newaddr, int mask) {
         cidrMask = mask;
         addressInt = ipv4AddressToInt(newaddr);

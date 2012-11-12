@@ -224,7 +224,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
 
     /**
      * Set the Body HttpDatas list
-     * @param datas
      * @throws NullPointerException for datas
      * @throws ErrorDataEncoderException if the encoding is in error or if the finalize were already done
      */
@@ -323,7 +322,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
 
     /**
      * Add the InterfaceHttpData to the Body list
-     * @param data
      * @throws NullPointerException for data
      * @throws ErrorDataEncoderException if the encoding is in error or if the finalize were already done
      */
@@ -660,8 +658,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
 
     /**
      * Encode one attribute
-     * @param s
-     * @param charset
      * @return the encoded attribute
      * @throws ErrorDataEncoderException if the encoding is in error
      */
@@ -954,35 +950,21 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      * Exception when an error occurs while encoding
      */
     public static class ErrorDataEncoderException extends Exception {
-        /**
- */
         private static final long serialVersionUID = 5020247425493164465L;
 
-        /**
- */
         public ErrorDataEncoderException() {
         }
 
-        /**
-         * @param arg0
-         */
-        public ErrorDataEncoderException(String arg0) {
-            super(arg0);
+        public ErrorDataEncoderException(String msg) {
+            super(msg);
         }
 
-        /**
-         * @param arg0
-         */
-        public ErrorDataEncoderException(Throwable arg0) {
-            super(arg0);
+        public ErrorDataEncoderException(Throwable cause) {
+            super(cause);
         }
 
-        /**
-         * @param arg0
-         * @param arg1
-         */
-        public ErrorDataEncoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public ErrorDataEncoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 }

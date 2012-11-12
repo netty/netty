@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.bootstrap;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
@@ -27,6 +24,9 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * A helper class which creates a new client-side {@link Channel} and makes a
@@ -233,12 +233,10 @@ public class ClientBootstrap extends Bootstrap {
      * Attempts to bind a channel with the specified {@code localAddress}. later the channel can
      * be connected to a remoteAddress by calling {@link Channel#connect(SocketAddress)}.This method
      * is useful where bind and connect need to be done in separate steps.
-     *
-     * This can also be useful if you want to set an attachment to the {@link Channel} via
-     * {@link Channel#setAttachment(Object)} so you can use it after the {@link #bind(SocketAddress)}
-     * was done.
-     * <br>
-     * For example:
+     * <p>
+     * For an instance, a user can set an attachment to the {@link Channel} via
+     * {@link Channel#setAttachment(Object)} before beginning a connection attempt so that the user can access
+     * the attachment once the connection is established:
      *
      * <pre>
      *  ChannelFuture bindFuture = bootstrap.bind(new InetSocketAddress("192.168.0.15", 0));
@@ -246,9 +244,8 @@ public class ClientBootstrap extends Bootstrap {
      *  channel.setAttachment(dataObj);
      *  channel.connect(new InetSocketAddress("192.168.0.30", 8080));
      * </pre>
-     * <br>
      *
-     * You can use it then in your handlers like this:
+     * The attachment can be accessed then in the handler like the following:
      *
      * <pre>
      *  public class YourHandler extends SimpleChannelUpstreamHandler {

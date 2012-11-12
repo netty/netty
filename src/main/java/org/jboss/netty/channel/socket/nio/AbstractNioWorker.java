@@ -188,8 +188,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     /**
      * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for
      * the {@link AbstractNioChannel}'s when they get registered
-     *
-     * @return selector
      */
     private void openSelector() {
         try {
@@ -918,10 +916,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
 
     /**
      * Create a new {@link Runnable} which will register the {@link AbstractNioWorker} with the {@link Channel}
-     *
-     * @param channel
-     * @param future
-     * @return task
      */
     protected abstract Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future);
 

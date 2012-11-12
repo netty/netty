@@ -19,7 +19,7 @@ package org.jboss.netty.handler.codec.frame;
  * An {@link Exception} which is thrown when the length of the frame
  * decoded is greater than the maximum.
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
 public class TooLongFrameException extends Exception {
 

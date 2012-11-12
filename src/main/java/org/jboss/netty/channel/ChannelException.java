@@ -18,7 +18,7 @@ package org.jboss.netty.channel;
 /**
  * A {@link RuntimeException} which is thrown when an I/O operation fails.
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
 public class ChannelException extends RuntimeException {
 

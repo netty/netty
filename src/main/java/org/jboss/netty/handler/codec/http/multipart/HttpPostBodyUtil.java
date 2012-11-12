@@ -140,9 +140,6 @@ final class HttpPostBodyUtil {
         int limit;
         ChannelBuffer buffer;
 
-        /**
-        * @param buffer
-        */
         SeekAheadOptimize(ChannelBuffer buffer) throws SeekAheadNoBackArrayException {
             if (!buffer.hasArray()) {
                 throw new SeekAheadNoBackArrayException();
@@ -155,7 +152,6 @@ final class HttpPostBodyUtil {
         }
 
         /**
-        *
         * @param minus this value will be used as (currentPos - minus) to set
         * the current readerIndex in the buffer.
         */
@@ -185,8 +181,6 @@ final class HttpPostBodyUtil {
 
     /**
      * Find the first non whitespace
-     * @param sb
-     * @param offset
      * @return the rank of the first non whitespace
      */
     static int findNonWhitespace(String sb, int offset) {
@@ -201,8 +195,6 @@ final class HttpPostBodyUtil {
 
     /**
      * Find the first whitespace
-     * @param sb
-     * @param offset
      * @return the rank of the first whitespace
      */
     static int findWhitespace(String sb, int offset) {
@@ -217,7 +209,6 @@ final class HttpPostBodyUtil {
 
     /**
      * Find the end of String
-     * @param sb
      * @return the rank of the end of string
      */
     static int findEndOfString(String sb) {

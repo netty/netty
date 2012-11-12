@@ -20,7 +20,7 @@ package org.jboss.netty.channel;
  * {@link LifeCycleAwareChannelHandler} throws an {@link Exception}
  * in its handler methods.
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
 public class ChannelHandlerLifeCycleException extends RuntimeException {
 

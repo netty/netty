@@ -36,10 +36,6 @@ public class CIDR6 extends CIDR {
     /** The big integer for the end address */
     private final BigInteger addressEndBigInt;
 
-    /**
-     * @param newaddress
-     * @param newmask
-     */
     protected CIDR6(Inet6Address newaddress, int newmask) {
         cidrMask = newmask;
         addressBigInt = ipv6AddressToBigInteger(newaddress);

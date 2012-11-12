@@ -112,8 +112,6 @@ public class SslBufferPool {
 
     /**
      * Release a previous acquired {@link ByteBuffer}
-     *
-     * @param buffer
      */
     public synchronized void releaseBuffer(ByteBuffer buffer) {
         if (index < maxBufferCount) {
@@ -122,10 +120,7 @@ public class SslBufferPool {
     }
 
     /**
-     * Will get removed. Please use {@link #releaseBuffer(ByteBuffer)}
-     *
-     * @deprecated
-     *
+     * @deprecated Use {@link #releaseBuffer(ByteBuffer)}
      */
     @Deprecated
     void release(ByteBuffer buffer) {

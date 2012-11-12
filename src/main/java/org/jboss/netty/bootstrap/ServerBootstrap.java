@@ -175,8 +175,12 @@ public class ServerBootstrap extends Bootstrap {
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the {@link ServerChannelFactory} that will be used to perform an I/O
+     * operation.  This method can be called only once and can't be called at
+     * all if the factory was specified in the constructor.
      *
+     * @throws IllegalStateException
+     *         if the factory is already set
      * @throws IllegalArgumentException
      *         if the specified {@code factory} is not a
      *         {@link ServerChannelFactory}

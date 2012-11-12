@@ -266,10 +266,6 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Change the underlying limitations and check interval.
-     *
-     * @param newWriteLimit
-     * @param newReadLimit
-     * @param newCheckInterval
      */
     public void configure(long newWriteLimit, long newReadLimit,
             long newCheckInterval) {
@@ -279,9 +275,6 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Change the underlying limitations.
-     *
-     * @param newWriteLimit
-     * @param newReadLimit
      */
     public void configure(long newWriteLimit, long newReadLimit) {
         writeLimit = newWriteLimit;
@@ -293,8 +286,6 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Change the check interval.
-     *
-     * @param newCheckInterval
      */
     public void configure(long newCheckInterval) {
         checkInterval = newCheckInterval;

@@ -19,7 +19,7 @@ package org.jboss.netty.handler.codec.frame;
  * An {@link Exception} which is thrown when the received frame data can not
  * be decoded by a {@link FrameDecoder} implementation.
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
 public class CorruptedFrameException extends Exception {
 
