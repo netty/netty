@@ -15,9 +15,8 @@
  */
 package io.netty.monitor.yammer;
 
-import io.netty.monitor.MonitorName;
-
 import com.yammer.metrics.core.MetricName;
+import io.netty.monitor.MonitorName;
 
 /**
  * <p>

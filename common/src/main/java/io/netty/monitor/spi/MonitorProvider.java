@@ -16,8 +16,6 @@
 package io.netty.monitor.spi;
 
 import java.io.Serializable;
-import java.lang.Comparable;
-import java.lang.Object;
 
 /**
  * <p>

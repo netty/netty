@@ -15,11 +15,8 @@
  */
 package io.netty.monitor.yammer;
 
-import io.netty.monitor.EventRateMonitor;
-
 import com.yammer.metrics.core.Meter;
-
-import java.lang.Object;
+import io.netty.monitor.EventRateMonitor;
 
 /**
  * <p>

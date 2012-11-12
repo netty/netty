@@ -15,11 +15,8 @@
  */
 package io.netty.monitor.yammer;
 
-import io.netty.monitor.CounterMonitor;
-
 import com.yammer.metrics.core.Counter;
-
-import java.lang.Object;
+import io.netty.monitor.CounterMonitor;
 
 /**
  * <p>
