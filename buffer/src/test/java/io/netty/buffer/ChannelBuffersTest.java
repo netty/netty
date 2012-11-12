@@ -15,8 +15,8 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.*;
+import org.easymock.EasyMock;
+import org.junit.Test;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.easymock.EasyMock;
-import org.junit.Test;
+import static io.netty.buffer.Unpooled.*;
+import static org.junit.Assert.*;
 
 /**
  * Tests channel buffers
@@ -45,8 +45,8 @@ public class ChannelBuffersTest {
 
         ByteBuf buffer = wrappedBuffer(header, payload);
 
-        assertTrue(header.readableBytes() == 12);
-        assertTrue(payload.readableBytes() == 512);
+        assertEquals(12, header.readableBytes());
+        assertEquals(512, payload.readableBytes());
 
         assertEquals(12 + 512, buffer.readableBytes());
         assertFalse(buffer.hasNioBuffer());
@@ -537,8 +537,8 @@ public class ChannelBuffersTest {
     public void testWrapBoolean() {
         ByteBuf buffer = copyBoolean(true, false);
         assertEquals(2, buffer.capacity());
-        assertEquals(true, buffer.readBoolean());
-        assertEquals(false, buffer.readBoolean());
+        assertTrue(buffer.readBoolean());
+        assertFalse(buffer.readBoolean());
         assertFalse(buffer.readable());
 
         assertEquals(0, Unpooled.copyBoolean(null).capacity());

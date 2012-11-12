@@ -22,16 +22,14 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
-import junit.framework.Assert;
-
-import org.junit.Ignore;
-import org.junit.Test;
 
 public class ServerSocketSuspendTest extends AbstractServerSocketTest {
 

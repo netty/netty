@@ -21,11 +21,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.TooLongFrameException;
-import junit.framework.Assert;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.MarshallingConfiguration;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -58,9 +58,9 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
 
         String unmarshalled = (String) ch.readInbound();
 
-        Assert.assertEquals(testObject, unmarshalled);
+        assertEquals(testObject, unmarshalled);
 
-        Assert.assertNull(ch.readInbound());
+        assertNull(ch.readInbound());
     }
 
     protected ByteBuf input(byte[] input) {
@@ -92,9 +92,9 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
 
         String unmarshalled = (String) ch.readInbound();
 
-        Assert.assertEquals(testObject, unmarshalled);
+        assertEquals(testObject, unmarshalled);
 
-        Assert.assertNull(ch.readInbound());
+        assertNull(ch.readInbound());
     }
 
     @Test

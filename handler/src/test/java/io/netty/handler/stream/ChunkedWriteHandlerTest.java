@@ -32,8 +32,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import junit.framework.Assert;
-
+import org.junit.Assert;
 import org.junit.Test;
 
 public class ChunkedWriteHandlerTest {
@@ -196,7 +195,7 @@ public class ChunkedWriteHandlerTest {
             ch.writeOutbound(input);
         }
 
-        Assert.assertTrue(ch.finish());
+        assertTrue(ch.finish());
 
         int i = 0;
         int read = 0;
@@ -206,7 +205,7 @@ public class ChunkedWriteHandlerTest {
                 break;
             }
             while (buffer.readable()) {
-                Assert.assertEquals(BYTES[i++], buffer.readByte());
+                assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {
                     i = 0;
@@ -214,6 +213,6 @@ public class ChunkedWriteHandlerTest {
             }
         }
 
-        Assert.assertEquals(BYTES.length * inputs.length, read);
+        assertEquals(BYTES.length * inputs.length, read);
     }
 }
