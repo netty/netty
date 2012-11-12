@@ -1314,11 +1314,11 @@ public class HttpPostRequestDecoder {
                 } else if (nextByte == HttpConstants.LF) {
                     return sb.toString();
                 } else if (nextByte == '-') {
-                    sb.append((char) nextByte);
+                    sb.append('-');
                     // second check for closing delimiter
                     nextByte = undecodedChunk.readByte();
                     if (nextByte == '-') {
-                        sb.append((char) nextByte);
+                        sb.append('-');
                         // now try to find if CRLF or LF there
                         if (undecodedChunk.readable()) {
                             nextByte = undecodedChunk.readByte();
@@ -1421,12 +1421,12 @@ public class HttpPostRequestDecoder {
                     sao.setReadPosition(0);
                     return sb.toString();
                 } else if (nextByte == '-') {
-                    sb.append((char) nextByte);
+                    sb.append('-');
                     // second check for closing delimiter
                     if (sao.pos < sao.limit) {
                         nextByte = sao.bytes[sao.pos++];
                         if (nextByte == '-') {
-                            sb.append((char) nextByte);
+                            sb.append('-');
                             // now try to find if CRLF or LF there
                             if (sao.pos < sao.limit) {
                                 nextByte = sao.bytes[sao.pos++];
