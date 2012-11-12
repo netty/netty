@@ -101,7 +101,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             throw new IllegalArgumentException();
         }
         if (channelClass == AioServerSocketChannel.class) {
-            channelFactory(new AioServerSocketChannelFactory());
+            return channelFactory(new AioServerSocketChannelFactory());
         }
         return super.channel(channelClass);
     }
