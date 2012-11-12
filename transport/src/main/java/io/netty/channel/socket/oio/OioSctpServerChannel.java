@@ -108,9 +108,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : sch.getAllLocalAddresses()) {
-                return address;
-            }
+            return sch.getAllLocalAddresses().iterator().next();
         } catch (IOException e) {
             // ignore
         }

@@ -94,9 +94,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : javaChannel().getAllLocalAddresses()) {
-                return address;
-            }
+            return javaChannel().getAllLocalAddresses().iterator().next();
         } catch (IOException e) {
             // ignore
         }

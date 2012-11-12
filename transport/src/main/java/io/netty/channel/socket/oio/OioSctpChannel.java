@@ -169,9 +169,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : ch.getAllLocalAddresses()) {
-                return address;
-            }
+            return ch.getAllLocalAddresses().iterator().next();
         } catch (IOException e) {
             // ignore
         }
@@ -195,9 +193,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress remoteAddress0() {
         try {
-            for (SocketAddress address : ch.getRemoteAddresses()) {
-                return address;
-            }
+            return ch.getRemoteAddresses().iterator().next();
         } catch (IOException e) {
             // ignore
         }
