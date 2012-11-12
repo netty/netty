@@ -51,8 +51,6 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.monitor.yammer,
-              !io.netty.monitor.yammer.spi,
               *
             </Import-Package>
             <Export-Package>

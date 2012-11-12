@@ -51,10 +51,6 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.handler.logging,
-              !io.netty.handler.ssl,
-              !io.netty.handler.stream,
-              !io.netty.handler.timeout,
               *
             </Import-Package>
             <Export-Package>
