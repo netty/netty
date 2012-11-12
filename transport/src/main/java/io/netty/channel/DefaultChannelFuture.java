@@ -311,9 +311,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
 
         try {
             synchronized (this) {
-                if (done) {
-                    return done;
-                } else if (waitTime <= 0) {
+                if (done || waitTime <= 0) {
                     return done;
                 }
 

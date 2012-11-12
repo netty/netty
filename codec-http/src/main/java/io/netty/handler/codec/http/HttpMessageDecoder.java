@@ -197,39 +197,39 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             if (nextState == State.READ_CHUNK_SIZE) {
                 // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
                 return message;
-            } else if (nextState == State.SKIP_CONTROL_CHARS) {
+            }
+            if (nextState == State.SKIP_CONTROL_CHARS) {
                 // No content is expected.
                 return reset();
-            } else {
-                long contentLength = HttpHeaders.getContentLength(message, -1);
-                if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                    content = Unpooled.EMPTY_BUFFER;
-                    return reset();
-                }
+            }
+            long contentLength = HttpHeaders.getContentLength(message, -1);
+            if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
+                content = Unpooled.EMPTY_BUFFER;
+                return reset();
+            }
 
-                switch (nextState) {
-                case READ_FIXED_LENGTH_CONTENT:
-                    if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                        // Generate HttpMessage first.  HttpChunks will follow.
-                        checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
-                        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
-                        // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
-                        // state reads data chunk by chunk.
-                        chunkSize = HttpHeaders.getContentLength(message, -1);
-                        return message;
-                    }
-                    break;
-                case READ_VARIABLE_LENGTH_CONTENT:
-                    if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                        // Generate HttpMessage first.  HttpChunks will follow.
-                        checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
-                        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
-                        return message;
-                    }
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected state: " + nextState);
+            switch (nextState) {
+            case READ_FIXED_LENGTH_CONTENT:
+                if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
+                    // Generate HttpMessage first.  HttpChunks will follow.
+                    checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
+                    message.setTransferEncoding(HttpTransferEncoding.STREAMED);
+                    // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
+                    // state reads data chunk by chunk.
+                    chunkSize = HttpHeaders.getContentLength(message, -1);
+                    return message;
                 }
+                break;
+            case READ_VARIABLE_LENGTH_CONTENT:
+                if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
+                    // Generate HttpMessage first.  HttpChunks will follow.
+                    checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
+                    message.setTransferEncoding(HttpTransferEncoding.STREAMED);
+                    return message;
+                }
+                break;
+            default:
+                throw new IllegalStateException("Unexpected state: " + nextState);
             }
             // We return null here, this forces decode to be called again where we will decode the content
             return null;

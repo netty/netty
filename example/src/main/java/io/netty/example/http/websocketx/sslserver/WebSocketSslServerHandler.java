@@ -15,11 +15,6 @@
  */
 package io.netty.example.http.websocketx.sslserver;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -40,6 +35,12 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * Handles handshakes and messages
@@ -85,7 +86,9 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
             res.setContent(content);
             sendHttpResponse(ctx, req, res);
             return;
-        } else if ("/favicon.ico".equals(req.getUri())) {
+        }
+
+        if ("/favicon.ico".equals(req.getUri())) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
@@ -108,10 +111,12 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
-        } else if (frame instanceof PingWebSocketFrame) {
+        }
+        if (frame instanceof PingWebSocketFrame) {
             ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
             return;
-        } else if (!(frame instanceof TextWebSocketFrame)) {
+        }
+        if (!(frame instanceof TextWebSocketFrame)) {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
                     .getName()));
         }

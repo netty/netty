@@ -80,11 +80,10 @@ public abstract class ByteToMessageDecoder<O>
                     } else {
                         continue;
                     }
-                } else {
-                    if (oldInputLength == in.readableBytes()) {
-                        throw new IllegalStateException(
-                                "decode() did not read anything but decoded a message.");
-                    }
+                }
+                if (oldInputLength == in.readableBytes()) {
+                    throw new IllegalStateException(
+                            "decode() did not read anything but decoded a message.");
                 }
 
                 if (ChannelHandlerUtil.unfoldAndAdd(ctx, o, true)) {
