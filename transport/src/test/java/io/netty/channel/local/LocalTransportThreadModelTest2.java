@@ -131,7 +131,7 @@ public class LocalTransportThreadModelTest2 {
 
         public volatile ChannelFuture lastWriteFuture;
 
-        public AtomicInteger count = new AtomicInteger(0);
+        public final AtomicInteger count = new AtomicInteger(0);
 
         public LocalHander(String name) {
             this.name = name;

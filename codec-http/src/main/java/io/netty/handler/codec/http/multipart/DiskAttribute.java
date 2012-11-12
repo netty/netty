@@ -30,9 +30,9 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
 
     public static boolean deleteOnExitTemporaryFile = true;
 
-    public static String prefix = "Attr_";
+    public static final String prefix = "Attr_";
 
-    public static String postfix = ".att";
+    public static final String postfix = ".att";
 
     /**
      * Constructor used for huge Attribute
