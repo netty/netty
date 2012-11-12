@@ -477,12 +477,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public boolean hasNextOutboundByteBuffer() {
-        return pipeline.hasNextOutboundByteBuffer(prev);
+        return DefaultChannelPipeline.hasNextOutboundByteBuffer(prev);
     }
 
     @Override
     public boolean hasNextOutboundMessageBuffer() {
-        return pipeline.hasNextOutboundMessageBuffer(prev);
+        return DefaultChannelPipeline.hasNextOutboundMessageBuffer(prev);
     }
 
     @Override
@@ -560,12 +560,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ByteBuf nextOutboundByteBuffer() {
-        return pipeline.nextOutboundByteBuffer(prev);
+        return DefaultChannelPipeline.nextOutboundByteBuffer(prev);
     }
 
     @Override
     public MessageBuf<Object> nextOutboundMessageBuffer() {
-        return pipeline.nextOutboundMessageBuffer(prev);
+        return DefaultChannelPipeline.nextOutboundMessageBuffer(prev);
     }
 
     @Override

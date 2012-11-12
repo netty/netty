@@ -61,7 +61,7 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
                 getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
         final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
             final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
             handshakeFuture.addListener(new ChannelFutureListener() {
