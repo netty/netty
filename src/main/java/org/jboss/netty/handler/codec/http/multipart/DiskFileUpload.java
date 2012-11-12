@@ -28,9 +28,9 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     public static boolean deleteOnExitTemporaryFile = true;
 
-    public static String prefix = "FUp_";
+    public static final String prefix = "FUp_";
 
-    public static String postfix = ".tmp";
+    public static final String postfix = ".tmp";
 
     private String filename;
 

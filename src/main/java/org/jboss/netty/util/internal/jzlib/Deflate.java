@@ -194,22 +194,22 @@ final class Deflate {
     int good_match;
     // Stop searching when current match exceeds this
     int nice_match;
-    short[] dyn_ltree; // literal and length tree
-    short[] dyn_dtree; // distance tree
-    short[] bl_tree; // Huffman tree for bit lengths
-    Tree l_desc = new Tree(); // desc for literal tree
-    Tree d_desc = new Tree(); // desc for distance tree
-    Tree bl_desc = new Tree(); // desc for bit length tree
+    final short[] dyn_ltree; // literal and length tree
+    final short[] dyn_dtree; // distance tree
+    final short[] bl_tree; // Huffman tree for bit lengths
+    final Tree l_desc = new Tree(); // desc for literal tree
+    final Tree d_desc = new Tree(); // desc for distance tree
+    final Tree bl_desc = new Tree(); // desc for bit length tree
     // number of codes at each bit length for an optimal tree
-    short[] bl_count = new short[JZlib.MAX_BITS + 1];
+    final short[] bl_count = new short[JZlib.MAX_BITS + 1];
     // heap used to build the Huffman trees
-    int[] heap = new int[2 * JZlib.L_CODES + 1];
+    final int[] heap = new int[2 * JZlib.L_CODES + 1];
     int heap_len; // number of elements in the heap
     int heap_max; // element of largest frequency
     // The sons of heap[n] are heap[2*n] and heap[2*n+1]. heap[0] is not used.
     // The same heap array is used to build all trees.
     // Depth of each subtree used as tie breaker for trees of equal frequency
-    byte[] depth = new byte[2 * JZlib.L_CODES + 1];
+    final byte[] depth = new byte[2 * JZlib.L_CODES + 1];
     int l_buf; // index for literals or lengths */
     // Size of match buffer for literals/lengths.  There are 4 reasons for
     // limiting lit_bufsize to 64K:

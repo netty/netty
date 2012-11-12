@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -33,6 +30,9 @@ import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AbstractTrafficShapingHandler allows to limit the global bandwidth
@@ -318,7 +318,7 @@ public abstract class AbstractTrafficShapingHandler extends
      * Class to implement setReadable at fix time
      */
     private class ReopenReadTimerTask implements TimerTask {
-        ChannelHandlerContext ctx;
+        final ChannelHandlerContext ctx;
         ReopenReadTimerTask(ChannelHandlerContext ctx) {
             this.ctx = ctx;
         }

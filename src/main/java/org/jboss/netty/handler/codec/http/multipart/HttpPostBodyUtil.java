@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
  */
 final class HttpPostBodyUtil {
 
-    public static int chunkSize = 8096;
+    public static final int chunkSize = 8096;
     /**
      * HTTP content disposition header name.
      */

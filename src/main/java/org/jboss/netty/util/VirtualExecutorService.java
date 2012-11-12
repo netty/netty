@@ -79,7 +79,7 @@ public class VirtualExecutorService extends AbstractExecutorService {
     private final ExecutorService s;
     final Object startStopLock = new Object();
     volatile boolean shutdown;
-    Set<Thread> activeThreads = new MapBackedSet<Thread>(new IdentityHashMap<Thread, Boolean>());
+    final Set<Thread> activeThreads = new MapBackedSet<Thread>(new IdentityHashMap<Thread, Boolean>());
 
     /**
      * Creates a new instance with the specified parent {@link Executor}.

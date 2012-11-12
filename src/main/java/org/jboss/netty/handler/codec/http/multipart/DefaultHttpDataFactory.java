@@ -35,7 +35,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Proposed default MINSIZE as 16 KB.
      */
-    public static long MINSIZE = 0x4000;
+    public static final long MINSIZE = 0x4000;
 
     private final boolean useDisk;
 
