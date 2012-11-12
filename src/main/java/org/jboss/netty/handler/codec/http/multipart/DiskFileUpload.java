@@ -75,12 +75,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData arg0) {
-        if (!(arg0 instanceof FileUpload)) {
+    public int compareTo(InterfaceHttpData o) {
+        if (!(o instanceof FileUpload)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + arg0.getHttpDataType());
+                    " with " + o.getHttpDataType());
         }
-        return compareTo((FileUpload) arg0);
+        return compareTo((FileUpload) o);
     }
 
     public int compareTo(FileUpload o) {

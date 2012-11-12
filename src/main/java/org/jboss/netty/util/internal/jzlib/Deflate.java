@@ -49,6 +49,7 @@ package org.jboss.netty.util.internal.jzlib;
 
 import org.jboss.netty.util.internal.jzlib.JZlib.WrapperType;
 
+@SuppressWarnings("MethodParameterNamingConvention")
 final class Deflate {
 
     private static final class Config {

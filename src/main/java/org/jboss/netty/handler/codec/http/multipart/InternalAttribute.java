@@ -68,12 +68,12 @@ public class InternalAttribute implements InterfaceHttpData {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData arg0) {
-        if (!(arg0 instanceof InternalAttribute)) {
+    public int compareTo(InterfaceHttpData o) {
+        if (!(o instanceof InternalAttribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + arg0.getHttpDataType());
+                    " with " + o.getHttpDataType());
         }
-        return compareTo((InternalAttribute) arg0);
+        return compareTo((InternalAttribute) o);
     }
 
     public int compareTo(InternalAttribute o) {

@@ -97,16 +97,16 @@ public class CIDR4 extends CIDR {
      * Given an IPv4 baseAddress length, return the block length.  I.e., a
      * baseAddress length of 24 will return 256.
      */
-    private static int ipv4PrefixLengthToLength(int prefix_length) {
-        return 1 << 32 - prefix_length;
+    private static int ipv4PrefixLengthToLength(int prefixLength) {
+        return 1 << 32 - prefixLength;
     }
 
     /**
      * Given a baseAddress length, return a netmask.  I.e, a baseAddress length
      * of 24 will return 0xFFFFFF00.
      */
-    private static int ipv4PrefixLengthToMask(int prefix_length) {
-        return ~((1 << 32 - prefix_length) - 1);
+    private static int ipv4PrefixLengthToMask(int prefixLength) {
+        return ~((1 << 32 - prefixLength) - 1);
     }
 
     /**

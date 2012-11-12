@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -32,6 +26,12 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Manages streams within a SPDY session.
@@ -678,8 +678,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      * Helper functions
      */
 
-    private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = isServerId(ID);
+    private boolean isRemoteInitiatedID(int id) {
+        boolean serverID = isServerId(id);
         return server && !serverID || !server && serverID;
     }
 

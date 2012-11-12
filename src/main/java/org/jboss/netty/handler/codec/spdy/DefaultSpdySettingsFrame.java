@@ -37,13 +37,13 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         return settingsMap.keySet();
     }
 
-    public boolean isSet(int ID) {
-        Integer key = ID;
+    public boolean isSet(int id) {
+        Integer key = id;
         return settingsMap.containsKey(key);
     }
 
-    public int getValue(int ID) {
-        Integer key = ID;
+    public int getValue(int id) {
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).getValue();
         } else {
@@ -51,15 +51,15 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
-    public void setValue(int ID, int value) {
-        setValue(ID, value, false, false);
+    public void setValue(int id, int value) {
+        setValue(id, value, false, false);
     }
 
-    public void setValue(int ID, int value, boolean persistValue, boolean persisted) {
-        if (ID <= 0 || ID > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
-            throw new IllegalArgumentException("Setting ID is not valid: " + ID);
+    public void setValue(int id, int value, boolean persistValue, boolean persisted) {
+        if (id <= 0 || id > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
+            throw new IllegalArgumentException("Setting ID is not valid: " + id);
         }
-        Integer key = ID;
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             Setting setting = settingsMap.get(key);
             setting.setValue(value);
@@ -70,19 +70,19 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
-    public void removeValue(int ID) {
-        Integer key = ID;
+    public void removeValue(int id) {
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             settingsMap.remove(key);
         }
     }
 
-    public boolean persistValue(int ID) {
-        return isPersistValue(ID);
+    public boolean persistValue(int id) {
+        return isPersistValue(id);
     }
 
-    public boolean isPersistValue(int ID) {
-        Integer key = ID;
+    public boolean isPersistValue(int id) {
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).isPersist();
         } else {
@@ -90,15 +90,15 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
-    public void setPersistValue(int ID, boolean persistValue) {
-        Integer key = ID;
+    public void setPersistValue(int id, boolean persistValue) {
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             settingsMap.get(key).setPersist(persistValue);
         }
     }
 
-    public boolean isPersisted(int ID) {
-        Integer key = ID;
+    public boolean isPersisted(int id) {
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).isPersisted();
         } else {
@@ -106,8 +106,8 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
-    public void setPersisted(int ID, boolean persisted) {
-        Integer key = ID;
+    public void setPersisted(int id, boolean persisted) {
+        Integer key = id;
         if (settingsMap.containsKey(key)) {
             settingsMap.get(key).setPersisted(persisted);
         }
