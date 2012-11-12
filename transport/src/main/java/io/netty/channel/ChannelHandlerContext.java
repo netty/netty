@@ -213,6 +213,46 @@ public interface ChannelHandlerContext
     <T> MessageBuf<T> outboundMessageBuffer();
 
     /**
+     * Replaces the inbound byte buffer with the given buffer.  This returns the
+     * old buffer, so any readable bytes can be handled appropriately by the caller.
+     *
+     * @param newInboundByteBuf the new inbound byte buffer
+     * @return the old buffer.
+     * @throws NullPointerException if the argument is {@code null}.
+     */
+    ByteBuf replaceInboundByteBuffer(ByteBuf newInboundByteBuf);
+
+    /**
+     * Replaces the inbound message buffer with the given buffer.  This returns the
+     * old buffer, so any pending messages can be handled appropriately by the caller.
+     *
+     * @param newInboundMsgBuf the new inbound message buffer
+     * @return the old buffer.
+     * @throws NullPointerException if the argument is {@code null}.
+     */
+    <T> MessageBuf<T> replaceInboundMessageBuffer(MessageBuf<T> newInboundMsgBuf);
+
+    /**
+     * Replaces the outbound byte buffer with the given buffer.  This returns the
+     * old buffer, so any readable bytes can be handled appropriately by the caller.
+     *
+     * @param newOutboundByteBuf the new inbound byte buffer
+     * @return the old buffer.
+     * @throws NullPointerException if the argument is {@code null}.
+     */
+    ByteBuf replaceOutboundByteBuffer(ByteBuf newOutboundByteBuf);
+
+    /**
+     * Replaces the outbound message buffer with the given buffer.  This returns the
+     * old buffer, so any pending messages can be handled appropriately by the caller.
+     *
+     * @param newOutboundMsgBuf the new inbound message buffer
+     * @return the old buffer.
+     * @throws NullPointerException if the argument is {@code null}.
+     */
+    <T> MessageBuf<T> replaceOutboundMessageBuffer(MessageBuf<T> newOutboundMsgBuf);
+
+    /**
      * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling
      * inbound data.
      */
