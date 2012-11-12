@@ -116,14 +116,8 @@ public final class SctpMessage {
 
     @Override
     public String toString() {
-        return new StringBuilder().
-                append("SctpFrame{").
-                append("streamIdentifier=").
-                append(streamIdentifier).
-                append(", protocolIdentifier=").
-                append(protocolIdentifier).
-                append(", payloadBuffer=").
-                append(ByteBufUtil.hexDump(getPayloadBuffer())).
-                append('}').toString();
+        return "SctpFrame{" +
+                "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
+                ", payloadBuffer=" + ByteBufUtil.hexDump(getPayloadBuffer()) + '}';
     }
 }

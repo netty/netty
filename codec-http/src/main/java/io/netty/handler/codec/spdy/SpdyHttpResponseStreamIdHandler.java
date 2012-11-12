@@ -40,7 +40,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     @Override
     public HttpMessage encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
         Integer id = ids.poll();
-        if (id != null && id != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
+        if (id != null && id.intValue() != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
         }
         return msg;

@@ -349,7 +349,7 @@ final class Deflate {
         int n; // iterates over all tree elements
         int prevlen = -1; // last emitted length
         int curlen; // length of current code
-        int nextlen = tree[0 * 2 + 1]; // length of next code
+        int nextlen = tree[1]; // length of next code
         int count = 0; // repeat count of the current code
         int max_count = 7; // max repeat count
         int min_count = 4; // min repeat count
@@ -445,7 +445,7 @@ final class Deflate {
         int n; // iterates over all tree elements
         int prevlen = -1; // last emitted length
         int curlen; // length of current code
-        int nextlen = tree[0 * 2 + 1]; // length of next code
+        int nextlen = tree[1]; // length of next code
         int count = 0; // repeat count of the current code
         int max_count = 7; // max repeat count
         int min_count = 4; // min repeat count
@@ -797,6 +797,7 @@ final class Deflate {
             int stored_len, // length of input block
             boolean eof // true if this is the last block for a file
     ) {
+        //noinspection PointlessArithmeticExpression
         send_bits((STORED_BLOCK << 1) + (eof? 1 : 0), 3); // send block type
         copy_block(buf, stored_len, true); // with header
     }

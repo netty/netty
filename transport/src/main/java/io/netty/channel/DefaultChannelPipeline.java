@@ -1433,20 +1433,22 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private static boolean inExceptionCaught(Throwable cause) {
-        if (cause == null) {
-            return false;
-        }
+        for (;;) {
+            if (cause == null) {
+                return false;
+            }
 
-        StackTraceElement[] trace = cause.getStackTrace();
-        if (trace != null) {
-            for (StackTraceElement t: trace) {
-                if ("exceptionCaught".equals(t.getMethodName())) {
-                    return true;
+            StackTraceElement[] trace = cause.getStackTrace();
+            if (trace != null) {
+                for (StackTraceElement t : trace) {
+                    if ("exceptionCaught".equals(t.getMethodName())) {
+                        return true;
+                    }
                 }
             }
-        }
 
-        return inExceptionCaught(cause.getCause());
+            cause = cause.getCause();
+        }
     }
 
     private void checkDuplicateName(String name) {
