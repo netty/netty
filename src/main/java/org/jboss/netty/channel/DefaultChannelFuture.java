@@ -298,9 +298,7 @@ public class DefaultChannelFuture implements ChannelFuture {
 
         try {
             synchronized (this) {
-                if (done) {
-                    return done;
-                } else if (waitTime <= 0) {
+                if (done || waitTime <= 0) {
                     return done;
                 }
 

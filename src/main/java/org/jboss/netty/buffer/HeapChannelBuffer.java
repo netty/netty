@@ -172,7 +172,8 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
                 } else {
                     break;
                 }
-            } else if (localReadBytes == 0) {
+            }
+            if (localReadBytes == 0) {
                 break;
             }
             readBytes += localReadBytes;

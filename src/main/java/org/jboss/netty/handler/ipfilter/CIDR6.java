@@ -15,14 +15,14 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+
 import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  */
@@ -73,7 +73,8 @@ public class CIDR6 extends CIDR {
             if (res == 0) {
                 if (arg.cidrMask == cidrMask) {
                     return 0;
-                } else if (arg.cidrMask < cidrMask) {
+                }
+                if (arg.cidrMask < cidrMask) {
                     return -1;
                 }
                 return 1;

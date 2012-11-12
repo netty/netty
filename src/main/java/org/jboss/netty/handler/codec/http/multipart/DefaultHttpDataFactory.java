@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
+import org.jboss.netty.handler.codec.http.HttpRequest;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.jboss.netty.handler.codec.http.HttpRequest;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -98,7 +98,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
-        } else if (checkSize) {
+        }
+        if (checkSize) {
             Attribute attribute = new MixedAttribute(name, minSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
@@ -119,7 +120,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
-        } else if (checkSize) {
+        }
+        if (checkSize) {
             Attribute attribute = new MixedAttribute(name, value, minSize);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
@@ -141,7 +143,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
-        } else if (checkSize) {
+        }
+        if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size, minSize);
             List<HttpData> fileToDelete = getList(request);

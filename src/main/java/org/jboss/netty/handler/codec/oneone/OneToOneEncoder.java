@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.oneone;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -26,6 +24,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Transforms a write request into another write request.  A typical setup for
@@ -66,7 +66,8 @@ public abstract class OneToOneEncoder implements ChannelDownstreamHandler {
         Object encodedMessage = encode(ctx, e.getChannel(), originalMessage);
         if (originalMessage == encodedMessage) {
             return false;
-        } else if (encodedMessage != null) {
+        }
+        if (encodedMessage != null) {
             write(ctx, e.getFuture(), encodedMessage, e.getRemoteAddress());
         }
         return true;

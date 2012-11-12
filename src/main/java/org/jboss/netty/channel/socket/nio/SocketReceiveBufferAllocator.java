@@ -40,9 +40,11 @@ final class SocketReceiveBufferAllocator implements ExternalResourceReleasable {
     ByteBuffer get(int size) {
         if (buf == null) {
             return newBuffer(size);
-        } else if (buf.capacity() < size) {
+        }
+        if (buf.capacity() < size) {
             return newBuffer(size);
-        } else if (buf.capacity() * percentual / 100 > size) {
+        }
+        if (buf.capacity() * percentual / 100 > size) {
             if (++exceedCount == maxExceedCount) {
                return newBuffer(size);
             } else {

@@ -303,9 +303,11 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             // fragmented
             if (frameOpcode == OPCODE_PING) {
                 return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_PONG) {
+            }
+            if (frameOpcode == OPCODE_PONG) {
                 return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_CLOSE) {
+            }
+            if (frameOpcode == OPCODE_CLOSE) {
                 checkCloseFrameBody(channel, framePayload);
                 receivedClosingHandshake = true;
                 return new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload);

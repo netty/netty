@@ -65,9 +65,11 @@ public class CIDR4 extends CIDR {
             }
             if (net < addressInt) {
                 return 1;
-            } else if (net > addressInt) {
+            }
+            if (net > addressInt) {
                 return -1;
-            } else if (arg.cidrMask < cidrMask) {
+            }
+            if (arg.cidrMask < cidrMask) {
                 return -1;
             }
             return 1;
@@ -78,9 +80,11 @@ public class CIDR4 extends CIDR {
         }
         if (o.addressInt < addressInt) {
             return 1;
-        } else if (o.addressInt > addressInt) {
+        }
+        if (o.addressInt > addressInt) {
             return -1;
-        } else if (o.cidrMask < cidrMask) {
+        }
+        if (o.cidrMask < cidrMask) {
             // greater Mask means less IpAddresses so -1
             return -1;
         }

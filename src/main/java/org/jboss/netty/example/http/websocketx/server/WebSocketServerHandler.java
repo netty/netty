@@ -82,7 +82,8 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
             res.setContent(content);
             sendHttpResponse(ctx, req, res);
             return;
-        } else if ("/favicon.ico".equals(req.getUri())) {
+        }
+        if ("/favicon.ico".equals(req.getUri())) {
             HttpResponse res = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
@@ -105,10 +106,12 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
             return;
-        } else if (frame instanceof PingWebSocketFrame) {
+        }
+        if (frame instanceof PingWebSocketFrame) {
             ctx.getChannel().write(new PongWebSocketFrame(frame.getBinaryData()));
             return;
-        } else if (!(frame instanceof TextWebSocketFrame)) {
+        }
+        if (!(frame instanceof TextWebSocketFrame)) {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
                     .getName()));
         }

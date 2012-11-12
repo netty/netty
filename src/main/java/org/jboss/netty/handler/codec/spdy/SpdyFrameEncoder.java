@@ -15,11 +15,6 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
-import java.nio.ByteOrder;
-import java.util.Set;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
@@ -28,6 +23,11 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
+
+import java.nio.ByteOrder;
+import java.util.Set;
+
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ChannelBuffer}.
@@ -118,7 +118,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
 
-        } else if (msg instanceof SpdySynStreamFrame) {
+        }
+
+        if (msg instanceof SpdySynStreamFrame) {
 
             synchronized (headerBlockCompressor) {
                 SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
@@ -162,7 +164,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             }
             return;
 
-        } else if (msg instanceof SpdySynReplyFrame) {
+        }
+
+        if (msg instanceof SpdySynReplyFrame) {
 
             synchronized (headerBlockCompressor) {
                 SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
@@ -209,7 +213,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
 
-        } else if (msg instanceof SpdySettingsFrame) {
+        }
+
+        if (msg instanceof SpdySettingsFrame) {
 
             SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
             byte flags = spdySettingsFrame.clearPreviouslyPersistedSettings() ?
@@ -250,7 +256,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
 
-        } else if (msg instanceof SpdyNoOpFrame) {
+        }
+
+        if (msg instanceof SpdyNoOpFrame) {
 
             ChannelBuffer frame = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE);
@@ -260,7 +268,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
 
-        } else if (msg instanceof SpdyPingFrame) {
+        }
+
+        if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
             ChannelBuffer frame = ChannelBuffers.buffer(
@@ -272,7 +282,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
 
-        } else if (msg instanceof SpdyGoAwayFrame) {
+        }
+
+        if (msg instanceof SpdyGoAwayFrame) {
 
             SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
             int length = version < 3 ? 4 : 8;
@@ -288,7 +300,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
 
-        } else if (msg instanceof SpdyHeadersFrame) {
+        }
+
+        if (msg instanceof SpdyHeadersFrame) {
 
             synchronized (headerBlockCompressor) {
                 SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
@@ -318,8 +332,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             }
             return;
 
-        } else if (msg instanceof SpdyWindowUpdateFrame) {
+        }
 
+        if (msg instanceof SpdyWindowUpdateFrame) {
             SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
             ChannelBuffer frame = ChannelBuffers.buffer(
                     ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE + 8);

@@ -44,7 +44,8 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
     SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
-        } else if (message instanceof FileRegion) {
+        }
+        if (message instanceof FileRegion) {
             return acquire((FileRegion) message);
         }
 

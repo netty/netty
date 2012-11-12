@@ -243,9 +243,11 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
         }
         if (o.subnet < subnet) {
             return 1;
-        } else if (o.subnet > subnet) {
+        }
+        if (o.subnet > subnet) {
             return -1;
-        } else if (o.cidrMask < cidrMask) {
+        }
+        if (o.cidrMask < cidrMask) {
             // greater Mask means less IpAddresses so -1
             return -1;
         }

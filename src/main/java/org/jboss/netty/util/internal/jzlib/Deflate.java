@@ -364,7 +364,8 @@ final class Deflate {
             nextlen = tree[(n + 1) * 2 + 1];
             if (++ count < max_count && curlen == nextlen) {
                 continue;
-            } else if (count < min_count) {
+            }
+            if (count < min_count) {
                 bl_tree[curlen * 2] += count;
             } else if (curlen != 0) {
                 if (curlen != prevlen) {
@@ -458,7 +459,8 @@ final class Deflate {
             nextlen = tree[(n + 1) * 2 + 1];
             if (++ count < max_count && curlen == nextlen) {
                 continue;
-            } else if (count < min_count) {
+            }
+            if (count < min_count) {
                 do {
                     send_code(curlen, bl_tree);
                 } while (-- count != 0);

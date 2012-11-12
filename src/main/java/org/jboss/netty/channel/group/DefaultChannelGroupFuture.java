@@ -15,7 +15,12 @@
  */
 package org.jboss.netty.channel.group;
 
-import static java.util.concurrent.TimeUnit.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,12 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
@@ -275,9 +275,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         try {
             synchronized (this) {
-                if (done) {
-                    return done;
-                } else if (waitTime <= 0) {
+                if (done || waitTime <= 0) {
                     return done;
                 }
 

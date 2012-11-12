@@ -280,7 +280,8 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
                 } else {
                     return readBytes;
                 }
-            } else if (localReadBytes == 0) {
+            }
+            if (localReadBytes == 0) {
                 break;
             }
             readBytes += localReadBytes;

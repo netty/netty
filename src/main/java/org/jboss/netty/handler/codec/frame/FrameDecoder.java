@@ -430,7 +430,8 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
                     // Probably it is reading on.
                     continue;
                 }
-            } else if (oldReaderIndex == cumulation.readerIndex()) {
+            }
+            if (oldReaderIndex == cumulation.readerIndex()) {
                 throw new IllegalStateException(
                         "decode() method must read at least one byte " +
                         "if it returned a frame (caused by: " + getClass() + ')');

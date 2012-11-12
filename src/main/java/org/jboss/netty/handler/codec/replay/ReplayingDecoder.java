@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
-import java.net.SocketAddress;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
@@ -25,6 +23,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
+
+import java.net.SocketAddress;
 
 /**
  * A specialized variation of {@link FrameDecoder} which enables implementation
@@ -546,10 +546,9 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             ChannelBuffer cumulation = this.cumulation;
             if (!needsCleanup) {
                 return;
-            } else {
-                needsCleanup = false;
             }
 
+            needsCleanup = false;
             replayable.terminate();
 
             if (cumulation != null && cumulation.readable()) {

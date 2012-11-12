@@ -15,15 +15,6 @@
  */
 package org.jboss.netty.handler.queue;
 
-import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -38,6 +29,15 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.util.HashedWheelTimer;
+
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Emulates buffered write operation.  This handler stores all write requests
@@ -297,7 +297,8 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
         if (size == 1) {
             ctx.sendDownstream(pendingWrites.remove(0));
             return pendingWrites;
-        } else if (size == 0) {
+        }
+        if (size == 0) {
             return pendingWrites;
         }
 

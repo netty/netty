@@ -15,7 +15,14 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.socket.DatagramChannelConfig;
+import org.jboss.netty.channel.socket.InternetProtocolFamily;
+import org.jboss.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -31,14 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.socket.DatagramChannelConfig;
-import org.jboss.netty.channel.socket.InternetProtocolFamily;
-import org.jboss.netty.util.internal.DetectionUtil;
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Provides an NIO based {@link org.jboss.netty.channel.socket.DatagramChannel}.
@@ -148,38 +148,38 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
-        } else {
-            if (multicastAddress == null) {
-                throw new NullPointerException("multicastAddress");
+        }
+
+        if (multicastAddress == null) {
+            throw new NullPointerException("multicastAddress");
+        }
+
+        if (networkInterface == null) {
+            throw new NullPointerException("networkInterface");
+        }
+
+        try {
+            MembershipKey key;
+            if (source == null) {
+                key = channel.join(multicastAddress, networkInterface);
+            } else {
+                key = channel.join(multicastAddress, networkInterface, source);
             }
 
-            if (networkInterface == null) {
-                throw new NullPointerException("networkInterface");
-            }
+            synchronized (this) {
+                if (memberships == null) {
+                    memberships = new HashMap<InetAddress, List<MembershipKey>>();
 
-            try {
-                MembershipKey key;
-                if (source == null) {
-                    key = channel.join(multicastAddress, networkInterface);
-                } else {
-                    key = channel.join(multicastAddress, networkInterface, source);
                 }
-
-                synchronized (this) {
-                    if (memberships == null) {
-                        memberships = new HashMap<InetAddress, List<MembershipKey>>();
-
-                    }
-                    List<MembershipKey> keys = memberships.get(multicastAddress);
-                    if (keys == null) {
-                        keys = new ArrayList<MembershipKey>();
-                        memberships.put(multicastAddress, keys);
-                    }
-                    keys.add(key);
+                List<MembershipKey> keys = memberships.get(multicastAddress);
+                if (keys == null) {
+                    keys = new ArrayList<MembershipKey>();
+                    memberships.put(multicastAddress, keys);
                 }
-            } catch (Throwable e) {
-                return failedFuture(this, e);
+                keys.add(key);
             }
+        } catch (Throwable e) {
+            return failedFuture(this, e);
         }
         return succeededFuture(this);
     }
