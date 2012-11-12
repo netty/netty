@@ -30,6 +30,7 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class NioSctpServerChannel extends AbstractNioMessageChannel
@@ -94,7 +95,10 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            return javaChannel().getAllLocalAddresses().iterator().next();
+            Iterator<SocketAddress> i = javaChannel().getAllLocalAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
+            }
         } catch (IOException e) {
             // ignore
         }

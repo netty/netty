@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.socket.SctpChannel {
@@ -151,7 +152,10 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected SocketAddress localAddress0() {
         try {
-            return javaChannel().getAllLocalAddresses().iterator().next();
+            Iterator<SocketAddress> i = javaChannel().getAllLocalAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
+            }
         } catch (IOException e) {
             // ignore
         }
@@ -161,7 +165,10 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected SocketAddress remoteAddress0() {
         try {
-            return javaChannel().getRemoteAddresses().iterator().next();
+            Iterator<SocketAddress> i = javaChannel().getRemoteAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
+            }
         } catch (IOException e) {
             // ignore
         }
