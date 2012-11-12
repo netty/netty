@@ -527,8 +527,8 @@ public class SpdyHeaders {
         return hash % BUCKET_SIZE;
     }
 
-    private final Entry[] entries = new Entry[BUCKET_SIZE];
-    private final Entry head = new Entry(-1, null, null);
+    private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
+    private final HeaderEntry head = new HeaderEntry(-1, null, null);
 
     SpdyHeaders() {
         head.before = head.after = head;
@@ -546,9 +546,9 @@ public class SpdyHeaders {
 
     private void addHeader0(int h, int i, final String name, final String value) {
         // Update the hash table.
-        Entry e = entries[i];
-        Entry newEntry;
-        entries[i] = newEntry = new Entry(h, name, value);
+        HeaderEntry e = entries[i];
+        HeaderEntry newEntry;
+        entries[i] = newEntry = new HeaderEntry(h, name, value);
         newEntry.next = e;
 
         // Update the linked list.
@@ -566,7 +566,7 @@ public class SpdyHeaders {
     }
 
     private void removeHeader0(int h, int i, String name) {
-        Entry e = entries[i];
+        HeaderEntry e = entries[i];
         if (e == null) {
             return;
         }
@@ -574,7 +574,7 @@ public class SpdyHeaders {
         for (;;) {
             if (e.hash == h && eq(name, e.key)) {
                 e.remove();
-                Entry next = e.next;
+                HeaderEntry next = e.next;
                 if (next != null) {
                     entries[i] = next;
                     e = next;
@@ -588,7 +588,7 @@ public class SpdyHeaders {
         }
 
         for (;;) {
-            Entry next = e.next;
+            HeaderEntry next = e.next;
             if (next == null) {
                 break;
             }
@@ -648,7 +648,7 @@ public class SpdyHeaders {
 
         int h = hash(name);
         int i = index(h);
-        Entry e = entries[i];
+        HeaderEntry e = entries[i];
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
                 return e.value;
@@ -668,7 +668,7 @@ public class SpdyHeaders {
 
         int h = hash(name);
         int i = index(h);
-        Entry e = entries[i];
+        HeaderEntry e = entries[i];
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
                 values.addFirst(e.value);
@@ -682,7 +682,7 @@ public class SpdyHeaders {
         List<Map.Entry<String, String>> all =
             new LinkedList<Map.Entry<String, String>>();
 
-        Entry e = head.after;
+        HeaderEntry e = head.after;
         while (e != head) {
             all.add(e);
             e = e.after;
@@ -697,7 +697,7 @@ public class SpdyHeaders {
     Set<String> getHeaderNames() {
         Set<String> names = new TreeSet<String>();
 
-        Entry e = head.after;
+        HeaderEntry e = head.after;
         while (e != head) {
             names.add(e.key);
             e = e.after;
@@ -712,14 +712,14 @@ public class SpdyHeaders {
         return value.toString();
     }
 
-    private static final class Entry implements Map.Entry<String, String> {
+    private static final class HeaderEntry implements Map.Entry<String, String> {
         final int hash;
         final String key;
         String value;
-        Entry next;
-        Entry before, after;
+        HeaderEntry next;
+        HeaderEntry before, after;
 
-        Entry(int hash, String key, String value) {
+        HeaderEntry(int hash, String key, String value) {
             this.hash = hash;
             this.key = key;
             this.value = value;
@@ -730,7 +730,7 @@ public class SpdyHeaders {
             after.before = before;
         }
 
-        void addBefore(Entry e) {
+        void addBefore(HeaderEntry e) {
             after  = e;
             before = e.before;
             before.after = this;

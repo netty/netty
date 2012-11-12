@@ -49,6 +49,7 @@ package io.netty.util.internal.jzlib;
 
 import io.netty.util.internal.jzlib.JZlib.WrapperType;
 
+@SuppressWarnings("MethodParameterNamingConvention")
 final class Deflate {
 
     private static final class Config {

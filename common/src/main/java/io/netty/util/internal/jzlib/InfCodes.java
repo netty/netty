@@ -47,6 +47,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package io.netty.util.internal.jzlib;
 
+@SuppressWarnings("MethodParameterNamingConvention")
 final class InfCodes {
 
     private static final int[] inflate_mask = { 0x00000000, 0x00000001,
