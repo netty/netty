@@ -23,7 +23,7 @@ import java.util.List;
  * (like Multipart Mixed mode)
  */
 public class InternalAttribute implements InterfaceHttpData {
-    protected List<String> value = new ArrayList<String>();
+    protected final List<String> value = new ArrayList<String>();
 
     @Override
     public HttpDataType getHttpDataType() {
