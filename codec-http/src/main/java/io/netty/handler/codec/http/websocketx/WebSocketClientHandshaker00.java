@@ -137,6 +137,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             path = wsURL.getPath() + '?' + wsURL.getQuery();
         }
 
+        if (path == null || path.isEmpty()) {
+            path = "/";
+        }
+
         // Format request
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         request.addHeader(Names.UPGRADE, Values.WEBSOCKET);
