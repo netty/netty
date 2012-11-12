@@ -38,7 +38,7 @@ import com.google.protobuf.CodedOutputStream;
  * +---------------+               +--------+---------------+
  * </pre> *
  *
- * @see com.google.protobuf.CodedOutputStream
+ * @see CodedOutputStream
  */
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {

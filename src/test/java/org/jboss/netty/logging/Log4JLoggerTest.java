@@ -18,6 +18,7 @@ package org.jboss.netty.logging;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
+import org.apache.log4j.Logger;
 import org.junit.Test;
 
 public class Log4JLoggerTest {
@@ -26,8 +27,8 @@ public class Log4JLoggerTest {
     @Test
     public void testIsDebugEnabled() {
 
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
@@ -39,8 +40,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testIsInfoEnabled() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isInfoEnabled()).andReturn(true);
         replay(mock);
@@ -52,8 +53,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testIsWarnEnabled() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         replay(mock);
 
@@ -64,8 +65,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testIsErrorEnabled() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
         replay(mock);
 
         InternalLogger logger = new Log4JLogger(mock);
@@ -75,8 +76,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testDebug() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.debug("a");
         replay(mock);
@@ -88,8 +89,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testDebugWithException() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.debug("a", e);
         replay(mock);
@@ -101,8 +102,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testInfo() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.info("a");
         replay(mock);
@@ -114,8 +115,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testInfoWithException() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.info("a", e);
         replay(mock);
@@ -127,8 +128,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testWarn() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.warn("a");
         replay(mock);
@@ -140,8 +141,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testWarnWithException() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.warn("a", e);
         replay(mock);
@@ -153,8 +154,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testError() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.error("a");
         replay(mock);
@@ -166,8 +167,8 @@ public class Log4JLoggerTest {
 
     @Test
     public void testErrorWithException() {
-        org.apache.log4j.Logger mock =
-            createStrictMock(org.apache.log4j.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.error("a", e);
         replay(mock);

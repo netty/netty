@@ -22,12 +22,13 @@
 
 package org.jboss.netty.util.internal;
 
+import java.lang.Math;
 import java.util.Random;
 
 /**
  * A random number generator isolated to the current thread.  Like the
- * global {@link java.util.Random} generator used by the {@link
- * java.lang.Math} class, a {@code ThreadLocalRandom} is initialized
+ * global {@link Random} generator used by the {@link
+ * Math} class, a {@code ThreadLocalRandom} is initialized
  * with an internally generated seed that may not otherwise be
  * modified. When applicable, use of {@code ThreadLocalRandom} rather
  * than shared {@code Random} objects in concurrent programs will

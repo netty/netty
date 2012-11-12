@@ -18,6 +18,7 @@ package org.jboss.netty.logging;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
+import org.jboss.logging.Logger;
 import org.junit.Test;
 
 public class JBossLoggerTest {
@@ -26,8 +27,8 @@ public class JBossLoggerTest {
     @Test
     @SuppressWarnings("deprecation")
     public void testIsDebugEnabled() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
@@ -40,8 +41,8 @@ public class JBossLoggerTest {
     @Test
     @SuppressWarnings("deprecation")
     public void testIsInfoEnabled() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         expect(mock.isInfoEnabled()).andReturn(true);
         replay(mock);
@@ -53,8 +54,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testIsWarnEnabled() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
         replay(mock);
 
         InternalLogger logger = new JBossLogger(mock);
@@ -64,8 +65,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testIsErrorEnabled() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
         replay(mock);
 
         InternalLogger logger = new JBossLogger(mock);
@@ -75,8 +76,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testDebug() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.debug("a");
         replay(mock);
@@ -88,8 +89,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testDebugWithException() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.debug("a", e);
         replay(mock);
@@ -101,8 +102,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testInfo() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.info("a");
         replay(mock);
@@ -114,8 +115,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testInfoWithException() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.info("a", e);
         replay(mock);
@@ -127,8 +128,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testWarn() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.warn("a");
         replay(mock);
@@ -140,8 +141,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testWarnWithException() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.warn("a", e);
         replay(mock);
@@ -153,8 +154,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testError() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.error("a");
         replay(mock);
@@ -166,8 +167,8 @@ public class JBossLoggerTest {
 
     @Test
     public void testErrorWithException() {
-        org.jboss.logging.Logger mock =
-            createStrictMock(org.jboss.logging.Logger.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
         mock.error("a", e);
         replay(mock);

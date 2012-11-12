@@ -416,7 +416,7 @@ public class HashedWheelTimer implements Timer {
                         // it to a temporary list - we will reschedule it in a
                         // separate loop.
                         if (slipped == null) {
-                            slipped = new ArrayList<HashedWheelTimer.HashedWheelTimeout>();
+                            slipped = new ArrayList<HashedWheelTimeout>();
                         }
                         slipped.add(timeout);
                     }

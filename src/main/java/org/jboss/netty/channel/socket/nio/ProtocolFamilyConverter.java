@@ -17,6 +17,8 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.channel.socket.InternetProtocolFamily;
 
+import java.net.ProtocolFamily;
+import java.net.StandardProtocolFamily;
 
 
 /**
@@ -33,13 +35,13 @@ final class ProtocolFamilyConverter {
     /**
      * Convert the {@link InternetProtocolFamily}. This MUST only be called on jdk version >= 7.
      */
-    public static java.net.ProtocolFamily convert(InternetProtocolFamily family) {
+    public static ProtocolFamily convert(InternetProtocolFamily family) {
         switch (family) {
         case IPv4:
-            return java.net.StandardProtocolFamily.INET;
+            return StandardProtocolFamily.INET;
 
         case IPv6:
-            return java.net.StandardProtocolFamily.INET6;
+            return StandardProtocolFamily.INET6;
         default:
             throw new IllegalArgumentException();
         }

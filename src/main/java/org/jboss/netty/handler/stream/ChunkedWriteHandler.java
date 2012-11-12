@@ -18,6 +18,7 @@ package org.jboss.netty.handler.stream;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.lang.OutOfMemoryError;
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -42,7 +43,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
  * asynchronously neither spending a lot of memory nor getting
- * {@link java.lang.OutOfMemoryError}.  Large data streaming such as file
+ * {@link OutOfMemoryError}.  Large data streaming such as file
  * transfer requires complicated state management in a {@link ChannelHandler}
  * implementation.  {@link ChunkedWriteHandler} manages such complicated states
  * so that you can send a large data stream without difficulties.

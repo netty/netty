@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.http.websocketx;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.util.internal.StringUtil;
@@ -43,7 +44,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * {@link ChannelFutureListener} which will call
-     * {@link Channels#fireExceptionCaught(org.jboss.netty.channel.ChannelHandlerContext, Throwable)}
+     * {@link Channels#fireExceptionCaught(ChannelHandlerContext, Throwable)}
      * if the {@link ChannelFuture} was not successful.
      */
     public static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {

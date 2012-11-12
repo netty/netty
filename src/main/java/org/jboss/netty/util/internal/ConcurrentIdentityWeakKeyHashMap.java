@@ -34,13 +34,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
  * An alternative weak-key identity-comparing {@link ConcurrentMap} which is
- * similar to {@link java.util.concurrent.ConcurrentHashMap}.
+ * similar to {@link ConcurrentHashMap}.
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */

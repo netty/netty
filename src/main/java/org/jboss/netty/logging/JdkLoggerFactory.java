@@ -16,6 +16,8 @@
 package org.jboss.netty.logging;
 
 
+import java.util.logging.Logger;
+
 /**
  * Logger factory which creates a
  * <a href="http://java.sun.com/javase/6/docs/technotes/guides/logging/index.html">java.util.logging</a>
@@ -25,8 +27,8 @@ public class JdkLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        final java.util.logging.Logger logger =
-            java.util.logging.Logger.getLogger(name);
+        final Logger logger =
+            Logger.getLogger(name);
         return new JdkLogger(logger, name);
     }
 }

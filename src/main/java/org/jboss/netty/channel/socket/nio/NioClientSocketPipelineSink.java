@@ -191,7 +191,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                 // when the selector is closed before this is run
                 //
                 // See https://github.com/netty/netty/issues/685
-                Selector selector = NioClientSocketPipelineSink.Boss.this.selector;
+                Selector selector = Boss.this.selector;
 
                 if (selector != null) {
                     if (wakenUp.compareAndSet(false, true)) {

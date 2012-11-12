@@ -57,7 +57,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 /**
  */
 class HttpTunnelingClientSocketChannel extends AbstractChannel
-        implements org.jboss.netty.channel.socket.SocketChannel {
+        implements SocketChannel {
 
     final HttpTunnelingSocketChannelConfig config;
 
@@ -67,7 +67,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     final SocketChannel realChannel;
 
-    private final HttpTunnelingClientSocketChannel.ServletChannelHandler handler = new ServletChannelHandler();
+    private final ServletChannelHandler handler = new ServletChannelHandler();
 
     HttpTunnelingClientSocketChannel(
             ChannelFactory factory,

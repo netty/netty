@@ -15,7 +15,20 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -35,20 +48,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import static org.jboss.netty.channel.Channels.*;
 
 class NioServerSocketPipelineSink extends AbstractNioChannelSink implements ExternalResourceReleasable {
 
@@ -65,9 +65,9 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink implements Exte
 
     NioServerSocketPipelineSink(Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
         this.workerPool = workerPool;
-        this.bosses = new Boss[bossCount];
+        bosses = new Boss[bossCount];
         for (int i = 0; i < bossCount; i++) {
-            this.bosses[i] = new Boss(bossExecutor);
+            bosses[i] = new Boss(bossExecutor);
         }
     }
 
@@ -343,7 +343,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink implements Exte
                                         logger.warn(
                                                 "Failed to close a selector.", e);
                                     } finally {
-                                        this.selector = null;
+                                        selector = null;
                                     }
                                     break;
                                 } else {
