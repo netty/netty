@@ -38,7 +38,7 @@ final class SpdySession {
     }
 
     boolean isActiveStream(int streamID) {
-        return activeStreams.containsKey(new Integer(streamID));
+        return activeStreams.containsKey(Integer.valueOf(streamID));
     }
 
     // Stream-IDs should be iterated in priority order
@@ -53,13 +53,13 @@ final class SpdySession {
             int sendWindowSize, int receiveWindowSize) {
         if (!remoteSideClosed || !localSideClosed) {
             activeStreams.put(
-                    new Integer(streamID),
+                    Integer.valueOf(streamID),
                     new StreamState(priority, remoteSideClosed, localSideClosed, sendWindowSize, receiveWindowSize));
         }
     }
 
     boolean removeStream(int streamID) {
-        Integer StreamID = new Integer(streamID);
+        Integer StreamID = Integer.valueOf(streamID);
         StreamState state = activeStreams.get(StreamID);
         activeStreams.remove(StreamID);
         if (state != null) {
@@ -70,12 +70,12 @@ final class SpdySession {
     }
 
     boolean isRemoteSideClosed(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state == null || state.isRemoteSideClosed();
     }
 
     void closeRemoteSide(int streamID) {
-        Integer StreamID = new Integer(streamID);
+        Integer StreamID = Integer.valueOf(streamID);
         StreamState state = activeStreams.get(StreamID);
         if (state != null) {
             state.closeRemoteSide();
@@ -86,12 +86,12 @@ final class SpdySession {
     }
 
     boolean isLocalSideClosed(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state == null || state.isLocalSideClosed();
     }
 
     void closeLocalSide(int streamID) {
-        Integer StreamID = new Integer(streamID);
+        Integer StreamID = Integer.valueOf(streamID);
         StreamState state = activeStreams.get(StreamID);
         if (state != null) {
             state.closeLocalSide();
@@ -106,29 +106,29 @@ final class SpdySession {
      * no need to synchronize access to the StreamState
      */
     boolean hasReceivedReply(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null && state.hasReceivedReply();
     }
 
     void receivedReply(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         if (state != null) {
             state.receivedReply();
         }
     }
 
     int getSendWindowSize(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.getSendWindowSize() : -1;
     }
 
     int updateSendWindowSize(int streamID, int deltaWindowSize) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.updateSendWindowSize(deltaWindowSize) : -1;
     }
 
     int updateReceiveWindowSize(int streamID, int deltaWindowSize) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         if (deltaWindowSize > 0) {
             state.setReceiveWindowSizeLowerBound(0);
         }
@@ -136,7 +136,7 @@ final class SpdySession {
     }
 
     int getReceiveWindowSizeLowerBound(int streamID) {
-        StreamState state = activeStreams.get(new Integer(streamID));
+        StreamState state = activeStreams.get(Integer.valueOf(streamID));
         return state != null ? state.getReceiveWindowSizeLowerBound() : 0;
     }
 

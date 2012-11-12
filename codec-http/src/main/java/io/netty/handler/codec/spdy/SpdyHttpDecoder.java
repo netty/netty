@@ -110,7 +110,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
                         return httpResponse;
                     } else {
                         // Response body will follow in a series of Data Frames
-                        messageMap.put(new Integer(streamID), httpResponse);
+                        messageMap.put(Integer.valueOf(streamID), httpResponse);
                     }
                 } catch (Exception e) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
@@ -130,7 +130,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
                         return httpRequest;
                     } else {
                         // Request body will follow in a series of Data Frames
-                        messageMap.put(new Integer(streamID), httpRequest);
+                        messageMap.put(Integer.valueOf(streamID), httpRequest);
                     }
                 } catch (Exception e) {
                     // If a client sends a SYN_STREAM without all of the method, url (host and path),
@@ -160,7 +160,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
                     return httpResponse;
                 } else {
                     // Response body will follow in a series of Data Frames
-                    messageMap.put(new Integer(streamID), httpResponse);
+                    messageMap.put(Integer.valueOf(streamID), httpResponse);
                 }
             } catch (Exception e) {
                 // If a client receives a SYN_REPLY without valid status and version headers
@@ -173,7 +173,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            Integer streamID = new Integer(spdyHeadersFrame.getStreamId());
+            Integer streamID = Integer.valueOf(spdyHeadersFrame.getStreamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard HEADERS frame.
@@ -189,7 +189,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            Integer streamID = new Integer(spdyDataFrame.getStreamId());
+            Integer streamID = Integer.valueOf(spdyDataFrame.getStreamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard Data Frame.
@@ -224,7 +224,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            Integer streamID = new Integer(spdyRstStreamFrame.getStreamId());
+            Integer streamID = Integer.valueOf(spdyRstStreamFrame.getStreamId());
             messageMap.remove(streamID);
         }
 
