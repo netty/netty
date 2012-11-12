@@ -79,12 +79,6 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.logging,
-              !io.netty.monitor,
-              !io.netty.monitor.spi
-              !io.netty.util,
-              !io.netty.util.internal,
-              !io.netty.util.internal.zlib,   
               sun.misc;resolution:=optional,           
               *
             </Import-Package>
@@ -94,7 +88,7 @@
               io.netty.monitor.spi,
               io.netty.util,
               io.netty.util.internal,
-              io.netty.util.internal.zlib              
+              io.netty.util.internal.jzlib              
             </Export-Package>
           </instructions>
         </configuration>

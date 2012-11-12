@@ -51,17 +51,12 @@
         <configuration>
           <instructions>
             <Import-Package>
-              !io.netty.handler.codec.http,
-              !io.netty.handler.codec.http.multipart,
-              !io.netty.handler.codec.http.websocket,
-              !io.netty.handler.codec.rtsp,
-              !io.netty.handler.codec.spdy,
               *
             </Import-Package>
             <Export-Package>
               io.netty.handler.codec.http,
               io.netty.handler.codec.http.multipart,
-              io.netty.handler.codec.http.websocket,
+              io.netty.handler.codec.http.websocketx,
               io.netty.handler.codec.rtsp,
               io.netty.handler.codec.spdy
             </Export-Package>
