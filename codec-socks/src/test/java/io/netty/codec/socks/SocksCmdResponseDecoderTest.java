@@ -41,7 +41,7 @@ public class SocksCmdResponseDecoderTest {
     }
 
     @Test
-    public void testSocksCmdResponseDecoderTest(){
+    public void testSocksCmdResponseDecoder(){
         for (SocksMessage.CmdStatus cmdStatus: SocksMessage.CmdStatus.values()){
             for (SocksMessage.AddressType addressType: SocksMessage.AddressType.values()){
                 testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, addressType);
