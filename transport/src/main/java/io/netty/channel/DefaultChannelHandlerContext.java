@@ -27,7 +27,10 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -448,11 +451,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     /**
-     * Executes a task on the event loop.  If the task is interrupted, then the current thread will be
-     * interrupted and this will return {@code null}.
+     * Executes a task on the event loop and waits for it to finish.  If the task is interrupted, then the
+     * current thread will be interrupted and this will return {@code null}.  It is expected that the task
+     * performs any appropriate locking.
      * <p>
      * If the {@link Callable#call()} call throws a {@link Throwable}, but it is not an instance of
-     * {@link Error} {@link RuntimeException}, or {@link Exception}, then it is wrapped inside an
+     * {@link Error}, {@link RuntimeException}, or {@link Exception}, then it is wrapped inside an
      * {@link AssertionError} and that is thrown instead.</p>
      *
      * @param c execute this callable and return its value
@@ -463,27 +467,100 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
      * @throws Error if the task threw this.
      * @throws RuntimeException if the task threw this.
      * @throws Exception if the task threw this.
-     * @throws AssertionError with a {@link Throwable} as a cause, if the task threw another type of {@link Throwable}.
+     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
+     *         {@link Throwable}.
      */
-    private <T> T executeOnEventLoop(Callable<T> c) throws Exception {
-        RunnableFuture<T> task = new FutureTask<T>(c);
-        executor().execute(task);
+    <T> T executeOnEventLoop(Callable<T> c) throws Exception {
+        return getFromFuture(executor().submit(c));
+    }
 
+    /**
+     * Executes a task on the event loop and waits for it to finish.  If the task is interrupted, then the
+     * current thread will be interrupted.  It is expected that the task performs any appropriate locking.
+     * <p>
+     * If the {@link Runnable#run()} call throws a {@link Throwable}, but it is not an instance of
+     * {@link Error} or {@link RuntimeException}, then it is wrapped inside a
+     * {@link ChannelPipelineException} and that is thrown instead.</p>
+     *
+     * @param r execute this runnable
+     * @see Runnable#run()
+     * @see Future#get()
+     * @throws Error if the task threw this.
+     * @throws RuntimeException if the task threw this.
+     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
+     *         {@link Throwable}.
+     */
+    void executeOnEventLoop(Runnable r) {
+        waitForFuture(executor().submit(r));
+    }
+
+    /**
+     * Waits for a future to finish and gets the result.  If the task is interrupted, then the current thread
+     * will be interrupted and this will return {@code null}. It is expected that the task performs any
+     * appropriate locking.
+     * <p>
+     * If the internal call throws a {@link Throwable}, but it is not an instance of {@link Error},
+     * {@link RuntimeException}, or {@link Exception}, then it is wrapped inside an {@link AssertionError}
+     * and that is thrown instead.</p>
+     *
+     * @param future wait for this future
+     * @param <T> the return value type
+     * @return the task's return value, or {@code null} if the task was interrupted.
+     * @see Future#get()
+     * @throws Error if the task threw this.
+     * @throws RuntimeException if the task threw this.
+     * @throws Exception if the task threw this.
+     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
+     *         {@link Throwable}.
+     */
+    <T> T getFromFuture(Future<T> future) throws Exception {
         try {
-            return task.get();
+            return future.get();
         } catch (ExecutionException ex) {
             // In the arbitrary case, we can throw Error, RuntimeException, and Exception
 
             Throwable t = ex.getCause();
-            if (t instanceof Error) throw (Error)t;
-            if (t instanceof RuntimeException) throw (RuntimeException)t;
-            if (t instanceof Exception) throw (Exception)t;
-            throw new AssertionError(t);
+            if (t instanceof Error) { throw (Error) t; }
+            if (t instanceof RuntimeException) { throw (RuntimeException) t; }
+            if (t instanceof Exception) { throw (Exception) t; }
+            throw new ChannelPipelineException(t);
         } catch (InterruptedException ex) {
             // Interrupt the calling thread (note that this method is not called from the event loop)
 
             Thread.currentThread().interrupt();
             return null;
+        }
+    }
+
+    /**
+     * Waits for a future to finish.  If the task is interrupted, then the current thread will be interrupted.
+     * It is expected that the task performs any appropriate locking.
+     * <p>
+     * If the internal call throws a {@link Throwable}, but it is not an instance of {@link Error} or
+     * {@link RuntimeException}, then it is wrapped inside a {@link ChannelPipelineException} and that is
+     * thrown instead.</p>
+     *
+     * @param future wait for this future
+     * @see Future#get()
+     * @throws Error if the task threw this.
+     * @throws RuntimeException if the task threw this.
+     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
+     *         {@link Throwable}.
+     */
+    void waitForFuture(Future future) {
+        try {
+            future.get();
+        } catch (ExecutionException ex) {
+            // In the arbitrary case, we can throw Error, RuntimeException, and Exception
+
+            Throwable t = ex.getCause();
+            if (t instanceof Error) { throw (Error) t; }
+            if (t instanceof RuntimeException) { throw (RuntimeException) t; }
+            throw new ChannelPipelineException(t);
+        } catch (InterruptedException ex) {
+            // Interrupt the calling thread (note that this method is not called from the event loop)
+
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -534,7 +611,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         MessageBuf<T> currentInboundMsgBuf = inboundMessageBuffer();
 
-        this.inMsgBuf = (MessageBuf<Object>)newInboundMsgBuf;
+        this.inMsgBuf = (MessageBuf<Object>) newInboundMsgBuf;
         return currentInboundMsgBuf;
     }
 
@@ -585,7 +662,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         MessageBuf<T> currentOutboundMsgBuf = outboundMessageBuffer();
 
-        this.outMsgBuf = (MessageBuf<Object>)newOutboundMsgBuf;
+        this.outMsgBuf = (MessageBuf<Object>) newOutboundMsgBuf;
         return currentOutboundMsgBuf;
     }
 
