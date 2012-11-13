@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureNotifier;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -151,6 +152,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             }
         }
 
+        ChannelFuture handshakeFuture = channel.newFuture();
         ChannelFuture future = channel.write(request);
 
         future.addListener(new ChannelFutureListener() {
@@ -162,8 +164,9 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
                         "ws-encoder", new WebSocket08FrameEncoder(true));
             }
         });
+        future.addListener(new ChannelFutureNotifier(handshakeFuture));
 
-        return future;
+        return handshakeFuture;
     }
 
     /**

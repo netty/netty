@@ -19,6 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFutureNotifier;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -172,6 +173,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         request.setContent(Unpooled.copiedBuffer(key3));
 
+        ChannelFuture handshakeFuture = channel.newFuture();
         ChannelFuture future = channel.write(request);
 
         future.addListener(new ChannelFutureListener() {
@@ -183,8 +185,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                         "ws-encoder", new WebSocket00FrameEncoder());
             }
         });
+        future.addListener(new ChannelFutureNotifier(handshakeFuture));
 
-        return future;
+        return handshakeFuture;
     }
 
     /**
