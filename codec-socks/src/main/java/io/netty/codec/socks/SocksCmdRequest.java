@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import sun.net.util.IPAddressUtil;
 
+import java.net.IDN;
+
 public final class SocksCmdRequest extends SocksRequest {
     private final CmdType cmdType;
     private final AddressType addressType;
@@ -27,9 +29,31 @@ public final class SocksCmdRequest extends SocksRequest {
 
     public SocksCmdRequest(CmdType cmdType, AddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
+        switch (addressType) {
+            case IPv4:
+                if (!IPAddressUtil.isIPv4LiteralAddress(host)) {
+                    throw new IllegalArgumentException(host + " is not a valid IPv4 address");
+                }
+                break;
+            case DOMAIN:
+                if (IDN.toASCII(host).length() > 255) {
+                    throw new IllegalArgumentException(host + " IDN: " + IDN.toASCII(host) + " exceeds 255 char limit");
+                }
+                break;
+            case IPv6:
+                if (!IPAddressUtil.isIPv6LiteralAddress(host)) {
+                    throw new IllegalArgumentException(host + " is not a valid IPv6 address");
+                }
+                break;
+            case UNKNOWN:
+                break;
+        }
+        if ((port < 0) && (port >= 65535)) {
+            throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
+        }
         this.cmdType = cmdType;
         this.addressType = addressType;
-        this.host = host;
+        this.host = IDN.toASCII(host);
         this.port = port;
     }
 
@@ -42,7 +66,7 @@ public final class SocksCmdRequest extends SocksRequest {
     }
 
     public String getHost() {
-        return host;
+        return IDN.toUnicode(host);
     }
 
     public int getPort() {

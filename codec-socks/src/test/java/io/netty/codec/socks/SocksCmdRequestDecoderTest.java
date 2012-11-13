@@ -26,7 +26,7 @@ public class SocksCmdRequestDecoderTest {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksCmdRequestDecoderTest.class);
 
     private void testSocksCmdRequestDecoderWithDifferentParams(SocksMessage.CmdType cmdType, SocksMessage.AddressType addressType, String host, int port) {
-        logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
+        logger.info("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
         SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
@@ -71,7 +71,18 @@ public class SocksCmdRequestDecoderTest {
 
     @Test
     public void testCmdRequestDecoderDomain() {
-        String[] hosts = {"google.com"};
+        String[] hosts = {"google.com" ,
+                          "مثال.إختبار",
+                          "παράδειγμα.δοκιμή",
+                          "مثال.آزمایشی",
+                          "пример.испытание",
+                          "בײַשפּיל.טעסט",
+                          "例子.测试",
+                          "例子.測試",
+                          "उदाहरण.परीक्षा",
+                          "例え.テスト",
+                          "실례.테스트",
+                          "உதாரணம்.பரிட்சை"};
         int[] ports = {0, 32769, 65535};
         for (SocksMessage.CmdType cmdType : SocksMessage.CmdType.values()) {
             for (String host : hosts) {

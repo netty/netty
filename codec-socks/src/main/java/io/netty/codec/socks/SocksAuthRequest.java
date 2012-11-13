@@ -18,12 +18,25 @@ package io.netty.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
+import java.nio.charset.CharsetEncoder;
+
 public final class SocksAuthRequest extends SocksRequest {
+    private static final CharsetEncoder asciiEncoder = CharsetUtil.getEncoder(CharsetUtil.US_ASCII);
     private final String username;
     private final String password;
 
     public SocksAuthRequest(String username, String password) {
         super(SocksRequestType.AUTH);
+        if (!asciiEncoder.canEncode(username) || !asciiEncoder.canEncode(password)) {
+            throw new IllegalArgumentException(" username: " + username + " or password: " + password +
+                                               " values should be in pure ascii");
+        }
+        if (username.length() > 255) {
+            throw new IllegalArgumentException(username + " exceeds 255 char limit");
+        }
+        if (password.length() > 255) {
+            throw new IllegalArgumentException(password + " exceeds 255 char limit");
+        }
         this.username = username;
         this.password = password;
     }
