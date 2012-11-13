@@ -20,7 +20,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelFutureNotifier;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.DefaultChannelFuture;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
@@ -182,9 +181,14 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.getChannel().getPipeline();
                 p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
+
+                if (future.isSuccess()) {
+                    handshakeFuture.setSuccess();
+                } else {
+                    handshakeFuture.setFailure(future.getCause());
+                }
             }
         });
-        future.addListener(new ChannelFutureNotifier(handshakeFuture));
 
         return handshakeFuture;
     }
