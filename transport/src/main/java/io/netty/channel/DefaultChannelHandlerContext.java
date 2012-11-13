@@ -567,7 +567,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf replaceInboundByteBuffer(final ByteBuf newInboundByteBuf) {
         if (newInboundByteBuf == null) {
-            throw new NullPointerException();
+            throw new NullPointerException("newInboundByteBuf");
         }
 
         if (!executor().inEventLoop()) {
@@ -593,7 +593,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> replaceInboundMessageBuffer(final MessageBuf<T> newInboundMsgBuf) {
         if (newInboundMsgBuf == null) {
-            throw new NullPointerException();
+            throw new NullPointerException("newInboundMsgBuf");
         }
 
         if (!executor().inEventLoop()) {
@@ -618,7 +618,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf replaceOutboundByteBuffer(final ByteBuf newOutboundByteBuf) {
         if (newOutboundByteBuf == null) {
-            throw new NullPointerException();
+            throw new NullPointerException("newOutboundByteBuf");
         }
 
         if (!executor().inEventLoop()) {
@@ -644,7 +644,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> replaceOutboundMessageBuffer(final MessageBuf<T> newOutboundMsgBuf) {
         if (newOutboundMsgBuf == null) {
-            throw new NullPointerException();
+            throw new NullPointerException("newOutboundMsgBuf");
         }
 
         if (!executor().inEventLoop()) {
