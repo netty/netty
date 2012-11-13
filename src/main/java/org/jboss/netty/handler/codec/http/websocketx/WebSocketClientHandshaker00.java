@@ -20,7 +20,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelFutureNotifier;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.DefaultChannelFuture;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
@@ -188,19 +187,24 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                 request.addHeader(e.getKey(), e.getValue());
             }
         }
-
+        request.setHeader(Names.CONTENT_LENGTH, key3.length);
         request.setContent(ChannelBuffers.copiedBuffer(key3));
 
-        ChannelFuture handshakeFuture = new DefaultChannelFuture(channel, false);
+        final ChannelFuture handshakeFuture = new DefaultChannelFuture(channel, false);
         ChannelFuture future = channel.write(request);
 
         future.addListener(new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.getChannel().getPipeline();
                 p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
+
+                if (future.isSuccess()) {
+                    handshakeFuture.setSuccess();
+                } else {
+                    handshakeFuture.setFailure(future.getCause());
+                }
             }
         });
-        future.addListener(new ChannelFutureNotifier(handshakeFuture));
 
         return handshakeFuture;
     }
