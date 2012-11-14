@@ -170,6 +170,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             }
         }
 
+        // Set Content-Length to workaround some known defect.
+        // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
+        request.setHeader(Names.CONTENT_LENGTH, key3.length);
         request.setContent(Unpooled.copiedBuffer(key3));
 
         final ChannelFuture handshakeFuture = channel.newFuture();
