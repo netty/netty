@@ -19,6 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 
+/**
+ * Decodes {@link ByteBuf}s into {@link SocksAuthResponse}.
+ */
 public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksResponse, SocksAuthResponseDecoder.State> {
     private static final String name = "SOCKS_AUTH_RESPONSE_DECODER";
 

@@ -20,6 +20,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.CharsetUtil;
 
+/**
+ * Decodes {@link ByteBuf}s into {@link SocksCmdResponse}.
+ */
 public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, SocksCmdResponseDecoder.State> {
     private static final String name = "SOCKS_CMD_RESPONSE_DECODER";
 
