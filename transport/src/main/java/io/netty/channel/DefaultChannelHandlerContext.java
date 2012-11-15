@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.DefaultChannelPipeline.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufPool;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
@@ -33,6 +33,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static io.netty.channel.DefaultChannelPipeline.*;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
 
@@ -330,6 +332,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelPipeline pipeline() {
         return pipeline;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return channel.config().getBufferPool();
     }
 
     @Override

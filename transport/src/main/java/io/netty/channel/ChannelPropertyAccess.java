@@ -15,11 +15,17 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufPool;
+
 /**
  * Factory which is responsible to create new {@link ChannelFuture}'s
  *
  */
-public interface ChannelFutureFactory {
+interface ChannelPropertyAccess {
+
+    ChannelPipeline pipeline();
+
+    ByteBufPool pool();
 
     /**
      * Create a new {@link ChannelFuture}

@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufPool;
+import io.netty.buffer.Pooled;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
@@ -30,12 +32,13 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    private volatile ByteBufPool bufferPool = Pooled.globalPool();
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, BUFFER_POOL);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -79,6 +82,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
         }
+        if (option == BUFFER_POOL) {
+            return (T) getBufferPool();
+        }
 
         return null;
     }
@@ -91,6 +97,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setConnectTimeoutMillis((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
+        } else if (option == BUFFER_POOL) {
+            setBufferPool((ByteBufPool) value);
         } else {
             return false;
         }
@@ -131,5 +139,18 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "writeSpinCount must be a positive integer.");
         }
         this.writeSpinCount = writeSpinCount;
+    }
+
+    @Override
+    public ByteBufPool getBufferPool() {
+        return bufferPool;
+    }
+
+    @Override
+    public void setBufferPool(ByteBufPool bufferPool) {
+        if (bufferPool == null) {
+            throw new NullPointerException("bufferPool");
+        }
+        this.bufferPool = bufferPool;
     }
 }
