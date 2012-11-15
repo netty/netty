@@ -32,7 +32,10 @@ public final class SocksInitRequest extends SocksRequest {
         super(SocksRequestType.INIT);
         this.authSchemes = authSchemes;
     }
-
+    /**
+     * Returns the List<{@link AuthScheme}> of this {@link SocksInitRequest}
+     * @return The List<{@link AuthScheme}> of this {@link SocksInitRequest}
+     */
     public List<AuthScheme> getAuthSchemes() {
         return Collections.unmodifiableList(authSchemes);
     }

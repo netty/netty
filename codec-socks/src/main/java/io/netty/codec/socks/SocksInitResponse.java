@@ -29,7 +29,10 @@ public final class SocksInitResponse extends SocksResponse {
         super(SocksResponseType.INIT);
         this.authScheme = authScheme;
     }
-
+    /**
+     * Returns the {@link AuthScheme} of this {@link SocksInitResponse}
+     * @return The {@link AuthScheme} of this {@link SocksInitResponse}
+     */
     public AuthScheme getAuthScheme() {
         return authScheme;
     }

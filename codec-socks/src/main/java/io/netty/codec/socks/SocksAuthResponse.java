@@ -30,7 +30,10 @@ public final class SocksAuthResponse extends SocksResponse {
         super(SocksResponseType.AUTH);
         this.authStatus = authStatus;
     }
-
+    /**
+     * Returns the {@link AuthStatus} of this {@link SocksAuthResponse}
+     * @return The {@link AuthStatus} of this {@link SocksAuthResponse}
+     */
     public AuthStatus getAuthStatus() {
         return authStatus;
     }

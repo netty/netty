@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
  */
 public final class SocksCmdResponse extends SocksResponse {
     private final CmdStatus cmdStatus;
+
     private final AddressType addressType;
     // All arrays are initialized on construction time to 0/false/null remove array Initialization
     private static final byte[] IPv4_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00};
@@ -36,9 +37,19 @@ public final class SocksCmdResponse extends SocksResponse {
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
     }
-
+    /**
+     * Returns the {@link CmdStatus} of this {@link SocksCmdResponse}
+     * @return The {@link CmdStatus} of this {@link SocksCmdResponse}
+     */
     public CmdStatus getCmdStatus() {
         return cmdStatus;
+    }
+    /**
+     * Returns the {@link AddressType} of this {@link SocksCmdResponse}
+     * @return The {@link AddressType} of this {@link SocksCmdResponse}
+     */
+    public AddressType getAddressType() {
+        return addressType;
     }
 
     @Override

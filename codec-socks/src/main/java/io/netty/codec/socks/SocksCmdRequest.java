@@ -65,19 +65,31 @@ public final class SocksCmdRequest extends SocksRequest {
         this.host = IDN.toASCII(host);
         this.port = port;
     }
-
+    /**
+     * Returns the {@link CmdType} of this {@link SocksCmdRequest}
+     * @return The {@link CmdType} of this {@link SocksCmdRequest}
+     */
     public CmdType getCmdType() {
         return cmdType;
     }
-
+    /**
+     * Returns the {@link AddressType} of this {@link SocksCmdRequest}
+     * @return The {@link AddressType} of this {@link SocksCmdRequest}
+     */
     public AddressType getAddressType() {
         return addressType;
     }
-
+    /**
+     * Returns host that is used as a parameter in {@link CmdType}
+     * @return host that is used as a parameter in {@link CmdType}
+     */
     public String getHost() {
         return IDN.toUnicode(host);
     }
-
+    /**
+     * Returns port that is used as a parameter in {@link CmdType}
+     * @return port that is used as a parameter in {@link CmdType}
+     */
     public int getPort() {
         return port;
     }

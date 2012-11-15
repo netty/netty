@@ -52,11 +52,17 @@ public final class SocksAuthRequest extends SocksRequest {
         this.username = username;
         this.password = password;
     }
-
+    /**
+     * Returns username that needs to be authenticated
+     * @return username that needs to be authenticated
+     */
     public String getUsername() {
         return username;
     }
-
+    /**
+     * Returns password that needs to be validated
+     * @return password that needs to be validated
+     */
     public String getPassword() {
         return password;
     }
