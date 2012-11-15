@@ -243,19 +243,19 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (Values.WEBSOCKET.equals(upgrade)) {
+        if (!Values.WEBSOCKET.equals(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
-                    + response.getHeader(Names.UPGRADE));
+                    + upgrade);
         }
 
         String connection = response.getHeader(Names.CONNECTION);
-        if (Values.UPGRADE.equals(connection)) {
+        if (!Values.UPGRADE.equals(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + response.getHeader(Names.CONNECTION));
+                    + connection);
         }
 
         ChannelBuffer challenge = response.getContent();
-        if (challenge.equals(expectedChallengeResponseBytes)) {
+        if (!challenge.equals(expectedChallengeResponseBytes)) {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
 
