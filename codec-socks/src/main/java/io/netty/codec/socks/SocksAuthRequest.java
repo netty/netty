@@ -20,6 +20,12 @@ import io.netty.util.CharsetUtil;
 
 import java.nio.charset.CharsetEncoder;
 
+
+/**
+ * An socks auth request.
+ * @see SocksAuthResponse
+ * @see SocksAuthRequestDecoder
+ */
 public final class SocksAuthRequest extends SocksRequest {
     private static final CharsetEncoder asciiEncoder = CharsetUtil.getEncoder(CharsetUtil.US_ASCII);
     private final String username;

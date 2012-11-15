@@ -17,6 +17,13 @@ package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * An abstract class that defines a SocksMessage, providing common properties for
+ * {@link SocksRequest} and {@link SocksResponse}.
+ * @see SocksRequest
+ * @see SocksResponse
+ */
+
 public abstract class SocksMessage {
     private final MessageType messageType;
     private final ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
@@ -25,6 +32,10 @@ public abstract class SocksMessage {
         this.messageType = messageType;
     }
 
+    /**
+     * Returns the {@link MessageType} of this {@link SocksMessage}
+     * @return The {@link MessageType} of this {@link SocksMessage}
+     */
     public MessageType getMessageType() {
         return messageType;
     }
@@ -141,7 +152,7 @@ public abstract class SocksMessage {
     }
 
     public enum CmdStatus {
-
+        
         SUCCESS((byte) 0x00),
         FAILURE((byte) 0x01),
         FORBIDDEN((byte) 0x02),
@@ -198,10 +209,18 @@ public abstract class SocksMessage {
         }
     }
 
-
+    /**
+     * Returns the {@link ProtocolVersion} of this {@link SocksMessage}
+     * @return The {@link ProtocolVersion} of this {@link SocksMessage}
+     */
     public ProtocolVersion getProtocolVersion() {
         return protocolVersion;
     }
 
+    /**
+     * Encode socks message into its byte representation and write it into byteBuf
+     * @see ByteBuf
+     * @param byteBuf
+     */
     public abstract void encodeAsByteBuf(ByteBuf byteBuf);
 }

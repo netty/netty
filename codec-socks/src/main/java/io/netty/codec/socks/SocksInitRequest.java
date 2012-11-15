@@ -20,6 +20,11 @@ import io.netty.buffer.ByteBuf;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * An socks init request.
+ * @see SocksInitResponse
+ * @see SocksInitRequestDecoder
+ */
 public final class SocksInitRequest extends SocksRequest {
     private final List<AuthScheme> authSchemes;
 

@@ -17,6 +17,11 @@ package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * An unknown socks message.
+ * @see UnknownSocksRequest
+ * @see UnknownSocksResponse
+ */
 public final class UnknownSocksMessage extends SocksMessage {
 
     public UnknownSocksMessage() {

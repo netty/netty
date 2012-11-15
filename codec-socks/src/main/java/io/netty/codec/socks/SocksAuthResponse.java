@@ -17,6 +17,11 @@ package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * An socks auth response.
+ * @see SocksAuthRequest
+ * @see SocksAuthResponseDecoder
+ */
 public final class SocksAuthResponse extends SocksResponse {
 
     private final AuthStatus authStatus;

@@ -15,6 +15,14 @@
  */
 package io.netty.codec.socks;
 
+/**
+ * An abstract class that defines a SocksResponse, providing common properties for
+ * {@link SocksInitResponse}, {@link SocksAuthResponse}, {@link SocksCmdResponse} and {@link UnknownSocksResponse}.
+ * @see SocksInitResponse
+ * @see SocksAuthResponse
+ * @see SocksCmdResponse
+ * @see UnknownSocksResponse
+ */
 public abstract class SocksResponse extends SocksMessage {
     private final SocksResponseType socksResponseType;
 
@@ -23,10 +31,16 @@ public abstract class SocksResponse extends SocksMessage {
         this.socksResponseType = socksResponseType;
     }
 
+    /**
+     * Returns socks response type
+     * @return socks response type
+     */
     public SocksResponseType getSocksResponseType() {
         return socksResponseType;
     }
-
+    /**
+     * Type of socks response
+     */
     public enum SocksResponseType {
         INIT,
         AUTH,

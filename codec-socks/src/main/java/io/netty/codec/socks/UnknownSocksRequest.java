@@ -17,6 +17,12 @@ package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * An unknown socks request.
+ * @see SocksInitRequestDecoder
+ * @see SocksAuthRequestDecoder
+ * @see SocksCmdRequestDecoder
+ */
 public final class UnknownSocksRequest extends SocksRequest {
 
     public UnknownSocksRequest() {

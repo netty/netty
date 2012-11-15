@@ -16,7 +16,11 @@
 package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-
+/**
+ * An socks cmd response.
+ * @see SocksCmdRequest
+ * @see SocksCmdResponseDecoder
+ */
 public final class SocksCmdResponse extends SocksResponse {
     private final CmdStatus cmdStatus;
     private final AddressType addressType;

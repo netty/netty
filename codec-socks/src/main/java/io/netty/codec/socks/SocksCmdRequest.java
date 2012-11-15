@@ -21,6 +21,12 @@ import sun.net.util.IPAddressUtil;
 
 import java.net.IDN;
 
+
+/**
+ * An socks cmd request.
+ * @see SocksCmdResponse
+ * @see SocksCmdRequestDecoder
+ */
 public final class SocksCmdRequest extends SocksRequest {
     private final CmdType cmdType;
     private final AddressType addressType;
