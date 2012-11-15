@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.UniqueName;
 
 import java.net.InetAddress;
@@ -28,6 +29,7 @@ public class ChannelOption<T> extends UniqueName {
 
     private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
 
+    public static final ChannelOption<ByteBufAllocator> ALLOCATOR = new ChannelOption<ByteBufAllocator>("ALLOCATOR");
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT =

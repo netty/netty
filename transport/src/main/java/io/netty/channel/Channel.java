@@ -106,7 +106,7 @@ import java.nio.channels.SelectionKey;
  *
  * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
-public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFutureFactory, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
      * Returns the unique integer ID of this channel.
@@ -130,12 +130,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      * Returns the configuration of this channel.
      */
     ChannelConfig config();
-
-    /**
-     * Returns the {@link ChannelPipeline} which handles {@link ChannelEvent}s
-     * associated with this channel.
-     */
-    ChannelPipeline pipeline();
 
     boolean isOpen();
     boolean isRegistered();

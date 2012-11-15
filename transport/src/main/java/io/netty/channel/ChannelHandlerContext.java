@@ -126,18 +126,13 @@ import java.util.Set;
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext
-         extends AttributeMap, ChannelFutureFactory,
+         extends AttributeMap, ChannelPropertyAccess,
                  ChannelInboundInvoker, ChannelOutboundInvoker {
 
     /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
      */
     Channel channel();
-
-    /**
-     * Return the {@link ChannelPipeline} which belongs this {@link ChannelHandlerContext}.
-     */
-    ChannelPipeline pipeline();
 
     /**
      * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly

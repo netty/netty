@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
@@ -28,14 +30,16 @@ import static io.netty.channel.ChannelOption.*;
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
+    private static final ByteBufAllocator DEFAULT_ALLOCATOR = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -79,6 +83,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
         }
+        if (option == ALLOCATOR) {
+            return (T) getAllocator();
+        }
 
         return null;
     }
@@ -91,6 +98,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setConnectTimeoutMillis((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
+        } else if (option == ALLOCATOR) {
+            setAllocator((ByteBufAllocator) value);
         } else {
             return false;
         }
@@ -131,5 +140,20 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "writeSpinCount must be a positive integer.");
         }
         this.writeSpinCount = writeSpinCount;
+    }
+
+    @Override
+    public ByteBufAllocator getAllocator() {
+        return allocator;
+    }
+
+    @Override
+    public ByteBufAllocator setAllocator(ByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+        ByteBufAllocator oldAllocator = this.allocator;
+        this.allocator = allocator;
+        return oldAllocator;
     }
 }

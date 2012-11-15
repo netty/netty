@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -358,7 +359,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private DefaultChannelHandlerContext remove(final DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext context;
-        Future future;
+        Future<?> future;
 
         synchronized (this) {
             if (head == tail) {
@@ -407,7 +408,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        context.waitForFuture(future);
+        waitForFuture(future);
 
         return context;
     }
@@ -497,9 +498,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private ChannelHandler replace(
             final DefaultChannelHandlerContext ctx, final String newName, ChannelHandler newHandler) {
-        Future future;
-        DefaultChannelHandlerContext context;
-
+        Future<?> future;
         synchronized (this) {
             if (ctx == head) {
                 throw new IllegalArgumentException();
@@ -528,7 +527,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 }
                             }
                         });
-                    context = oldTail;
                 }
 
             } else {
@@ -555,7 +553,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 }
                             }
                         });
-                    context = newCtx;
                 }
             }
         }
@@ -563,7 +560,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        context.waitForFuture(future);
+        waitForFuture(future);
 
         return ctx.handler();
     }
@@ -866,33 +863,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return nextOutboundByteBuffer(tail);
     }
 
-    static boolean hasNextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
-        for (;;) {
-            if (ctx == null) {
-                return false;
-            }
-
-            if (ctx.outByteBridge != null) {
-                return true;
-            }
-            ctx = ctx.prev;
-        }
-    }
-
-    static boolean hasNextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
-        for (;;) {
-            if (ctx == null) {
-                return false;
-            }
-
-            if (ctx.outMsgBridge != null) {
-                return true;
-            }
-            ctx = ctx.prev;
-        }
-    }
-
-    static ByteBuf nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
+    ByteBuf nextOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
         final DefaultChannelHandlerContext initialCtx = ctx;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
@@ -910,13 +881,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
             }
 
-            if (ctx.outByteBuf != null) {
+            if (ctx.hasOutboundByteBuffer()) {
                 if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.outByteBuf;
+                    return ctx.outboundByteBuffer();
                 } else {
                     ByteBridge bridge = ctx.outByteBridge.get();
                     if (bridge == null) {
-                        bridge = new ByteBridge();
+                        bridge = new ByteBridge(ctx);
                         if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.outByteBridge.get();
                         }
@@ -928,7 +899,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    static MessageBuf<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
+    MessageBuf<Object> nextOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
         final DefaultChannelHandlerContext initialCtx = ctx;
         final Thread currentThread = Thread.currentThread();
         for (;;) {
@@ -946,9 +917,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
             }
 
-            if (ctx.outMsgBuf != null) {
+            if (ctx.hasOutboundMessageBuffer()) {
                 if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.outMsgBuf;
+                    return ctx.outboundMessageBuffer();
                 } else {
                     MessageBridge bridge = ctx.outMsgBridge.get();
                     if (bridge == null) {
@@ -972,6 +943,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public void fireChannelUnregistered() {
         head.fireChannelUnregistered();
+
+        // Free all buffers if channel is closed and unregistered.
+        if (!channel.isOpen()) {
+            head.callFreeInboundBuffer();
+        }
     }
 
     @Override
@@ -1232,8 +1208,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             notifyHandlerException(t);
         } finally {
-            if (ctx.outByteBuf != null) {
-                ByteBuf buf = ctx.outByteBuf;
+            if (ctx.hasOutboundByteBuffer()) {
+                ByteBuf buf = ctx.outboundByteBuffer();
                 if (!buf.readable()) {
                     buf.discardReadBytes();
                 }
@@ -1289,10 +1265,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         if (executor.inEventLoop()) {
             if (msgBuf) {
-                ctx.outMsgBuf.add(message);
+                ctx.outboundMessageBuffer().add(message);
             } else {
                 ByteBuf buf = (ByteBuf) message;
-                ctx.outByteBuf.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+                ctx.outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
             }
             flush0(ctx, future);
             return future;
@@ -1325,12 +1301,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private DefaultChannelHandlerContext firstContext(int direction) {
+    DefaultChannelHandlerContext firstContext(int direction) {
         assert direction == DIR_INBOUND || direction == DIR_OUTBOUND;
-        if (direction > 0) {
-            return nextContext(head.next, direction);
-        } else {
-            return nextContext(tail, direction);
+        if (direction == DIR_INBOUND) {
+            return nextContext(head.next, DIR_INBOUND);
+        } else { // DIR_OUTBOUND
+            return nextContext(tail, DIR_OUTBOUND);
         }
     }
 
@@ -1342,15 +1318,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         DefaultChannelHandlerContext realCtx = ctx;
-        if (direction > 0) {
-            while ((realCtx.directions & direction) == 0) {
+        if (direction == DIR_INBOUND) {
+            while ((realCtx.flags & DIR_INBOUND) == 0) {
                 realCtx = realCtx.next;
                 if (realCtx == null) {
                     return null;
                 }
             }
-        } else {
-            while ((realCtx.directions & direction) == 0) {
+        } else { // DIR_OUTBOUND
+            while ((realCtx.flags & DIR_OUTBOUND) == 0) {
                 realCtx = realCtx.prev;
                 if (realCtx == null) {
                     return null;
@@ -1448,12 +1424,18 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.metadata().bufferType()) {
             case BYTE:
-                // TODO: Use a direct buffer once buffer pooling is implemented.
-                return Unpooled.buffer();
+                return ctx.alloc().ioBuffer();
             case MESSAGE:
                 return Unpooled.messageBuffer();
             default:
                 throw new Error();
+            }
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+            if (buf instanceof UnsafeByteBuf) {
+                ((UnsafeByteBuf) buf).free();
             }
         }
 

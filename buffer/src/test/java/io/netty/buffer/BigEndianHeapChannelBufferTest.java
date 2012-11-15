@@ -15,9 +15,9 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests big-endian heap channel buffers
@@ -39,7 +39,12 @@ public class BigEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
     }
 
     @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new HeapByteBuf(null, 0);
+    public void shouldNotAllowNullInConstructor1() {
+        new UnpooledHeapByteBuf(null, new byte[1], 0);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor2() {
+        new UnpooledHeapByteBuf(UnpooledByteBufAllocator.HEAP_BY_DEFAULT, null, 0);
     }
 }

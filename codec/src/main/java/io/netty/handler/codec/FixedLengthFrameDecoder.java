@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -68,7 +67,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         if (allocateFullBuffer) {
-            return Unpooled.buffer(frameLength);
+            return ctx.alloc().buffer(frameLength);
         } else {
             return super.newInboundBuffer(ctx);
         }

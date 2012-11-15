@@ -17,7 +17,8 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
@@ -32,6 +33,10 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DetectionUtil;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -43,11 +48,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.Status;
-import javax.net.ssl.SSLException;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -376,12 +376,22 @@ public class SslHandler
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.buffer();
+        return ctx.alloc().buffer();
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.buffer();
+        return ctx.alloc().buffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        ((UnsafeByteBuf) buf).free();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        ((UnsafeByteBuf) buf).free();
     }
 
     @Override
@@ -401,7 +411,7 @@ public class SslHandler
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        out.unsafe().discardSomeReadBytes();
+        ((UnsafeByteBuf) out).discardSomeReadBytes();
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -473,7 +483,7 @@ public class SslHandler
             setHandshakeFailure(e);
             throw e;
         } finally {
-            in.unsafe().discardSomeReadBytes();
+            ((UnsafeByteBuf) in).discardSomeReadBytes();
             flush0(ctx, bytesConsumed);
         }
     }

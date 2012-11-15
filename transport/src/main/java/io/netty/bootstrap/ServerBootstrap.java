@@ -15,6 +15,7 @@
  */
 package io.netty.bootstrap;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -227,6 +228,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         @Override
         public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            // Nothing to free
         }
 
         @SuppressWarnings("unchecked")

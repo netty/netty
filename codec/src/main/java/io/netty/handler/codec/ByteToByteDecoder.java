@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
@@ -70,7 +71,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
             }
         }
 
-        in.unsafe().discardSomeReadBytes();
+        ((UnsafeByteBuf) in).discardSomeReadBytes();
         if (out.readableBytes() > oldOutSize) {
             ctx.fireInboundBufferUpdated();
         }
