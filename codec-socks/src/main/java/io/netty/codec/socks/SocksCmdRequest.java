@@ -21,7 +21,6 @@ import sun.net.util.IPAddressUtil;
 
 import java.net.IDN;
 
-
 /**
  * An socks cmd request.
  *

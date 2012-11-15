@@ -20,7 +20,6 @@ import io.netty.util.CharsetUtil;
 
 import java.nio.charset.CharsetEncoder;
 
-
 /**
  * An socks auth request.
  *
