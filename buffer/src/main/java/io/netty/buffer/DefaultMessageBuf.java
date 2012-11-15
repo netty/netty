@@ -33,11 +33,6 @@ public class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T>
     }
 
     @Override
-    public boolean isPooled() {
-        return false;
-    }
-
-    @Override
     public ChannelBufType type() {
         return ChannelBufType.MESSAGE;
     }

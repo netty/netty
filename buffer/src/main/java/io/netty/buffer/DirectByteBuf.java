@@ -33,7 +33,7 @@ import java.nio.channels.ScatteringByteChannel;
  * constructor explicitly.
  */
 @SuppressWarnings("restriction")
-public class DirectByteBuf extends AbstractByteBuf {
+public class DirectByteBuf extends AbstractNonWrappedByteBuf {
 
     private static final Field CLEANER_FIELD;
 
@@ -61,11 +61,9 @@ public class DirectByteBuf extends AbstractByteBuf {
         }
     }
 
-    private final Unsafe unsafe = new DirectUnsafe();
-
     private boolean doNotFree;
     private ByteBuffer buffer;
-    private ByteBuffer tmpBuf;
+    private ByteBuffer tmpNioBuf;
     private int capacity;
 
     /**
@@ -130,8 +128,21 @@ public class DirectByteBuf extends AbstractByteBuf {
         }
 
         this.buffer = buffer;
-        tmpBuf = buffer.duplicate();
+        tmpNioBuf = null;
         capacity = buffer.remaining();
+    }
+
+    private ByteBuffer tmpNioBuf() {
+        ByteBuffer tmpNioBuf = this.tmpNioBuf;
+        if (tmpNioBuf == null) {
+            this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
+        }
+        return tmpNioBuf;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return null;
     }
 
     @Override
@@ -225,7 +236,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         if (dst instanceof DirectByteBuf) {
             DirectByteBuf bbdst = (DirectByteBuf) dst;
-            ByteBuffer data = bbdst.tmpBuf;
+            ByteBuffer data = bbdst.tmpNioBuf();
             data.clear().position(dstIndex).limit(dstIndex + length);
             getBytes(index, data);
         } else if (buffer.hasArray()) {
@@ -238,6 +249,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+        ByteBuffer tmpBuf = tmpNioBuf();
         try {
             tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
@@ -251,6 +263,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
+        ByteBuffer tmpBuf = tmpNioBuf();
         try {
             tmpBuf.clear().position(index).limit(index + bytesToCopy);
         } catch (IllegalArgumentException e) {
@@ -297,7 +310,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         if (src instanceof DirectByteBuf) {
             DirectByteBuf bbsrc = (DirectByteBuf) src;
-            ByteBuffer data = bbsrc.tmpBuf;
+            ByteBuffer data = bbsrc.tmpNioBuf();
 
             data.clear().position(srcIndex).limit(srcIndex + length);
             setBytes(index, data);
@@ -311,6 +324,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+        ByteBuffer tmpBuf = tmpNioBuf();
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);
         return this;
@@ -318,6 +332,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
+        ByteBuffer tmpBuf = tmpNioBuf();
         if (src == tmpBuf) {
             src = src.duplicate();
         }
@@ -337,6 +352,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             out.write(buffer.array(), index + buffer.arrayOffset(), length);
         } else {
             byte[] tmp = new byte[length];
+            ByteBuffer tmpBuf = tmpNioBuf();
             tmpBuf.clear().position(index);
             tmpBuf.get(tmp);
             out.write(tmp);
@@ -350,6 +366,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             return 0;
         }
 
+        ByteBuffer tmpBuf = tmpNioBuf();
         tmpBuf.clear().position(index).limit(index + length);
         return out.write(tmpBuf);
     }
@@ -362,17 +379,19 @@ public class DirectByteBuf extends AbstractByteBuf {
         } else {
             byte[] tmp = new byte[length];
             int readBytes = in.read(tmp);
-            tmpBuf.clear().position(index);
-            tmpBuf.put(tmp);
+            ByteBuffer tmpNioBuf = tmpNioBuf();
+            tmpNioBuf.clear().position(index);
+            tmpNioBuf.put(tmp);
             return readBytes;
         }
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        tmpBuf.clear().position(index).limit(index + length);
+        ByteBuffer tmpNioBuf = tmpNioBuf();
+        tmpNioBuf.clear().position(index).limit(index + length);
         try {
-            return in.read(tmpBuf);
+            return in.read(tmpNioBuf);
         } catch (ClosedChannelException e) {
             return -1;
         }
@@ -388,7 +407,7 @@ public class DirectByteBuf extends AbstractByteBuf {
         if (index == 0 && length == capacity()) {
             return buffer.duplicate();
         } else {
-            return ((ByteBuffer) tmpBuf.clear().position(index).limit(index + length)).slice();
+            return ((ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length)).slice();
         }
     }
 
@@ -406,7 +425,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf copy(int index, int length) {
         ByteBuffer src;
         try {
-            src = (ByteBuffer) tmpBuf.clear().position(index).limit(index + length);
+            src = (ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
@@ -420,14 +439,14 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    protected Unsafe newUnsafe() {
+        return new DirectUnsafe();
     }
 
     private class DirectUnsafe implements Unsafe {
         @Override
         public ByteBuffer nioBuffer() {
-            return tmpBuf;
+            return tmpNioBuf();
         }
 
         @Override
@@ -454,29 +473,6 @@ public class DirectByteBuf extends AbstractByteBuf {
         }
 
         @Override
-        public void acquire() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt ++;
-        }
-
-        @Override
-        public void release() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt --;
-            if (refCnt == 0) {
-                if (doNotFree) {
-                    doNotFree = false;
-                } else {
-                    freeDirect(buffer);
-                }
-
-                buffer = null;
-                tmpBuf = null;
-            }
-        }
+        public void release() { }
     }
 }

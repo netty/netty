@@ -252,6 +252,13 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     int maxCapacity();
 
     /**
+     * Returns the {@link ByteBufPool} which created this buffer.
+     *
+     * @return {@code null} if this buffer is not pooled
+     */
+    ByteBufPool pool();
+
+    /**
      * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
      * of this buffer.
      */
@@ -272,6 +279,11 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * NIO direct buffer.
      */
     boolean isDirect();
+
+    /**
+     * Returns {@code true} if and only if this buffer was created by a {@link ByteBufPool}.
+     */
+    boolean isPooled();
 
     /**
      * Returns the {@code readerIndex} of this buffer.
@@ -1869,14 +1881,8 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
         void discardSomeReadBytes();
 
         /**
-         * Increases the reference count of the buffer.
-         */
-        void acquire();
-
-        /**
-         * Decreases the reference count of the buffer.  If decreased to 0, the internal memory
-         * block of the buffer will be deallocated.  The result of accessing a freed buffer is
-         * unspecified and can even cause JVM crash.
+         * Deallocates the internal memory block of this buffer or returns it to the {@link ByteBufPool} it came
+         * from.  The result of accessing a released buffer is unspecified and can even cause JVM crash.
          */
         void release();
     }

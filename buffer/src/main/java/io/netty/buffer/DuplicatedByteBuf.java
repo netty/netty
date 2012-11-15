@@ -30,8 +30,9 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
 
-    private final Unsafe unsafe = new DuplicatedUnsafe();
-    final ByteBuf buffer;
+    private final ByteBuf buffer;
+
+    private Unsafe unsafe;
 
     public DuplicatedByteBuf(ByteBuf buffer) {
         super(buffer.order(), buffer.maxCapacity());
@@ -43,13 +44,16 @@ public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
         }
 
         setIndex(buffer.readerIndex(), buffer.writerIndex());
-
-        buffer.unsafe().acquire();
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return buffer.pool();
     }
 
     @Override
@@ -231,6 +235,10 @@ public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
 
     @Override
     public Unsafe unsafe() {
+        Unsafe unsafe = this.unsafe;
+        if (unsafe == null) {
+            this.unsafe = unsafe = new DuplicatedUnsafe();
+        }
         return unsafe;
     }
 
@@ -257,13 +265,6 @@ public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
         }
 
         @Override
-        public void acquire() {
-            buffer.unsafe().acquire();
-        }
-
-        @Override
-        public void release() {
-            buffer.unsafe().release();
-        }
+        public void release() { }
     }
 }

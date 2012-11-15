@@ -31,10 +31,11 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class SlicedByteBuf extends AbstractWrappedByteBuf {
 
-    private final Unsafe unsafe = new SlicedUnsafe();
     private final ByteBuf buffer;
     private final int adjustment;
     private final int length;
+
+    private Unsafe unsafe;
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(buffer.order(), length);
@@ -52,7 +53,7 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
             this.buffer = ((SlicedByteBuf) buffer).buffer;
             adjustment = ((SlicedByteBuf) buffer).adjustment + index;
         } else if (buffer instanceof DuplicatedByteBuf) {
-            this.buffer = ((DuplicatedByteBuf) buffer).buffer;
+            this.buffer = ((DuplicatedByteBuf) buffer).unwrap();
             adjustment = index;
         } else {
             this.buffer = buffer;
@@ -61,13 +62,16 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
         this.length = length;
 
         writerIndex(length);
-
-        buffer.unsafe().acquire();
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return buffer.pool();
     }
 
     @Override
@@ -303,6 +307,10 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
 
     @Override
     public Unsafe unsafe() {
+        Unsafe unsafe = this.unsafe;
+        if (unsafe == null) {
+            this.unsafe = unsafe = new SlicedUnsafe();
+        }
         return unsafe;
     }
 
@@ -329,13 +337,6 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
         }
 
         @Override
-        public void acquire() {
-            buffer.unsafe().acquire();
-        }
-
-        @Override
-        public void release() {
-            buffer.unsafe().release();
-        }
+        public void release() { }
     }
 }

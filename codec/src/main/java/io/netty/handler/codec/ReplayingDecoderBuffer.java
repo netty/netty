@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
+import io.netty.buffer.ByteBufPool;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
@@ -76,6 +77,11 @@ class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public ChannelBufType type() {
         return ChannelBufType.BYTE;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return buffer.pool();
     }
 
     @Override

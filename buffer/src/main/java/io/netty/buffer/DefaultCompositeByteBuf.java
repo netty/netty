@@ -37,11 +37,10 @@ import java.util.ListIterator;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
+public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implements CompositeByteBuf {
 
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
-    private final Unsafe unsafe = new CompositeUnsafe();
 
     private Component lastAccessed;
     private int lastAccessedId;
@@ -369,6 +368,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         return slice;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return null;
     }
 
     @Override
@@ -1458,8 +1462,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    protected Unsafe newUnsafe() {
+        return new CompositeUnsafe();
     }
 
     private final class CompositeUnsafe implements Unsafe {
@@ -1494,28 +1498,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         @Override
-        public void acquire() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt ++;
-        }
-
-        @Override
-        public void release() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt --;
-            if (refCnt == 0) {
-                for (Component c: components) {
-                    c.buf.unsafe().release();
-                }
-
-                components.clear();
-                lastAccessed = null;
-            }
-        }
+        public void release() { }
     }
 
     @Override

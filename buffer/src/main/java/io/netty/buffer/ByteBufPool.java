@@ -15,9 +15,20 @@
  */
 package io.netty.buffer;
 
-public interface ChannelBuf {
-    /**
-     * The ChannelBufType which will be handled by the ChannelBuf implementation
-     */
-    ChannelBufType type();
+import java.util.concurrent.TimeUnit;
+
+public interface ByteBufPool {
+    ByteBuf buffer();
+    ByteBuf buffer(int initialCapacity);
+    ByteBuf buffer(int initialCapacity, int maxCapacity);
+    ByteBuf directBuffer();
+    ByteBuf directBuffer(int initialCapacity);
+    ByteBuf directBuffer(int initialCapacity, int maxCapacity);
+    CompositeByteBuf compositeBuffer();
+    CompositeByteBuf compositeBuffer(int maxNumComponents);
+
+    void shutdown();
+    boolean isShutdown();
+    boolean isTerminated();
+    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
 }

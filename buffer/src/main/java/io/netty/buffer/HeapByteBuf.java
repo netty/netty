@@ -27,12 +27,10 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * Big endian Java heap buffer implementation.
  */
-public class HeapByteBuf extends AbstractByteBuf {
-
-    private final Unsafe unsafe = new HeapUnsafe();
+public class HeapByteBuf extends AbstractNonWrappedByteBuf {
 
     private byte[] array;
-    private ByteBuffer nioBuf;
+    private ByteBuffer tmpNioBuf;
 
     /**
      * Creates a new heap buffer with a newly allocated byte array.
@@ -56,6 +54,7 @@ public class HeapByteBuf extends AbstractByteBuf {
 
     private HeapByteBuf(byte[] initialArray, int readerIndex, int writerIndex, int maxCapacity) {
         super(ByteOrder.BIG_ENDIAN, maxCapacity);
+
         if (initialArray == null) {
             throw new NullPointerException("initialArray");
         }
@@ -70,7 +69,20 @@ public class HeapByteBuf extends AbstractByteBuf {
 
     private void setArray(byte[] initialArray) {
         array = initialArray;
-        nioBuf = ByteBuffer.wrap(initialArray);
+        tmpNioBuf = null;
+    }
+
+    private ByteBuffer tmpNioBuf() {
+        ByteBuffer nioBuf = this.tmpNioBuf;
+        if (nioBuf == null) {
+            this.tmpNioBuf = nioBuf = ByteBuffer.wrap(array);
+        }
+        return nioBuf;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return null;
     }
 
     @Override
@@ -163,7 +175,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        return out.write((ByteBuffer) nioBuf.clear().position(index).limit(index + length));
+        return out.write((ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length));
     }
 
     @Override
@@ -202,7 +214,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         try {
-            return in.read((ByteBuffer) nioBuf.clear().position(index).limit(index + length));
+            return in.read((ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length));
         } catch (ClosedChannelException e) {
             return -1;
         }
@@ -310,14 +322,14 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    protected Unsafe newUnsafe() {
+        return new HeapUnsafe();
     }
 
     private class HeapUnsafe implements Unsafe {
         @Override
         public ByteBuffer nioBuffer() {
-            return nioBuf;
+            return tmpNioBuf();
         }
 
         @Override
@@ -344,23 +356,6 @@ public class HeapByteBuf extends AbstractByteBuf {
         }
 
         @Override
-        public void acquire() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt ++;
-        }
-
-        @Override
-        public void release() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt --;
-            if (refCnt == 0) {
-                array = null;
-                nioBuf = null;
-            }
-        }
+        public void release() { }
     }
 }

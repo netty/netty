@@ -32,6 +32,8 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
 
     private final ByteBuf buffer;
 
+    private Unsafe unsafe;
+
     public ReadOnlyByteBuf(ByteBuf buffer) {
         super(buffer.order(), buffer.maxCapacity());
         this.buffer = buffer;
@@ -47,6 +49,11 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
     @Override
     public ByteBuf unwrap() {
         return buffer;
+    }
+
+    @Override
+    public ByteBufPool pool() {
+        return buffer.pool();
     }
 
     @Override
@@ -229,6 +236,36 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
 
     @Override
     public Unsafe unsafe() {
-        return buffer.unsafe();
+        Unsafe unsafe = this.unsafe;
+        if (unsafe == null) {
+            this.unsafe = unsafe = new ReadOnlyUnsafe();
+        }
+        return unsafe;
+    }
+
+    private final class ReadOnlyUnsafe implements Unsafe {
+
+        @Override
+        public ByteBuffer nioBuffer() {
+            return buffer.unsafe().nioBuffer();
+        }
+
+        @Override
+        public ByteBuffer[] nioBuffers() {
+            return buffer.unsafe().nioBuffers();
+        }
+
+        @Override
+        public ByteBuf newBuffer(int initialCapacity) {
+            return buffer.unsafe().newBuffer(initialCapacity);
+        }
+
+        @Override
+        public void discardSomeReadBytes() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void release() { }
     }
 }

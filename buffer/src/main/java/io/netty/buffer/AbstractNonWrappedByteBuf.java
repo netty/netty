@@ -15,9 +15,24 @@
  */
 package io.netty.buffer;
 
-public interface ChannelBuf {
-    /**
-     * The ChannelBufType which will be handled by the ChannelBuf implementation
-     */
-    ChannelBufType type();
+import java.nio.ByteOrder;
+
+public abstract class AbstractNonWrappedByteBuf extends AbstractByteBuf {
+
+    private Unsafe unsafe;
+
+    protected AbstractNonWrappedByteBuf(ByteOrder endianness, int maxCapacity) {
+        super(endianness, maxCapacity);
+    }
+
+    @Override
+    public final Unsafe unsafe() {
+        Unsafe unsafe = this.unsafe;
+        if (unsafe == null) {
+            this.unsafe = unsafe = newUnsafe();
+        }
+        return unsafe;
+    }
+
+    protected abstract Unsafe newUnsafe();
 }
