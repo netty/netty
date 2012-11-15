@@ -29,6 +29,11 @@ public abstract class SocksMessage {
     private final MessageType messageType;
     private final ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
 
+    /**
+     *
+     * @param messageType
+     * @throws NullPointerException
+     */
     public SocksMessage(MessageType messageType) {
         if (messageType == null) {
             throw new NullPointerException("messageType");

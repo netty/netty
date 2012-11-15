@@ -34,6 +34,15 @@ public final class SocksCmdRequest extends SocksRequest {
     private final String host;
     private final int port;
 
+    /**
+     *
+     * @param cmdType
+     * @param addressType
+     * @param host
+     * @param port
+     * @throws NullPointerException
+     * @throws IllegalArgumentException
+     */
     public SocksCmdRequest(CmdType cmdType, AddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
         if (cmdType == null) {

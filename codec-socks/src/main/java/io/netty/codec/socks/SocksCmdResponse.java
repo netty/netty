@@ -34,6 +34,12 @@ public final class SocksCmdResponse extends SocksResponse {
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00};
 
+    /**
+     *
+     * @param cmdStatus
+     * @param addressType
+     * @throws NullPointerException
+     */
     public SocksCmdResponse(CmdStatus cmdStatus, AddressType addressType) {
         super(SocksResponseType.CMD);
         if (cmdStatus == null) {

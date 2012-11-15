@@ -27,6 +27,12 @@ public final class SocksAuthResponse extends SocksResponse {
 
     private final AuthStatus authStatus;
 
+    /**
+     *
+     * @param authStatus
+     * @throws NullPointerException
+     */
+
     public SocksAuthResponse(AuthStatus authStatus) {
         super(SocksResponseType.AUTH);
         if (authStatus == null) {

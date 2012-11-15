@@ -26,6 +26,11 @@ import io.netty.buffer.ByteBuf;
 public final class SocksInitResponse extends SocksResponse {
     private final AuthScheme authScheme;
 
+    /**
+     *
+     * @param authScheme
+     * @throws NullPointerException
+     */
     public SocksInitResponse(AuthScheme authScheme) {
         super(SocksResponseType.INIT);
         if (authScheme == null) {

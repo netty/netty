@@ -70,4 +70,21 @@ public class SocksCmdRequestTest {
             assertTrue(e instanceof IllegalArgumentException);
         }
     }
+
+    @Test
+    public void testValidPortRange(){
+        try {
+            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.DOMAIN,
+                    "παράδειγμα.δοκιμήπαράδει", -1);
+        } catch (Exception e){
+            assertTrue(e instanceof IllegalArgumentException);
+        }
+
+        try {
+            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.DOMAIN,
+                    "παράδειγμα.δοκιμήπαράδει", 65536);
+        } catch (Exception e){
+            assertTrue(e instanceof IllegalArgumentException);
+        }
+    }
 }
