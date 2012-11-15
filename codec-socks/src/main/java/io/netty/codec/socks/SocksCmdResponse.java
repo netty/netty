@@ -16,8 +16,10 @@
 package io.netty.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+
 /**
  * An socks cmd response.
+ *
  * @see SocksCmdRequest
  * @see SocksCmdResponseDecoder
  */
@@ -28,24 +30,34 @@ public final class SocksCmdResponse extends SocksResponse {
     // All arrays are initialized on construction time to 0/false/null remove array Initialization
     private static final byte[] IPv4_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00};
     private static final byte[] IPv6_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00,
-                                                        0x00, 0x00, 0x00, 0x00,
-                                                        0x00, 0x00, 0x00, 0x00,
-                                                        0x00, 0x00, 0x00, 0x00};
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00};
 
     public SocksCmdResponse(CmdStatus cmdStatus, AddressType addressType) {
         super(SocksResponseType.CMD);
+        if (cmdStatus == null) {
+            throw new NullPointerException("cmdStatus");
+        }
+        if (addressType == null) {
+            throw new NullPointerException("addressType");
+        }
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
     }
+
     /**
      * Returns the {@link CmdStatus} of this {@link SocksCmdResponse}
+     *
      * @return The {@link CmdStatus} of this {@link SocksCmdResponse}
      */
     public CmdStatus getCmdStatus() {
         return cmdStatus;
     }
+
     /**
      * Returns the {@link AddressType} of this {@link SocksCmdResponse}
+     *
      * @return The {@link AddressType} of this {@link SocksCmdResponse}
      */
     public AddressType getAddressType() {

@@ -18,6 +18,7 @@ package io.netty.codec.socks;
 /**
  * An abstract class that defines a SocksRequest, providing common properties for
  * {@link SocksInitRequest}, {@link SocksAuthRequest}, {@link SocksCmdRequest} and {@link UnknownSocksRequest}.
+ *
  * @see SocksInitRequest
  * @see SocksAuthRequest
  * @see SocksCmdRequest
@@ -28,11 +29,15 @@ public abstract class SocksRequest extends SocksMessage {
 
     public SocksRequest(SocksRequestType socksRequestType) {
         super(MessageType.REQUEST);
+        if (socksRequestType == null) {
+            throw new NullPointerException("socksRequestType");
+        }
         this.socksRequestType = socksRequestType;
     }
 
     /**
      * Returns socks request type
+     *
      * @return socks request type
      */
     public SocksRequestType getSocksRequestType() {

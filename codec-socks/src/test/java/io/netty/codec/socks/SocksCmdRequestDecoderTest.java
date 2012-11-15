@@ -19,9 +19,9 @@ import io.netty.channel.embedded.EmbeddedByteChannel;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import sun.net.util.IPAddressUtil;
-
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 public class SocksCmdRequestDecoderTest {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksCmdRequestDecoderTest.class);
 

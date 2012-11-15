@@ -18,7 +18,6 @@ package io.netty.codec.socks;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
-
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 

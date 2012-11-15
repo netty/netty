@@ -15,23 +15,16 @@
  */
 package io.netty.codec.socks;
 
-import io.netty.buffer.ByteBuf;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-/**
- * An unknown socks request.
- *
- * @see SocksInitRequestDecoder
- * @see SocksAuthRequestDecoder
- * @see SocksCmdRequestDecoder
- */
-public final class UnknownSocksRequest extends SocksRequest {
-
-    public UnknownSocksRequest() {
-        super(SocksRequestType.UNKNOWN);
-    }
-
-    @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
-        // NOOP
+public class SocksAuthResponseTest {
+    @Test
+    public void testConstructorParamsAreNotNull() {
+        try {
+            new SocksAuthResponse(null);
+        } catch (Exception e) {
+            assertTrue(e instanceof NullPointerException);
+        }
     }
 }

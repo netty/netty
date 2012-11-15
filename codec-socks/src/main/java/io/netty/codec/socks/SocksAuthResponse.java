@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * An socks auth response.
+ *
  * @see SocksAuthRequest
  * @see SocksAuthResponseDecoder
  */
@@ -28,10 +29,15 @@ public final class SocksAuthResponse extends SocksResponse {
 
     public SocksAuthResponse(AuthStatus authStatus) {
         super(SocksResponseType.AUTH);
+        if (authStatus == null) {
+            throw new NullPointerException("authStatus");
+        }
         this.authStatus = authStatus;
     }
+
     /**
      * Returns the {@link AuthStatus} of this {@link SocksAuthResponse}
+     *
      * @return The {@link AuthStatus} of this {@link SocksAuthResponse}
      */
     public AuthStatus getAuthStatus() {

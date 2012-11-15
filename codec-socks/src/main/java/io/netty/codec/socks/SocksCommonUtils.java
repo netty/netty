@@ -91,7 +91,7 @@ final class SocksCommonUtils {
     }
 
     private static void ipv6toStr(StringBuilder sb, byte[] src,
-                                        int fromHextet, int toHextet) {
+                                  int fromHextet, int toHextet) {
         for (int i = fromHextet; i < toHextet; i++) {
             sb.append(Integer.toHexString(((src[i << 1] << 8) & 0xff00)
                     | (src[(i << 1) + 1] & 0xff)));

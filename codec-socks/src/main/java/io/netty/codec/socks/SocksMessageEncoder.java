@@ -18,6 +18,7 @@ package io.netty.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+
 /**
  * Encodes an {@link SocksMessage} into a {@link ByteBuf}.
  */

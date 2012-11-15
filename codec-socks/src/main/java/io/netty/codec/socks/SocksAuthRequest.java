@@ -23,6 +23,7 @@ import java.nio.charset.CharsetEncoder;
 
 /**
  * An socks auth request.
+ *
  * @see SocksAuthResponse
  * @see SocksAuthRequestDecoder
  */
@@ -41,7 +42,7 @@ public final class SocksAuthRequest extends SocksRequest {
         }
         if (!asciiEncoder.canEncode(username) || !asciiEncoder.canEncode(password)) {
             throw new IllegalArgumentException(" username: " + username + " or password: " + password +
-                                               " values should be in pure ascii");
+                    " values should be in pure ascii");
         }
         if (username.length() > 255) {
             throw new IllegalArgumentException(username + " exceeds 255 char limit");
@@ -52,15 +53,19 @@ public final class SocksAuthRequest extends SocksRequest {
         this.username = username;
         this.password = password;
     }
+
     /**
      * Returns username that needs to be authenticated
+     *
      * @return username that needs to be authenticated
      */
     public String getUsername() {
         return username;
     }
+
     /**
      * Returns password that needs to be validated
+     *
      * @return password that needs to be validated
      */
     public String getPassword() {

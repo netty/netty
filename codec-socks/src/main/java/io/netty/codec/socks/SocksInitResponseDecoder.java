@@ -18,6 +18,7 @@ package io.netty.codec.socks;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
+
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitResponse}.
  */

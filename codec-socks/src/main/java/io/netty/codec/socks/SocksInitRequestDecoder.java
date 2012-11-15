@@ -21,6 +21,7 @@ import io.netty.handler.codec.ReplayingDecoder;
 
 import java.util.ArrayList;
 import java.util.List;
+
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitRequest}.
  */

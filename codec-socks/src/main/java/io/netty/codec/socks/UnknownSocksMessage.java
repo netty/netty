@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * An unknown socks message.
+ *
  * @see UnknownSocksRequest
  * @see UnknownSocksResponse
  */
