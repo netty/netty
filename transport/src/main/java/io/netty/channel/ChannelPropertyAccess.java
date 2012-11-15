@@ -18,8 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufPool;
 
 /**
- * Factory which is responsible to create new {@link ChannelFuture}'s
- *
+ * Provides common methods between {@link Channel} and {@link ChannelHandlerContext}.
  */
 interface ChannelPropertyAccess {
 
