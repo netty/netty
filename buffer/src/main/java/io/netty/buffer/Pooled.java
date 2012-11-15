@@ -30,7 +30,9 @@ public final class Pooled {
                         POOL.shutdown();
                     }
                 });
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+                // Couldn't register the shutdown hook probably due to a rejection from SecurityManager.
+            }
         }
     }
 
