@@ -26,7 +26,7 @@ public class SocksCmdRequestDecoderTest {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksCmdRequestDecoderTest.class);
 
     private void testSocksCmdRequestDecoderWithDifferentParams(SocksMessage.CmdType cmdType, SocksMessage.AddressType addressType, String host, int port) {
-        logger.info("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
+        logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
         SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
