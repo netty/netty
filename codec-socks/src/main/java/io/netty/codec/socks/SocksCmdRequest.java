@@ -29,6 +29,9 @@ public final class SocksCmdRequest extends SocksRequest {
 
     public SocksCmdRequest(CmdType cmdType, AddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
+        if (host == null) {
+            throw new NullPointerException("host");
+        }
         switch (addressType) {
             case IPv4:
                 if (!IPAddressUtil.isIPv4LiteralAddress(host)) {
