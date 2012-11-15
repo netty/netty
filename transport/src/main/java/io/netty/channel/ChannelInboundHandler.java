@@ -25,4 +25,10 @@ public interface ChannelInboundHandler extends ChannelStateHandler {
      * Return the {@link ChannelBuf} which will be used for inbound data for the given {@link ChannelHandlerContext}.
      */
     ChannelBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when this handler is not going to receive any inbound message anymore and thus it's safe to
+     * deallocate its inbound buffer.
+     */
+    void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception;
 }

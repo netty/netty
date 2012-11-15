@@ -31,11 +31,6 @@ public class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     }
 
     @Override
-    public boolean isPooled() {
-        return false;
-    }
-
-    @Override
     public ChannelBufType type() {
         return ChannelBufType.MESSAGE;
     }

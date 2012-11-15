@@ -28,34 +28,22 @@ import java.nio.charset.Charset;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf implements ByteBuf {
-
-    private final SwappedByteBuf swappedBuf;
-    private final ByteOrder order;
-    private final int maxCapacity;
+public abstract class AbstractByteBuf implements UnsafeByteBuf {
 
     private int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
 
-    int refCnt = 1;
+    private final int maxCapacity;
 
-    protected AbstractByteBuf(ByteOrder endianness, int maxCapacity) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+    private SwappedByteBuf swappedBuf;
+
+    protected AbstractByteBuf(int maxCapacity) {
         if (maxCapacity < 0) {
             throw new IllegalArgumentException("maxCapacity: " + maxCapacity + " (expected: >= 0)");
         }
-        order = endianness;
-        swappedBuf = new SwappedByteBuf(this);
         this.maxCapacity = maxCapacity;
-    }
-
-    @Override
-    public boolean isPooled() {
-        return false;
     }
 
     @Override
@@ -267,17 +255,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    public final ByteOrder order() {
-        return order;
-    }
-
-    @Override
     public ByteBuf order(ByteOrder endianness) {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
-        if (endianness == order()) {
+        if (endianness == order() || capacity() == 0) {
             return this;
+        }
+
+        SwappedByteBuf swappedBuf = this.swappedBuf;
+        if (swappedBuf == null) {
+            this.swappedBuf = swappedBuf = new SwappedByteBuf(this);
         }
         return swappedBuf;
     }
@@ -521,7 +509,9 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        ByteBuf buf = unsafe().newBuffer(length);
+
+        // Use an unpooled heap buffer because there's no way to mandate a user to free the returned buffer.
+        ByteBuf buf = Unpooled.buffer(length, maxCapacity);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;

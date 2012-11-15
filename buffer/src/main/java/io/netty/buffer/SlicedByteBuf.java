@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -29,15 +30,14 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractWrappedByteBuf {
+public class SlicedByteBuf extends AbstractByteBuf {
 
-    private final Unsafe unsafe = new SlicedUnsafe();
-    private final ByteBuf buffer;
+    private final UnsafeByteBuf buffer;
     private final int adjustment;
     private final int length;
 
-    public SlicedByteBuf(ByteBuf buffer, int index, int length) {
-        super(buffer.order(), length);
+    public SlicedByteBuf(UnsafeByteBuf buffer, int index, int length) {
+        super(length);
         if (index < 0 || index > buffer.capacity()) {
             throw new IndexOutOfBoundsException("Invalid index of " + index
                     + ", maximum is " + buffer.capacity());
@@ -52,7 +52,7 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
             this.buffer = ((SlicedByteBuf) buffer).buffer;
             adjustment = ((SlicedByteBuf) buffer).adjustment + index;
         } else if (buffer instanceof DuplicatedByteBuf) {
-            this.buffer = ((DuplicatedByteBuf) buffer).buffer;
+            this.buffer = (UnsafeByteBuf) buffer.unwrap();
             adjustment = index;
         } else {
             this.buffer = buffer;
@@ -61,13 +61,21 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
         this.length = length;
 
         writerIndex(length);
-
-        buffer.unsafe().acquire();
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return buffer.alloc();
+    }
+
+    @Override
+    public ByteOrder order() {
+        return buffer.order();
     }
 
     @Override
@@ -81,7 +89,7 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public WrappedByteBuf capacity(int newCapacity) {
+    public ByteBuf capacity(int newCapacity) {
         throw new UnsupportedOperationException("sliced buffer");
     }
 
@@ -153,84 +161,84 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public WrappedByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, dst, dstIndex, length);
         return this;
     }
 
     @Override
-    public WrappedByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, dst, dstIndex, length);
         return this;
     }
 
     @Override
-    public WrappedByteBuf getBytes(int index, ByteBuffer dst) {
+    public ByteBuf getBytes(int index, ByteBuffer dst) {
         checkIndex(index, dst.remaining());
         buffer.getBytes(index + adjustment, dst);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setByte(int index, int value) {
+    public ByteBuf setByte(int index, int value) {
         checkIndex(index);
         buffer.setByte(index + adjustment, value);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setShort(int index, int value) {
+    public ByteBuf setShort(int index, int value) {
         checkIndex(index, 2);
         buffer.setShort(index + adjustment, value);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setMedium(int index, int value) {
+    public ByteBuf setMedium(int index, int value) {
         checkIndex(index, 3);
         buffer.setMedium(index + adjustment, value);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setInt(int index, int value) {
+    public ByteBuf setInt(int index, int value) {
         checkIndex(index, 4);
         buffer.setInt(index + adjustment, value);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setLong(int index, long value) {
+    public ByteBuf setLong(int index, long value) {
         checkIndex(index, 8);
         buffer.setLong(index + adjustment, value);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkIndex(index, length);
         buffer.setBytes(index + adjustment, src, srcIndex, length);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkIndex(index, length);
         buffer.setBytes(index + adjustment, src, srcIndex, length);
         return this;
     }
 
     @Override
-    public WrappedByteBuf setBytes(int index, ByteBuffer src) {
+    public ByteBuf setBytes(int index, ByteBuffer src) {
         checkIndex(index, src.remaining());
         buffer.setBytes(index + adjustment, src);
         return this;
     }
 
     @Override
-    public WrappedByteBuf getBytes(int index, OutputStream out, int length)
+    public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, out, length);
@@ -302,40 +310,20 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    public ByteBuffer internalNioBuffer() {
+        return buffer.nioBuffer(adjustment, length);
     }
 
-    private final class SlicedUnsafe implements Unsafe {
-
-        @Override
-        public ByteBuffer nioBuffer() {
-            return buffer.nioBuffer(adjustment, length);
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            return buffer.nioBuffers(adjustment, length);
-        }
-
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return buffer.unsafe().newBuffer(initialCapacity);
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void acquire() {
-            buffer.unsafe().acquire();
-        }
-
-        @Override
-        public void release() {
-            buffer.unsafe().release();
-        }
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buffer.nioBuffers(adjustment, length);
     }
+
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void free() { }
 }
