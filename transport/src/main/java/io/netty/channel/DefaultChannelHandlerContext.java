@@ -40,35 +40,38 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private static final EnumSet<ChannelHandlerType> EMPTY_TYPE = EnumSet.noneOf(ChannelHandlerType.class);
 
-    static final int DIR_INBOUND  = 0x00000001;
-    static final int DIR_OUTBOUND = 0x80000000;
+    static final int DIR_INBOUND  = 1;
+    static final int DIR_OUTBOUND = 2;
+
+    private static final int FLAG_NEEDS_LAZY_INIT = 4;
 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
+
     private final Channel channel;
     private final DefaultChannelPipeline pipeline;
-    EventExecutor executor; // not thread-safe but OK because it never changes once set.
     private final String name;
     private final Set<ChannelHandlerType> type;
-    final int directions;
     private final ChannelHandler handler;
+    final int flags;
+    final AtomicBoolean readable = new AtomicBoolean(true);
 
-    MessageBuf<Object> inMsgBuf;
-    ByteBuf inByteBuf;
-    MessageBuf<Object> outMsgBuf;
-    ByteBuf outByteBuf;
+    EventExecutor executor; // not thread-safe but OK because it never changes once set.
+
+    private MessageBuf<Object> inMsgBuf;
+    private ByteBuf inByteBuf;
+    private MessageBuf<Object> outMsgBuf;
+    private ByteBuf outByteBuf;
 
     // When the two handlers run in a different thread and they are next to each other,
     // each other's buffers can be accessed at the same time resulting in a race condition.
     // To avoid such situation, we lazily creates an additional thread-safe buffer called
     // 'bridge' so that the two handlers access each other's buffer only via the bridges.
     // The content written into a bridge is flushed into the actual buffer by flushBridge().
-    final AtomicReference<MessageBridge> inMsgBridge;
-    final AtomicReference<MessageBridge> outMsgBridge;
-    final AtomicReference<ByteBridge> inByteBridge;
-    final AtomicReference<ByteBridge> outByteBridge;
-
-    final AtomicBoolean readable = new AtomicBoolean(true);
+    private final AtomicReference<MessageBridge> inMsgBridge;
+    AtomicReference<MessageBridge> outMsgBridge;
+    private final AtomicReference<ByteBridge> inByteBridge;
+    AtomicReference<ByteBridge> outByteBridge;
 
     // Runnables that calls handlers
     final Runnable fireChannelRegisteredTask = new Runnable() {
@@ -164,25 +167,25 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("handler");
         }
 
+        int flags = 0;
+
         // Determine the type of the specified handler.
-        int typeValue = 0;
         EnumSet<ChannelHandlerType> type = EMPTY_TYPE.clone();
         if (handler instanceof ChannelStateHandler) {
             type.add(ChannelHandlerType.STATE);
-            typeValue |= DIR_INBOUND;
+            flags |= DIR_INBOUND;
             if (handler instanceof ChannelInboundHandler) {
                 type.add(ChannelHandlerType.INBOUND);
             }
         }
         if (handler instanceof ChannelOperationHandler) {
             type.add(ChannelHandlerType.OPERATION);
-            typeValue |= DIR_OUTBOUND;
+            flags |= DIR_OUTBOUND;
             if (handler instanceof ChannelOutboundHandler) {
                 type.add(ChannelHandlerType.OUTBOUND);
             }
         }
         this.type = Collections.unmodifiableSet(type);
-        directions = typeValue;
 
         this.prev = prev;
         this.next = next;
@@ -240,35 +243,58 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         if (type.contains(ChannelHandlerType.OUTBOUND)) {
-            ChannelBuf buf;
-            try {
-                buf = ((ChannelOutboundHandler) handler).newOutboundBuffer(this);
-            } catch (Exception e) {
-                throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
-            }
-
-            if (buf == null) {
-                throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
-            }
-
-            if (buf instanceof ByteBuf) {
-                outByteBuf = (ByteBuf) buf;
-                outByteBridge = new AtomicReference<ByteBridge>();
-                outMsgBuf = null;
-                outMsgBridge = null;
-            } else if (buf instanceof MessageBuf) {
-                outByteBuf = null;
-                outByteBridge = null;
-                outMsgBuf = (MessageBuf<Object>) buf;
-                outMsgBridge = new AtomicReference<MessageBridge>();
+            if (prev == null) {
+                // Special case: if pref == null, it means this context for HeadHandler.
+                // HeadHandler is an outbound handler instantiated by the constructor of DefaultChannelPipeline.
+                // Because Channel is not really fully initialized at this point, we should not call
+                // newOutboundBuffer() yet because it will usually lead to NPE.
+                // To work around this problem, we lazily initialize the outbound buffer for this special case.
+                flags |= FLAG_NEEDS_LAZY_INIT;
             } else {
-                throw new Error();
+                initOutboundBuffer();
             }
         } else {
             outByteBuf = null;
             outByteBridge = null;
             outMsgBuf = null;
             outMsgBridge = null;
+        }
+
+        this.flags = flags;
+    }
+
+    void lazyInitOutboundBuffer() {
+        if ((flags & FLAG_NEEDS_LAZY_INIT) != 0) {
+            if (outByteBuf == null && outMsgBuf == null) {
+                initOutboundBuffer();
+            }
+        }
+    }
+
+    private void initOutboundBuffer() {
+        ChannelBuf buf;
+        try {
+            buf = ((ChannelOutboundHandler) handler).newOutboundBuffer(this);
+        } catch (Exception e) {
+            throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
+        }
+
+        if (buf == null) {
+            throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
+        }
+
+        if (buf instanceof ByteBuf) {
+            outByteBuf = (ByteBuf) buf;
+            outByteBridge = new AtomicReference<ByteBridge>();
+            outMsgBuf = null;
+            outMsgBridge = null;
+        } else if (buf instanceof MessageBuf) {
+            outByteBuf = null;
+            outByteBridge = null;
+            outMsgBuf = (MessageBuf<Object>) buf;
+            outMsgBridge = new AtomicReference<MessageBridge>();
+        } else {
+            throw new Error();
         }
     }
 
@@ -311,6 +337,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
 
+        lazyInitOutboundBuffer();
         if (outMsgBridge != null) {
             MessageBridge bridge = outMsgBridge.get();
             if (bridge != null) {
@@ -412,16 +439,22 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public boolean hasOutboundByteBuffer() {
+        lazyInitOutboundBuffer();
         return outByteBuf != null;
     }
 
     @Override
     public boolean hasOutboundMessageBuffer() {
+        lazyInitOutboundBuffer();
         return outMsgBuf != null;
     }
 
     @Override
     public ByteBuf outboundByteBuffer() {
+        if (outMsgBuf == null) {
+            lazyInitOutboundBuffer();
+        }
+
         if (outByteBuf == null) {
             if (handler instanceof ChannelOutboundHandler) {
                 throw new NoSuchBufferException(String.format(
@@ -441,6 +474,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> outboundMessageBuffer() {
+        if (outMsgBuf == null) {
+            initOutboundBuffer();
+        }
+
         if (outMsgBuf == null) {
             if (handler instanceof ChannelOutboundHandler) {
                 throw new NoSuchBufferException(String.format(
@@ -554,7 +591,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
      * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
      *         {@link Throwable}.
      */
-    void waitForFuture(Future future) {
+    void waitForFuture(Future<?> future) {
         try {
             future.get();
         } catch (ExecutionException ex) {
@@ -592,7 +629,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ByteBuf currentInboundByteBuf = inboundByteBuffer();
 
-        this.inByteBuf = newInboundByteBuf;
+        inByteBuf = newInboundByteBuf;
         return currentInboundByteBuf;
     }
 
@@ -618,7 +655,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         MessageBuf<T> currentInboundMsgBuf = inboundMessageBuffer();
 
-        this.inMsgBuf = (MessageBuf<Object>) newInboundMsgBuf;
+        inMsgBuf = (MessageBuf<Object>) newInboundMsgBuf;
         return currentInboundMsgBuf;
     }
 
@@ -643,7 +680,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ByteBuf currentOutboundByteBuf = outboundByteBuffer();
 
-        this.outByteBuf = newOutboundByteBuf;
+        outByteBuf = newOutboundByteBuf;
         return currentOutboundByteBuf;
     }
 
@@ -669,7 +706,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         MessageBuf<T> currentOutboundMsgBuf = outboundMessageBuffer();
 
-        this.outMsgBuf = (MessageBuf<Object>) newOutboundMsgBuf;
+        outMsgBuf = (MessageBuf<Object>) newOutboundMsgBuf;
         return currentOutboundMsgBuf;
     }
 
@@ -703,12 +740,36 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public boolean hasNextOutboundByteBuffer() {
-        return DefaultChannelPipeline.hasNextOutboundByteBuffer(prev);
+        DefaultChannelHandlerContext ctx = prev;
+        for (;;) {
+            if (ctx == null) {
+                return false;
+            }
+
+            ctx.lazyInitOutboundBuffer();
+
+            if (ctx.outByteBridge != null) {
+                return true;
+            }
+            ctx = ctx.prev;
+        }
     }
 
     @Override
     public boolean hasNextOutboundMessageBuffer() {
-        return DefaultChannelPipeline.hasNextOutboundMessageBuffer(prev);
+        DefaultChannelHandlerContext ctx = prev;
+        for (;;) {
+            if (ctx == null) {
+                return false;
+            }
+
+            ctx.lazyInitOutboundBuffer();
+
+            if (ctx.outMsgBridge != null) {
+                return true;
+            }
+            ctx = ctx.prev;
+        }
     }
 
     @Override
@@ -786,12 +847,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ByteBuf nextOutboundByteBuffer() {
-        return DefaultChannelPipeline.nextOutboundByteBuffer(prev);
+        return pipeline.nextOutboundByteBuffer(prev);
     }
 
     @Override
     public MessageBuf<Object> nextOutboundMessageBuffer() {
-        return DefaultChannelPipeline.nextOutboundMessageBuffer(prev);
+        return pipeline.nextOutboundMessageBuffer(prev);
     }
 
     @Override
