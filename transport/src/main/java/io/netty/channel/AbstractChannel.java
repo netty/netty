@@ -386,9 +386,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final ChannelHandlerContext directOutboundContext() {
-            DefaultChannelHandlerContext head = pipeline.head;
-            //head.lazyInitOutboundBuffer();
-            return head;
+            return pipeline.head;
         }
 
         @Override
