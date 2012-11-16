@@ -911,7 +911,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 } else {
                     ByteBridge bridge = ctx.outByteBridge.get();
                     if (bridge == null) {
-                        bridge = new ByteBridge();
+                        bridge = new ByteBridge(ctx.pool().buffer());
                         if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.outByteBridge.get();
                         }
@@ -1444,7 +1444,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             switch (channel.metadata().bufferType()) {
             case BYTE:
                 // TODO: Use a direct buffer once buffer pooling is implemented.
-                return Unpooled.buffer();
+                return ctx.pool().buffer();
             case MESSAGE:
                 return Unpooled.messageBuffer();
             default:

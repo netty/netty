@@ -735,7 +735,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } else {
                     ByteBridge bridge = ctx.inByteBridge.get();
                     if (bridge == null) {
-                        bridge = new ByteBridge();
+                        bridge = new ByteBridge(ctx.pool().buffer());
                         if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.inByteBridge.get();
                         }
@@ -1059,8 +1059,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class ByteBridge {
-        final ByteBuf byteBuf = Unpooled.buffer();
+        final ByteBuf byteBuf;
         final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
+
+        ByteBridge(ByteBuf byteBuf) {
+            this.byteBuf = byteBuf;
+        }
 
         void fill() {
             if (!byteBuf.readable()) {
