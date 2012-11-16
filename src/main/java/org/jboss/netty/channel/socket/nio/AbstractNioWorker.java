@@ -554,22 +554,26 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         synchronized (channel.writeLock) {
             channel.inWriteNowLoop = true;
             for (;;) {
+
                 MessageEvent evt = channel.currentWriteEvent;
-                SendBuffer buf;
-                if (evt == null) {
-                    if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
-                        removeOpWrite = true;
-                        channel.writeSuspended = false;
-                        break;
+                SendBuffer buf = null;
+                ChannelFuture future = null;
+                try {
+                    if (evt == null) {
+                        if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
+                            removeOpWrite = true;
+                            channel.writeSuspended = false;
+                            break;
+                        }
+                        future = evt.getFuture();
+
+                        channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
+                    } else {
+                        future = evt.getFuture();
+                        buf = channel.currentWriteBuffer;
+
                     }
 
-                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
-                } else {
-                    buf = channel.currentWriteBuffer;
-                }
-
-                ChannelFuture future = evt.getFuture();
-                try {
                     long localWrittenBytes = 0;
                     for (int i = writeSpinCount; i > 0; i --) {
                         localWrittenBytes = buf.transferTo(ch);
@@ -613,7 +617,9 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                     channel.currentWriteBuffer = null;
                     buf = null;
                     evt = null;
-                    future.setFailure(t);
+                    if (future != null) {
+                        future.setFailure(t);
+                    }
                     if (iothread) {
                         fireExceptionCaught(channel, t);
                     } else {
