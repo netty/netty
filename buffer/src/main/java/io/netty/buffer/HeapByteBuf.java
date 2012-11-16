@@ -27,7 +27,7 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * Big endian Java heap buffer implementation.
  */
-public class HeapByteBuf extends AbstractNonWrappedByteBuf {
+public class HeapByteBuf extends AbstractByteBuf {
 
     private byte[] array;
     private ByteBuffer tmpNioBuf;
@@ -322,37 +322,33 @@ public class HeapByteBuf extends AbstractNonWrappedByteBuf {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
-        return new HeapUnsafe();
+    public ByteBuffer internalNioBuffer() {
+        return tmpNioBuf();
     }
 
-    private class HeapUnsafe implements Unsafe {
-        @Override
-        public ByteBuffer nioBuffer() {
-            return tmpNioBuf();
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        return new HeapByteBuf(initialCapacity, Math.max(initialCapacity, maxCapacity()));
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        final int readerIndex = readerIndex();
+        if (readerIndex == writerIndex()) {
+            discardReadBytes();
+            return;
         }
 
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return new HeapByteBuf(initialCapacity, Math.max(initialCapacity, maxCapacity()));
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            final int readerIndex = readerIndex();
-            if (readerIndex == writerIndex()) {
-                discardReadBytes();
-                return;
-            }
-
-            if (readerIndex > 0 && readerIndex >= capacity() >>> 1) {
-                discardReadBytes();
-            }
+        if (readerIndex > 0 && readerIndex >= capacity() >>> 1) {
+            discardReadBytes();
         }
     }
+
+    @Override
+    public void free() { }
 }

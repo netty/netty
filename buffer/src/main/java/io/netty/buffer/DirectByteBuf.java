@@ -33,7 +33,7 @@ import java.nio.channels.ScatteringByteChannel;
  * constructor explicitly.
  */
 @SuppressWarnings("restriction")
-public class DirectByteBuf extends AbstractNonWrappedByteBuf {
+public class DirectByteBuf extends AbstractByteBuf {
 
     private static final Field CLEANER_FIELD;
 
@@ -439,37 +439,35 @@ public class DirectByteBuf extends AbstractNonWrappedByteBuf {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
-        return new DirectUnsafe();
+    public ByteBuffer internalNioBuffer() {
+        return tmpNioBuf();
     }
 
-    private class DirectUnsafe implements Unsafe {
-        @Override
-        public ByteBuffer nioBuffer() {
-            return tmpNioBuf();
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        return new DirectByteBuf(initialCapacity, Math.max(initialCapacity, maxCapacity()));
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        final int readerIndex = readerIndex();
+        if (readerIndex == writerIndex()) {
+            discardReadBytes();
+            return;
         }
 
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            throw new UnsupportedOperationException();
+        if (readerIndex > 0 && readerIndex >= capacity >>> 1) {
+            discardReadBytes();
         }
+    }
 
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return new DirectByteBuf(initialCapacity, Math.max(initialCapacity, maxCapacity()));
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            final int readerIndex = readerIndex();
-            if (readerIndex == writerIndex()) {
-                discardReadBytes();
-                return;
-            }
-
-            if (readerIndex > 0 && readerIndex >= capacity >>> 1) {
-                discardReadBytes();
-            }
-        }
+    @Override
+    public void free() {
+        // TODO: Should we deallocate the buffer even if it's unpooled?
     }
 }

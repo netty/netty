@@ -28,7 +28,7 @@ import java.nio.charset.Charset;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf implements ByteBuf {
+public abstract class AbstractByteBuf implements UnsafeByteBuf {
 
     private final ByteOrder order;
     private final int maxCapacity;
@@ -523,7 +523,9 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        ByteBuf buf = unsafe().newBuffer(length);
+
+        // Use an unpooled heap buffer because there's no way to mandate a user to free the returned buffer.
+        ByteBuf buf = Unpooled.buffer(length, maxCapacity);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;

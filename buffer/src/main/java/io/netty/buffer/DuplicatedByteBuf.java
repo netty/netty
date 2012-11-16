@@ -30,11 +30,9 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
 
-    private final ByteBuf buffer;
+    private final UnsafeByteBuf buffer;
 
-    private Unsafe unsafe;
-
-    public DuplicatedByteBuf(ByteBuf buffer) {
+    public DuplicatedByteBuf(UnsafeByteBuf buffer) {
         super(buffer.order(), buffer.maxCapacity());
 
         if (buffer instanceof DuplicatedByteBuf) {
@@ -234,34 +232,27 @@ public class DuplicatedByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        Unsafe unsafe = this.unsafe;
-        if (unsafe == null) {
-            this.unsafe = unsafe = new DuplicatedUnsafe();
-        }
-        return unsafe;
+    public ByteBuffer internalNioBuffer() {
+        return buffer.internalNioBuffer();
     }
 
-    private final class DuplicatedUnsafe implements Unsafe {
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buffer.internalNioBuffers();
+    }
 
-        @Override
-        public ByteBuffer nioBuffer() {
-            return buffer.unsafe().nioBuffer();
-        }
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        return buffer.newBuffer(initialCapacity);
+    }
 
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            return buffer.unsafe().nioBuffers();
-        }
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnsupportedOperationException();
+    }
 
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return buffer.unsafe().newBuffer(initialCapacity);
-        }
+    @Override
+    public void free() {
 
-        @Override
-        public void discardSomeReadBytes() {
-            throw new UnsupportedOperationException();
-        }
     }
 }

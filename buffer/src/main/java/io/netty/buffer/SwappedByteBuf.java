@@ -24,12 +24,12 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-public class SwappedByteBuf implements WrappedByteBuf {
+public class SwappedByteBuf implements WrappedByteBuf, UnsafeByteBuf {
 
-    private final ByteBuf buf;
+    private final UnsafeByteBuf buf;
     private final ByteOrder order;
 
-    public SwappedByteBuf(ByteBuf buf) {
+    public SwappedByteBuf(UnsafeByteBuf buf) {
         if (buf == null) {
             throw new NullPointerException("buf");
         }
@@ -478,7 +478,7 @@ public class SwappedByteBuf implements WrappedByteBuf {
 
     @Override
     public ByteBuf readBytes(int length) {
-        return buf.readBytes(length);
+        return buf.readBytes(length).order(order());
     }
 
     @Override
@@ -774,11 +774,6 @@ public class SwappedByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        return buf.unsafe();
-    }
-
-    @Override
     public int hashCode() {
         return buf.hashCode();
     }
@@ -803,4 +798,27 @@ public class SwappedByteBuf implements WrappedByteBuf {
     public String toString() {
         return "Swapped(" + buf.toString() + ')';
     }
+
+    @Override
+    public ByteBuffer internalNioBuffer() {
+        return buf.internalNioBuffer();
+    }
+
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buf.internalNioBuffers();
+    }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        return buf.newBuffer(initialCapacity).order(order);
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        buf.discardSomeReadBytes();
+    }
+
+    @Override
+    public void free() { }
 }

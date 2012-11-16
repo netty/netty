@@ -37,7 +37,7 @@ import java.util.ListIterator;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implements CompositeByteBuf {
+public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
 
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
@@ -245,7 +245,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         if (numComponents > maxNumComponents) {
             final int capacity = components.get(numComponents - 1).endOffset;
 
-            ByteBuf consolidated = components.get(numComponents - 1).buf.unsafe().newBuffer(capacity);
+            ByteBuf consolidated = components.get(numComponents - 1).buf.newBuffer(capacity);
 
             // We're not using foreach to avoid creating an iterator.
             // noinspection ForLoopReplaceableByForEach
@@ -429,7 +429,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
                 padding = new HeapByteBuf(paddingLength, paddingLength);
             } else {
                 Component last = components.get(components.size() - 1);
-                padding = last.buf.unsafe().newBuffer(paddingLength);
+                padding = last.buf.newBuffer(paddingLength);
             }
             padding.setIndex(0, paddingLength);
             addComponent(padding);
@@ -945,7 +945,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
                     + (index + length) + ", maximum is " + capacity());
         }
 
-        ByteBuf dst = unsafe().newBuffer(length);
+        ByteBuf dst = newBuffer(length);
         copyTo(index, length, componentId, dst);
         return dst;
     }
@@ -1103,7 +1103,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
 
         final Component last = components.get(numComponents - 1);
         final int capacity = last.endOffset;
-        final ByteBuf consolidated = last.buf.unsafe().newBuffer(capacity);
+        final ByteBuf consolidated = last.buf.newBuffer(capacity);
 
         for (int i = 0; i < numComponents; i ++) {
             ByteBuf b = components.get(i).buf;
@@ -1127,7 +1127,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         final int endCIndex = cIndex + numComponents;
         final Component last = components.get(endCIndex - 1);
         final int capacity = last.endOffset - components.get(cIndex).offset;
-        final ByteBuf consolidated = last.buf.unsafe().newBuffer(capacity);
+        final ByteBuf consolidated = last.buf.newBuffer(capacity);
 
         for (int i = cIndex; i < endCIndex; i ++) {
             ByteBuf b = components.get(i).buf;
@@ -1228,13 +1228,13 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
     }
 
     private static final class Component {
-        final ByteBuf buf;
+        final UnsafeByteBuf buf;
         final int length;
         int offset;
         int endOffset;
 
         Component(ByteBuf buf) {
-            this.buf = buf;
+            this.buf = (UnsafeByteBuf) buf;
             length = buf.readableBytes();
         }
     }
@@ -1462,44 +1462,42 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
     }
 
     @Override
-    protected Unsafe newUnsafe() {
-        return new CompositeUnsafe();
-    }
-
-    private final class CompositeUnsafe implements Unsafe {
-        @Override
-        public ByteBuffer nioBuffer() {
-            if (components.size() == 1) {
-                return components.get(0).buf.unsafe().nioBuffer();
-            }
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            ByteBuffer[] nioBuffers = new ByteBuffer[components.size()];
-            int index = 0;
-            for (Component component : components) {
-                nioBuffers[index++] = component.buf.unsafe().nioBuffer();
-            }
-            return nioBuffers;
-        }
-
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            CompositeByteBuf buf = new DefaultCompositeByteBuf(maxNumComponents);
-            buf.addComponent(new HeapByteBuf(new byte[initialCapacity], initialCapacity));
-            return buf;
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            discardReadComponents();
-        }
-    }
-
-    @Override
     public ByteBuffer[] nioBuffers() {
         return nioBuffers(readerIndex(), readableBytes());
     }
+
+    @Override
+    public ByteBuffer internalNioBuffer() {
+        if (components.size() == 1) {
+            return components.get(0).buf.internalNioBuffer();
+        }
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        ByteBuffer[] nioBuffers = new ByteBuffer[components.size()];
+        int index = 0;
+        for (Component component : components) {
+            nioBuffers[index++] = component.buf.internalNioBuffer();
+        }
+        return nioBuffers;
+    }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        CompositeByteBuf buf = new DefaultCompositeByteBuf(maxNumComponents);
+        buf.addComponent(new HeapByteBuf(new byte[initialCapacity], initialCapacity));
+        return buf;
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        discardReadComponents();
+    }
+
+    public void free() {
+        // TODO: Free the components added by capacity()
+    }
+
 }

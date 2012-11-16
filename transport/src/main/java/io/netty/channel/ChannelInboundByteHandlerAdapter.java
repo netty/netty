@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 
 
 /**
@@ -44,7 +45,7 @@ public abstract class ChannelInboundByteHandlerAdapter
             inboundBufferUpdated(ctx, in);
         } finally {
             if (!in.readable()) {
-                in.unsafe().discardSomeReadBytes();
+                ((UnsafeByteBuf) in).discardSomeReadBytes();
             }
         }
     }

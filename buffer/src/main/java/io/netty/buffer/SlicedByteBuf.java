@@ -31,13 +31,11 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class SlicedByteBuf extends AbstractWrappedByteBuf {
 
-    private final ByteBuf buffer;
+    private final UnsafeByteBuf buffer;
     private final int adjustment;
     private final int length;
 
-    private Unsafe unsafe;
-
-    public SlicedByteBuf(ByteBuf buffer, int index, int length) {
+    public SlicedByteBuf(UnsafeByteBuf buffer, int index, int length) {
         super(buffer.order(), length);
         if (index < 0 || index > buffer.capacity()) {
             throw new IndexOutOfBoundsException("Invalid index of " + index
@@ -53,7 +51,7 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
             this.buffer = ((SlicedByteBuf) buffer).buffer;
             adjustment = ((SlicedByteBuf) buffer).adjustment + index;
         } else if (buffer instanceof DuplicatedByteBuf) {
-            this.buffer = ((DuplicatedByteBuf) buffer).unwrap();
+            this.buffer = (UnsafeByteBuf) ((DuplicatedByteBuf) buffer).unwrap();
             adjustment = index;
         } else {
             this.buffer = buffer;
@@ -306,34 +304,25 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        Unsafe unsafe = this.unsafe;
-        if (unsafe == null) {
-            this.unsafe = unsafe = new SlicedUnsafe();
-        }
-        return unsafe;
+    public ByteBuffer internalNioBuffer() {
+        return buffer.nioBuffer(adjustment, length);
     }
 
-    private final class SlicedUnsafe implements Unsafe {
-
-        @Override
-        public ByteBuffer nioBuffer() {
-            return buffer.nioBuffer(adjustment, length);
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            return buffer.nioBuffers(adjustment, length);
-        }
-
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return buffer.unsafe().newBuffer(initialCapacity);
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            throw new UnsupportedOperationException();
-        }
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buffer.nioBuffers(adjustment, length);
     }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        return buffer.newBuffer(initialCapacity);
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void free() { }
 }

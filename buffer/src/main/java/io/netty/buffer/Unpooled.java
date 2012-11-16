@@ -199,7 +199,7 @@ public final class Unpooled {
             return wrappedBuffer(array);
         }
 
-        return new SlicedByteBuf(wrappedBuffer(array), offset, length);
+        return wrappedBuffer(array).slice(offset, length);
     }
 
     /**
@@ -674,10 +674,7 @@ public final class Unpooled {
      * {@code buffer}.
      */
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
-        if (buffer instanceof ReadOnlyByteBuf) {
-            buffer = ((ReadOnlyByteBuf) buffer).unwrap();
-        }
-        return new ReadOnlyByteBuf(buffer);
+        return new ReadOnlyByteBuf((UnsafeByteBuf) buffer);
     }
 
     /**

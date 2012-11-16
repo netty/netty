@@ -1843,41 +1843,4 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      */
     @Override
     String toString();
-
-    /**
-     * Returns an object that exposes unsafe expert-only operations which can lead to unspecified
-     * behavior.
-     */
-    Unsafe unsafe();
-
-    interface Unsafe {
-        /**
-         * Returns the internal NIO buffer that is reused for I/O.
-         *
-         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer
-         */
-        ByteBuffer nioBuffer();
-
-        /**
-         * Returns the internal NIO buffer array that is reused for I/O.
-         *
-         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer array
-         */
-        ByteBuffer[] nioBuffers();
-
-        /**
-         * Returns a new buffer whose type is identical to the callee.
-         *
-         * @param initialCapacity the initial capacity of the new buffer
-         */
-        ByteBuf newBuffer(int initialCapacity);
-
-        /**
-         * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
-         * some, all, or none of read bytes depending on its internal implementation to reduce
-         * overall memory bandwidth consumption at the cost of potentially additional memory
-         * consumption.
-         */
-        void discardSomeReadBytes();
-    }
 }

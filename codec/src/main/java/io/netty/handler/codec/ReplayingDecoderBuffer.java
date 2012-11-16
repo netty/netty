@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufPool;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.util.internal.Signal;
 
 import java.io.IOException;
@@ -32,7 +33,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-class ReplayingDecoderBuffer implements ByteBuf {
+class ReplayingDecoderBuffer implements UnsafeByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
@@ -855,7 +856,27 @@ class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
+    public ByteBuffer internalNioBuffer() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public void free() {
         throw new UnreplayableOperationException();
     }
 }

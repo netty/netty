@@ -19,6 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -440,7 +441,7 @@ public class LocalTransportThreadModelTest {
                     out.add(msg);
                 }
             }
-            in.unsafe().discardSomeReadBytes();
+            ((UnsafeByteBuf) in).discardSomeReadBytes();
             if (swallow) {
                 future.setSuccess();
             } else {

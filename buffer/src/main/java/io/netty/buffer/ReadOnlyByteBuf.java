@@ -30,19 +30,16 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
 
-    private final ByteBuf buffer;
+    private final UnsafeByteBuf buffer;
 
-    private Unsafe unsafe;
-
-    public ReadOnlyByteBuf(ByteBuf buffer) {
+    public ReadOnlyByteBuf(UnsafeByteBuf buffer) {
         super(buffer.order(), buffer.maxCapacity());
-        this.buffer = buffer;
-        setIndex(buffer.readerIndex(), buffer.writerIndex());
-    }
 
-    private ReadOnlyByteBuf(ReadOnlyByteBuf buffer) {
-        super(buffer.buffer.order(), buffer.maxCapacity());
-        this.buffer = buffer.buffer;
+        if (buffer instanceof ReadOnlyByteBuf) {
+            buffer = ((ReadOnlyByteBuf) buffer).buffer;
+        }
+
+        this.buffer = buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
@@ -176,7 +173,7 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new ReadOnlyByteBuf(buffer.slice(index, length));
+        return new ReadOnlyByteBuf((UnsafeByteBuf) buffer.slice(index, length));
     }
 
     @Override
@@ -235,34 +232,25 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public Unsafe unsafe() {
-        Unsafe unsafe = this.unsafe;
-        if (unsafe == null) {
-            this.unsafe = unsafe = new ReadOnlyUnsafe();
-        }
-        return unsafe;
+    public ByteBuffer internalNioBuffer() {
+        return buffer.internalNioBuffer();
     }
 
-    private final class ReadOnlyUnsafe implements Unsafe {
-
-        @Override
-        public ByteBuffer nioBuffer() {
-            return buffer.unsafe().nioBuffer();
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            return buffer.unsafe().nioBuffers();
-        }
-
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return buffer.unsafe().newBuffer(initialCapacity);
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            throw new UnsupportedOperationException();
-        }
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buffer.internalNioBuffers();
     }
+
+    @Override
+    public ByteBuf newBuffer(int initialCapacity) {
+        return buffer.newBuffer(initialCapacity);
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void free() { }
 }

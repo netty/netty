@@ -17,11 +17,12 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class ByteToMessageDecoder<O>
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
@@ -92,7 +93,7 @@ public abstract class ByteToMessageDecoder<O>
                     break;
                 }
             } catch (Throwable t) {
-                in.unsafe().discardSomeReadBytes();
+                ((UnsafeByteBuf) in).discardSomeReadBytes();
 
                 if (decoded) {
                     decoded = false;
@@ -107,7 +108,7 @@ public abstract class ByteToMessageDecoder<O>
             }
         }
 
-        in.unsafe().discardSomeReadBytes();
+        ((UnsafeByteBuf) in).discardSomeReadBytes();
 
         if (decoded) {
             ctx.fireInboundBufferUpdated();
