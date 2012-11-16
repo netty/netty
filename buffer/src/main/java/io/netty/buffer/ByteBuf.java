@@ -1879,11 +1879,5 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
          * consumption.
          */
         void discardSomeReadBytes();
-
-        /**
-         * Deallocates the internal memory block of this buffer or returns it to the {@link ByteBufPool} it came
-         * from.  The result of accessing a released buffer is unspecified and can even cause JVM crash.
-         */
-        void release();
     }
 }

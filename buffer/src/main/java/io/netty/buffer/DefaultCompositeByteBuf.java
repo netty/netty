@@ -252,7 +252,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
             for (int i = 0; i < numComponents; i ++) {
                 ByteBuf b = components.get(i).buf;
                 consolidated.writeBytes(b);
-                b.unsafe().release();
+                // TODO: Free 'b' if it was added by capacity()
             }
             Component c = new Component(consolidated);
             c.endOffset = c.length;
@@ -447,7 +447,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
                 Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim));
                 newC.offset = c.offset;
                 newC.endOffset = newC.offset + newC.length;
-                c.buf.unsafe().release();
+                // TODO: Free 'c.buf' if it was added by capacity()
                 i.set(newC);
                 break;
             }
@@ -1108,8 +1108,8 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         for (int i = 0; i < numComponents; i ++) {
             ByteBuf b = components.get(i).buf;
             consolidated.writeBytes(b);
-            b.unsafe().release();
-        }
+            // TODO: Free 'b' if it was added by capacity()
+       }
 
         components.clear();
         components.add(new Component(consolidated));
@@ -1132,7 +1132,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         for (int i = cIndex; i < endCIndex; i ++) {
             ByteBuf b = components.get(i).buf;
             consolidated.writeBytes(b);
-            b.unsafe().release();
+            // TODO: Free 'b' if it was added by capacity()
         }
 
         components.subList(cIndex + 1, endCIndex).clear();
@@ -1152,7 +1152,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
             for (Component c: components) {
-                c.buf.unsafe().release();
+                // TODO: Free 'c.buf' if it was added by capacity()
             }
             components.clear();
             setIndex(0, 0);
@@ -1163,7 +1163,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.get(i).buf.unsafe().release();
+            // TODO: Free 'components.get(i).buf' if it was added by capacity()
         }
         components.subList(0, firstComponentId).clear();
 
@@ -1186,7 +1186,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
             for (Component c: components) {
-                c.buf.unsafe().release();
+                // TODO: Free 'c.buf' if it was added by capacity()
             }
             components.clear();
             setIndex(0, 0);
@@ -1197,7 +1197,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.get(i).buf.unsafe().release();
+            // TODO: Free 'components.get(i).buf' if it was added by capacity()
         }
         components.subList(0, firstComponentId).clear();
 
@@ -1209,7 +1209,7 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
             components.remove(0);
         } else {
             Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
-            c.buf.unsafe().release();
+            // TODO: Free 'c.buf' if it was added by capacity()
             components.set(0, newC);
         }
 
@@ -1496,9 +1496,6 @@ public class DefaultCompositeByteBuf extends AbstractNonWrappedByteBuf implement
         public void discardSomeReadBytes() {
             discardReadComponents();
         }
-
-        @Override
-        public void release() { }
     }
 
     @Override

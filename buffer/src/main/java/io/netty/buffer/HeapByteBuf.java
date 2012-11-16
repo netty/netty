@@ -73,11 +73,11 @@ public class HeapByteBuf extends AbstractNonWrappedByteBuf {
     }
 
     private ByteBuffer tmpNioBuf() {
-        ByteBuffer nioBuf = this.tmpNioBuf;
-        if (nioBuf == null) {
-            this.tmpNioBuf = nioBuf = ByteBuffer.wrap(array);
+        ByteBuffer tmpNioBuf = this.tmpNioBuf;
+        if (tmpNioBuf == null) {
+            this.tmpNioBuf = tmpNioBuf = ByteBuffer.wrap(array);
         }
-        return nioBuf;
+        return tmpNioBuf;
     }
 
     @Override
@@ -354,8 +354,5 @@ public class HeapByteBuf extends AbstractNonWrappedByteBuf {
                 discardReadBytes();
             }
         }
-
-        @Override
-        public void release() { }
     }
 }

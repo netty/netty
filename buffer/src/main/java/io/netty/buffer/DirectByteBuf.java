@@ -471,8 +471,5 @@ public class DirectByteBuf extends AbstractNonWrappedByteBuf {
                 discardReadBytes();
             }
         }
-
-        @Override
-        public void release() { }
     }
 }

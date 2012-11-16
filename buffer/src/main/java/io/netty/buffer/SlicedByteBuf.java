@@ -335,8 +335,5 @@ public class SlicedByteBuf extends AbstractWrappedByteBuf {
         public void discardSomeReadBytes() {
             throw new UnsupportedOperationException();
         }
-
-        @Override
-        public void release() { }
     }
 }

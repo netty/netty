@@ -264,8 +264,5 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
         public void discardSomeReadBytes() {
             throw new UnsupportedOperationException();
         }
-
-        @Override
-        public void release() { }
     }
 }
