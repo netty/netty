@@ -139,5 +139,5 @@ public interface ChannelConfig {
     void setWriteSpinCount(int writeSpinCount);
 
     ByteBufPool getBufferPool();
-    void setBufferPool(ByteBufPool bufferPool);
+    ByteBufPool setBufferPool(ByteBufPool bufferPool);
 }

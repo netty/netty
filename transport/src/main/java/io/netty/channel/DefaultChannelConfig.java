@@ -147,10 +147,12 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public void setBufferPool(ByteBufPool bufferPool) {
+    public ByteBufPool setBufferPool(ByteBufPool bufferPool) {
         if (bufferPool == null) {
             throw new NullPointerException("bufferPool");
         }
+        ByteBufPool oldPool = this.bufferPool;
         this.bufferPool = bufferPool;
+        return oldPool;
     }
 }
