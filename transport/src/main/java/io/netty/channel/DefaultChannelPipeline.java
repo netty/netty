@@ -121,6 +121,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             nextCtx.prev = newCtx;
         }
         head.next = newCtx;
+        if(tail == head)
+            tail = newCtx;
+
         name2ctx.put(name, newCtx);
 
         callAfterAdd(newCtx);
