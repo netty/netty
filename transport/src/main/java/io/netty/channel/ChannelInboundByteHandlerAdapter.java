@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.UnsafeByteBuf;
 
 
@@ -35,6 +36,11 @@ public abstract class ChannelInboundByteHandlerAdapter
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.pool().buffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        ((UnsafeByteBuf) buf).free();
     }
 
     @Override

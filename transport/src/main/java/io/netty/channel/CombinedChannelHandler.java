@@ -69,9 +69,19 @@ public class CombinedChannelHandler
     }
 
     @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        in.freeInboundBuffer(ctx, buf);
+    }
+
+    @Override
     public ChannelBuf newOutboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        out.freeOutboundBuffer(ctx, buf);
     }
 
     @Override

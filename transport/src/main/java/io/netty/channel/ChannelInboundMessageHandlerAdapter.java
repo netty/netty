@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 
@@ -31,6 +32,11 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
     }
 
     @SuppressWarnings("unchecked")

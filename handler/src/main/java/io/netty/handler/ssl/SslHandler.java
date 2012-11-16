@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFlushFutureNotifier;
@@ -381,6 +382,16 @@ public class SslHandler
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.pool().buffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        ((UnsafeByteBuf) buf).free();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        ((UnsafeByteBuf) buf).free();
     }
 
     @Override
