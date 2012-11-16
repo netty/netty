@@ -74,7 +74,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     AtomicReference<ByteBridge> outByteBridge;
 
     // Runnables that calls handlers
-    final Runnable fireChannelRegisteredTask = new Runnable() {
+    private final Runnable fireChannelRegisteredTask = new Runnable() {
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
@@ -85,7 +85,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
     };
-    final Runnable fireChannelUnregisteredTask = new Runnable() {
+    private final Runnable fireChannelUnregisteredTask = new Runnable() {
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
@@ -96,7 +96,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
     };
-    final Runnable fireChannelActiveTask = new Runnable() {
+    private final Runnable fireChannelActiveTask = new Runnable() {
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
@@ -107,7 +107,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
     };
-    final Runnable fireChannelInactiveTask = new Runnable() {
+    private final Runnable fireChannelInactiveTask = new Runnable() {
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
@@ -118,7 +118,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
     };
-    final Runnable curCtxFireInboundBufferUpdatedTask = new Runnable() {
+    private final Runnable curCtxFireInboundBufferUpdatedTask = new Runnable() {
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
@@ -263,7 +263,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.flags = flags;
     }
 
-    void lazyInitOutboundBuffer() {
+    private void lazyInitOutboundBuffer() {
         if ((flags & FLAG_NEEDS_LAZY_INIT) != 0) {
             if (outByteBuf == null && outMsgBuf == null) {
                 initOutboundBuffer();
@@ -514,7 +514,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
      * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
      *         {@link Throwable}.
      */
-    <T> T executeOnEventLoop(Callable<T> c) throws Exception {
+    private <T> T executeOnEventLoop(Callable<T> c) throws Exception {
         return getFromFuture(executor().submit(c));
     }
 
@@ -557,7 +557,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
      * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
      *         {@link Throwable}.
      */
-    <T> T getFromFuture(Future<T> future) throws Exception {
+    private static <T> T getFromFuture(Future<T> future) throws Exception {
         try {
             return future.get();
         } catch (ExecutionException ex) {
@@ -591,7 +591,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
      * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
      *         {@link Throwable}.
      */
-    void waitForFuture(Future<?> future) {
+    static void waitForFuture(Future<?> future) {
         try {
             future.get();
         } catch (ExecutionException ex) {
@@ -1096,9 +1096,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     static final class MessageBridge {
         final MessageBuf<Object> msgBuf = Unpooled.messageBuffer();
-        final Queue<Object[]> exchangeBuf = new ConcurrentLinkedQueue<Object[]>();
 
-        void fill() {
+        private final Queue<Object[]> exchangeBuf = new ConcurrentLinkedQueue<Object[]>();
+
+        private void fill() {
             if (msgBuf.isEmpty()) {
                 return;
             }
@@ -1107,7 +1108,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             exchangeBuf.add(data);
         }
 
-        void flush(MessageBuf<Object> out) {
+        private void flush(MessageBuf<Object> out) {
             for (;;) {
                 Object[] data = exchangeBuf.poll();
                 if (data == null) {
@@ -1121,13 +1122,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     static final class ByteBridge {
         final ByteBuf byteBuf;
-        final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
+
+        private final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
 
         ByteBridge(ByteBuf byteBuf) {
             this.byteBuf = byteBuf;
         }
 
-        void fill() {
+        private void fill() {
             if (!byteBuf.readable()) {
                 return;
             }
@@ -1136,7 +1138,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             exchangeBuf.add(data);
         }
 
-        void flush(ByteBuf out) {
+        private void flush(ByteBuf out) {
             for (;;) {
                 ByteBuf data = exchangeBuf.poll();
                 if (data == null) {
