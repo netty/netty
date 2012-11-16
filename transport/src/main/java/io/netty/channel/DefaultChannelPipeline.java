@@ -121,6 +121,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             nextCtx.prev = newCtx;
         }
         head.next = newCtx;
+        if(tail == head)
+            tail = newCtx;
+
         name2ctx.put(name, newCtx);
 
         callAfterAdd(newCtx);
@@ -892,7 +895,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
-                if (initialCtx.next != null) {
+                if (initialCtx != null && initialCtx.next != null) {
                     throw new NoSuchBufferException(String.format(
                             "the handler '%s' could not find a %s whose outbound buffer is %s.",
                             initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
