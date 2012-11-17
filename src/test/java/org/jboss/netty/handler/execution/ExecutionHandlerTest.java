@@ -109,19 +109,13 @@ public class ExecutionHandlerTest {
         }
 
         public void sendUpstream(ChannelEvent e) {
-            try {
-                handler.releaseExternalResources();
-            } catch (IllegalStateException ex) {
-                latch.countDown();
-            }
+            handler.releaseExternalResources();
+            latch.countDown();
         }
 
         public void sendDownstream(ChannelEvent e) {
-            try {
-                handler.releaseExternalResources();
-            } catch (IllegalStateException ex) {
-                latch.countDown();
-            }
+            handler.releaseExternalResources();
+            latch.countDown();
         }
 
         public Object getAttachment() {

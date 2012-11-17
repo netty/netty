@@ -17,9 +17,9 @@ package org.jboss.netty.handler.execution;
 
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A special {@link Executor} which allows to chain a series of
@@ -72,7 +72,12 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable {
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(cur, next);
+        if (cur instanceof ExecutorService) {
+            ((ExecutorService) cur).shutdown();
+        }
+        if (next instanceof ExecutorService) {
+            ((ExecutorService) next).shutdown();
+        }
         releaseExternal(cur);
         releaseExternal(next);
     }

@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.execution;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -31,7 +32,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * Forwards an upstream {@link ChannelEvent} to an {@link Executor}.
@@ -160,7 +160,9 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      */
     public void releaseExternalResources() {
         Executor executor = getExecutor();
-        ExecutorUtil.terminate(ChannelEventRunnable.PARENT, executor);
+        if (executor instanceof ExecutorService) {
+            ((ExecutorService) executor).shutdown();
+        }
         if (executor instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) executor).releaseExternalResources();
         }
