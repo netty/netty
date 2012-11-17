@@ -18,7 +18,14 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.codec.socks.*;
+import io.netty.codec.socks.SocksCmdRequestDecoder;
+import io.netty.codec.socks.SocksInitResponse;
+import io.netty.codec.socks.SocksMessage;
+import io.netty.codec.socks.SocksRequest;
+import io.netty.codec.socks.SocksAuthResponse;
+import io.netty.codec.socks.SocksCmdRequest;
+import io.netty.codec.socks.SocksCmdResponse;
+
 
 
 @ChannelHandler.Sharable
