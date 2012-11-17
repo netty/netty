@@ -21,6 +21,7 @@ import io.netty.handler.codec.ReplayingDecoder;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitResponse}.
+ * Before returning SocksResponse decoder removes itself from pipeline.
  */
 public class SocksInitResponseDecoder extends ReplayingDecoder<SocksResponse, SocksInitResponseDecoder.State> {
     private static final String name = "SOCKS_INIT_RESPONSE_DECODER";

@@ -22,6 +22,7 @@ import io.netty.util.CharsetUtil;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksAuthRequest}.
+ * Before returning SocksRequest decoder removes itself from pipeline.
  */
 public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, SocksAuthRequestDecoder.State> {
     private static final String name = "SOCKS_AUTH_REQUEST_DECODER";

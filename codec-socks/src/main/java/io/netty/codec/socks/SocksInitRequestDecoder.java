@@ -24,6 +24,7 @@ import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksInitRequest}.
+ * Before returning SocksRequest decoder removes itself from pipeline.
  */
 public class SocksInitRequestDecoder extends ReplayingDecoder<SocksRequest, SocksInitRequestDecoder.State> {
     private static final String name = "SOCKS_INIT_REQUEST_DECODER";

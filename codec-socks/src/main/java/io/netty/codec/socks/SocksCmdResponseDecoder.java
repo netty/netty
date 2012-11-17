@@ -22,6 +22,7 @@ import io.netty.util.CharsetUtil;
 
 /**
  * Decodes {@link ByteBuf}s into {@link SocksCmdResponse}.
+ * Before returning SocksResponse decoder removes itself from pipeline.
  */
 public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, SocksCmdResponseDecoder.State> {
     private static final String name = "SOCKS_CMD_RESPONSE_DECODER";
