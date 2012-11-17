@@ -61,15 +61,6 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     /**
-     * Creates a new instance with the default {@code version (2)},
-     * {@code maxChunkSize (8192)}, and {@code maxHeaderSize (16384)}.
-     */
-    @Deprecated
-    public SpdyFrameDecoder() {
-        this(2);
-    }
-
-    /**
      * Creates a new instance with the specified {@code version} and the default
      * {@code maxChunkSize (8192)} and {@code maxHeaderSize (16384)}.
      */
