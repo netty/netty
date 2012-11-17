@@ -44,8 +44,9 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
     public void messageReceived(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
         switch (socksRequest.getSocksRequestType()) {
             case INIT: {
-//                channelHandlerContext.pipeline().addFirst("socksAuthRequestDecoder",new SocksAuthRequestDecoder());
-//                channelHandlerContext.write(new SocksInitResponse(SocksMessage.AuthScheme.AUTH_PASSWORD));
+//                auth support example
+//                ctx.pipeline().addFirst("socksAuthRequestDecoder",new SocksAuthRequestDecoder());
+//                ctx.write(new SocksInitResponse(SocksMessage.AuthScheme.AUTH_PASSWORD));
                 ctx.pipeline().addFirst(SocksCmdRequestDecoder.getName(), new SocksCmdRequestDecoder());
                 ctx.write(new SocksInitResponse(SocksMessage.AuthScheme.NO_AUTH));
                 break;
