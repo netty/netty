@@ -34,10 +34,10 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
         new SpdySessionStatus(1, "PROTOCOL_ERROR");
 
     /**
-     * 11 Internal Error
+     * 2 Internal Error
      */
     public static final SpdySessionStatus INTERNAL_ERROR =
-        new SpdySessionStatus(11, "INTERNAL_ERROR");
+        new SpdySessionStatus(2, "INTERNAL_ERROR");
 
     /**
      * Returns the {@link SpdySessionStatus} represented by the specified code.
@@ -50,7 +50,7 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
             return OK;
         case 1:
             return PROTOCOL_ERROR;
-        case 11:
+        case 2:
             return INTERNAL_ERROR;
         }
 
