@@ -64,13 +64,7 @@ public abstract class ChannelEventRunnable implements Runnable, EstimatableObjec
     }
 
     public final void run() {
-        try {
-            PARENT.set(executor);
-            doRun();
-        } finally {
-            PARENT.remove();
-        }
-
+        doRun();
     }
 
     protected abstract void doRun();
