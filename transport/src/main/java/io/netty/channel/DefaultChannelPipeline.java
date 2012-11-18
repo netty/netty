@@ -627,7 +627,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ChannelStateHandlerAdapter h = (ChannelStateHandlerAdapter) handler;
             if (!h.isSharable() && h.added) {
                 throw new ChannelHandlerLifeCycleException(
-                        "Only a @Sharable handler can be added or removed multiple times.");
+                        h.getClass().getName()  +
+                        " is not a @Sharable handler, so can't be added or removed multiple times.");
             }
             h.added = true;
         }
