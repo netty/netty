@@ -280,7 +280,6 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
-            <ignore>sun.net.util.IPAddressUtil</ignore>
 
             <ignore>java.util.zip.Deflater</ignore>
 
