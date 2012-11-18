@@ -69,7 +69,7 @@
 
   <properties>
     <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
-    <yammer.metrics.version>2.1.2</yammer.metrics.version>
+    <yammer.metrics.version>2.1.4</yammer.metrics.version>
   </properties>
  
   <modules>
