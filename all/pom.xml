@@ -318,6 +318,7 @@
             <Import-Package>
               com.sun.nio.sctp;resolution:=optional,
               sun.misc;resolution:=optional,
+              sun.net.util;resolution:=optional,
               *
             </Import-Package>
             <Export-Package>
