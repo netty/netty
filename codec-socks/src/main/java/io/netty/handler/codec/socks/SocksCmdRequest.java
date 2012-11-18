@@ -17,7 +17,7 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
-import sun.net.util.IPAddressUtil;
+import io.netty.util.IPUtil;
 
 import java.net.IDN;
 
@@ -46,7 +46,7 @@ public final class SocksCmdRequest extends SocksRequest {
         }
         switch (addressType) {
             case IPv4:
-                if (!IPAddressUtil.isIPv4LiteralAddress(host)) {
+                if (!IPUtil.isValidIPV4Address(host)) {
                     throw new IllegalArgumentException(host + " is not a valid IPv4 address");
                 }
                 break;
@@ -56,7 +56,7 @@ public final class SocksCmdRequest extends SocksRequest {
                 }
                 break;
             case IPv6:
-                if (!IPAddressUtil.isIPv6LiteralAddress(host)) {
+                if (!IPUtil.isValidIP6Address(host)) {
                     throw new IllegalArgumentException(host + " is not a valid IPv6 address");
                 }
                 break;
@@ -116,7 +116,7 @@ public final class SocksCmdRequest extends SocksRequest {
         byteBuf.writeByte(addressType.getByteValue());
         switch (addressType) {
             case IPv4: {
-                byteBuf.writeBytes(IPAddressUtil.textToNumericFormatV4(host));
+                byteBuf.writeBytes(IPUtil.createByteArrayFromIPAddressString(host));
                 byteBuf.writeShort(port);
                 break;
             }
@@ -129,7 +129,7 @@ public final class SocksCmdRequest extends SocksRequest {
             }
 
             case IPv6: {
-                byteBuf.writeBytes(IPAddressUtil.textToNumericFormatV6(host));
+                byteBuf.writeBytes(IPUtil.createByteArrayFromIPAddressString(host));
                 byteBuf.writeShort(port);
                 break;
             }
