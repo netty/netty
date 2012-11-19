@@ -820,7 +820,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } else {
                     ByteBridge bridge = ctx.inByteBridge.get();
                     if (bridge == null) {
-                        bridge = new ByteBridge(ctx.pool().buffer());
+                        bridge = new ByteBridge(ctx);
                         if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.inByteBridge.get();
                         }
@@ -1144,13 +1144,16 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    final class ByteBridge {
+    static final class ByteBridge {
         final UnsafeByteBuf byteBuf;
 
         private final Queue<UnsafeByteBuf> exchangeBuf = new ConcurrentLinkedQueue<UnsafeByteBuf>();
+        private final ChannelHandlerContext ctx;
 
-        ByteBridge(ByteBuf byteBuf) {
-            this.byteBuf = (UnsafeByteBuf) byteBuf;
+        ByteBridge(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+            // TODO Choose whether to use heap or direct buffer depending on the context's buffer type.
+            byteBuf = (UnsafeByteBuf) ctx.pool().buffer();
         }
 
         private void fill() {
@@ -1161,9 +1164,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             int dataLen = byteBuf.readableBytes();
             ByteBuf data;
             if (byteBuf.isDirect()) {
-                data = pool().directBuffer(dataLen, dataLen);
+                data = ctx.pool().directBuffer(dataLen, dataLen);
             } else {
-                data = pool().buffer(dataLen, dataLen);
+                data = ctx.pool().buffer(dataLen, dataLen);
             }
 
             byteBuf.readBytes(data);

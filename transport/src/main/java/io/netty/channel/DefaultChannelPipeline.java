@@ -404,7 +404,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        context.waitForFuture(future);
+        waitForFuture(future);
 
         return context;
     }
@@ -495,8 +495,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private ChannelHandler replace(
             final DefaultChannelHandlerContext ctx, final String newName, ChannelHandler newHandler) {
         Future<?> future;
-        DefaultChannelHandlerContext context;
-
         synchronized (this) {
             if (ctx == head) {
                 throw new IllegalArgumentException();
@@ -525,7 +523,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 }
                             }
                         });
-                    context = oldTail;
                 }
 
             } else {
@@ -552,7 +549,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 }
                             }
                         });
-                    context = newCtx;
                 }
             }
         }
@@ -560,7 +556,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        context.waitForFuture(future);
+        waitForFuture(future);
 
         return ctx.handler();
     }
@@ -886,7 +882,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 } else {
                     ByteBridge bridge = ctx.outByteBridge.get();
                     if (bridge == null) {
-                        bridge = new ByteBridge(ctx.pool().buffer());
+                        bridge = new ByteBridge(ctx);
                         if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
                             bridge = ctx.outByteBridge.get();
                         }
