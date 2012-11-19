@@ -35,7 +35,7 @@ import io.netty.channel.socket.aio.AioServerSocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetworkConstants;
+import io.netty.util.IpAddresses;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -50,7 +50,7 @@ import java.util.Map.Entry;
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
-    private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(NetworkConstants.LOCALHOST, 0);
+    private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(IpAddresses.LOCALHOST, 0);
 
     private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
         @Override
