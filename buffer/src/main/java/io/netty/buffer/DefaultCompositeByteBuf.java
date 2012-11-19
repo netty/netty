@@ -47,6 +47,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     private Component lastAccessed;
     private int lastAccessedId;
+    private boolean freed;
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents) {
         super(Integer.MAX_VALUE);
@@ -140,7 +141,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         // No need to consolidate - just add a component to the list.
-        Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice());
+        Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice(), false);
         if (cIndex == components.size()) {
             components.add(c);
             if (cIndex == 0) {
@@ -263,11 +264,12 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             // We're not using foreach to avoid creating an iterator.
             // noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < numComponents; i ++) {
-                ByteBuf b = components.get(i).buf;
+                Component c = components.get(i);
+                UnsafeByteBuf b = c.buf;
                 consolidated.writeBytes(b);
-                // TODO: Free 'b' if it was added by capacity()
+                c.freeIfNecessary();
             }
-            Component c = new Component(consolidated);
+            Component c = new Component(consolidated, true);
             c.endOffset = c.length;
             components.clear();
             components.add(c);
@@ -275,6 +277,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private void checkComponentIndex(int cIndex) {
+        assert !freed;
         if (cIndex < 0 || cIndex > components.size()) {
             throw new IndexOutOfBoundsException(String.format(
                     "cIndex: %d (expected: >= 0 && <= numComponents(%d))",
@@ -283,6 +286,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private void checkComponentIndex(int cIndex, int numComponents) {
+        assert !freed;
         if (cIndex < 0 || cIndex + numComponents > components.size()) {
             throw new IndexOutOfBoundsException(String.format(
                     "cIndex: %d, numComponents: %d " +
@@ -329,6 +333,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public Iterator<ByteBuf> iterator() {
+        assert !freed;
         List<ByteBuf> list = new ArrayList<ByteBuf>(components.size());
         for (Component c: components) {
             list.add(c.buf);
@@ -425,6 +430,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf capacity(int newCapacity) {
+        assert !freed;
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -451,10 +457,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 }
 
                 // Replace the last component with the trimmed slice.
-                Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim));
+                Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim), c.allocatedBySelf);
                 newC.offset = c.offset;
                 newC.endOffset = newC.offset + newC.length;
-                // TODO: Free 'c.buf' if it was added by capacity()
                 i.set(newC);
                 break;
             }
@@ -490,6 +495,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public int toComponentIndex(int offset) {
+        assert !freed;
         if (offset < 0 || offset >= capacity()) {
             throw new IndexOutOfBoundsException(String.format(
                     "offset: %d (expected: >= 0 && < capacity(%d))", offset, capacity()));
@@ -998,6 +1004,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private Component findComponent(int offset) {
+        assert !freed;
         if (offset < 0 || offset >= capacity()) {
             throw new IndexOutOfBoundsException(String.format(
                     "offset: %d (expected: >= 0 && < capacity(%d))", offset, capacity()));
@@ -1054,6 +1061,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private ByteBuffer copiedNioBuffer(int index, int length) {
+        assert !freed;
         if (components.size() == 1) {
             return toNioBuffer(components.get(0).buf, index, length);
         }
@@ -1113,6 +1121,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf consolidate() {
+        assert !freed;
         final int numComponents = numComponents();
         if (numComponents <= 1) {
             return this;
@@ -1123,13 +1132,14 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         final ByteBuf consolidated = alloc().buffer(capacity);
 
         for (int i = 0; i < numComponents; i ++) {
-            ByteBuf b = components.get(i).buf;
+            Component c = components.get(i);
+            UnsafeByteBuf b = c.buf;
             consolidated.writeBytes(b);
-            // TODO: Free 'b' if it was added by capacity()
+            c.freeIfNecessary();
        }
 
         components.clear();
-        components.add(new Component(consolidated));
+        components.add(new Component(consolidated, true));
         updateComponentOffsets(0);
         return this;
     }
@@ -1147,19 +1157,21 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         final ByteBuf consolidated = alloc().buffer(capacity);
 
         for (int i = cIndex; i < endCIndex; i ++) {
-            ByteBuf b = components.get(i).buf;
+            Component c = components.get(i);
+            ByteBuf b = c.buf;
             consolidated.writeBytes(b);
-            // TODO: Free 'b' if it was added by capacity()
+            c.freeIfNecessary();
         }
 
         components.subList(cIndex + 1, endCIndex).clear();
-        components.set(cIndex, new Component(consolidated));
+        components.set(cIndex, new Component(consolidated, true));
         updateComponentOffsets(cIndex);
         return this;
     }
 
     @Override
     public CompositeByteBuf discardReadComponents() {
+        assert !freed;
         final int readerIndex = readerIndex();
         if (readerIndex == 0) {
             return this;
@@ -1169,7 +1181,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
             for (Component c: components) {
-                // TODO: Free 'c.buf' if it was added by capacity()
+                c.freeIfNecessary();
             }
             components.clear();
             setIndex(0, 0);
@@ -1180,7 +1192,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            // TODO: Free 'components.get(i).buf' if it was added by capacity()
+            components.get(i).freeIfNecessary();
         }
         components.subList(0, firstComponentId).clear();
 
@@ -1194,6 +1206,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf discardReadBytes() {
+        assert !freed;
         final int readerIndex = readerIndex();
         if (readerIndex == 0) {
             return this;
@@ -1203,7 +1216,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
             for (Component c: components) {
-                // TODO: Free 'c.buf' if it was added by capacity()
+                c.freeIfNecessary();
             }
             components.clear();
             setIndex(0, 0);
@@ -1214,7 +1227,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            // TODO: Free 'components.get(i).buf' if it was added by capacity()
+            components.get(i).freeIfNecessary();
         }
         components.subList(0, firstComponentId).clear();
 
@@ -1225,8 +1238,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             // new slice would be empty, so remove instead
             components.remove(0);
         } else {
-            Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
-            // TODO: Free 'c.buf' if it was added by capacity()
+            Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment), c.allocatedBySelf);
             components.set(0, newC);
         }
 
@@ -1247,12 +1259,27 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     private static final class Component {
         final UnsafeByteBuf buf;
         final int length;
+        final boolean allocatedBySelf;
         int offset;
         int endOffset;
 
-        Component(ByteBuf buf) {
+        Component(ByteBuf buf, boolean allocatedBySelf) {
             this.buf = (UnsafeByteBuf) buf;
             length = buf.readableBytes();
+            this.allocatedBySelf = allocatedBySelf;
+        }
+
+        void freeIfNecessary() {
+            if (!allocatedBySelf) {
+                return;
+            }
+
+            // Unwrap so that we can free slices, too.
+            UnsafeByteBuf buf;
+            for (buf = this.buf; buf.unwrap() != null; buf = (UnsafeByteBuf) buf.unwrap()) {
+                continue;
+            }
+            buf.free(); // We should not get a NPE here. If so, it must be a bug.
         }
     }
 
@@ -1508,7 +1535,14 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public void free() {
-        // TODO: Free the components added by capacity()
+        if (freed) {
+            return;
+        }
+
+        freed = true;
+        for (Component c: components) {
+            c.freeIfNecessary();
+        }
     }
 
     @Override
