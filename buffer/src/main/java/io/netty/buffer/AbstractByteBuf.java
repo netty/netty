@@ -30,23 +30,19 @@ import java.nio.charset.Charset;
  */
 public abstract class AbstractByteBuf implements UnsafeByteBuf {
 
-    private final ByteOrder order;
-    private final int maxCapacity;
-    private SwappedByteBuf swappedBuf;
-
     private int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
 
-    protected AbstractByteBuf(ByteOrder endianness, int maxCapacity) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+    private final int maxCapacity;
+
+    private SwappedByteBuf swappedBuf;
+
+    protected AbstractByteBuf(int maxCapacity) {
         if (maxCapacity < 0) {
             throw new IllegalArgumentException("maxCapacity: " + maxCapacity + " (expected: >= 0)");
         }
-        order = endianness;
         this.maxCapacity = maxCapacity;
     }
 
@@ -256,11 +252,6 @@ public abstract class AbstractByteBuf implements UnsafeByteBuf {
         }
 
         return Math.min(newCapacity, maxCapacity);
-    }
-
-    @Override
-    public final ByteOrder order() {
-        return order;
     }
 
     @Override

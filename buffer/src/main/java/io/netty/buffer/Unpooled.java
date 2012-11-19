@@ -77,6 +77,8 @@ import java.util.Queue;
  */
 public final class Unpooled {
 
+    static final ByteBufAllocator ALLOC = new UnpooledByteBufAllocator();
+
     /**
      * Big endian byte order.
      */
@@ -90,7 +92,7 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = new HeapByteBuf(0, 0);
+    public static final ByteBuf EMPTY_BUFFER = new UnpooledHeapByteBuf(ALLOC, 0, 0);
 
     public static <T> MessageBuf<T> messageBuffer() {
         return new DefaultMessageBuf<T>();
@@ -150,7 +152,7 @@ public final class Unpooled {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return EMPTY_BUFFER;
         }
-        return new HeapByteBuf(initialCapacity, maxCapacity);
+        return new UnpooledHeapByteBuf(ALLOC, initialCapacity, maxCapacity);
     }
 
     /**
@@ -162,7 +164,7 @@ public final class Unpooled {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return EMPTY_BUFFER;
         }
-        return new DirectByteBuf(initialCapacity, maxCapacity);
+        return new UnpooledDirectByteBuf(ALLOC, initialCapacity, maxCapacity);
     }
 
     /**
@@ -174,7 +176,7 @@ public final class Unpooled {
         if (array.length == 0) {
             return EMPTY_BUFFER;
         }
-        return new HeapByteBuf(array, array.length);
+        return new UnpooledHeapByteBuf(ALLOC, array, array.length);
     }
 
     /**
@@ -209,7 +211,7 @@ public final class Unpooled {
                     buffer.arrayOffset() + buffer.position(),
                     buffer.remaining()).order(buffer.order());
         } else {
-            return new DirectByteBuf(buffer, buffer.remaining());
+            return new UnpooledDirectByteBuf(ALLOC, buffer, buffer.remaining());
         }
     }
 
@@ -280,7 +282,7 @@ public final class Unpooled {
             }
 
             if (!components.isEmpty()) {
-                return new DefaultCompositeByteBuf(maxNumComponents, components);
+                return new DefaultCompositeByteBuf(ALLOC, maxNumComponents, components);
             }
         }
 
@@ -304,7 +306,7 @@ public final class Unpooled {
         default:
             for (ByteBuf b: buffers) {
                 if (b.readable()) {
-                    return new DefaultCompositeByteBuf(maxNumComponents, buffers);
+                    return new DefaultCompositeByteBuf(ALLOC, maxNumComponents, buffers);
                 }
             }
         }
@@ -338,7 +340,7 @@ public final class Unpooled {
             }
 
             if (!components.isEmpty()) {
-                return new DefaultCompositeByteBuf(maxNumComponents, components);
+                return new DefaultCompositeByteBuf(ALLOC, maxNumComponents, components);
             }
         }
 
@@ -356,7 +358,7 @@ public final class Unpooled {
      * Returns a new big-endian composite buffer with no components.
      */
     public static CompositeByteBuf compositeBuffer(int maxNumComponents) {
-        return new DefaultCompositeByteBuf(maxNumComponents);
+        return new DefaultCompositeByteBuf(ALLOC, maxNumComponents);
     }
 
     /**

@@ -21,77 +21,26 @@ import java.util.concurrent.TimeUnit;
 /**
  * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
  */
-public class UnpooledByteBufAllocator implements ByteBufAllocator {
+public class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private final Semaphore s = new Semaphore(0);
-    private final boolean directByDefault;
 
     public UnpooledByteBufAllocator() {
-        this(false);
+        super(false);
     }
 
     public UnpooledByteBufAllocator(boolean directByDefault) {
-        this.directByDefault = directByDefault;
+        super(directByDefault);
     }
 
     @Override
-    public ByteBuf buffer() {
-        if (directByDefault) {
-            return directBuffer();
-        }
-        return heapBuffer();
+    protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+        return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
     }
 
     @Override
-    public ByteBuf buffer(int initialCapacity) {
-        if (directByDefault) {
-            return directBuffer(initialCapacity);
-        }
-        return heapBuffer(initialCapacity);
-    }
-
-    @Override
-    public ByteBuf buffer(int initialCapacity, int maxCapacity) {
-        if (directByDefault) {
-            return directBuffer(initialCapacity, maxCapacity);
-        }
-        return heapBuffer(initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public ByteBuf heapBuffer() {
-        ensureNotShutdown();
-        return Unpooled.buffer();
-    }
-
-    @Override
-    public ByteBuf heapBuffer(int initialCapacity) {
-        ensureNotShutdown();
-        return Unpooled.buffer(initialCapacity);
-    }
-
-    @Override
-    public ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
-        ensureNotShutdown();
-        return Unpooled.buffer(initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public ByteBuf directBuffer() {
-        ensureNotShutdown();
-        return Unpooled.directBuffer();
-    }
-
-    @Override
-    public ByteBuf directBuffer(int initialCapacity) {
-        ensureNotShutdown();
-        return Unpooled.directBuffer(initialCapacity);
-    }
-
-    @Override
-    public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        ensureNotShutdown();
-        return Unpooled.directBuffer(initialCapacity, maxCapacity);
+    protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+        return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
     }
 
     @Override
@@ -119,11 +68,5 @@ public class UnpooledByteBufAllocator implements ByteBufAllocator {
             s.release();
         }
         return isTerminated();
-    }
-
-    private void ensureNotShutdown() {
-        if (isShutdown()) {
-            throw new IllegalStateException("shut down already");
-        }
     }
 }

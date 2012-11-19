@@ -34,14 +34,6 @@ public interface UnsafeByteBuf extends ByteBuf {
      */
     ByteBuffer[] internalNioBuffers();
 
-    // TODO: Check if this can be replaced with pool().buffer(...)
-    /**
-     * Returns a new buffer whose type is identical to the callee.
-     *
-     * @param initialCapacity the initial capacity of the new buffer
-     */
-    ByteBuf newBuffer(int initialCapacity);
-
     /**
      * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
      * some, all, or none of read bytes depending on its internal implementation to reduce
@@ -55,4 +47,11 @@ public interface UnsafeByteBuf extends ByteBuf {
      * from.  The result of accessing a released buffer is unspecified and can even cause JVM crash.
      */
     void free();
+
+    /**
+     * Return the underlying buffer instance if this buffer is a wrapper.
+     *
+     * @return {@code null} if this buffer is not a wrapper
+     */
+    ByteBuf unwrap();
 }

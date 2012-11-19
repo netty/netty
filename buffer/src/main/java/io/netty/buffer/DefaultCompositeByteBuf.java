@@ -39,20 +39,22 @@ import java.util.ListIterator;
  */
 public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
 
+    private final ByteBufAllocator alloc;
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
 
     private Component lastAccessed;
     private int lastAccessedId;
 
-    public DefaultCompositeByteBuf(int maxNumComponents) {
-        super(ByteOrder.BIG_ENDIAN, Integer.MAX_VALUE);
+    public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents) {
+        super(Integer.MAX_VALUE);
+        this.alloc = alloc;
         this.maxNumComponents = maxNumComponents;
     }
 
-    public DefaultCompositeByteBuf(int maxNumComponents, ByteBuf... buffers) {
-        super(ByteOrder.BIG_ENDIAN, Integer.MAX_VALUE);
-
+    public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents, ByteBuf... buffers) {
+        super(Integer.MAX_VALUE);
+        this.alloc = alloc;
         if (maxNumComponents < 2) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
@@ -65,9 +67,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         setIndex(0, capacity());
     }
 
-    public DefaultCompositeByteBuf(int maxNumComponents, Iterable<ByteBuf> buffers) {
-        super(ByteOrder.BIG_ENDIAN, Integer.MAX_VALUE);
-
+    public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents, Iterable<ByteBuf> buffers) {
+        super(Integer.MAX_VALUE);
+        this.alloc = alloc;
         if (maxNumComponents < 2) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
@@ -245,7 +247,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         if (numComponents > maxNumComponents) {
             final int capacity = components.get(numComponents - 1).endOffset;
 
-            ByteBuf consolidated = components.get(numComponents - 1).buf.newBuffer(capacity);
+            ByteBuf consolidated = alloc().buffer(capacity);
 
             // We're not using foreach to avoid creating an iterator.
             // noinspection ForLoopReplaceableByForEach
@@ -371,11 +373,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public ByteBufAllocator alloc() {
-        return null;
-    }
-
-    @Override
     public boolean isDirect() {
         if (components.size() == 1) {
             return components.get(0).buf.isDirect();
@@ -426,10 +423,10 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             final int paddingLength = newCapacity - oldCapacity;
             ByteBuf padding;
             if (components.isEmpty()) {
-                padding = new HeapByteBuf(paddingLength, paddingLength);
+                padding = alloc().buffer(paddingLength, paddingLength);
             } else {
                 Component last = components.get(components.size() - 1);
-                padding = last.buf.newBuffer(paddingLength);
+                padding = alloc().buffer(paddingLength);
             }
             padding.setIndex(0, paddingLength);
             addComponent(padding);
@@ -459,6 +456,16 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             }
         }
         return this;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return alloc;
+    }
+
+    @Override
+    public ByteOrder order() {
+        return ByteOrder.BIG_ENDIAN;
     }
 
     @Override
@@ -945,7 +952,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                     + (index + length) + ", maximum is " + capacity());
         }
 
-        ByteBuf dst = newBuffer(length);
+        ByteBuf dst = Unpooled.buffer(length);
         copyTo(index, length, componentId, dst);
         return dst;
     }
@@ -1103,7 +1110,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
         final Component last = components.get(numComponents - 1);
         final int capacity = last.endOffset;
-        final ByteBuf consolidated = last.buf.newBuffer(capacity);
+        final ByteBuf consolidated = alloc().buffer(capacity);
 
         for (int i = 0; i < numComponents; i ++) {
             ByteBuf b = components.get(i).buf;
@@ -1127,7 +1134,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         final int endCIndex = cIndex + numComponents;
         final Component last = components.get(endCIndex - 1);
         final int capacity = last.endOffset - components.get(cIndex).offset;
-        final ByteBuf consolidated = last.buf.newBuffer(capacity);
+        final ByteBuf consolidated = alloc().buffer(capacity);
 
         for (int i = cIndex; i < endCIndex; i ++) {
             ByteBuf b = components.get(i).buf;
@@ -1485,13 +1492,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public ByteBuf newBuffer(int initialCapacity) {
-        CompositeByteBuf buf = new DefaultCompositeByteBuf(maxNumComponents);
-        buf.addComponent(new HeapByteBuf(new byte[initialCapacity], initialCapacity));
-        return buf;
-    }
-
-    @Override
     public void discardSomeReadBytes() {
         discardReadComponents();
     }
@@ -1501,4 +1501,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         // TODO: Free the components added by capacity()
     }
 
+    @Override
+    public ByteBuf unwrap() {
+        return null;
+    }
 }

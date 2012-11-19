@@ -46,7 +46,7 @@ public class ReadOnlyChannelBufferTest {
     @Test
     public void testUnwrap() {
         ByteBuf buf = buffer(1);
-        assertSame(buf, ((WrappedByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
+        assertSame(buf, ((UnsafeByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
     }
 
     @Test

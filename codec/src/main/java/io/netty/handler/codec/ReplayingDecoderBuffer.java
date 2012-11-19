@@ -861,17 +861,17 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public ByteBuf newBuffer(int initialCapacity) {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
     public void discardSomeReadBytes() {
         throw new UnreplayableOperationException();
     }
 
     @Override
     public void free() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public ByteBuf unwrap() {
         throw new UnreplayableOperationException();
     }
 }
