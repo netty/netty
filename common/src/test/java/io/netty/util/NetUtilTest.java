@@ -19,16 +19,16 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class IpAddressesTest {
+public class NetUtilTest {
 
     @Test
     public void testLocalhost() {
-        assertNotNull(IpAddresses.LOCALHOST);
+        assertNotNull(NetUtil.LOCALHOST);
     }
 
     @Test
     public void testLoopback() {
-        assertNotNull(IpAddresses.LOOPBACK_IF);
+        assertNotNull(NetUtil.LOOPBACK_IF);
     }
 
 }
