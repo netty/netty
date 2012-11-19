@@ -24,7 +24,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
-import io.netty.util.NetworkConstants;
+import io.netty.util.IpAddresses;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -56,9 +56,9 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cb.handler(mhandler);
 
-        sb.option(ChannelOption.IP_MULTICAST_IF, NetworkConstants.LOOPBACK_IF);
+        sb.option(ChannelOption.IP_MULTICAST_IF, IpAddresses.LOOPBACK_IF);
         sb.option(ChannelOption.SO_REUSEADDR, true);
-        cb.option(ChannelOption.IP_MULTICAST_IF, NetworkConstants.LOOPBACK_IF);
+        cb.option(ChannelOption.IP_MULTICAST_IF, IpAddresses.LOOPBACK_IF);
         cb.option(ChannelOption.SO_REUSEADDR, true);
         cb.localAddress(addr.getPort());
 
@@ -75,13 +75,13 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         String group = "230.0.0.1";
         InetSocketAddress groupAddress = new InetSocketAddress(group, addr.getPort());
 
-        cc.joinGroup(groupAddress, NetworkConstants.LOOPBACK_IF).sync();
+        cc.joinGroup(groupAddress, IpAddresses.LOOPBACK_IF).sync();
 
         sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
 
         // leave the group
-        cc.leaveGroup(groupAddress, NetworkConstants.LOOPBACK_IF).sync();
+        cc.leaveGroup(groupAddress, IpAddresses.LOOPBACK_IF).sync();
 
         // sleep a second to make sure we left the group
         Thread.sleep(1000);
