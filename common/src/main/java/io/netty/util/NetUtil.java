@@ -38,7 +38,7 @@ import java.util.StringTokenizer;
  * <a href="http://svn.apache.org/repos/asf/harmony/enhanced/java/branches/java6/classlib/modules/luni/
  * src/main/java/org/apache/harmony/luni/util/Inet6Util.java">Inet6Util class</a> which was part of Apache Harmony.
  */
-public final class IpAddresses {
+public final class NetUtil {
 
     /**
      * The {@link InetAddress} representing the host machine
@@ -64,10 +64,9 @@ public final class IpAddresses {
      * The logger being used by this class
      */
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(IpAddresses.class);
+            InternalLoggerFactory.getInstance(NetUtil.class);
 
     static {
-
         //Start the process of discovering localhost
         InetAddress localhost;
         try {
@@ -182,7 +181,6 @@ public final class IpAddresses {
             }
         }
     }
-
 
     /**
      * Creates an byte[] based on an ipAddressString. No error handling is
@@ -302,7 +300,6 @@ public final class IpAddresses {
         }
 
         return ipByteArray;
-
     }
 
     /** Converts a 4 character hex word into a 2 byte word equivalent */
@@ -605,7 +602,7 @@ public final class IpAddresses {
     /**
      * A constructor to stop this class being constructed.
      */
-    private IpAddresses() {
+    private NetUtil() {
         // Unused
     }
 }

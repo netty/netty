@@ -20,7 +20,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
-import io.netty.util.IpAddresses;
+import io.netty.util.NetUtil;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -47,7 +47,7 @@ public abstract class AbstractClientSocketTest {
         for (Factory<Bootstrap> e: COMBO) {
             cb = e.newInstance();
             addr = new InetSocketAddress(
-                    IpAddresses.LOCALHOST, TestUtils.getFreePort());
+                    NetUtil.LOCALHOST, TestUtils.getFreePort());
             cb.remoteAddress(addr);
 
             logger.info(String.format(

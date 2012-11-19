@@ -21,7 +21,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
-import io.netty.util.IpAddresses;
+import io.netty.util.NetUtil;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -53,7 +53,7 @@ public abstract class AbstractSctpTest {
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
             addr = new InetSocketAddress(
-                    IpAddresses.LOCALHOST, TestUtils.getFreePort());
+                    NetUtil.LOCALHOST, TestUtils.getFreePort());
             sb.localAddress(addr);
             cb.remoteAddress(addr);
 

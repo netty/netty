@@ -22,7 +22,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.util.IpAddresses;
+import io.netty.util.NetUtil;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -38,10 +38,9 @@ import java.util.concurrent.atomic.AtomicReference;
 final class AioServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-<<<<<<< HEAD
     private final AtomicReference<AsynchronousServerSocketChannel> channel
             = new AtomicReference<AsynchronousServerSocketChannel>();
-    private volatile int backlog = NetworkConstants.SOMAXCONN;
+    private volatile int backlog = NetUtil.SOMAXCONN;
     private Map<SocketOption<?>, Object> options = new ConcurrentHashMap<SocketOption<?>, Object>();
     private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
     private static final boolean DEFAULT_SO_REUSEADDR = false;
@@ -54,10 +53,6 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
      */
     AioServerSocketChannelConfig() {
     }
-=======
-    private final  AsynchronousServerSocketChannel channel;
-    private volatile int backlog = IpAddresses.SOMAXCONN;
->>>>>>> 9e370a3... Merge IPUtil and NetworkConstants into IpAddresses and also make naming of methods consistent
 
     /**
      * Creates a new instance with the given {@link AsynchronousServerSocketChannel} assigned to it.
