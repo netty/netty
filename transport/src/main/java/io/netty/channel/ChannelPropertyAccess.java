@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufPool;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Provides common methods between {@link Channel} and {@link ChannelHandlerContext}.
@@ -24,7 +24,7 @@ interface ChannelPropertyAccess {
 
     ChannelPipeline pipeline();
 
-    ByteBufPool pool();
+    ByteBufAllocator alloc();
 
     /**
      * Create a new {@link ChannelFuture}

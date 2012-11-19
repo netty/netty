@@ -133,7 +133,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBufPool pool() {
+    public ByteBufAllocator alloc() {
         return null;
     }
 

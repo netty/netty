@@ -63,13 +63,8 @@ public class SwappedByteBuf implements WrappedByteBuf, UnsafeByteBuf {
     }
 
     @Override
-    public boolean isPooled() {
-        return buf.isPooled();
-    }
-
-    @Override
-    public ByteBufPool pool() {
-        return buf.pool();
+    public ByteBufAllocator alloc() {
+        return buf.alloc();
     }
 
     @Override

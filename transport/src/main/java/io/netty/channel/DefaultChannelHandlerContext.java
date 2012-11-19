@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufPool;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
@@ -412,8 +412,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ByteBufPool pool() {
-        return channel.config().getBufferPool();
+    public ByteBufAllocator alloc() {
+        return channel.config().getAllocator();
     }
 
     @Override
@@ -1198,7 +1198,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         ByteBridge(ChannelHandlerContext ctx) {
             this.ctx = ctx;
             // TODO Choose whether to use heap or direct buffer depending on the context's buffer type.
-            byteBuf = (UnsafeByteBuf) ctx.pool().buffer();
+            byteBuf = (UnsafeByteBuf) ctx.alloc().buffer();
         }
 
         private void fill() {
@@ -1209,9 +1209,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             int dataLen = byteBuf.readableBytes();
             ByteBuf data;
             if (byteBuf.isDirect()) {
-                data = ctx.pool().directBuffer(dataLen, dataLen);
+                data = ctx.alloc().directBuffer(dataLen, dataLen);
             } else {
-                data = ctx.pool().buffer(dataLen, dataLen);
+                data = ctx.alloc().buffer(dataLen, dataLen);
             }
 
             byteBuf.readBytes(data);

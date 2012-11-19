@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufPool;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.nio.ByteBuffer;
@@ -138,6 +138,6 @@ public interface ChannelConfig {
      */
     void setWriteSpinCount(int writeSpinCount);
 
-    ByteBufPool getBufferPool();
-    ByteBufPool setBufferPool(ByteBufPool bufferPool);
+    ByteBufAllocator getAllocator();
+    ByteBufAllocator setAllocator(ByteBufAllocator bufferPool);
 }

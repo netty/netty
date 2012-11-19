@@ -49,8 +49,8 @@ public class ReadOnlyByteBuf extends AbstractWrappedByteBuf {
     }
 
     @Override
-    public ByteBufPool pool() {
-        return buffer.pool();
+    public ByteBufAllocator alloc() {
+        return buffer.alloc();
     }
 
     @Override

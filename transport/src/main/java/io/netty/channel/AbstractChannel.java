@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufPool;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MessageBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -148,8 +148,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ByteBufPool pool() {
-        return config().getBufferPool();
+    public ByteBufAllocator alloc() {
+        return config().getAllocator();
     }
 
     @Override

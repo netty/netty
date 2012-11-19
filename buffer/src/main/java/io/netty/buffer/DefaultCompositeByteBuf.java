@@ -371,7 +371,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public ByteBufPool pool() {
+    public ByteBufAllocator alloc() {
         return null;
     }
 
@@ -1496,6 +1496,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         discardReadComponents();
     }
 
+    @Override
     public void free() {
         // TODO: Free the components added by capacity()
     }

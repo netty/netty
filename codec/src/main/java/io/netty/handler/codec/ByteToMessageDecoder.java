@@ -37,7 +37,7 @@ public abstract class ByteToMessageDecoder<O>
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.pool().buffer();
+        return ctx.alloc().buffer();
     }
 
     @Override

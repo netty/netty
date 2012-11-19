@@ -16,8 +16,8 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
-import io.netty.buffer.ByteBufPool;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
@@ -81,13 +81,8 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public ByteBufPool pool() {
-        return buffer.pool();
-    }
-
-    @Override
-    public boolean isPooled() {
-        return false;
+    public ByteBufAllocator alloc() {
+        return buffer.alloc();
     }
 
     @Override

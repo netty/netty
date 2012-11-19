@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufPool;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Pooled;
 import io.netty.channel.socket.SocketChannelConfig;
 
@@ -32,13 +32,13 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
-    private volatile ByteBufPool bufferPool = Pooled.globalPool();
+    private volatile ByteBufAllocator allocator = Pooled.globalPool();
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, BUFFER_POOL);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -82,8 +82,8 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
         }
-        if (option == BUFFER_POOL) {
-            return (T) getBufferPool();
+        if (option == ALLOCATOR) {
+            return (T) getAllocator();
         }
 
         return null;
@@ -97,8 +97,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setConnectTimeoutMillis((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
-        } else if (option == BUFFER_POOL) {
-            setBufferPool((ByteBufPool) value);
+        } else if (option == ALLOCATOR) {
+            setAllocator((ByteBufAllocator) value);
         } else {
             return false;
         }
@@ -142,17 +142,17 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public ByteBufPool getBufferPool() {
-        return bufferPool;
+    public ByteBufAllocator getAllocator() {
+        return allocator;
     }
 
     @Override
-    public ByteBufPool setBufferPool(ByteBufPool bufferPool) {
-        if (bufferPool == null) {
-            throw new NullPointerException("bufferPool");
+    public ByteBufAllocator setAllocator(ByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
         }
-        ByteBufPool oldPool = this.bufferPool;
-        this.bufferPool = bufferPool;
-        return oldPool;
+        ByteBufAllocator oldAllocator = this.allocator;
+        this.allocator = allocator;
+        return oldAllocator;
     }
 }

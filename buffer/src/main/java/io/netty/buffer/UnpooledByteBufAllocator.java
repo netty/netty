@@ -19,26 +19,41 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Simplistic {@link ByteBufPool} implementation that does not pool anything.
+ * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
  */
-public class UnpooledByteBufPool implements ByteBufPool {
+public class UnpooledByteBufAllocator implements ByteBufAllocator {
 
     private final Semaphore s = new Semaphore(0);
 
     @Override
     public ByteBuf buffer() {
+        return heapBuffer();
+    }
+
+    @Override
+    public ByteBuf buffer(int initialCapacity) {
+        return heapBuffer(initialCapacity);
+    }
+
+    @Override
+    public ByteBuf buffer(int initialCapacity, int maxCapacity) {
+        return heapBuffer(initialCapacity, maxCapacity);
+    }
+
+    @Override
+    public ByteBuf heapBuffer() {
         ensureNotShutdown();
         return Unpooled.buffer();
     }
 
     @Override
-    public ByteBuf buffer(int initialCapacity) {
+    public ByteBuf heapBuffer(int initialCapacity) {
         ensureNotShutdown();
         return Unpooled.buffer(initialCapacity);
     }
 
     @Override
-    public ByteBuf buffer(int initialCapacity, int maxCapacity) {
+    public ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
         ensureNotShutdown();
         return Unpooled.buffer(initialCapacity, maxCapacity);
     }
@@ -59,18 +74,6 @@ public class UnpooledByteBufPool implements ByteBufPool {
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         ensureNotShutdown();
         return Unpooled.directBuffer(initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public CompositeByteBuf compositeBuffer() {
-        ensureNotShutdown();
-        return Unpooled.compositeBuffer();
-    }
-
-    @Override
-    public CompositeByteBuf compositeBuffer(int maxNumComponents) {
-        ensureNotShutdown();
-        return Unpooled.compositeBuffer(maxNumComponents);
     }
 
     @Override

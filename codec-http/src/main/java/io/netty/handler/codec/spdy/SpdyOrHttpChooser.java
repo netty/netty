@@ -63,7 +63,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.pool().buffer();
+        return ctx.alloc().buffer();
     }
 
     @Override

@@ -18,7 +18,7 @@ package io.netty.buffer;
 public final class Pooled {
 
     /* Default global pool implementation */
-    private static final ByteBufPool POOL = new UnpooledByteBufPool();
+    private static final ByteBufAllocator POOL = new UnpooledByteBufAllocator();
 
     static {
         // Add shutdown hook only when it's absolutely sure that it doesn't leak.
@@ -36,7 +36,7 @@ public final class Pooled {
         }
     }
 
-    public static ByteBufPool globalPool() {
+    public static ByteBufAllocator globalPool() {
         return POOL;
     }
 
@@ -52,6 +52,18 @@ public final class Pooled {
         return POOL.buffer(initialCapacity, maxCapacity);
     }
 
+    public static ByteBuf heapBuffer() {
+        return POOL.heapBuffer();
+    }
+
+    public static ByteBuf heapBuffer(int initialCapacity) {
+        return POOL.heapBuffer(initialCapacity);
+    }
+
+    public static ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
+        return POOL.heapBuffer(initialCapacity, maxCapacity);
+    }
+
     public static ByteBuf directBuffer() {
         return POOL.directBuffer();
     }
@@ -62,14 +74,6 @@ public final class Pooled {
 
     public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         return POOL.directBuffer(initialCapacity, maxCapacity);
-    }
-
-    public static CompositeByteBuf compositeBuffer() {
-        return POOL.compositeBuffer();
-    }
-
-    public static CompositeByteBuf compositeByteBuf(int maxNumComponents) {
-        return POOL.compositeBuffer(maxNumComponents);
     }
 
     private Pooled() {

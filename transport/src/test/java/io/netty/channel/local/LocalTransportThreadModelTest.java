@@ -405,7 +405,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ctx.pool().buffer();
+            return ctx.alloc().buffer();
         }
 
         @Override
@@ -494,7 +494,7 @@ public class LocalTransportThreadModelTest {
         @Override
         public ByteBuf newInboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return ctx.pool().buffer();
+            return ctx.alloc().buffer();
         }
 
         @Override

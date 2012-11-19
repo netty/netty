@@ -51,11 +51,6 @@ public abstract class AbstractByteBuf implements UnsafeByteBuf {
     }
 
     @Override
-    public boolean isPooled() {
-        return pool() != null;
-    }
-
-    @Override
     public ChannelBufType type() {
         return ChannelBufType.BYTE;
     }

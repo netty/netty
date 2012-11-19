@@ -357,7 +357,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
     @Override
     public ByteBuf newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
-        cumulation = ctx.pool().buffer();
+        cumulation = ctx.alloc().buffer();
         replayable = new ReplayingDecoderBuffer(cumulation);
         return cumulation;
     }

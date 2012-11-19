@@ -252,11 +252,9 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     int maxCapacity();
 
     /**
-     * Returns the {@link ByteBufPool} which created this buffer.
-     *
-     * @return {@code null} if this buffer is not pooled
+     * Returns the {@link ByteBufAllocator} which created this buffer.
      */
-    ByteBufPool pool();
+    ByteBufAllocator alloc();
 
     /**
      * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
@@ -279,11 +277,6 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * NIO direct buffer.
      */
     boolean isDirect();
-
-    /**
-     * Returns {@code true} if and only if this buffer was created by a {@link ByteBufPool}.
-     */
-    boolean isPooled();
 
     /**
      * Returns the {@code readerIndex} of this buffer.

@@ -17,15 +17,17 @@ package io.netty.buffer;
 
 import java.util.concurrent.TimeUnit;
 
-public interface ByteBufPool {
+public interface ByteBufAllocator {
+
     ByteBuf buffer();
     ByteBuf buffer(int initialCapacity);
     ByteBuf buffer(int initialCapacity, int maxCapacity);
+    ByteBuf heapBuffer();
+    ByteBuf heapBuffer(int initialCapacity);
+    ByteBuf heapBuffer(int initialCapacity, int maxCapacity);
     ByteBuf directBuffer();
     ByteBuf directBuffer(int initialCapacity);
     ByteBuf directBuffer(int initialCapacity, int maxCapacity);
-    CompositeByteBuf compositeBuffer();
-    CompositeByteBuf compositeBuffer(int maxNumComponents);
 
     void shutdown();
     boolean isShutdown();

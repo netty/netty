@@ -1420,7 +1420,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             switch (channel.metadata().bufferType()) {
             case BYTE:
                 // TODO: Use a direct buffer once buffer pooling is implemented.
-                return ctx.pool().buffer();
+                return ctx.alloc().buffer();
             case MESSAGE:
                 return Unpooled.messageBuffer();
             default:

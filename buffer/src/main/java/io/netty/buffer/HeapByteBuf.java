@@ -73,7 +73,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBufPool pool() {
+    public ByteBufAllocator alloc() {
         return null;
     }
 
