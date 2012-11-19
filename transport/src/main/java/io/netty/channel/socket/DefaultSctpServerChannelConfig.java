@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.util.NetworkConstants;
+import io.netty.util.IpAddresses;
 
 import java.io.IOException;
 import java.util.Map;
@@ -36,7 +36,7 @@ import static com.sun.nio.sctp.SctpStandardSocketOptions.SO_SNDBUF;
 public class DefaultSctpServerChannelConfig extends DefaultChannelConfig implements SctpServerChannelConfig {
 
     private final SctpServerChannel serverChannel;
-    private volatile int backlog = NetworkConstants.SOMAXCONN;
+    private volatile int backlog = IpAddresses.SOMAXCONN;
 
     /**
      * Creates a new instance.

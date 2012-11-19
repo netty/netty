@@ -20,7 +20,8 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
-import io.netty.util.NetworkConstants;
+import io.netty.util.IpAddresses;
+
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -46,7 +47,7 @@ public abstract class AbstractServerSocketTest {
         for (Factory<ServerBootstrap> e: COMBO) {
             sb = e.newInstance();
             addr = new InetSocketAddress(
-                    NetworkConstants.LOCALHOST, TestUtils.getFreePort());
+                    IpAddresses.LOCALHOST, TestUtils.getFreePort());
             sb.localAddress(addr);
 
             logger.info(String.format(
