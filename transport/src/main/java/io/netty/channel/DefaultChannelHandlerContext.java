@@ -94,29 +94,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ((ChannelStateHandler) ctx.handler).channelUnregistered(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
-            } finally {
-                // Closed and unregistered - safe to free the buffers.
-                if (!channel.isOpen()) {
-                    try {
-                        if (inByteBuf != null) {
-                            ((ChannelInboundHandler) ctx.handler).freeInboundBuffer(ctx, inByteBuf);
-                        } else if (inMsgBuf != null) {
-                            ((ChannelInboundHandler) ctx.handler).freeInboundBuffer(ctx, inMsgBuf);
-                        }
-                    } catch (Throwable t) {
-                        pipeline.notifyHandlerException(t);
-                    }
-
-                    try {
-                        if (outByteBuf != null) {
-                            ((ChannelOutboundHandler) ctx.handler).freeOutboundBuffer(ctx, outByteBuf);
-                        } else if (outMsgBuf != null) {
-                            ((ChannelOutboundHandler) ctx.handler).freeOutboundBuffer(ctx, outMsgBuf);
-                        }
-                    } catch (Throwable t) {
-                        pipeline.notifyHandlerException(t);
-                    }
-                }
             }
         }
     };
@@ -174,6 +151,55 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } else {
                     executor.execute(next.curCtxFireInboundBufferUpdatedTask);
                 }
+            }
+        }
+    };
+    private final Runnable freeInboundBufferTask = new Runnable() {
+        @Override
+        public void run() {
+            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            if (ctx.handler instanceof ChannelInboundHandler) {
+                ChannelInboundHandler h = (ChannelInboundHandler) ctx.handler;
+                try {
+                    if (ctx.inByteBuf != null) {
+                        h.freeInboundBuffer(ctx, ctx.inByteBuf);
+                    } else {
+                        h.freeInboundBuffer(ctx, ctx.inMsgBuf);
+                    }
+                } catch (Throwable t) {
+                    pipeline.notifyHandlerException(t);
+                }
+            }
+
+            DefaultChannelHandlerContext nextCtx = nextContext(ctx.next, DIR_INBOUND);
+            if (nextCtx != null) {
+                nextCtx.callFreeInboundBuffer();
+            } else {
+                // Freed all inbound buffers. Free all outbound buffers in a reverse order.
+                pipeline.firstContext(DIR_OUTBOUND).callFreeOutboundBuffer();
+            }
+        }
+    };
+    private final Runnable freeOutboundBufferTask = new Runnable() {
+        @Override
+        public void run() {
+            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            if (ctx.handler instanceof ChannelOutboundHandler) {
+                ChannelOutboundHandler h = (ChannelOutboundHandler) ctx.handler;
+                try {
+                    if (ctx.outByteBuf != null) {
+                        h.freeOutboundBuffer(ctx, ctx.outByteBuf);
+                    } else {
+                        h.freeOutboundBuffer(ctx, ctx.outMsgBuf);
+                    }
+                } catch (Throwable t) {
+                    pipeline.notifyHandlerException(t);
+                }
+            }
+
+            DefaultChannelHandlerContext nextCtx = nextContext(ctx.prev, DIR_OUTBOUND);
+            if (nextCtx != null) {
+                nextCtx.callFreeOutboundBuffer();
             }
         }
     };
@@ -968,8 +994,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } else {
             logger.warn(
                     "An exceptionCaught() event was fired, and it reached at the end of the " +
-                    "pipeline.  It usually means the last inbound handler in the pipeline did not " +
-                    "handle the exception.", cause);
+                            "pipeline.  It usually means the last inbound handler in the pipeline did not " +
+                            "handle the exception.", cause);
         }
     }
 
@@ -1101,6 +1127,25 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
         return pipeline.write(prev, message, future);
+    }
+
+    void callFreeInboundBuffer() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            freeInboundBufferTask.run();
+        } else {
+            executor.execute(freeInboundBufferTask);
+        }
+    }
+
+    /** Invocation initiated by {@link #freeInboundBufferTask} after freeing all inbound buffers. */
+    private void callFreeOutboundBuffer() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            freeOutboundBufferTask.run();
+        } else {
+            executor.execute(freeOutboundBufferTask);
+        }
     }
 
     @Override

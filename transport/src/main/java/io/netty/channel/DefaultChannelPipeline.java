@@ -938,6 +938,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public void fireChannelUnregistered() {
         head.fireChannelUnregistered();
+
+        // Free all buffers if channel is closed and unregistered.
+        if (!channel.isOpen()) {
+            head.callFreeInboundBuffer();
+        }
     }
 
     @Override
@@ -1291,7 +1296,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private DefaultChannelHandlerContext firstContext(int direction) {
+    DefaultChannelHandlerContext firstContext(int direction) {
         assert direction == DIR_INBOUND || direction == DIR_OUTBOUND;
         if (direction == DIR_INBOUND) {
             return nextContext(head.next, DIR_INBOUND);
