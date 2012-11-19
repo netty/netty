@@ -54,10 +54,14 @@ public class UnpooledHeapByteBuf extends AbstractByteBuf {
         this(alloc, initialArray, 0, initialArray.length, maxCapacity);
     }
 
-    private UnpooledHeapByteBuf(ByteBufAllocator alloc, byte[] initialArray, int readerIndex, int writerIndex, int maxCapacity) {
-        super(maxCapacity);
-        this.alloc = alloc;
+    private UnpooledHeapByteBuf(
+            ByteBufAllocator alloc, byte[] initialArray, int readerIndex, int writerIndex, int maxCapacity) {
 
+        super(maxCapacity);
+
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (initialArray == null) {
             throw new NullPointerException("initialArray");
         }
@@ -66,6 +70,7 @@ public class UnpooledHeapByteBuf extends AbstractByteBuf {
                     "initialCapacity(%d) > maxCapacity(%d)", initialArray.length, maxCapacity));
         }
 
+        this.alloc = alloc;
         setArray(initialArray);
         setIndex(readerIndex, writerIndex);
     }

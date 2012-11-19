@@ -39,6 +39,8 @@ import java.util.ListIterator;
  */
 public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
 
+    private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
+
     private final ByteBufAllocator alloc;
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
@@ -48,18 +50,24 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents) {
         super(Integer.MAX_VALUE);
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         this.alloc = alloc;
         this.maxNumComponents = maxNumComponents;
     }
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents, ByteBuf... buffers) {
         super(Integer.MAX_VALUE);
-        this.alloc = alloc;
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (maxNumComponents < 2) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
         }
 
+        this.alloc = alloc;
         this.maxNumComponents = maxNumComponents;
 
         addComponents0(0, buffers);
@@ -69,12 +77,15 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents, Iterable<ByteBuf> buffers) {
         super(Integer.MAX_VALUE);
-        this.alloc = alloc;
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (maxNumComponents < 2) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
         }
 
+        this.alloc = alloc;
         this.maxNumComponents = maxNumComponents;
         addComponents0(0, buffers);
         consolidateIfNeeded();
@@ -425,7 +436,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             if (components.isEmpty()) {
                 padding = alloc().buffer(paddingLength, paddingLength);
             } else {
-                Component last = components.get(components.size() - 1);
                 padding = alloc().buffer(paddingLength);
             }
             padding.setIndex(0, paddingLength);
@@ -1072,7 +1082,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             throw new IndexOutOfBoundsException("index must be >= 0");
         }
         if (length == 0) {
-            return new ByteBuffer[0];
+            return EMPTY_NIOBUFFERS;
         }
         int componentId = toComponentIndex(index);
 

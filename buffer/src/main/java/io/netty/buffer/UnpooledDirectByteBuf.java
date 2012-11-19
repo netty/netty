@@ -81,7 +81,9 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
      */
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
-        this.alloc = alloc;
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity);
         }
@@ -93,6 +95,7 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
+        this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
     }
 
@@ -103,7 +106,9 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
      */
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
         super(maxCapacity);
-        this.alloc = alloc;
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (initialBuffer == null) {
             throw new NullPointerException("initialBuffer");
         }
@@ -120,6 +125,7 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
+        this.alloc = alloc;
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
