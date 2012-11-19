@@ -132,14 +132,6 @@ public class DirectByteBuf extends AbstractByteBuf {
         capacity = buffer.remaining();
     }
 
-    private ByteBuffer tmpNioBuf() {
-        ByteBuffer tmpNioBuf = this.tmpNioBuf;
-        if (tmpNioBuf == null) {
-            this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
-        }
-        return tmpNioBuf;
-    }
-
     @Override
     public ByteBufPool pool() {
         return null;
@@ -236,7 +228,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         if (dst instanceof DirectByteBuf) {
             DirectByteBuf bbdst = (DirectByteBuf) dst;
-            ByteBuffer data = bbdst.tmpNioBuf();
+            ByteBuffer data = bbdst.internalNioBuffer();
             data.clear().position(dstIndex).limit(dstIndex + length);
             getBytes(index, data);
         } else if (buffer.hasArray()) {
@@ -249,7 +241,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        ByteBuffer tmpBuf = tmpNioBuf();
+        ByteBuffer tmpBuf = internalNioBuffer();
         try {
             tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
@@ -263,7 +255,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
-        ByteBuffer tmpBuf = tmpNioBuf();
+        ByteBuffer tmpBuf = internalNioBuffer();
         try {
             tmpBuf.clear().position(index).limit(index + bytesToCopy);
         } catch (IllegalArgumentException e) {
@@ -310,7 +302,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         if (src instanceof DirectByteBuf) {
             DirectByteBuf bbsrc = (DirectByteBuf) src;
-            ByteBuffer data = bbsrc.tmpNioBuf();
+            ByteBuffer data = bbsrc.internalNioBuffer();
 
             data.clear().position(srcIndex).limit(srcIndex + length);
             setBytes(index, data);
@@ -324,7 +316,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        ByteBuffer tmpBuf = tmpNioBuf();
+        ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);
         return this;
@@ -332,7 +324,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        ByteBuffer tmpBuf = tmpNioBuf();
+        ByteBuffer tmpBuf = internalNioBuffer();
         if (src == tmpBuf) {
             src = src.duplicate();
         }
@@ -352,7 +344,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             out.write(buffer.array(), index + buffer.arrayOffset(), length);
         } else {
             byte[] tmp = new byte[length];
-            ByteBuffer tmpBuf = tmpNioBuf();
+            ByteBuffer tmpBuf = internalNioBuffer();
             tmpBuf.clear().position(index);
             tmpBuf.get(tmp);
             out.write(tmp);
@@ -366,7 +358,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             return 0;
         }
 
-        ByteBuffer tmpBuf = tmpNioBuf();
+        ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         return out.write(tmpBuf);
     }
@@ -379,7 +371,7 @@ public class DirectByteBuf extends AbstractByteBuf {
         } else {
             byte[] tmp = new byte[length];
             int readBytes = in.read(tmp);
-            ByteBuffer tmpNioBuf = tmpNioBuf();
+            ByteBuffer tmpNioBuf = internalNioBuffer();
             tmpNioBuf.clear().position(index);
             tmpNioBuf.put(tmp);
             return readBytes;
@@ -388,7 +380,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        ByteBuffer tmpNioBuf = tmpNioBuf();
+        ByteBuffer tmpNioBuf = internalNioBuffer();
         tmpNioBuf.clear().position(index).limit(index + length);
         try {
             return in.read(tmpNioBuf);
@@ -407,7 +399,7 @@ public class DirectByteBuf extends AbstractByteBuf {
         if (index == 0 && length == capacity()) {
             return buffer.duplicate();
         } else {
-            return ((ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length)).slice();
+            return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
         }
     }
 
@@ -425,7 +417,7 @@ public class DirectByteBuf extends AbstractByteBuf {
     public ByteBuf copy(int index, int length) {
         ByteBuffer src;
         try {
-            src = (ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length);
+            src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
@@ -440,7 +432,11 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer() {
-        return tmpNioBuf();
+        ByteBuffer tmpNioBuf = this.tmpNioBuf;
+        if (tmpNioBuf == null) {
+            this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
+        }
+        return tmpNioBuf;
     }
 
     @Override

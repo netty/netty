@@ -72,14 +72,6 @@ public class HeapByteBuf extends AbstractByteBuf {
         tmpNioBuf = null;
     }
 
-    private ByteBuffer tmpNioBuf() {
-        ByteBuffer tmpNioBuf = this.tmpNioBuf;
-        if (tmpNioBuf == null) {
-            this.tmpNioBuf = tmpNioBuf = ByteBuffer.wrap(array);
-        }
-        return tmpNioBuf;
-    }
-
     @Override
     public ByteBufPool pool() {
         return null;
@@ -175,7 +167,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        return out.write((ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length));
+        return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
     }
 
     @Override
@@ -214,7 +206,7 @@ public class HeapByteBuf extends AbstractByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         try {
-            return in.read((ByteBuffer) tmpNioBuf().clear().position(index).limit(index + length));
+            return in.read((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
         } catch (ClosedChannelException e) {
             return -1;
         }
@@ -323,7 +315,11 @@ public class HeapByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer() {
-        return tmpNioBuf();
+        ByteBuffer tmpNioBuf = this.tmpNioBuf;
+        if (tmpNioBuf == null) {
+            this.tmpNioBuf = tmpNioBuf = ByteBuffer.wrap(array);
+        }
+        return tmpNioBuf;
     }
 
     @Override
