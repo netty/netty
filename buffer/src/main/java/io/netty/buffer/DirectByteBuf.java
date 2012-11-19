@@ -52,6 +52,11 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     private static void freeDirect(ByteBuffer buffer) {
+        if (CLEANER_FIELD == null) {
+            // Doomed to wait for GC.
+            return;
+        }
+
         Cleaner cleaner;
         try {
             cleaner = (Cleaner) CLEANER_FIELD.get(buffer);
