@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.util;
 
-import io.netty.util.IpAddresses;
+import io.netty.util.NetUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -64,7 +64,7 @@ public final class TestUtils {
 
                 ss = new ServerSocket();
                 ss.setReuseAddress(false);
-                ss.bind(new InetSocketAddress(IpAddresses.LOCALHOST, port));
+                ss.bind(new InetSocketAddress(NetUtil.LOCALHOST, port));
                 ss.close();
 
                 return port;
