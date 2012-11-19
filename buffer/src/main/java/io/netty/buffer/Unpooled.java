@@ -90,15 +90,7 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = new HeapByteBuf(0, 0) {
-        @Override
-        public ByteBuf order(ByteOrder endianness) {
-            if (endianness == null) {
-                throw new NullPointerException("endianness");
-            }
-            return this;
-        }
-    };
+    public static final ByteBuf EMPTY_BUFFER = new HeapByteBuf(0, 0);
 
     public static <T> MessageBuf<T> messageBuffer() {
         return new DefaultMessageBuf<T>();

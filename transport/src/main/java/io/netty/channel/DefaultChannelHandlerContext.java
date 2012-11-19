@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufPool;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.util.DefaultAttributeMap;
 
 import java.net.SocketAddress;
@@ -59,9 +60,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     EventExecutor executor; // not thread-safe but OK because it never changes once set.
 
     private MessageBuf<Object> inMsgBuf;
-    private ByteBuf inByteBuf;
+    private UnsafeByteBuf inByteBuf;
     private MessageBuf<Object> outMsgBuf;
-    private ByteBuf outByteBuf;
+    private UnsafeByteBuf outByteBuf;
 
     // When the two handlers run in a different thread and they are next to each other,
     // each other's buffers can be accessed at the same time resulting in a race condition.
@@ -93,6 +94,29 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ((ChannelStateHandler) ctx.handler).channelUnregistered(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
+            } finally {
+                // Closed and unregistered - safe to free the buffers.
+                if (!channel.isOpen()) {
+                    try {
+                        if (inByteBuf != null) {
+                            ((ChannelInboundHandler) ctx.handler).freeInboundBuffer(ctx, inByteBuf);
+                        } else if (inMsgBuf != null) {
+                            ((ChannelInboundHandler) ctx.handler).freeInboundBuffer(ctx, inMsgBuf);
+                        }
+                    } catch (Throwable t) {
+                        pipeline.notifyHandlerException(t);
+                    }
+
+                    try {
+                        if (outByteBuf != null) {
+                            ((ChannelOutboundHandler) ctx.handler).freeOutboundBuffer(ctx, outByteBuf);
+                        } else if (outMsgBuf != null) {
+                            ((ChannelOutboundHandler) ctx.handler).freeOutboundBuffer(ctx, outMsgBuf);
+                        }
+                    } catch (Throwable t) {
+                        pipeline.notifyHandlerException(t);
+                    }
+                }
             }
         }
     };
@@ -222,8 +246,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
             }
 
-            if (buf instanceof ByteBuf) {
-                inByteBuf = (ByteBuf) buf;
+            if (buf instanceof UnsafeByteBuf) {
+                inByteBuf = (UnsafeByteBuf) buf;
                 inByteBridge = new AtomicReference<ByteBridge>();
                 inMsgBuf = null;
                 inMsgBridge = null;
@@ -283,8 +307,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
         }
 
-        if (buf instanceof ByteBuf) {
-            outByteBuf = (ByteBuf) buf;
+        if (buf instanceof UnsafeByteBuf) {
+            outByteBuf = (UnsafeByteBuf) buf;
             outByteBridge = new AtomicReference<ByteBridge>();
             outMsgBuf = null;
             outMsgBridge = null;
@@ -629,7 +653,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ByteBuf currentInboundByteBuf = inboundByteBuffer();
 
-        inByteBuf = newInboundByteBuf;
+        inByteBuf = (UnsafeByteBuf) newInboundByteBuf;
         return currentInboundByteBuf;
     }
 
@@ -680,7 +704,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ByteBuf currentOutboundByteBuf = outboundByteBuffer();
 
-        outByteBuf = newOutboundByteBuf;
+        outByteBuf = (UnsafeByteBuf) newOutboundByteBuf;
         return currentOutboundByteBuf;
     }
 
@@ -1120,32 +1144,46 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    static final class ByteBridge {
-        final ByteBuf byteBuf;
+    final class ByteBridge {
+        final UnsafeByteBuf byteBuf;
 
-        private final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
+        private final Queue<UnsafeByteBuf> exchangeBuf = new ConcurrentLinkedQueue<UnsafeByteBuf>();
 
         ByteBridge(ByteBuf byteBuf) {
-            this.byteBuf = byteBuf;
+            this.byteBuf = (UnsafeByteBuf) byteBuf;
         }
 
         private void fill() {
             if (!byteBuf.readable()) {
                 return;
             }
-            ByteBuf data = byteBuf.readBytes(byteBuf.readableBytes());
-            byteBuf.discardReadBytes();
-            exchangeBuf.add(data);
+
+            int dataLen = byteBuf.readableBytes();
+            ByteBuf data;
+            if (byteBuf.isDirect()) {
+                data = pool().directBuffer(dataLen, dataLen);
+            } else {
+                data = pool().buffer(dataLen, dataLen);
+            }
+
+            byteBuf.readBytes(data);
+            byteBuf.discardSomeReadBytes();
+
+            exchangeBuf.add((UnsafeByteBuf) data);
         }
 
         private void flush(ByteBuf out) {
             for (;;) {
-                ByteBuf data = exchangeBuf.poll();
+                UnsafeByteBuf data = exchangeBuf.poll();
                 if (data == null) {
                     break;
                 }
 
-                out.writeBytes(data);
+                try {
+                    out.writeBytes(data);
+                } finally {
+                    data.free();
+                }
             }
         }
     }

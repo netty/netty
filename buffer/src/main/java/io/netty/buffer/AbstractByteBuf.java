@@ -273,7 +273,7 @@ public abstract class AbstractByteBuf implements UnsafeByteBuf {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
-        if (endianness == order()) {
+        if (endianness == order() || capacity() == 0) {
             return this;
         }
 

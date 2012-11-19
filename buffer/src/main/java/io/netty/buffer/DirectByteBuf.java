@@ -468,6 +468,10 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public void free() {
-        // TODO: Should we deallocate the buffer even if it's unpooled?
+        if (doNotFree) {
+            return;
+        }
+
+        freeDirect(buffer);
     }
 }
