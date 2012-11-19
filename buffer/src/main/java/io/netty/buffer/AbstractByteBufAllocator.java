@@ -33,9 +33,9 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public ByteBuf buffer() {
         if (directByDefault) {
-            return heapBuffer();
+            return directBuffer();
         }
-        return directBuffer();
+        return heapBuffer();
     }
 
     @Override
