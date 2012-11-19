@@ -114,7 +114,7 @@ public final class Unpooled {
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf buffer() {
-        return buffer(256, Integer.MAX_VALUE);
+        return ALLOC.heapBuffer();
     }
 
     /**
@@ -122,7 +122,7 @@ public final class Unpooled {
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf directBuffer() {
-        return directBuffer(256, Integer.MAX_VALUE);
+        return ALLOC.directBuffer();
     }
 
     /**
@@ -131,7 +131,7 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity) {
-        return buffer(initialCapacity, Integer.MAX_VALUE);
+        return ALLOC.heapBuffer(initialCapacity);
     }
 
     /**
@@ -140,7 +140,7 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity) {
-        return directBuffer(initialCapacity, Integer.MAX_VALUE);
+        return ALLOC.directBuffer(initialCapacity);
     }
 
     /**
@@ -150,10 +150,6 @@ public final class Unpooled {
      */
     public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
         return ALLOC.heapBuffer(initialCapacity, maxCapacity);
-//        if (initialCapacity == 0 && maxCapacity == 0) {
-//            return EMPTY_BUFFER;
-//        }
-//        return new UnpooledHeapByteBuf(ALLOC, initialCapacity, maxCapacity);
     }
 
     /**
@@ -162,10 +158,7 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        if (initialCapacity == 0 && maxCapacity == 0) {
-            return EMPTY_BUFFER;
-        }
-        return new UnpooledDirectByteBuf(ALLOC, initialCapacity, maxCapacity);
+        return ALLOC.directBuffer(initialCapacity, maxCapacity);
     }
 
     /**
