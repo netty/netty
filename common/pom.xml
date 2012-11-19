@@ -25,7 +25,7 @@
   </parent>
 
   <artifactId>netty-common</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Common</name>
 
@@ -68,36 +68,6 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
-  
-  <build>
-    <plugins>
-    
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-        <configuration>
-          <instructions>
-            <Import-Package>
-              sun.misc;resolution:=optional,           
-              *
-            </Import-Package>
-            <Export-Package>
-              io.netty.logging,
-              io.netty.monitor,
-              io.netty.monitor.spi,
-              io.netty.util,
-              io.netty.util.internal,
-              io.netty.util.internal.jzlib              
-            </Export-Package>
-          </instructions>
-        </configuration>
-      </plugin>
-      
-    </plugins>
-  </build>
-  
-  
   
 </project>
 

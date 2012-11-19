@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-transport</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Transport</name>
 
@@ -40,31 +40,13 @@
     <plugins>
     
       <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
         <configuration>
-          <instructions>
-            <Import-Package>
-              com.sun.nio.sctp;resolution:=optional,
-              sun.misc;resolution:=optional,
-              *
-            </Import-Package>
-            <Export-Package>
-              io.netty.bootstrap,
-              io.netty.channel,
-              io.netty.channel.embedded,
-              io.netty.channel.group,
-              io.netty.channel.local,
-              io.netty.channel.socket,
-              io.netty.channel.socket.aio,
-              io.netty.channel.socket.nio,
-              io.netty.channel.socket.oio
-            </Export-Package>
-            <Private-Package>
-              !com.sun.nio.sctp
-            </Private-Package>
-          </instructions>
+          <excludes>
+            <!-- dont want to include com.sun in here -->
+            <exclude>com/**</exclude>
+          </excludes>
         </configuration>
       </plugin>
       
@@ -72,5 +54,5 @@
   
   </build>
   
-  </project>
+</project>
 
