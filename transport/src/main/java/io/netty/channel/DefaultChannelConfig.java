@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Pooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
@@ -30,9 +30,10 @@ import static io.netty.channel.ChannelOption.*;
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
+    private static final ByteBufAllocator DEFAULT_ALLOCATOR = new UnpooledByteBufAllocator();
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
-    private volatile ByteBufAllocator allocator = Pooled.globalPool();
+    private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
 
