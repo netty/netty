@@ -15,21 +15,17 @@
  */
 package io.netty.buffer;
 
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
  */
-public class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
+public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
-    private final Semaphore s = new Semaphore(0);
+    public static final UnpooledByteBufAllocator HEAP_BY_DEFAULT = new UnpooledByteBufAllocator(false);
+    public static final UnpooledByteBufAllocator DIRECT_BY_DEFAULT = new UnpooledByteBufAllocator(true);
 
-    public UnpooledByteBufAllocator() {
-        super(false);
-    }
-
-    public UnpooledByteBufAllocator(boolean directByDefault) {
+    private UnpooledByteBufAllocator(boolean directByDefault) {
         super(directByDefault);
     }
 
@@ -44,29 +40,23 @@ public class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     @Override
-    public synchronized void shutdown() {
-        if (isShutdown()) {
-            return;
-        }
-
-        s.release();
+    public void shutdown() {
+        throw new IllegalStateException(getClass().getName() + " cannot be shut down.");
     }
 
     @Override
     public boolean isShutdown() {
-        return s.availablePermits() > 0;
+        return false;
     }
 
     @Override
     public boolean isTerminated() {
-        return isShutdown();
+        return false;
     }
 
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        if (s.tryAcquire(timeout, unit)) {
-            s.release();
-        }
-        return isTerminated();
+        Thread.sleep(unit.toMillis(timeout));
+        return false;
     }
 }

@@ -63,7 +63,6 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     public ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
-        ensureRunning();
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
@@ -79,7 +78,6 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        ensureRunning();
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
@@ -88,10 +86,4 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     protected abstract ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity);
     protected abstract ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity);
-
-    protected void ensureRunning() {
-        if (isShutdown()) {
-            throw new IllegalStateException("shut down already");
-        }
-    }
 }

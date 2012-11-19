@@ -77,7 +77,7 @@ import java.util.Queue;
  */
 public final class Unpooled {
 
-    static final ByteBufAllocator ALLOC = new UnpooledByteBufAllocator();
+    private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
 
     /**
      * Big endian byte order.
@@ -92,7 +92,7 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = new UnpooledHeapByteBuf(ALLOC, 0, 0);
+    public static final ByteBuf EMPTY_BUFFER = ALLOC.heapBuffer(0, 0);
 
     public static <T> MessageBuf<T> messageBuffer() {
         return new DefaultMessageBuf<T>();
@@ -149,10 +149,11 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
-        if (initialCapacity == 0 && maxCapacity == 0) {
-            return EMPTY_BUFFER;
-        }
-        return new UnpooledHeapByteBuf(ALLOC, initialCapacity, maxCapacity);
+        return ALLOC.heapBuffer(initialCapacity, maxCapacity);
+//        if (initialCapacity == 0 && maxCapacity == 0) {
+//            return EMPTY_BUFFER;
+//        }
+//        return new UnpooledHeapByteBuf(ALLOC, initialCapacity, maxCapacity);
     }
 
     /**

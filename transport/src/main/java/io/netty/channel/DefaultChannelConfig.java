@@ -30,7 +30,7 @@ import static io.netty.channel.ChannelOption.*;
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
-    private static final ByteBufAllocator DEFAULT_ALLOCATOR = new UnpooledByteBufAllocator();
+    private static final ByteBufAllocator DEFAULT_ALLOCATOR = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
