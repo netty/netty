@@ -24,19 +24,37 @@ import java.util.concurrent.TimeUnit;
 public class UnpooledByteBufAllocator implements ByteBufAllocator {
 
     private final Semaphore s = new Semaphore(0);
+    private final boolean directByDefault;
+
+    public UnpooledByteBufAllocator() {
+        this(false);
+    }
+
+    public UnpooledByteBufAllocator(boolean directByDefault) {
+        this.directByDefault = directByDefault;
+    }
 
     @Override
     public ByteBuf buffer() {
+        if (directByDefault) {
+            return directBuffer();
+        }
         return heapBuffer();
     }
 
     @Override
     public ByteBuf buffer(int initialCapacity) {
+        if (directByDefault) {
+            return directBuffer(initialCapacity);
+        }
         return heapBuffer(initialCapacity);
     }
 
     @Override
     public ByteBuf buffer(int initialCapacity, int maxCapacity) {
+        if (directByDefault) {
+            return directBuffer(initialCapacity, maxCapacity);
+        }
         return heapBuffer(initialCapacity, maxCapacity);
     }
 
