@@ -319,12 +319,17 @@
               com.sun.nio.sctp;resolution:=optional,
               sun.misc;resolution:=optional,
               sun.net.util;resolution:=optional,
+              !io.netty.*,
               *
             </Import-Package>
             <Export-Package>
               !io.netty.example.*,            
+              !io.netty.*.internal.*,            
               io.netty.*
             </Export-Package>
+            <Private-Package>
+              io.netty.*.internal.*
+            </Private-Package>
           </instructions>
         </configuration>
       </plugin>      
