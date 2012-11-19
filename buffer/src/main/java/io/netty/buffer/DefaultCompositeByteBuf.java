@@ -96,7 +96,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf addComponent(ByteBuf buffer) {
-        addComponent0(components.size(), buffer);
+        addComponent0(components.size(), buffer, false);
         consolidateIfNeeded();
         return this;
     }
@@ -117,12 +117,12 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf addComponent(int cIndex, ByteBuf buffer) {
-        addComponent0(cIndex, buffer);
+        addComponent0(cIndex, buffer, false);
         consolidateIfNeeded();
         return this;
     }
 
-    private int addComponent0(int cIndex, ByteBuf buffer) {
+    private int addComponent0(int cIndex, ByteBuf buffer, boolean addedBySelf) {
         checkComponentIndex(cIndex);
 
         if (buffer == null) {
@@ -141,7 +141,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         // No need to consolidate - just add a component to the list.
-        Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice(), false);
+        Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice(), addedBySelf);
         if (cIndex == components.size()) {
             components.add(c);
             if (cIndex == 0) {
@@ -190,7 +190,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 break;
             }
             if (b.readable()) {
-                cIndex = addComponent0(cIndex, b) + 1;
+                cIndex = addComponent0(cIndex, b, false) + 1;
                 int size = components.size();
                 if (cIndex > size) {
                     cIndex = size;
@@ -441,11 +441,14 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             ByteBuf padding;
             if (components.isEmpty()) {
                 padding = alloc().buffer(paddingLength, paddingLength);
+                padding.setIndex(0, paddingLength);
+                addComponent0(0, padding, true);
             } else {
                 padding = alloc().buffer(paddingLength);
+                padding.setIndex(0, paddingLength);
+                addComponent0(components.size(), padding, true);
+                consolidateIfNeeded();
             }
-            padding.setIndex(0, paddingLength);
-            addComponent(padding);
         } else if (newCapacity < oldCapacity) {
             int bytesToTrim = oldCapacity - newCapacity;
             for (ListIterator<Component> i = components.listIterator(components.size()); i.hasPrevious();) {
