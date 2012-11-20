@@ -78,12 +78,6 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
         }
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.error("Exception Caught", cause);
-        ctx.close();
-    }
-
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         ChannelFuture f = ctx.channel().write(res);
         if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
