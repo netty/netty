@@ -24,6 +24,6 @@ abstract class SpdyHeaderBlockDecompressor {
     }
 
     abstract void setInput(ChannelBuffer compressed);
-    abstract void decode(ChannelBuffer decompressed) throws Exception;
+    abstract int decode(ChannelBuffer decompressed) throws Exception;
     abstract void end();
 }
