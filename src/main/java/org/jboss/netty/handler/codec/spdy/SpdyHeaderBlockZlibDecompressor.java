@@ -44,7 +44,7 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
     }
 
     @Override
-    public void decode(ChannelBuffer decompressed) throws Exception {
+    public int decode(ChannelBuffer decompressed) throws Exception {
         try {
             int numBytes = decompressor.inflate(out);
             if (numBytes == 0 && decompressor.needsDictionary()) {
@@ -56,6 +56,7 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
                 numBytes = decompressor.inflate(out);
             }
             decompressed.writeBytes(out, 0, numBytes);
+            return numBytes;
         } catch (DataFormatException e) {
             throw new SpdyProtocolException(
                     "Received invalid header block", e);
