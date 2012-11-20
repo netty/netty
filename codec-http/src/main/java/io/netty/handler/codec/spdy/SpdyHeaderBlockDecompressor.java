@@ -24,6 +24,6 @@ abstract class SpdyHeaderBlockDecompressor {
     }
 
     abstract void setInput(ByteBuf compressed);
-    abstract void decode(ByteBuf decompressed) throws Exception;
+    abstract int decode(ByteBuf decompressed) throws Exception;
     abstract void end();
 }
