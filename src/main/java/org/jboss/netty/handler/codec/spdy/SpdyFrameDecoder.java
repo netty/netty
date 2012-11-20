@@ -544,8 +544,13 @@ public class SpdyFrameDecoder extends FrameDecoder {
             return true;
         }
         // Perhaps last call to decode filled output buffer
-        headerBlockDecompressor.decode(decompressed);
-        return decompressed.readableBytes() >= bytes;
+        int numBytes;
+        boolean done;
+        do {
+            numBytes = headerBlockDecompressor.decode(decompressed);
+            done = decompressed.readableBytes() >= bytes;
+        } while (!done && numBytes > 0);
+        return done;
     }
 
     private int readLengthField() {
