@@ -63,7 +63,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                     }
                     messageReceived(ctx, (I) msg);
                 } catch (Throwable t) {
-                    ctx.fireExceptionCaught(t);
+                    exceptionCaught(ctx, t);
                 }
             }
         } finally {
