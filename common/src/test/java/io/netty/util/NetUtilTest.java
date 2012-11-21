@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import org.junit.Test;
+import sun.net.util.IPAddressUtil;
 
 import static org.junit.Assert.*;
 
@@ -48,54 +49,53 @@ public class NetUtilTest {
             "[fe80::200:5aee:feaa:20a2]",
             "[2001::1]",
             "[2001:0000:4136:e378:8000:63bf:3fff:fdd2]",
-            "0:1:2:3:4:5:6:789a", // Test isValidIpV6Address with preferred style.
-            "0:1:2:3::f", // Test isValidIpV6Address with compressed style.
-            "0:0:0:0:0:0:10.0.0.1", // Test isValidIpV6Address with ipv4 style.
-            "::ffff:192.168.0.1", // Test isValidIpV6Address with compressed ipv4 style.
+            "0:1:2:3:4:5:6:789a", // Test method with preferred style.
+            "0:1:2:3::f", // Test method with compressed style.
+            "0:0:0:0:0:0:10.0.0.1", // Test method with ipv4 style.
+            "::ffff:192.168.0.1", // Test method with compressed ipv4 style.
     };
     private final static String[] invalidIpV6Hosts = {
             // for i in `cat chkip.t | grep -B2 defined | grep ::ipv6 | sed 's/.*(//' | sed 's/);//'`; do echo $i"," // `cat chkip.t| grep -B1 $i| head -n1`; done
-            "Obvious Garbage", // Test isValidIpV6Address with garbage.
-            "0:1:2:3:4:5:6:7:8", // Test isValidIpV6Address with preferred style, too many :
-            "0:1:2:3:4:5:6", // Test isValidIpV6Address with preferred style, not enough :
-            "0:1:2:3:4:5:6:x", // Test isValidIpV6Address with preferred style, bad digits.
-            "0:1:2:3:4:5:6::7", // Test isValidIpV6Address with preferred style, adjacent :
-            "0:1:2:3:4:5:6:789abcdef", // Test isValidIpV6Address with preferred style, too many digits.
-            "0:1:2:3::x", // Test isValidIpV6Address with compressed style, bad digits.
-            "0:1:2:::3", // Test isValidIpV6Address with compressed style, too many adjacent :
-            "0:1:2:3::abcde", // Test isValidIpV6Address with compressed style, too many digits.
-            "0:1:2:3:4:5:6:7:8", // Test isValidIpV6Address with preferred style, too many :
-            "0:1", // Test isValidIpV6Address with compressed style, not enough :
-            "0:0:0:0:0:x:10.0.0.1", // Test isValidIpV6Address with ipv4 style, bad ipv6 digits.
-            "0:0:0:0:0:0:10.0.0.x", // Test isValidIpV6Address with ipv4 style, bad ipv4 digits.
-//            "0:0:0:0:0::0:10.0.0.1", // Test isValidIpV6Address with ipv4 style, adjacent :
-            "0:0:0:0:0:00000:10.0.0.1", // Test isValidIpV6Address with ipv4 style, too many ipv6 digits.
-            "0:0:0:0:0:0:0:10.0.0.1", // Test isValidIpV6Address with ipv4 style, too many :
-            "0:0:0:0:0:10.0.0.1", // Test isValidIpV6Address with ipv4 style, not enough :
-            "0:0:0:0:0:0:10.0.0.0.1", // Test isValidIpV6Address with ipv4 style, too many .
-            "0:0:0:0:0:0:10.0.1", // Test isValidIpV6Address with ipv4 style, not enough .
-            "0:0:0:0:0:0:10..0.0.1", // Test isValidIpV6Address with ipv4 style, adjacent .
-            "::fffx:192.168.0.1", // Test isValidIpV6Address with compressed ipv4 style, bad ipv6 digits.
-            "::ffff:192.168.0.x", // Test isValidIpV6Address with compressed ipv4 style, bad ipv4 digits.
-            ":::ffff:192.168.0.1", // Test isValidIpV6Address with compressed ipv4 style, too many adjacent :
-            "::fffff:192.168.0.1", // Test isValidIpV6Address with compressed ipv4 style, too many ipv6 digits.
-            "::ffff:1923.168.0.1", // Test isValidIpV6Address with compressed ipv4 style, too many ipv4 digits.
-            ":ffff:192.168.0.1", // Test isValidIpV6Address with compressed ipv4 style, not enough :
-            "::ffff:192.168.0.1.2", // Test isValidIpV6Address with compressed ipv4 style, too many .
-            "::ffff:192.168.0", // Test isValidIpV6Address with compressed ipv4 style, not enough .
-            "::ffff:192.168..0.1", // Test isValidIpV6Address with compressed ipv4 style, adjacent .
+            "Obvious Garbage", // Test method with garbage.
+            "0:1:2:3:4:5:6:7:8", // Test method with preferred style, too many :
+            "0:1:2:3:4:5:6", // Test method with preferred style, not enough :
+            "0:1:2:3:4:5:6:x", // Test method with preferred style, bad digits.
+            "0:1:2:3:4:5:6::7", // Test method with preferred style, adjacent :
+            "0:1:2:3:4:5:6:789abcdef", // Test method with preferred style, too many digits.
+            "0:1:2:3::x", // Test method with compressed style, bad digits.
+            "0:1:2:::3", // Test method with compressed style, too many adjacent :
+            "0:1:2:3::abcde", // Test method with compressed style, too many digits.
+            "0:1:2:3:4:5:6:7:8", // Test method with preferred style, too many :
+            "0:1", // Test method with compressed style, not enough :
+            "0:0:0:0:0:x:10.0.0.1", // Test method with ipv4 style, bad ipv6 digits.
+            "0:0:0:0:0:0:10.0.0.x", // Test method with ipv4 style, bad ipv4 digits.
+//            "0:0:0:0:0::0:10.0.0.1", // Test method with ipv4 style, adjacent :
+            "0:0:0:0:0:00000:10.0.0.1", // Test method with ipv4 style, too many ipv6 digits.
+            "0:0:0:0:0:0:0:10.0.0.1", // Test method with ipv4 style, too many :
+            "0:0:0:0:0:10.0.0.1", // Test method with ipv4 style, not enough :
+            "0:0:0:0:0:0:10.0.0.0.1", // Test method with ipv4 style, too many .
+            "0:0:0:0:0:0:10.0.1", // Test method with ipv4 style, not enough .
+            "0:0:0:0:0:0:10..0.0.1", // Test method with ipv4 style, adjacent .
+            "::fffx:192.168.0.1", // Test method with compressed ipv4 style, bad ipv6 digits.
+            "::ffff:192.168.0.x", // Test method with compressed ipv4 style, bad ipv4 digits.
+            ":::ffff:192.168.0.1", // Test method with compressed ipv4 style, too many adjacent :
+            "::fffff:192.168.0.1", // Test method with compressed ipv4 style, too many ipv6 digits.
+            "::ffff:1923.168.0.1", // Test method with compressed ipv4 style, too many ipv4 digits.
+            ":ffff:192.168.0.1", // Test method with compressed ipv4 style, not enough :
+            "::ffff:192.168.0.1.2", // Test method with compressed ipv4 style, too many .
+            "::ffff:192.168.0", // Test method with compressed ipv4 style, not enough .
+            "::ffff:192.168..0.1", // Test method with compressed ipv4 style, adjacent .
             // for i in `cat  ipv4.t  | grep -B3 invalid | grep ::ipv6 | sed 's/.*(//' | sed 's/);.*//'`; do echo $i"," // ` cat ipv4.t | grep -B1 $i | head -n1`; done
-            "absolute, and utter garbage", // Test ipv6_parse_ipv4, garbage.
-            "x:0:0:0:0:0:10.0.0.1", // Test ipv6_parse_ipv4, bad ipv6 digits.
-            "0:0:0:0:0:0:x.0.0.1", // Test ipv6_parse_ipv4, bad ipv4 digits.
-//            "0:0:0:0:0::0:10.0.0.1", // Test ipv6_parse_ipv4, adjacent :
-            "00000:0:0:0:0:0:10.0.0.1", // Test ipv6_parse_ipv4, too many ipv6 digits.
-            "0:0:0:0:0:0:10.0.0.1000", // Test ipv6_parse_ipv4, too many ipv4 digits.
-            "0:0:0:0:0:0:0:10.0.0.1", // Test ipv6_parse_ipv4, too many :
-            "0:0:0:0:0:10.0.0.1", // Test ipv6_parse_ipv4, not enough :
-            "0:0:0:0:0:0:10.0.0.0.1", // Test ipv6_parse_ipv4, too many .
-            "0:0:0:0:0:0:10.0.1", // Test ipv6_parse_ipv4, not enough .
-            "0:0:0:0:0:0:10.0.0..1", // Test ipv6_parse_ipv4, adjacent .
+            "absolute, and utter garbage", // Test method, garbage.
+            "x:0:0:0:0:0:10.0.0.1", // Test method, bad ipv6 digits.
+            "0:0:0:0:0:0:x.0.0.1", // Test method, bad ipv4 digits.
+            "00000:0:0:0:0:0:10.0.0.1", // Test method, too many ipv6 digits.
+            "0:0:0:0:0:0:10.0.0.1000", // Test method, too many ipv4 digits.
+            "0:0:0:0:0:0:0:10.0.0.1", // Test method, too many :
+            "0:0:0:0:0:10.0.0.1", // Test method, not enough :
+            "0:0:0:0:0:0:10.0.0.0.1", // Test method, too many .
+            "0:0:0:0:0:0:10.0.1", // Test method, not enough .
+            "0:0:0:0:0:0:10.0.0..1", // Test method, adjacent .
     };
 
     @Test
@@ -118,6 +118,19 @@ public class NetUtilTest {
         }
     }
 
+//    @Test
+//    public void testIPAddressUtil() {
+////        for (String host : validIpV6Hosts) {
+////            System.out.println(host);
+////            assertTrue(IPAddressUtil.isIPv6LiteralAddress(host));
+////        }
+//        for (String host : invalidIpV6Hosts) {
+//            System.out.println(host);
+////            assertFalse(IPAddressUtil.isIPv6LiteralAddress(host));
+//            assertNull(IPAddressUtil.textToNumericFormatV6(host));
+//
+//        }
+//    }
 
     @Test
     public void testIsValidIpV6Address() {
@@ -143,5 +156,9 @@ public class NetUtilTest {
         for (String host: invalidIpV4Hosts){
             assertNull(NetUtil.createByteArrayFromIpAddressString(host));
         }
+    }
+    @Test
+    public void testInvalidAddress(){
+        NetUtil.isValidIpV6Address("0:0:0:0:0::0:10.0.0.1");
     }
 }
