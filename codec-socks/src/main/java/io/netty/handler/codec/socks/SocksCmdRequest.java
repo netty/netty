@@ -56,7 +56,7 @@ public final class SocksCmdRequest extends SocksRequest {
                 }
                 break;
             case IPv6:
-                if (!NetUtil.isValidIp6Address(host)) {
+                if (!NetUtil.isValidIpV6Address(host)) {
                     throw new IllegalArgumentException(host + " is not a valid IPv6 address");
                 }
                 break;
