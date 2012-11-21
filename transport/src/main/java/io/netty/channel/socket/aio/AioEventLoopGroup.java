@@ -15,6 +15,10 @@
  */
 package io.netty.channel.socket.aio;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
@@ -31,6 +35,8 @@ import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(AioEventLoopGroup.class);
@@ -53,6 +59,14 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         CHANNEL_FINDER = finder;
     }
 
+    // Channel counter is initialized to one and shutdown will decrement it by one
+    // therefore we can also use it for shutdown signaling.
+    private final AtomicInteger channelCounter = new AtomicInteger(1);
+
+    // To prevent childCounter from being decremented to often by calls to shutdown
+    // we have to protect it with an AtomicBoolean (see shutdown below).
+    private final AtomicBoolean shutdown = new AtomicBoolean(false);
+
     private final AioExecutorService groupExecutor = new AioExecutorService();
     final AsynchronousChannelGroup group;
 
@@ -73,41 +87,55 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         }
     }
 
+    private final ChannelFutureListener channelCloseListener = new ChannelFutureListener() {
+      @Override
+      public void operationComplete(final ChannelFuture future) throws Exception {
+         removeChannel();
+      }
+    };
+
+    private void removeChannel() {
+       if (channelCounter.decrementAndGet() == 0) {
+          // Close all connections and shut down event loop threads.
+          super.shutdown();
+       }
+    }
+
+    private boolean addChannel() {
+       int c;
+       do {
+          c = channelCounter.get();
+       } while (c != 0 && !channelCounter.compareAndSet(c, c + 1));
+       return c > 0;
+    }
+
+    final void attach(final Channel channel) {
+       if (! addChannel()) {
+          channel.close();
+          throw new ChannelException("AioEventLoopGroup already shutdown");
+       }
+       // Ensure that we are notified once the channel is closed.
+       channel.closeFuture().addListener(channelCloseListener);
+    }
+
     @Override
     public void shutdown() {
-        boolean interrupted = false;
-
-        // Tell JDK not to accept any more registration request.  Note that the threads are not really shut down yet.
-        try {
-            group.shutdownNow();
-        } catch (IOException e) {
-            throw new EventLoopException("failed to shut down a channel group", e);
-        }
-
-        // Wait until JDK propagates the shutdown request on AsynchronousChannelGroup to the ExecutorService.
-        // JDK will probably submit some final tasks to the ExecutorService before shutting down the ExecutorService,
-        // so we have to ensure all tasks submitted by JDK are executed before calling super.shutdown() to really
-        // shut down event loop threads.
-        while (!groupExecutor.isTerminated()) {
-            try {
-                groupExecutor.awaitTermination(1, TimeUnit.HOURS);
-            } catch (InterruptedException e) {
-                interrupted = true;
-            }
-        }
-
-        // Close all connections and shut down event loop threads.
-        super.shutdown();
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
+       // First of all ensure that we call removeChannel only once from within the shutdown
+       // method. Just in case shutdown is called more then once by the client.
+       if (shutdown.compareAndSet(false, true)) {
+          // Tell JDK not to accept any more registration request.  Note that the threads
+          // are not really shut down yet. The group will terminate once all its channels
+          // are closed.
+          group.shutdown();
+          // Make sure the shutdown signal is set.
+          removeChannel();
+       }
     }
 
     @Override
     protected EventExecutor newChild(
             ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
-        return new AioEventLoop(this, threadFactory, scheduler);
+          return new AioEventLoop(this, threadFactory, scheduler);
     }
 
     private final class AioExecutorService extends AbstractExecutorService {
