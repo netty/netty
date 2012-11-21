@@ -33,7 +33,7 @@ import java.util.StringTokenizer;
 
 /**
  * A class that holds a number of network-related constants.
- *
+ * <p/>
  * This class borrowed some of its methods from a  modified fork of the
  * <a href="http://svn.apache.org/repos/asf/harmony/enhanced/java/branches/java6/classlib/modules/luni/
  * src/main/java/org/apache/harmony/luni/util/Inet6Util.java">Inet6Util class</a> which was part of Apache Harmony.
@@ -42,7 +42,7 @@ public final class NetUtil {
 
     /**
      * The {@link InetAddress} representing the host machine
-     *
+     * <p/>
      * We cache this because some machines take almost forever to return from
      * {@link InetAddress}.getLocalHost(). This may be due to incorrect
      * configuration of the hosts and DNS client configuration files.
@@ -75,12 +75,12 @@ public final class NetUtil {
         } catch (IOException e) {
             // The default local host names did not work.  Try hard-coded IPv4 address.
             try {
-                localhost = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
+                localhost = InetAddress.getByAddress(new byte[]{127, 0, 0, 1});
                 validateHost(localhost);
             } catch (IOException e1) {
                 // The hard-coded IPv4 address did not work.  Try hard coded IPv6 address.
                 try {
-                    localhost = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+                    localhost = InetAddress.getByAddress(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
                     validateHost(localhost);
                 } catch (IOException e2) {
                     throw new Error("Failed to resolve localhost - incorrect network configuration?", e2);
@@ -204,105 +204,89 @@ public final class NetUtil {
             return byteAddress;
         }
 
-        if (ipAddressString.charAt(0) == '[') {
-            ipAddressString = ipAddressString.substring(1, ipAddressString
-                    .length() - 1);
-        }
+        if (isValidIpV6Address(ipAddressString)) {
+            if (ipAddressString.charAt(0) == '[') {
+                ipAddressString = ipAddressString.substring(1, ipAddressString
+                        .length() - 1);
+            }
 
-        StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ":.",
-                true);
-        ArrayList<String> hexStrings = new ArrayList<String>();
-        ArrayList<String> decStrings = new ArrayList<String>();
-        String token = "";
-        String prevToken = "";
-        int doubleColonIndex = -1; // If a double colon exists, we need to
-        // insert 0s.
+            StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ":.",
+                    true);
+            ArrayList<String> hexStrings = new ArrayList<String>();
+            ArrayList<String> decStrings = new ArrayList<String>();
+            String token = "";
+            String prevToken = "";
+            int doubleColonIndex = -1; // If a double colon exists, we need to
+            // insert 0s.
 
-        // Go through the tokens, including the seperators ':' and '.'
-        // When we hit a : or . the previous token will be added to either
-        // the hex list or decimal list. In the case where we hit a ::
-        // we will save the index of the hexStrings so we can add zeros
-        // in to fill out the string
-        while (tokenizer.hasMoreTokens()) {
-            prevToken = token;
-            token = tokenizer.nextToken();
+            // Go through the tokens, including the seperators ':' and '.'
+            // When we hit a : or . the previous token will be added to either
+            // the hex list or decimal list. In the case where we hit a ::
+            // we will save the index of the hexStrings so we can add zeros
+            // in to fill out the string
+            while (tokenizer.hasMoreTokens()) {
+                prevToken = token;
+                token = tokenizer.nextToken();
 
-            if (":".equals(token)) {
-                if (":".equals(prevToken)) {
-                    doubleColonIndex = hexStrings.size();
-                } else if (!prevToken.isEmpty()) {
-                    hexStrings.add(prevToken);
+                if (":".equals(token)) {
+                    if (":".equals(prevToken)) {
+                        doubleColonIndex = hexStrings.size();
+                    } else if (!prevToken.isEmpty()) {
+                        hexStrings.add(prevToken);
+                    }
+                } else if (".".equals(token)) {
+                    decStrings.add(prevToken);
                 }
-            } else if (".".equals(token)) {
-                decStrings.add(prevToken);
             }
-        }
 
-        if (":".equals(prevToken)) {
-            if (":".equals(token)) {
-                doubleColonIndex = hexStrings.size();
-            } else {
-                hexStrings.add(token);
+            if (":".equals(prevToken)) {
+                if (":".equals(token)) {
+                    doubleColonIndex = hexStrings.size();
+                } else {
+                    hexStrings.add(token);
+                }
+            } else if (".".equals(prevToken)) {
+                decStrings.add(token);
             }
-        } else if (".".equals(prevToken)) {
-            decStrings.add(token);
-        }
 
-        // figure out how many hexStrings we should have
-        // also check if it is a IPv4 address
-        int hexStringsLength = 8;
+            // figure out how many hexStrings we should have
+            // also check if it is a IPv4 address
+            int hexStringsLength = 8;
 
-        // If we have an IPv4 address tagged on at the end, subtract
-        // 4 bytes, or 2 hex words from the total
-        if (!decStrings.isEmpty()) {
-            hexStringsLength -= 2;
-        }
-
-        // if we hit a double Colon add the appropriate hex strings
-        if (doubleColonIndex != -1) {
-            int numberToInsert = hexStringsLength - hexStrings.size();
-            for (int i = 0; i < numberToInsert; i++) {
-                hexStrings.add(doubleColonIndex, "0");
+            // If we have an IPv4 address tagged on at the end, subtract
+            // 4 bytes, or 2 hex words from the total
+            if (!decStrings.isEmpty()) {
+                hexStringsLength -= 2;
             }
-        }
 
-        byte[] ipByteArray = new byte[16];
-
-        // Finally convert these strings to bytes...
-        for (int i = 0; i < hexStrings.size(); i++) {
-            convertToBytes(hexStrings.get(i), ipByteArray, i * 2);
-        }
-
-        // Now if there are any decimal values, we know where they go...
-        for (int i = 0; i < decStrings.size(); i++) {
-            ipByteArray[i + 12] = (byte) (Integer.parseInt(decStrings
-                    .get(i)) & 255);
-        }
-
-        // now check to see if this guy is actually and IPv4 address
-        // an ipV4 address is ::FFFF:d.d.d.d
-        boolean ipV4 = true;
-        for (int i = 0; i < 10; i++) {
-            if (ipByteArray[i] != 0) {
-                ipV4 = false;
-                break;
+            // if we hit a double Colon add the appropriate hex strings
+            if (doubleColonIndex != -1) {
+                int numberToInsert = hexStringsLength - hexStrings.size();
+                for (int i = 0; i < numberToInsert; i++) {
+                    hexStrings.add(doubleColonIndex, "0");
+                }
             }
-        }
 
-        if (ipByteArray[10] != -1 || ipByteArray[11] != -1) {
-            ipV4 = false;
-        }
+            byte[] ipByteArray = new byte[16];
 
-        if (ipV4) {
-            byte[] ipv4ByteArray = new byte[4];
-            System.arraycopy(ipByteArray, 12, ipv4ByteArray, 0, 4);
-            return ipv4ByteArray;
-        }
+            // Finally convert these strings to bytes...
+            for (int i = 0; i < hexStrings.size(); i++) {
+                convertToBytes(hexStrings.get(i), ipByteArray, i * 2);
+            }
 
-        return ipByteArray;
+            // Now if there are any decimal values, we know where they go...
+            for (int i = 0; i < decStrings.size(); i++) {
+                ipByteArray[i + 12] = (byte) (Integer.parseInt(decStrings
+                        .get(i)) & 255);
+            }
+            return ipByteArray;
+        }
+        return null;
     }
 
-    /** Converts a 4 character hex word into a 2 byte word equivalent */
+    /**
+     * Converts a 4 character hex word into a 2 byte word equivalent
+     */
     private static void convertToBytes(String hexWord, byte[] ipByteArray,
                                        int byteIndex) {
 
@@ -378,7 +362,7 @@ public final class NetUtil {
         return 0;
     }
 
-    public static boolean isValidIp6Address(String ipAddress) {
+    public static boolean isValidIpV6Address(String ipAddress) {
         int length = ipAddress.length();
         boolean doubleColon = false;
         int numberOfColons = 0;
@@ -503,7 +487,8 @@ public final class NetUtil {
 
         // Check if we have an IPv4 ending
         if (numberOfPeriods > 0) {
-            if (numberOfPeriods != 3 || !isValidIp4Word(word.toString())) {
+            // There is a test case with 7 colons and valid ipv4 this should resolve it
+            if (numberOfPeriods != 3 || !(isValidIp4Word(word.toString()) && numberOfColons < 7)) {
                 return false;
             }
         } else {
