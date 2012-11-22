@@ -29,6 +29,8 @@ import io.netty.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -50,8 +52,10 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         }
     }
 
-    final SctpServerChannel sch;
+    private final SctpServerChannel sch;
     private final SctpServerChannelConfig config;
+
+    private final Selector selector;
 
     public OioSctpServerChannel() {
         this(newServerSocket());
@@ -70,7 +74,9 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         this.sch = sch;
         boolean success = false;
         try {
-            sch.configureBlocking(true);
+            sch.configureBlocking(false);
+            selector = Selector.open();
+            sch.register(selector, SelectionKey.OP_ACCEPT);
             config = new DefaultSctpServerChannelConfig(sch);
             success = true;
         } catch (Exception e) {
@@ -145,6 +151,11 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doClose() throws Exception {
+        try {
+            selector.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close a selector.", e);
+        }
         sch.close();
     }
 
@@ -160,11 +171,20 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
 
         SctpChannel s = null;
         try {
-            s = sch.accept();
-            if (s != null) {
-                buf.add(new OioSctpChannel(this, null, s));
-                return 1;
+            final int selectedKeys = selector.select(SO_TIMEOUT);
+            if (selectedKeys > 0) {
+                final Set<SelectionKey> selectionKeys = selector.selectedKeys();
+                for (SelectionKey key : selectionKeys) {
+                   if (key.isAcceptable()) {
+                       s = sch.accept();
+                       if (s != null) {
+                           buf.add(new OioSctpChannel(this, null, s));
+                       }
+                   }
+                }
+                return selectedKeys;
             }
+
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted sctp channel.", t);
             if (s != null) {
