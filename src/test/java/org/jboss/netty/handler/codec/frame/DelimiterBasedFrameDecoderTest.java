@@ -64,4 +64,17 @@ public class DelimiterBasedFrameDecoderTest {
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
+
+    @Test
+    public void testDecode() throws Exception {
+        DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
+                new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
+
+        Assert.assertTrue(embedder.offer(ChannelBuffers.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII)));
+        Assert.assertTrue(embedder.finish());
+        Assert.assertEquals("first", embedder.poll().toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("second", embedder.poll().toString(CharsetUtil.US_ASCII));
+        Assert.assertNull(embedder.poll());
+
+    }
 }
