@@ -510,7 +510,8 @@ public final class NetUtil {
 
         // Check if we have an IPv4 ending
         if (numberOfPeriods > 0) {
-            if (numberOfPeriods != 3 || !isValidIp4Word(word.toString())) {
+            // There is a test case with 7 colons and valid ipv4 this should resolve it
+            if (numberOfPeriods != 3 || !(isValidIp4Word(word.toString()) && (numberOfColons < 7))) {
                 return false;
             }
         } else {

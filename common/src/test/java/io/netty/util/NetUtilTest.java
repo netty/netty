@@ -69,7 +69,7 @@ public class NetUtilTest {
             "0:1", // Test method with compressed style, not enough :
             "0:0:0:0:0:x:10.0.0.1", // Test method with ipv4 style, bad ipv6 digits.
             "0:0:0:0:0:0:10.0.0.x", // Test method with ipv4 style, bad ipv4 digits.
-//            "0:0:0:0:0::0:10.0.0.1", // Test method with ipv4 style, adjacent :
+            "0:0:0:0:0::0:10.0.0.1", // Test method with ipv4 style, adjacent :
             "0:0:0:0:0:00000:10.0.0.1", // Test method with ipv4 style, too many ipv6 digits.
             "0:0:0:0:0:0:0:10.0.0.1", // Test method with ipv4 style, too many :
             "0:0:0:0:0:10.0.0.1", // Test method with ipv4 style, not enough :
@@ -118,20 +118,6 @@ public class NetUtilTest {
         }
     }
 
-//    @Test
-//    public void testIPAddressUtil() {
-////        for (String host : validIpV6Hosts) {
-////            System.out.println(host);
-////            assertTrue(IPAddressUtil.isIPv6LiteralAddress(host));
-////        }
-//        for (String host : invalidIpV6Hosts) {
-//            System.out.println(host);
-////            assertFalse(IPAddressUtil.isIPv6LiteralAddress(host));
-//            assertNull(IPAddressUtil.textToNumericFormatV6(host));
-//
-//        }
-//    }
-
     @Test
     public void testIsValidIpV6Address() {
         for (String host : validIpV6Hosts) {
@@ -156,9 +142,5 @@ public class NetUtilTest {
         for (String host: invalidIpV4Hosts){
             assertNull(NetUtil.createByteArrayFromIpAddressString(host));
         }
-    }
-    @Test
-    public void testInvalidAddress(){
-        NetUtil.isValidIpV6Address("0:0:0:0:0::0:10.0.0.1");
     }
 }
