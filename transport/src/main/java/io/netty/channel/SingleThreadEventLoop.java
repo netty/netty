@@ -44,6 +44,12 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     @Override
     public ChannelFuture register(final Channel channel, final ChannelFuture future) {
+        if (isShutdown()) {
+            channel.unsafe().closeForcibly();
+            future.setFailure(new EventLoopException("cannot register a channel to a shut down loop"));
+            return future;
+        }
+
         if (inEventLoop()) {
             channel.unsafe().register(this, future);
         } else {

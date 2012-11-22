@@ -40,16 +40,9 @@ class DefaultEventExecutor extends SingleThreadEventExecutor {
                 // Waken up by interruptThread()
             }
 
-            if (isShutdown() && peekTask() == null) {
+            if (isShutdown() && confirmShutdown()) {
                 break;
             }
-        }
-    }
-
-    @Override
-    protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && isShutdown()) {
-            interruptThread();
         }
     }
 }
