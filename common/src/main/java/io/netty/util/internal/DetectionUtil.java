@@ -15,8 +15,12 @@
  */
 package io.netty.util.internal;
 
+import sun.misc.Cleaner;
+
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -38,11 +42,11 @@ public final class DetectionUtil {
 
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
+    private static final boolean CAN_FREE_DIRECT_BUFFER;
     private static final boolean IS_WINDOWS;
     private static final boolean IS_ROOT;
 
     static {
-
         Pattern PERMISSION_DENIED = Pattern.compile(".*permission.*denied.*");
         String os = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.UK);
         // windows
@@ -82,6 +86,21 @@ public final class DetectionUtil {
         }
 
         IS_ROOT = root;
+
+        boolean canFreeDirectBuffer = false;
+
+        try {
+            ByteBuffer direct = ByteBuffer.allocateDirect(1);
+            Field cleanerField = direct.getClass().getDeclaredField("cleaner");
+            cleanerField.setAccessible(true);
+            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
+            cleaner.clean();
+            canFreeDirectBuffer = true;
+        } catch (Throwable t) {
+            // Ignore.
+        }
+
+        CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer;
     }
 
     /**
@@ -105,6 +124,10 @@ public final class DetectionUtil {
 
     public static int javaVersion() {
         return JAVA_VERSION;
+    }
+
+    public static boolean canFreeDirectBuffer() {
+        return CAN_FREE_DIRECT_BUFFER;
     }
 
     private static boolean hasUnsafe(ClassLoader loader) {

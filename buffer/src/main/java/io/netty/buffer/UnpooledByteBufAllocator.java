@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.DetectionUtil;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -37,6 +39,15 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+    }
+
+    @Override
+    public ByteBuf ioBuffer() {
+        if (DetectionUtil.canFreeDirectBuffer()) {
+            return directBuffer();
+        }
+
+        return heapBuffer();
     }
 
     @Override

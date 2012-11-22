@@ -1419,7 +1419,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.metadata().bufferType()) {
             case BYTE:
-                return ctx.alloc().directBuffer();
+                return ctx.alloc().ioBuffer();
             case MESSAGE:
                 return Unpooled.messageBuffer();
             default:
