@@ -71,6 +71,10 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     @Override
     public void shutdown() {
+        if (isShutdown()) {
+            return;
+        }
+
         scheduler.shutdown();
         for (EventExecutor l: children) {
             l.shutdown();

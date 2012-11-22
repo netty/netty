@@ -43,7 +43,6 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -81,7 +80,7 @@ public class LocalTransportThreadModelTest {
         sb.shutdown();
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testStagedExecutionMultiple() throws Throwable {
         for (int i = 0; i < 10; i ++) {
             testStagedExecution();
@@ -197,10 +196,10 @@ public class LocalTransportThreadModelTest {
             throw e;
         } finally {
             l.shutdown();
-            l.awaitTermination(5, TimeUnit.SECONDS);
             e1.shutdown();
-            e1.awaitTermination(5, TimeUnit.SECONDS);
             e2.shutdown();
+            l.awaitTermination(5, TimeUnit.SECONDS);
+            e1.awaitTermination(5, TimeUnit.SECONDS);
             e2.awaitTermination(5, TimeUnit.SECONDS);
         }
     }
@@ -319,7 +318,6 @@ public class LocalTransportThreadModelTest {
             }
 
             ch.close().sync();
-            h6.latch.await(); // Wait until channelInactive() is triggered.
 
         } finally {
             l.shutdown();
@@ -662,7 +660,6 @@ public class LocalTransportThreadModelTest {
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
-        final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -722,11 +719,6 @@ public class LocalTransportThreadModelTest {
                 out.add(msg);
             }
             ctx.flush(future);
-        }
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            latch.countDown();
         }
 
         @Override

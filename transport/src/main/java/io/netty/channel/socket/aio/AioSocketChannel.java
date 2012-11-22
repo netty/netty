@@ -220,6 +220,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     protected void doClose() throws Exception {
         javaChannel().close();
+        inputShutdown = true;
         outputShutdown = true;
     }
 
@@ -354,6 +355,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
+            if (channel.inputShutdown) {
+                // Channel has been closed during read. Because the inbound buffer has been deallocated already,
+                // there's no way to let a user handler access it unfortunately.
+                return;
+            }
+
             final ChannelPipeline pipeline = channel.pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
 
@@ -394,7 +401,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                if (closed) {
+                // Double check because fireInboundBufferUpdated() might have triggered the closure by a user handler.
+                if (closed || !channel.isOpen()) {
                     channel.inputShutdown = true;
                     if (channel.isOpen()) {
                         if (channel.config().isAllowHalfClosure()) {
