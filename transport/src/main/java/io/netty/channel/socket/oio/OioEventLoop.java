@@ -91,17 +91,10 @@ class OioEventLoop extends SingleThreadEventLoop {
                 if (ch != null) {
                     ch.unsafe().close(ch.unsafe().voidFuture());
                 }
-                if (peekTask() == null) {
+                if (confirmShutdown()) {
                     break;
                 }
             }
-        }
-    }
-
-    @Override
-    protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && isShutdown()) {
-            interruptThread();
         }
     }
 

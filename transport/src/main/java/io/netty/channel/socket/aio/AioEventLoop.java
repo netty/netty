@@ -79,11 +79,9 @@ final class AioEventLoop extends SingleThreadEventLoop {
 
             if (isShutdown()) {
                 closeAll();
-                task = pollTask();
-                if (task == null) {
+                if (confirmShutdown()) {
                     break;
                 }
-                task.run();
             }
         }
     }
@@ -96,13 +94,6 @@ final class AioEventLoop extends SingleThreadEventLoop {
 
         for (Channel ch: channels) {
             ch.unsafe().close(ch.unsafe().voidFuture());
-        }
-    }
-
-    @Override
-    protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && isShutdown()) {
-            interruptThread();
         }
     }
 }

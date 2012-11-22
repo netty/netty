@@ -249,7 +249,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                 if (isShutdown()) {
                     closeAll();
-                    if (peekTask() == null) {
+                    if (confirmShutdown()) {
                         break;
                     }
                 }
