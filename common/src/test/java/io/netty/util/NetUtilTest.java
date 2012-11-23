@@ -16,86 +16,237 @@
 package io.netty.util;
 
 import org.junit.Test;
-import sun.net.util.IPAddressUtil;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
 public class NetUtilTest {
-    private final static String[] validIpV4Hosts = {
-            "192.168.1.0",
-            "10.255.255.254",
-            "172.18.5.4",
-            "0.0.0.0",
-            "127.0.0.1"
+    private byte[] initArray(byte[] value) {
+        return value;
+    }
+
+    private final static Map<String, byte[]> validIpV4Hosts = new HashMap<String, byte[]>() {
+        {
+            validIpV4Hosts.put("192.168.1.0", new byte[]{
+                    (byte) 0xc0, (byte) 0xa8, 0x01, 0x00}
+            );
+            validIpV4Hosts.put("10.255.255.254", new byte[]{
+                    0x0a, (byte) 0xff, (byte) 0xff, (byte) 0xfe
+            });
+            validIpV4Hosts.put("172.18.5.4", new byte[]{
+                    (byte) 0xac, 0x12, 0x05, 0x04
+            });
+            validIpV4Hosts.put("0.0.0.0", new byte[]{
+                    0x00, 0x00, 0x00, 0x00
+            });
+            validIpV4Hosts.put("127.0.0.1", new byte[]{
+                    0x7f, 0x00, 0x00, 0x01
+            });
+
+        }
     };
-    private final static String[] invalidIpV4Hosts = {
-            "1.256.3.4",
-            "256.0.0.1",
-            "1.1.1.1.1"
+    private final static Map<String, byte[]> invalidIpV4Hosts = new HashMap<String, byte[]>() {
+        {
+            invalidIpV4Hosts.put("1.256.3.4", null);
+            invalidIpV4Hosts.put("256.0.0.1", null);
+            invalidIpV4Hosts.put("1.1.1.1.1", null);
+        }
     };
-    private final static String[] validIpV6Hosts = {
-            // for i in `cat chkip.t | grep -B2 CODE | grep ::ipv6 | sed 's/.*(//' | sed 's/);//'`; do echo $i"," // `cat chkip.t| grep -B1 $i| head -n1`; done
-            "::ffff:5.6.7.8",
-            "fdf8:f53b:82e4::53",
-            "fe80::200:5aee:feaa:20a2",
-            "2001::1",
-            "2001:0000:4136:e378:8000:63bf:3fff:fdd2",
-            "2001:0002:6c::430",
-            "2001:10:240:ab::a",
-            "2002:cb0a:3cdd:1::1",
-            "2001:db8:8:4::2",
-            "ff01:0:0:0:0:0:0:2",
-            "[fdf8:f53b:82e4::53]",
-            "[fe80::200:5aee:feaa:20a2]",
-            "[2001::1]",
-            "[2001:0000:4136:e378:8000:63bf:3fff:fdd2]",
-            "0:1:2:3:4:5:6:789a", // Test method with preferred style.
-            "0:1:2:3::f", // Test method with compressed style.
-            "0:0:0:0:0:0:10.0.0.1", // Test method with ipv4 style.
-            "::ffff:192.168.0.1", // Test method with compressed ipv4 style.
+    private final static Map<String, byte[]> validIpV6Hosts = new HashMap<String, byte[]>() {
+        {
+            validIpV6Hosts.put("::ffff:5.6.7.8", new byte[]{
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, (byte) 0xff, (byte) 0xff,
+                    0x05, 0x06, 0x07, 0x08}
+            );
+            validIpV6Hosts.put("fdf8:f53b:82e4::53", new byte[]{
+                    (byte) 0xfd, (byte) 0xf8, (byte) 0xf5, 0x3b,
+                    (byte) 0x82, (byte) 0xe4, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x53}
+            );
+            validIpV6Hosts.put("fe80::200:5aee:feaa:20a2", new byte[]{
+                    (byte) 0xfe, (byte) 0x80, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x02, 0x00, 0x5a, (byte) 0xee,
+                    (byte) 0xfe, (byte) 0xaa, 0x20, (byte) 0xa2}
+            );
+            validIpV6Hosts.put("2001::1", new byte[]{
+                    0x20, 0x01, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x01}
+            );
+            validIpV6Hosts.put("2001:0000:4136:e378:8000:63bf:3fff:fdd2", new byte[]{
+                    0x20, 0x01, 0x00, 0x00,
+                    0x41, 0x36, (byte) 0xe3, 0x78,
+                    (byte) 0x80, 0x00, 0x63, (byte) 0xbf,
+                    0x3f, (byte) 0xff, (byte) 0xfd, (byte) 0xd2}
+            );
+            validIpV6Hosts.put("2001:0002:6c::430", new byte[]{
+                    0x20, 0x01, 0x00, 0x02,
+                    0x00, 0x6c, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x04, 0x30}
+            );
+            validIpV6Hosts.put("2001:10:240:ab::a", new byte[]{
+                    0x20, 0x01, 0x00, 0x10,
+                    0x02, 0x40, 0x00, (byte) 0xab,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x0a});
+            validIpV6Hosts.put("2002:cb0a:3cdd:1::1", new byte[]{
+                    0x20, 0x02, (byte) 0xcb, 0x0a,
+                    0x3c, (byte) 0xdd, 0x00, 0x01,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x01}
+            );
+            validIpV6Hosts.put("2001:db8:8:4::2", new byte[]{
+                    0x20, 0x01, 0x0d, (byte) 0xb8,
+                    0x00, 0x08, 0x00, 0x04,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x02}
+            );
+            validIpV6Hosts.put("ff01:0:0:0:0:0:0:2", new byte[]{
+                    (byte) 0xff, 0x01, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x02}
+            );
+            validIpV6Hosts.put("[fdf8:f53b:82e4::53]", new byte[]{
+                    (byte) 0xfd, (byte) 0xf8, (byte) 0xf5, 0x3b,
+                    (byte) 0x82, (byte) 0xe4, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x53}
+            );
+            validIpV6Hosts.put("[fe80::200:5aee:feaa:20a2]", new byte[]{
+                    (byte) 0xfe, (byte) 0x80, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x02, 0x00, 0x5a, (byte) 0xee,
+                    (byte) 0xfe, (byte) 0xaa, 0x20, (byte) 0xa2}
+            );
+            validIpV6Hosts.put("[2001::1]", new byte[]{
+                    0x20, 0x01, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x01}
+            );
+            validIpV6Hosts.put("[2001:0000:4136:e378:8000:63bf:3fff:fdd2]", new byte[]{
+                    0x20, 0x01, 0x00, 0x00,
+                    0x41, 0x36, (byte) 0xe3, 0x78,
+                    (byte) 0x80, 0x00, 0x63, (byte) 0xbf,
+                    0x3f, (byte) 0xff, (byte) 0xfd, (byte) 0xd2}
+            );
+            validIpV6Hosts.put("0:1:2:3:4:5:6:789a", new byte[]{
+                    0x00, 0x00, 0x00, 0x01,
+                    0x00, 0x02, 0x00, 0x03,
+                    0x00, 0x04, 0x00, 0x05,
+                    0x00, 0x06, 0x78, (byte) 0x9a}
+            );
+            validIpV6Hosts.put("0:1:2:3::f", new byte[]{
+                    0x00, 0x00, 0x00, 0x01,
+                    0x00, 0x02, 0x00, 0x03,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x0f}
+            );
+            validIpV6Hosts.put("0:0:0:0:0:0:10.0.0.1", new byte[]{
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x0a, 0x00, 0x00, 0x01}
+            );
+            validIpV6Hosts.put("::ffff:192.168.0.1", new byte[]{
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, (byte) 0xff, (byte) 0xff,
+                    (byte) 0xc0, (byte) 0xa8, 0x00, 0x01}
+            );
+        }
     };
-    private final static String[] invalidIpV6Hosts = {
-            // for i in `cat chkip.t | grep -B2 defined | grep ::ipv6 | sed 's/.*(//' | sed 's/);//'`; do echo $i"," // `cat chkip.t| grep -B1 $i| head -n1`; done
-            "Obvious Garbage", // Test method with garbage.
-            "0:1:2:3:4:5:6:7:8", // Test method with preferred style, too many :
-            "0:1:2:3:4:5:6", // Test method with preferred style, not enough :
-            "0:1:2:3:4:5:6:x", // Test method with preferred style, bad digits.
-            "0:1:2:3:4:5:6::7", // Test method with preferred style, adjacent :
-            "0:1:2:3:4:5:6:789abcdef", // Test method with preferred style, too many digits.
-            "0:1:2:3::x", // Test method with compressed style, bad digits.
-            "0:1:2:::3", // Test method with compressed style, too many adjacent :
-            "0:1:2:3::abcde", // Test method with compressed style, too many digits.
-            "0:1:2:3:4:5:6:7:8", // Test method with preferred style, too many :
-            "0:1", // Test method with compressed style, not enough :
-            "0:0:0:0:0:x:10.0.0.1", // Test method with ipv4 style, bad ipv6 digits.
-            "0:0:0:0:0:0:10.0.0.x", // Test method with ipv4 style, bad ipv4 digits.
-            "0:0:0:0:0::0:10.0.0.1", // Test method with ipv4 style, adjacent :
-            "0:0:0:0:0:00000:10.0.0.1", // Test method with ipv4 style, too many ipv6 digits.
-            "0:0:0:0:0:0:0:10.0.0.1", // Test method with ipv4 style, too many :
-            "0:0:0:0:0:10.0.0.1", // Test method with ipv4 style, not enough :
-            "0:0:0:0:0:0:10.0.0.0.1", // Test method with ipv4 style, too many .
-            "0:0:0:0:0:0:10.0.1", // Test method with ipv4 style, not enough .
-            "0:0:0:0:0:0:10..0.0.1", // Test method with ipv4 style, adjacent .
-            "::fffx:192.168.0.1", // Test method with compressed ipv4 style, bad ipv6 digits.
-            "::ffff:192.168.0.x", // Test method with compressed ipv4 style, bad ipv4 digits.
-            ":::ffff:192.168.0.1", // Test method with compressed ipv4 style, too many adjacent :
-            "::fffff:192.168.0.1", // Test method with compressed ipv4 style, too many ipv6 digits.
-            "::ffff:1923.168.0.1", // Test method with compressed ipv4 style, too many ipv4 digits.
-            ":ffff:192.168.0.1", // Test method with compressed ipv4 style, not enough :
-            "::ffff:192.168.0.1.2", // Test method with compressed ipv4 style, too many .
-            "::ffff:192.168.0", // Test method with compressed ipv4 style, not enough .
-            "::ffff:192.168..0.1", // Test method with compressed ipv4 style, adjacent .
-            // for i in `cat  ipv4.t  | grep -B3 invalid | grep ::ipv6 | sed 's/.*(//' | sed 's/);.*//'`; do echo $i"," // ` cat ipv4.t | grep -B1 $i | head -n1`; done
-            "absolute, and utter garbage", // Test method, garbage.
-            "x:0:0:0:0:0:10.0.0.1", // Test method, bad ipv6 digits.
-            "0:0:0:0:0:0:x.0.0.1", // Test method, bad ipv4 digits.
-            "00000:0:0:0:0:0:10.0.0.1", // Test method, too many ipv6 digits.
-            "0:0:0:0:0:0:10.0.0.1000", // Test method, too many ipv4 digits.
-            "0:0:0:0:0:0:0:10.0.0.1", // Test method, too many :
-            "0:0:0:0:0:10.0.0.1", // Test method, not enough :
-            "0:0:0:0:0:0:10.0.0.0.1", // Test method, too many .
-            "0:0:0:0:0:0:10.0.1", // Test method, not enough .
-            "0:0:0:0:0:0:10.0.0..1", // Test method, adjacent .
+    private final static Map<String, byte[]> invalidIpV6Hosts = new HashMap<String, byte[]>() {
+        {
+            // Test method with garbage.
+            invalidIpV6Hosts.put("Obvious Garbage", null);
+            // Test method with preferred style, too many :
+            invalidIpV6Hosts.put("0:1:2:3:4:5:6:7:8", null);
+            // Test method with preferred style, not enough :
+            invalidIpV6Hosts.put("0:1:2:3:4:5:6", null);
+            // Test method with preferred style, bad digits.
+            invalidIpV6Hosts.put("0:1:2:3:4:5:6:x", null);
+            // Test method with preferred style, adjacent :
+            invalidIpV6Hosts.put("0:1:2:3:4:5:6::7", null);
+            // Test method with preferred style, too many digits.
+            invalidIpV6Hosts.put("0:1:2:3:4:5:6:789abcdef", null);
+            // Test method with compressed style, bad digits.
+            invalidIpV6Hosts.put("0:1:2:3::x", null);
+            // Test method with compressed style, too many adjacent :
+            invalidIpV6Hosts.put("0:1:2:::3", null);
+            // Test method with compressed style, too many digits.
+            invalidIpV6Hosts.put("0:1:2:3::abcde", null);
+            // Test method with preferred style, too many :
+            invalidIpV6Hosts.put("0:1:2:3:4:5:6:7:8", null);
+            // Test method with compressed style, not enough :
+            invalidIpV6Hosts.put("0:1", null);
+            // Test method with ipv4 style, bad ipv6 digits.
+            invalidIpV6Hosts.put("0:0:0:0:0:x:10.0.0.1", null);
+            // Test method with ipv4 style, bad ipv4 digits.
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.0.x", null);
+            // Test method with ipv4 style, adjacent :
+            invalidIpV6Hosts.put("0:0:0:0:0::0:10.0.0.1", null);
+            // Test method with ipv4 style, too many ipv6 digits.
+            invalidIpV6Hosts.put("0:0:0:0:0:00000:10.0.0.1", null);
+            // Test method with ipv4 style, too many :
+            invalidIpV6Hosts.put("0:0:0:0:0:0:0:10.0.0.1", null);
+            // Test method with ipv4 style, not enough :
+            invalidIpV6Hosts.put("0:0:0:0:0:10.0.0.1", null);
+            // Test method with ipv4 style, too many .
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.0.0.1", null);
+            // Test method with ipv4 style, not enough .
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.1", null);
+            // Test method with ipv4 style, adjacent .
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10..0.0.1", null);
+            // Test method with compressed ipv4 style, bad ipv6 digits.
+            invalidIpV6Hosts.put("::fffx:192.168.0.1", null);
+            // Test method with compressed ipv4 style, bad ipv4 digits.
+            invalidIpV6Hosts.put("::ffff:192.168.0.x", null);
+            // Test method with compressed ipv4 style, too many adjacent :
+            invalidIpV6Hosts.put(":::ffff:192.168.0.1", null);
+            // Test method with compressed ipv4 style, too many ipv6 digits.
+            invalidIpV6Hosts.put("::fffff:192.168.0.1", null);
+            // Test method with compressed ipv4 style, too many ipv4 digits.
+            invalidIpV6Hosts.put("::ffff:1923.168.0.1", null);
+            // Test method with compressed ipv4 style, not enough :
+            invalidIpV6Hosts.put(":ffff:192.168.0.1", null);
+            // Test method with compressed ipv4 style, too many .
+            invalidIpV6Hosts.put("::ffff:192.168.0.1.2", null);
+            // Test method with compressed ipv4 style, not enough .
+            invalidIpV6Hosts.put("::ffff:192.168.0", null);
+            // Test method with compressed ipv4 style, adjacent .
+            invalidIpV6Hosts.put("::ffff:192.168..0.1", null);
+            // Test method, garbage.
+            invalidIpV6Hosts.put("absolute, and utter garbage", null);
+            // Test method, bad ipv6 digits.
+            invalidIpV6Hosts.put("x:0:0:0:0:0:10.0.0.1", null);
+            // Test method, bad ipv4 digits.
+            invalidIpV6Hosts.put("0:0:0:0:0:0:x.0.0.1", null);
+            // Test method, too many ipv6 digits.
+            invalidIpV6Hosts.put("00000:0:0:0:0:0:10.0.0.1", null);
+            // Test method, too many ipv4 digits.
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.0.1000", null);
+            // Test method, too many :
+            invalidIpV6Hosts.put("0:0:0:0:0:0:0:10.0.0.1", null);
+            // Test method, not enough :
+            invalidIpV6Hosts.put("0:0:0:0:0:10.0.0.1", null);
+            // Test method, too many .
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.0.0.1", null);
+            // Test method, not enough .
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.1", null);
+            // Test method, adjacent .
+            invalidIpV6Hosts.put("0:0:0:0:0:0:10.0.0..1", null);
+        }
     };
 
     @Test
@@ -110,37 +261,37 @@ public class NetUtilTest {
 
     @Test
     public void testIsValidIpV4Address() {
-        for (String host : validIpV4Hosts) {
+        for (String host : validIpV4Hosts.keySet()) {
             assertTrue(NetUtil.isValidIpV4Address(host));
         }
-        for (String host : invalidIpV4Hosts) {
+        for (String host : invalidIpV4Hosts.keySet()) {
             assertFalse(NetUtil.isValidIpV4Address(host));
         }
     }
 
     @Test
     public void testIsValidIpV6Address() {
-        for (String host : validIpV6Hosts) {
+        for (String host : validIpV6Hosts.keySet()) {
             assertTrue(NetUtil.isValidIpV6Address(host));
         }
-        for (String host : invalidIpV6Hosts) {
+        for (String host : invalidIpV6Hosts.keySet()) {
             assertFalse(NetUtil.isValidIpV6Address(host));
         }
     }
 
     @Test
-    public void testCreateByteArrayFromIpAddressString(){
-        for (String host: validIpV4Hosts){
-            assertNotNull(NetUtil.createByteArrayFromIpAddressString(host));
+    public void testCreateByteArrayFromIpAddressString() {
+        for (String host : validIpV4Hosts.keySet()) {
+            assertTrue(Arrays.equals(validIpV4Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
         }
-        for (String host: invalidIpV4Hosts){
-            assertNull(NetUtil.createByteArrayFromIpAddressString(host));
+        for (String host : invalidIpV4Hosts.keySet()) {
+            assertTrue(Arrays.equals(invalidIpV4Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
         }
-        for (String host: validIpV6Hosts){
-            assertNotNull(NetUtil.createByteArrayFromIpAddressString(host));
+        for (String host : validIpV6Hosts.keySet()) {
+            assertTrue(Arrays.equals(validIpV6Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
         }
-        for (String host: invalidIpV4Hosts){
-            assertNull(NetUtil.createByteArrayFromIpAddressString(host));
+        for (String host : invalidIpV6Hosts.keySet()) {
+            assertTrue(Arrays.equals(invalidIpV6Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
         }
     }
 }
