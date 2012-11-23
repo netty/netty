@@ -767,8 +767,10 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 }
 
                 ChannelFuture future = evt.getFuture();
-                channel.currentWriteBuffer.release();
-                channel.currentWriteBuffer = null;
+                if (channel.currentWriteBuffer != null) {
+                    channel.currentWriteBuffer.release();
+                    channel.currentWriteBuffer = null;
+                }
                 channel.currentWriteEvent = null;
                 evt = null;
                 future.setFailure(cause);
