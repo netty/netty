@@ -281,27 +281,6 @@ public final class NetUtil {
                 ipByteArray[i + 12] = (byte) (Integer.parseInt(decStrings
                         .get(i)) & 255);
             }
-
-            // now check to see if this guy is actually and IPv4 address
-            // an ipV4 address is ::FFFF:d.d.d.d
-            boolean ipV4 = true;
-            for (int i = 0; i < 10; i++) {
-                if (ipByteArray[i] != 0) {
-                    ipV4 = false;
-                    break;
-                }
-            }
-
-            if (ipByteArray[10] != -1 || ipByteArray[11] != -1) {
-                ipV4 = false;
-            }
-
-            if (ipV4) {
-                byte[] ipv4ByteArray = new byte[4];
-                System.arraycopy(ipByteArray, 12, ipv4ByteArray, 0, 4);
-                return ipv4ByteArray;
-            }
-
             return ipByteArray;
         }
         return null;
