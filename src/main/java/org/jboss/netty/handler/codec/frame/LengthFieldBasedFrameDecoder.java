@@ -390,9 +390,20 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         // extract frame
         int readerIndex = buffer.readerIndex();
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
-        ChannelBuffer frame = extractFrame(buffer, readerIndex, actualFrameLength);
+        Object frame = extract(buffer, readerIndex, actualFrameLength);
         buffer.readerIndex(readerIndex + actualFrameLength);
         return frame;
+    }
+
+    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
+        ChannelBuffer frame = buffer.factory().getBuffer(length);
+        frame.writeBytes(buffer, index, length);
+        return frame;
+    }
+
+    @Override
+    protected Object extract(ChannelBuffer buffer, int index, int length) {
+        return extractFrame(buffer, index, length);
     }
 
     private void failIfNecessary(ChannelHandlerContext ctx, boolean firstDetectionOfTooLongFrame) {
@@ -413,27 +424,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             }
         }
 
-    }
-
-    /**
-     * Extract the sub-region of the specified buffer. This method is called by
-     * {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer)} for each
-     * frame.  The default implementation returns a copy of the sub-region.
-     * For example, you could override this method to use an alternative
-     * {@link ChannelBufferFactory}.
-     * <p>
-     * If you are sure that the frame and its content are not accessed after
-     * the current {@link #decode(ChannelHandlerContext, Channel, ChannelBuffer)}
-     * call returns, you can even avoid memory copy by returning the sliced
-     * sub-region (i.e. <tt>return buffer.slice(index, length)</tt>).
-     * It's often useful when you convert the extracted frame into an object.
-     * Refer to the source code of {@link ObjectDecoder} to see how this method
-     * is overridden to avoid memory copy.
-     */
-    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
-        ChannelBuffer frame = buffer.factory().getBuffer(length);
-        frame.writeBytes(buffer, index, length);
-        return frame;
     }
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {

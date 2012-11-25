@@ -74,7 +74,7 @@ public class LineBasedFrameDecoder extends FrameDecoder {
                             final ChannelBuffer buffer) throws Exception {
         final int eol = findEndOfLine(buffer);
         if (eol != -1) {
-            final ChannelBuffer frame;
+            final Object frame;
             final int length = eol - buffer.readerIndex();
             assert length >= 0: "Invalid length=" + length;
             if (discarding) {
@@ -92,11 +92,12 @@ public class LineBasedFrameDecoder extends FrameDecoder {
                     delimLength = 1;
                 }
                 if (stripDelimiter) {
-                    frame = buffer.readBytes(length);
-                    buffer.skipBytes(delimLength);
+                    frame = extract(buffer, buffer.readerIndex(), length);
                 } else {
-                    frame = buffer.readBytes(length + delimLength);
+                    frame = extract(buffer, buffer.readerIndex(), length + delimLength);
                 }
+                buffer.skipBytes(length + delimLength);
+
             }
             return frame;
         }
@@ -113,6 +114,7 @@ public class LineBasedFrameDecoder extends FrameDecoder {
         }
         return null;
     }
+
 
     private void fail(final ChannelHandlerContext ctx, final String msg) {
         Channels.fireExceptionCaught(ctx.getChannel(),

@@ -232,7 +232,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
 
         if (minDelim != null) {
             int minDelimLength = minDelim.capacity();
-            ChannelBuffer frame;
+            Object frame;
 
             if (discardingTooLongFrame) {
                 // We've just finished discarding a very large frame.
@@ -256,11 +256,11 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             }
 
             if (stripDelimiter) {
-                frame = buffer.readBytes(minFrameLength);
-                buffer.skipBytes(minDelimLength);
+                frame = extract(buffer, buffer.readerIndex(), minFrameLength);
             } else {
-                frame = buffer.readBytes(minFrameLength + minDelimLength);
+                frame = extract(buffer, buffer.readerIndex(), minFrameLength + minDelimLength);
             }
+            buffer.skipBytes(minFrameLength + minDelimLength);
 
             return frame;
         } else {
@@ -282,6 +282,8 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             return null;
         }
     }
+
+
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {

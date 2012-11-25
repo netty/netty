@@ -381,6 +381,10 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     /**
      * Decodes the received packets so far into a frame.
      *
+     * If an sub-class wants to extract a frame out of the buffer it should use
+     * the {@link #extract(org.jboss.netty.buffer.ChannelBuffer, int, int)} method,
+     * to make optimizations easier later.
+     *
      * @param ctx      the context of this handler
      * @param channel  the current channel
      * @param buffer   the cumulative buffer of received packets so far.
@@ -551,6 +555,21 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
             return ChannelBuffers.EMPTY_BUFFER;
         }
         return buf;
+    }
+
+    /**
+     * Extract a Frame of the specified buffer. By default this implementation
+     * will return a extract the sub-region of the buffer and create a new one.
+     * If an sub-class want to extract a frame from the buffer it should use this method
+     * by default.
+     *
+     * <strong>Be sure that this method MUST not modify the readerIndex of the given buffer</strong>
+     *
+     */
+    protected Object extract(ChannelBuffer buffer, int index, int length) {
+        ChannelBuffer frame = buffer.factory().getBuffer(length);
+        frame.writeBytes(buffer, index, length);
+        return frame;
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
