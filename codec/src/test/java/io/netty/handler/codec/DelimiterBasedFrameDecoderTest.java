@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.nio.charset.Charset;
 
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
@@ -65,5 +66,17 @@ public class DelimiterBasedFrameDecoderTest {
         assertEquals("TestLine\r\n", ((ByteBuf)ch.readInbound()).toString(Charset.defaultCharset()));
         assertEquals("g\r\n", ((ByteBuf)ch.readInbound()).toString(Charset.defaultCharset()));
         assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testDecode() throws Exception {
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+                new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
+
+        ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        assertEquals("first", ((ByteBuf)ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second", ((ByteBuf)ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertNull(ch.readInbound());
+
     }
 }
