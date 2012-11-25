@@ -390,21 +390,11 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         // extract frame
         int readerIndex = buffer.readerIndex();
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
-        Object frame = extract(buffer, readerIndex, actualFrameLength);
+        ChannelBuffer frame = extractFrame(buffer, readerIndex, actualFrameLength);
         buffer.readerIndex(readerIndex + actualFrameLength);
         return frame;
     }
 
-    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
-        ChannelBuffer frame = buffer.factory().getBuffer(length);
-        frame.writeBytes(buffer, index, length);
-        return frame;
-    }
-
-    @Override
-    protected Object extract(ChannelBuffer buffer, int index, int length) {
-        return extractFrame(buffer, index, length);
-    }
 
     private void failIfNecessary(ChannelHandlerContext ctx, boolean firstDetectionOfTooLongFrame) {
         if (bytesToDiscard == 0) {

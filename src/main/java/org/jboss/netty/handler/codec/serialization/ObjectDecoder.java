@@ -132,9 +132,4 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
     protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
         return buffer.slice(index, length);
     }
-
-    @Override
-    protected final Object extract(ChannelBuffer buffer, int index, int length) {
-        return super.extract(buffer, index, length);
-    }
 }
