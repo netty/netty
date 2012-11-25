@@ -19,7 +19,7 @@ import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.util.NetworkConstants;
+import io.netty.util.NetUtil;
 
 import java.net.ServerSocket;
 import java.net.SocketException;
@@ -32,7 +32,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
     private final ServerSocket socket;
-    private volatile int backlog = NetworkConstants.SOMAXCONN;
+    private volatile int backlog = NetUtil.SOMAXCONN;
 
     /**
      * Creates a new instance.
