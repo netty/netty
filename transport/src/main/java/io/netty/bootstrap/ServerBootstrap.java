@@ -309,7 +309,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     private final class AioServerSocketChannelFactory implements ChannelFactory {
         @Override
         public Channel newChannel() {
-            return new AioServerSocketChannel((AioEventLoopGroup) group(),  (AioEventLoopGroup) childGroup);
+            return new AioServerSocketChannel((AioEventLoopGroup) group(), (AioEventLoopGroup) childGroup);
+        }
+
+        @Override
+        public String toString() {
+            return AioServerSocketChannel.class.getSimpleName() + ".class";
         }
     }
 }
