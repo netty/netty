@@ -73,7 +73,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void>
             return obj;
         } catch (LimitingByteInput.TooBigObjectException e) {
             discardingTooLongFrame = true;
-            throw new TooLongFrameException("Object to big to unmarshal");
+            throw new TooLongFrameException();
         } finally {
             // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
             // readable. This helps to be sure that we do not leak resource
