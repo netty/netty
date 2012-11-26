@@ -344,6 +344,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
+          <argLine>-XX:+AggressiveOpts -XX:+UseFastAccessorMethods -XX:+OptimizeStringConcat -XX:+HeapDumpOnOutOfMemoryError</argLine>
         </configuration>
       </plugin>
       <plugin>
