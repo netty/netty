@@ -344,7 +344,13 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>-XX:+AggressiveOpts -XX:+UseFastAccessorMethods -XX:+OptimizeStringConcat -XX:+HeapDumpOnOutOfMemoryError</argLine>
+          <argLine>
+            -server 
+            -dsa -da -ea:io.netty...
+            -XX:+AggressiveOpts -XX:+UseFastAccessorMethods
+            -XX:+OptimizeStringConcat
+            -XX:+HeapDumpOnOutOfMemoryError
+          </argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -494,7 +500,5 @@
         </plugin>
       </plugins>
     </pluginManagement>
-    
-    
   </build>
 </project>
