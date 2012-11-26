@@ -58,7 +58,7 @@ public abstract class AbstractSctpTest {
             cb.remoteAddress(addr);
 
             logger.info(String.format(
-                    "Running: %s %d of %d", testName.getMethodName(), ++ i, COMBO.size()));
+                    "Running: %s %d of %d (%s + %s)", testName.getMethodName(), ++ i, COMBO.size(), sb, cb));
             try {
                 Method m = getClass().getDeclaredMethod(
                         testName.getMethodName(), ServerBootstrap.class, Bootstrap.class);
