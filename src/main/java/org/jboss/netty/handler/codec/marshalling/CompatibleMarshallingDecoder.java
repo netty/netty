@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.marshalling;
 
-import java.io.ObjectStreamConstants;
-
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -26,6 +24,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.handler.codec.replay.VoidEnum;
+
+import java.io.ObjectStreamConstants;
 
 /**
  * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ChannelBuffer}.
@@ -38,6 +38,7 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
 public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     protected final UnmarshallerProvider provider;
     protected final int maxObjectSize;
+    private boolean discardingTooLongFrame;
 
     /**
      * Create a new instance of {@link CompatibleMarshallingDecoder}.
@@ -60,6 +61,12 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, VoidEnum state) throws Exception {
+        if (discardingTooLongFrame) {
+            buffer.skipBytes(actualReadableBytes());
+            checkpoint();
+            return null;
+        }
+
         Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize != Integer.MAX_VALUE) {
@@ -71,6 +78,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
             unmarshaller.finish();
             return obj;
         } catch (LimitingByteInput.TooBigObjectException e) {
+            discardingTooLongFrame = true;
             throw new TooLongFrameException("Object to big to unmarshal");
         } finally {
             // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
