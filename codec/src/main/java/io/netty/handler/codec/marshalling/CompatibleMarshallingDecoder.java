@@ -65,7 +65,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void>
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize != Integer.MAX_VALUE) {
             input = new LimitingByteInput(input, maxObjectSize);
-        }768
+        }
         try {
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
