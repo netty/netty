@@ -316,7 +316,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void lazyInitOutboundBuffer() {
         if ((flags & FLAG_NEEDS_LAZY_INIT) != 0) {
             if (outByteBuf == null && outMsgBuf == null) {
-                initOutboundBuffer();
+                EventExecutor exec = executor();
+                if (exec.inEventLoop()) {
+                    initOutboundBuffer();
+                } else {
+                    try {
+                        getFromFuture(exec.submit(new Runnable() {
+                            @Override
+                            public void run() {
+                                lazyInitOutboundBuffer();
+                            }
+                        }));
+                    } catch (Exception e) {
+                        throw new ChannelPipelineException("failed to initialize an outbound buffer lazily", e);
+                    }
+                }
             }
         }
     }
@@ -673,7 +687,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                         }
                     });
             } catch (Exception ex) {
-                // Ignore because call() does not throw an Exception
+                throw new ChannelPipelineException("failed to replace an inbound byte buffer", ex);
             }
         }
 
@@ -699,7 +713,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 });
             } catch (Exception ex) {
-                // Ignore because call() does not throw an Exception
+                throw new ChannelPipelineException("failed to replace an inbound message buffer", ex);
             }
         }
 
@@ -724,7 +738,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 });
             } catch (Exception ex) {
-                // Ignore because call() does not throw an Exception
+                throw new ChannelPipelineException("failed to replace an outbound byte buffer", ex);
             }
         }
 
@@ -750,7 +764,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 });
             } catch (Exception ex) {
-                // Ignore because call() does not throw an Exception
+                throw new ChannelPipelineException("failed to replace an outbound message buffer", ex);
             }
         }
 
