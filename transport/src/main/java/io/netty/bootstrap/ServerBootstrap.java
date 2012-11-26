@@ -271,6 +271,41 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
     }
 
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(super.toString());
+        buf.setLength(buf.length() - 1);
+        buf.append(", ");
+        if (childGroup != null) {
+            buf.append("childGroup: ");
+            buf.append(childGroup.getClass().getSimpleName());
+            buf.append(", ");
+        }
+        if (childOptions != null && !childOptions.isEmpty()) {
+            buf.append("childOptions: ");
+            buf.append(childOptions);
+            buf.append(", ");
+        }
+        if (childAttrs != null && !childAttrs.isEmpty()) {
+            buf.append("childAttrs: ");
+            buf.append(childAttrs);
+            buf.append(", ");
+        }
+        if (childHandler != null) {
+            buf.append("childHandler: ");
+            buf.append(childHandler);
+            buf.append(", ");
+        }
+        if (buf.charAt(buf.length() - 1) == '(') {
+            buf.append(')');
+        } else {
+            buf.setCharAt(buf.length() - 2, ')');
+            buf.setLength(buf.length() - 1);
+        }
+
+        return buf.toString();
+    }
+
     private final class AioServerSocketChannelFactory implements ChannelFactory {
         @Override
         public Channel newChannel() {
