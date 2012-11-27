@@ -34,8 +34,8 @@
             return document.getElementById('responseText');
         }
 
-        function send(e) {
-            e.preventDefault();
+        function send(event) {
+            event.preventDefault();
             if (window.WebSocket) {
                 if (socket.readyState == WebSocket.OPEN) {
                     socket.send(event.target.message.value);
