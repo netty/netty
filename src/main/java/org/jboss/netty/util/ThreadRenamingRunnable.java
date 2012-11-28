@@ -34,6 +34,7 @@ public class ThreadRenamingRunnable implements Runnable {
 
     private static volatile ThreadNameDeterminer threadNameDeterminer =
         ThreadNameDeterminer.PROPOSED;
+    private final ThreadNameDeterminer determiner;
 
     /**
      * Returns the {@link ThreadNameDeterminer} which overrides the proposed
@@ -68,7 +69,7 @@ public class ThreadRenamingRunnable implements Runnable {
      * and changes the thread name to the specified thread name when the
      * specified {@code runnable} is running.
      */
-    public ThreadRenamingRunnable(Runnable runnable, String proposedThreadName) {
+    public ThreadRenamingRunnable(Runnable runnable, String proposedThreadName, ThreadNameDeterminer determiner) {
         if (runnable == null) {
             throw new NullPointerException("runnable");
         }
@@ -76,7 +77,12 @@ public class ThreadRenamingRunnable implements Runnable {
             throw new NullPointerException("proposedThreadName");
         }
         this.runnable = runnable;
+        this.determiner = determiner;
         this.proposedThreadName = proposedThreadName;
+    }
+
+    public ThreadRenamingRunnable(Runnable runnable, String proposedThreadName) {
+        this(runnable, proposedThreadName, null);
     }
 
     public void run() {
@@ -113,8 +119,12 @@ public class ThreadRenamingRunnable implements Runnable {
         String newThreadName = null;
 
         try {
+            ThreadNameDeterminer nameDeterminer = determiner;
+            if (nameDeterminer == null) {
+                nameDeterminer = getThreadNameDeterminer();
+            }
             newThreadName =
-                getThreadNameDeterminer().determineThreadName(
+                nameDeterminer.determineThreadName(
                         currentThreadName, proposedThreadName);
         } catch (Throwable t) {
             logger.warn("Failed to determine the thread name", t);

@@ -31,6 +31,7 @@ import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.util.ThreadNameDeterminer;
 
 public class NioWorker extends AbstractNioWorker {
 
@@ -38,6 +39,10 @@ public class NioWorker extends AbstractNioWorker {
 
     public NioWorker(Executor executor) {
         super(executor);
+    }
+
+    public NioWorker(Executor executor, ThreadNameDeterminer determiner) {
+        super(executor, determiner);
     }
 
     @Override

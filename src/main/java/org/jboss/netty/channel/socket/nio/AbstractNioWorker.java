@@ -24,6 +24,7 @@ import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
@@ -123,8 +124,12 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
     AbstractNioWorker(Executor executor) {
+        this(executor, null);
+    }
+
+    AbstractNioWorker(Executor executor, ThreadNameDeterminer determiner) {
         this.executor = executor;
-        openSelector();
+        openSelector(determiner);
     }
 
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
@@ -189,7 +194,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
      * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for
      * the {@link AbstractNioChannel}'s when they get registered
      */
-    private void openSelector() {
+    private void openSelector(ThreadNameDeterminer determiner) {
         try {
             selector = Selector.open();
         } catch (Throwable t) {
@@ -199,7 +204,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         // Start the worker thread with the new Selector.
         boolean success = false;
         try {
-            DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id));
+            DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id, determiner));
             success = true;
         } finally {
             if (!success) {

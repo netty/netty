@@ -28,7 +28,6 @@ import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ClientSocketChannelFactory} which creates a client-side NIO-based
@@ -85,10 +84,9 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     private static final int DEFAULT_BOSS_COUNT = 1;
 
-    private final Executor bossExecutor;
+    private final BossPool<NioClientBoss> bossPool;
     private final WorkerPool<NioWorker> workerPool;
     private final NioClientSocketPipelineSink sink;
-    private final Timer timer;
 
     /**
      * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()}
@@ -183,34 +181,41 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, int bossCount,
             WorkerPool<NioWorker> workerPool, Timer timer) {
+        this(new NioClientBossPool(bossExecutor, bossCount, timer, null), workerPool);
+    }
 
-        if (bossExecutor == null) {
-            throw new NullPointerException("bossExecutor");
+    /**
+     * Creates a new instance.
+     *
+     * @param bossPool
+     *        the {@link BossPool} to use to handle the connects
+     * @param workerPool
+     *        the {@link WorkerPool} to use to do the IO
+     */
+    public NioClientSocketChannelFactory(
+            BossPool<NioClientBoss> bossPool,
+            WorkerPool<NioWorker> workerPool) {
+
+        if (bossPool == null) {
+            throw new NullPointerException("bossPool");
         }
         if (workerPool == null) {
             throw new NullPointerException("workerPool");
         }
-        if (bossCount <= 0) {
-            throw new IllegalArgumentException(
-                    "bossCount (" + bossCount + ") " +
-                    "must be a positive integer.");
-        }
-
-
-        this.bossExecutor = bossExecutor;
+        this.bossPool = bossPool;
         this.workerPool = workerPool;
-        this.timer = timer;
-        sink = new NioClientSocketPipelineSink(
-                bossExecutor, bossCount, workerPool, timer);
+        sink = new NioClientSocketPipelineSink(bossPool);
     }
 
+
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioClientSocketChannel(this, pipeline, sink, sink.nextWorker());
+        return new NioClientSocketChannel(this, pipeline, sink, workerPool.nextWorker());
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor);
-        timer.stop();
+        if (bossPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) bossPool).releaseExternalResources();
+        }
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }

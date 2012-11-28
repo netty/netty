@@ -38,18 +38,19 @@ class NioServerSocketChannel extends AbstractServerChannel
         InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     final ServerSocketChannel socket;
-    final Runnable boss;
+    final Boss boss;
+    final WorkerPool<NioWorker> workerPool;
 
     private final ServerSocketChannelConfig config;
 
     NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink, Runnable boss) {
+            ChannelSink sink, Boss boss, WorkerPool<NioWorker> workerPool) {
 
         super(factory, pipeline, sink);
         this.boss = boss;
-
+        this.workerPool = workerPool;
         try {
             socket = ServerSocketChannel.open();
         } catch (IOException e) {
