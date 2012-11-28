@@ -83,9 +83,9 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  */
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
-    final Executor bossExecutor;
     private final WorkerPool<NioWorker> workerPool;
     private final NioServerSocketPipelineSink sink;
+    private final BossPool<NioServerBoss> bossPool;
 
     /**
      * Create a new {@link NioServerSocketChannelFactory} using {@link Executors#newCachedThreadPool()}
@@ -174,24 +174,41 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
-        if (bossExecutor == null) {
+        this(new NioServerBossPool(bossExecutor, bossCount, null), workerPool);
+
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param bossPool
+     *        the {@link BossPool} which will be used to obtain the {@link NioServerBoss} that execute
+     *        the I/O for accept new connections
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link NioWorker} that execute
+     *        the I/O worker threads
+     */
+    public NioServerSocketChannelFactory(BossPool<NioServerBoss> bossPool, WorkerPool<NioWorker> workerPool) {
+        if (bossPool == null) {
             throw new NullPointerException("bossExecutor");
         }
         if (workerPool == null) {
             throw new NullPointerException("workerPool");
         }
 
-        this.bossExecutor = bossExecutor;
+        this.bossPool = bossPool;
         this.workerPool = workerPool;
-        sink = new NioServerSocketPipelineSink(bossExecutor, bossCount, workerPool);
+        sink = new NioServerSocketPipelineSink();
     }
 
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioServerSocketChannel(this, pipeline, sink, sink.nextBoss());
+        return new NioServerSocketChannel(this, pipeline, sink, bossPool.nextBoss(), workerPool);
     }
 
     public void releaseExternalResources() {
-        sink.releaseExternalResources();
+        if (bossPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) bossPool).releaseExternalResources();
+        }
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }

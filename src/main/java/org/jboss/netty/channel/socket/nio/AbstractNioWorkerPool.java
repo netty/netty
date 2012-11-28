@@ -33,7 +33,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     private final AbstractNioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
-
+    private volatile boolean initDone;
 
     /**
      * Create a new instance
@@ -42,30 +42,61 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
      * @param workerCount the count of {@link Worker}'s to create
      */
     AbstractNioWorkerPool(Executor workerExecutor, int workerCount) {
+        this(workerExecutor, workerCount, true);
+    }
+
+    AbstractNioWorkerPool(Executor workerExecutor, int workerCount, boolean autoInit) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
         if (workerCount <= 0) {
             throw new IllegalArgumentException(
-                    "workerCount (" + workerCount + ") " +
-                    "must be a positive integer.");
+                    "workerCount (" + workerCount + ") " + "must be a positive integer.");
         }
         workers = new AbstractNioWorker[workerCount];
+        this.workerExecutor = workerExecutor;
+        if (autoInit) {
+            init();
+        }
+    }
+    protected void init() {
+        if (initDone) {
+            throw new IllegalStateException("Init was done before");
+        }
+        initDone = true;
 
         for (int i = 0; i < workers.length; i++) {
-            workers[i] = createWorker(workerExecutor);
+            workers[i] = newWorker(workerExecutor);
         }
-        this.workerExecutor = workerExecutor;
     }
 
     /**
-     * Create a new {@link Worker} which uses the given {@link Executor} to service IO
+     * Only here for backward compability and will be removed in later releases. Please use
+     * {@link #newWorker(java.util.concurrent.Executor)}
+     *
+     *
+     * @param executor the {@link Executor} to use
+     * @return worker the new {@link Worker}
+     * @deprecated use {@link #newWorker(java.util.concurrent.Executor)}
+     */
+    @Deprecated
+    protected E createWorker(Executor executor) {
+        throw new IllegalStateException("This will be removed. Override this and the newWorker(..) method!");
+    }
+
+    /**
+     * Create a new {@link Worker} which uses the given {@link Executor} to service IO.
+     *
+     * This method will be made abstract in further releases (once {@link #createWorker(java.util.concurrent.Executor)}
+     * was removed).
      *
      *
      * @param executor the {@link Executor} to use
      * @return worker the new {@link Worker}
      */
-    protected abstract E createWorker(Executor executor);
+    protected E newWorker(Executor executor) {
+        return createWorker(executor);
+    }
 
     @SuppressWarnings("unchecked")
     public E nextWorker() {

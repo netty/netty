@@ -17,10 +17,13 @@ package org.jboss.netty.util;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.security.Permission;
 import java.util.concurrent.Executor;
 
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 public class ThreadRenamingRunnableTest {
@@ -82,6 +85,58 @@ public class ThreadRenamingRunnableTest {
             System.setSecurityManager(null);
             assertEquals(oldThreadName, Thread.currentThread().getName());
         }
+    }
+
+    // Tests mainly changed which were introduced as part of #711
+    @Test
+    public void testThreadNameDeterminer() {
+        final String oldThreadName = Thread.currentThread().getName();
+        final String newThreadName = "new";
+        final String proposed = "proposed";
+
+        ThreadNameDeterminer determiner = new ThreadNameDeterminer() {
+            public String determineThreadName(String currentThreadName, String proposedThreadName) throws Exception {
+                assertEquals(proposed, proposedThreadName);
+                assertEquals(oldThreadName, currentThreadName);
+
+                return newThreadName;
+            }
+        };
+        ThreadRenamingRunnable.setThreadNameDeterminer(new ThreadNameDeterminer() {
+            public String determineThreadName(String currentThreadName, String proposedThreadName) throws Exception {
+                assertEquals(proposed, proposedThreadName);
+                assertEquals(oldThreadName, currentThreadName);
+                return proposed;
+            }
+        });
+
+        Executor e = new ImmediateExecutor();
+        try {
+            e.execute(new ThreadRenamingRunnable(new Runnable() {
+                public void run() {
+                    assertEquals("Should use the given ThreadNameDEterminer",
+                            newThreadName, Thread.currentThread().getName());
+                }
+            }, proposed, determiner));
+        } finally {
+            assertEquals(oldThreadName, Thread.currentThread().getName());
+        }
+        try {
+            e.execute(new ThreadRenamingRunnable(new Runnable() {
+                public void run() {
+                    assertEquals("Should use the static set ThreadNameDeterminer",
+                            proposed, Thread.currentThread().getName());
+                }
+            }, proposed));
+        } finally {
+            assertEquals(oldThreadName, Thread.currentThread().getName());
+        }
+    }
+
+    @AfterClass
+    public static void after() {
+        // reset to default
+        ThreadRenamingRunnable.setThreadNameDeterminer(ThreadNameDeterminer.PROPOSED);
     }
 
     private static class ImmediateExecutor implements Executor {
