@@ -358,13 +358,13 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext arg0, MessageEvent arg1)
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
         try {
             long curtime = System.currentTimeMillis();
-            long size = objectSizeEstimator.estimateSize(arg1.getMessage());
+            long size = objectSizeEstimator.estimateSize(e.getMessage());
             if (trafficCounter != null) {
-                trafficCounter.bytesRecvFlowControl(arg0, size);
+                trafficCounter.bytesRecvFlowControl(ctx, size);
                 if (readLimit == 0) {
                     // no action
                     return;
@@ -375,7 +375,7 @@ public abstract class AbstractTrafficShapingHandler extends
                         trafficCounter.getLastTime(), curtime);
                 if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                                             // time in order to
-                    Channel channel = arg0.getChannel();
+                    Channel channel = ctx.getChannel();
                     // try to limit the traffic
                     if (channel != null && channel.isConnected()) {
                         // Channel version
@@ -388,12 +388,12 @@ public abstract class AbstractTrafficShapingHandler extends
                             Thread.sleep(wait);
                             return;
                         }
-                        if (arg0.getAttachment() == null) {
+                        if (ctx.getAttachment() == null) {
                             // readSuspended = true;
-                            arg0.setAttachment(Boolean.TRUE);
+                            ctx.setAttachment(Boolean.TRUE);
                             channel.setReadable(false);
                             // logger.warn("Read will wakeup after "+wait+" ms "+this);
-                            TimerTask timerTask = new ReopenReadTimerTask(arg0);
+                            TimerTask timerTask = new ReopenReadTimerTask(ctx);
                             timeout = timer.newTimeout(timerTask, wait,
                                     TimeUnit.MILLISECONDS);
                         } else {
@@ -417,16 +417,16 @@ public abstract class AbstractTrafficShapingHandler extends
             }
         } finally {
             // The message is then just passed to the next handler
-            super.messageReceived(arg0, arg1);
+            super.messageReceived(ctx, e);
         }
     }
 
     @Override
-    public void writeRequested(ChannelHandlerContext arg0, MessageEvent arg1)
+    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
         try {
             long curtime = System.currentTimeMillis();
-            long size = objectSizeEstimator.estimateSize(arg1.getMessage());
+            long size = objectSizeEstimator.estimateSize(e.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesWriteFlowControl(size);
                 if (writeLimit == 0) {
@@ -447,7 +447,7 @@ public abstract class AbstractTrafficShapingHandler extends
             }
         } finally {
             // The message is then just passed to the next handler
-            super.writeRequested(arg0, arg1);
+            super.writeRequested(ctx, e);
         }
     }
     @Override

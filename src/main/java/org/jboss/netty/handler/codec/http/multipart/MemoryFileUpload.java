@@ -69,12 +69,12 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData arg0) {
-        if (!(arg0 instanceof FileUpload)) {
+    public int compareTo(InterfaceHttpData data) {
+        if (!(data instanceof FileUpload)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + arg0.getHttpDataType());
+                    " with " + data.getHttpDataType());
         }
-        return compareTo((FileUpload) arg0);
+        return compareTo((FileUpload) data);
     }
 
     public int compareTo(FileUpload o) {

@@ -2025,25 +2025,25 @@ public class HttpPostRequestDecoder {
         }
 
         /**
-         * @param arg0
+         * @param msg
          */
-        public NotEnoughDataDecoderException(String arg0) {
-            super(arg0);
+        public NotEnoughDataDecoderException(String msg) {
+            super(msg);
         }
 
         /**
-         * @param arg0
+         * @param cause
          */
-        public NotEnoughDataDecoderException(Throwable arg0) {
-            super(arg0);
+        public NotEnoughDataDecoderException(Throwable cause) {
+            super(cause);
         }
 
         /**
-         * @param arg0
-         * @param arg1
+         * @param msg
+         * @param cause
          */
-        public NotEnoughDataDecoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public NotEnoughDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 
@@ -2071,25 +2071,25 @@ public class HttpPostRequestDecoder {
         }
 
         /**
-         * @param arg0
+         * @param msg
          */
-        public ErrorDataDecoderException(String arg0) {
-            super(arg0);
+        public ErrorDataDecoderException(String msg) {
+            super(msg);
         }
 
         /**
-         * @param arg0
+         * @param cause
          */
-        public ErrorDataDecoderException(Throwable arg0) {
-            super(arg0);
+        public ErrorDataDecoderException(Throwable cause) {
+            super(cause);
         }
 
         /**
-         * @param arg0
-         * @param arg1
+         * @param msg
+         * @param cause
          */
-        public ErrorDataDecoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public ErrorDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 
@@ -2107,25 +2107,25 @@ public class HttpPostRequestDecoder {
         }
 
         /**
-         * @param arg0
+         * @param msg
          */
-        public IncompatibleDataDecoderException(String arg0) {
-            super(arg0);
+        public IncompatibleDataDecoderException(String msg) {
+            super(msg);
         }
 
         /**
-         * @param arg0
+         * @param cause
          */
-        public IncompatibleDataDecoderException(Throwable arg0) {
-            super(arg0);
+        public IncompatibleDataDecoderException(Throwable cause) {
+            super(cause);
         }
 
         /**
-         * @param arg0
-         * @param arg1
+         * @param msg
+         * @param cause
          */
-        public IncompatibleDataDecoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public IncompatibleDataDecoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 }

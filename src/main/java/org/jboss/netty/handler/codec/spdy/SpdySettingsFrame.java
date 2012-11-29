@@ -46,19 +46,19 @@ public interface SpdySettingsFrame {
     /**
      * Returns {@code true} if the setting ID has a value.
      */
-    boolean isSet(int ID);
+    boolean isSet(int id);
 
     /**
      * Returns the value of the setting ID.
      * Returns -1 if the setting ID is not set.
      */
-    int getValue(int ID);
+    int getValue(int id);
 
     /**
      * Sets the value of the setting ID.
      * The ID must be positive and cannot exceed 16777215.
      */
-    void setValue(int ID, int value);
+    void setValue(int id, int value);
 
     /**
      * Sets the value of the setting ID.
@@ -66,45 +66,45 @@ public interface SpdySettingsFrame {
      * Sets if the setting is persisted (should only be set by the client).
      * The ID must be positive and cannot exceed 16777215.
      */
-    void setValue(int ID, int value, boolean persistVal, boolean persisted);
+    void setValue(int id, int value, boolean persistVal, boolean persisted);
 
     /**
      * Removes the value of the setting ID.
      * Removes all persistance information for the setting.
      */
-    void removeValue(int ID);
+    void removeValue(int id);
 
     /**
      * @deprecated Use {@link #isPersistValue(int)} instead.
      */
     @Deprecated
-    boolean persistValue(int ID);
+    boolean persistValue(int id);
 
     /**
      * Returns {@code true} if this setting should be persisted.
      * Returns {@code false} if this setting should not be persisted
      *         or if the setting ID has no value.
      */
-    boolean isPersistValue(int ID);
+    boolean isPersistValue(int id);
 
     /**
      * Sets if this setting should be persisted.
      * Has no effect if the setting ID has no value.
      */
-    void setPersistValue(int ID, boolean persistValue);
+    void setPersistValue(int id, boolean persistValue);
 
     /**
      * Returns {@code true} if this setting is persisted.
      * Returns {@code false} if this setting should not be persisted
      *         or if the setting ID has no value.
      */
-    boolean isPersisted(int ID);
+    boolean isPersisted(int id);
 
     /**
      * Sets if this setting is persisted.
      * Has no effect if the setting ID has no value.
      */
-    void setPersisted(int ID, boolean persisted);
+    void setPersisted(int id, boolean persisted);
 
     /**
      * Returns {@code true} if previously persisted settings should be cleared.

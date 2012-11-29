@@ -85,12 +85,12 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData arg0) {
-        if (!(arg0 instanceof Attribute)) {
+    public int compareTo(InterfaceHttpData data) {
+        if (!(data instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + arg0.getHttpDataType());
+                    " with " + data.getHttpDataType());
         }
-        return compareTo((Attribute) arg0);
+        return compareTo((Attribute) data);
     }
 
     public int compareTo(Attribute o) {

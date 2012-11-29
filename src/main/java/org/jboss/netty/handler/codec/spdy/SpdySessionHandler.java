@@ -678,8 +678,8 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
      * Helper functions
      */
 
-    private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = isServerId(ID);
+    private boolean isRemoteInitiatedID(int id) {
+        boolean serverID = isServerId(id);
         return server && !serverID || !server && serverID;
     }
 

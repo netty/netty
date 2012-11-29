@@ -964,25 +964,25 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         }
 
         /**
-         * @param arg0
+         * @param msg
          */
-        public ErrorDataEncoderException(String arg0) {
-            super(arg0);
+        public ErrorDataEncoderException(String msg) {
+            super(msg);
         }
 
         /**
-         * @param arg0
+         * @param cause
          */
-        public ErrorDataEncoderException(Throwable arg0) {
-            super(arg0);
+        public ErrorDataEncoderException(Throwable cause) {
+            super(cause);
         }
 
         /**
-         * @param arg0
-         * @param arg1
+         * @param msg
+         * @param cause
          */
-        public ErrorDataEncoderException(String arg0, Throwable arg1) {
-            super(arg0, arg1);
+        public ErrorDataEncoderException(String msg, Throwable cause) {
+            super(msg, cause);
         }
     }
 }

@@ -137,11 +137,11 @@ public abstract class CIDR implements Comparable<CIDR> {
     public abstract boolean contains(InetAddress inetAddress);
 
     @Override
-    public boolean equals(Object arg0) {
-        if (!(arg0 instanceof CIDR)) {
+    public boolean equals(Object obj) {
+        if (!(obj instanceof CIDR)) {
             return false;
         }
-        return compareTo((CIDR) arg0) == 0;
+        return compareTo((CIDR) obj) == 0;
     }
 
     @Override
