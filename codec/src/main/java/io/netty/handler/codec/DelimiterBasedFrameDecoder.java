@@ -168,7 +168,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
         }
         if (delimiters.length == 0) {
             throw new IllegalArgumentException("empty delimiters");
-        } else if (isLineBased(delimiters) && !isSubclass()) {
+        }
+
+        if (isLineBased(delimiters) && !isSubclass()) {
             lineBasedDecoder = new LineBasedFrameDecoder(maxFrameLength, stripDelimiter, failFast);
             this.delimiters = null;
         } else {
@@ -203,7 +205,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     /**
-     * Return <code>true</code> if the current instance is a subclass of DelimiterBasedFrameDecoder
+     * Return {@code true} if the current instance is a subclass of DelimiterBasedFrameDecoder
      */
     private boolean isSubclass() {
         return this.getClass() != DelimiterBasedFrameDecoder.class;

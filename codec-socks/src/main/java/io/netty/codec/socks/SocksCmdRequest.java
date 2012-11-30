@@ -33,15 +33,6 @@ public final class SocksCmdRequest extends SocksRequest {
     private final String host;
     private final int port;
 
-    /**
-     *
-     * @param cmdType
-     * @param addressType
-     * @param host
-     * @param port
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
-     */
     public SocksCmdRequest(CmdType cmdType, AddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
         if (cmdType == null) {
@@ -72,7 +63,7 @@ public final class SocksCmdRequest extends SocksRequest {
             case UNKNOWN:
                 break;
         }
-        if ((port < 0) && (port >= 65535)) {
+        if (port < 0 && port >= 65535) {
             throw new IllegalArgumentException(port + " is not in bounds 0 < x < 65536");
         }
         this.cmdType = cmdType;

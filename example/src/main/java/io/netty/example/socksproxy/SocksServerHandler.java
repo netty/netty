@@ -24,8 +24,6 @@ import io.netty.codec.socks.SocksMessage;
 import io.netty.codec.socks.SocksRequest;
 import io.netty.codec.socks.SocksAuthResponse;
 import io.netty.codec.socks.SocksCmdRequest;
-import io.netty.codec.socks.SocksCmdResponse;
-
 
 
 @ChannelHandler.Sharable

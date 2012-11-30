@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 public class ChunkedWriteHandlerTest {
