@@ -59,6 +59,11 @@
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-metrics-yammer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
 

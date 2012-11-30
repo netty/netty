@@ -90,8 +90,10 @@ serialization API, which can be obtained at:
   * HOMEPAGE:
     * http://www.jboss.org/jbossmarshalling
 
-This product optionally depends on 'SLF4J', a simple logging facade for Java,
-which can be obtained at:
+This product optionally depends on 'SLF4J', a simple logging facade for Java.
+The monitor registries implementation is based on the approach used by SLF4J.
+
+Slf4j can be obtained at:
 
   * LICENSE:
     * license/LICENSE.slf4j.txt (MIT License)
