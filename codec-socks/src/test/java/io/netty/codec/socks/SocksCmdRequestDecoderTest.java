@@ -19,13 +19,13 @@ import io.netty.channel.embedded.EmbeddedByteChannel;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import sun.net.util.IPAddressUtil;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 public class SocksCmdRequestDecoderTest {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksCmdRequestDecoderTest.class);
 
-    private void testSocksCmdRequestDecoderWithDifferentParams(SocksMessage.CmdType cmdType, SocksMessage.AddressType addressType, String host, int port) {
+    private static void testSocksCmdRequestDecoderWithDifferentParams(SocksMessage.CmdType cmdType, SocksMessage.AddressType addressType, String host, int port) {
         logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
         SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
@@ -35,10 +35,10 @@ public class SocksCmdRequestDecoderTest {
             assertTrue(embedder.readInbound() instanceof UnknownSocksRequest);
         } else {
             msg = (SocksCmdRequest) embedder.readInbound();
-            assertTrue(msg.getCmdType().equals(cmdType));
-            assertTrue(msg.getAddressType().equals(addressType));
-            assertTrue(msg.getHost().equals(host));
-            assertTrue(msg.getPort() == port);
+            assertSame(msg.getCmdType(), cmdType);
+            assertSame(msg.getAddressType(), addressType);
+            assertEquals(msg.getHost(), host);
+            assertEquals(msg.getPort(), port);
         }
         assertNull(embedder.readInbound());
     }

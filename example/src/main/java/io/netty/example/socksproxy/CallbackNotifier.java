@@ -18,7 +18,6 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelHandlerContext;
 
 public interface CallbackNotifier {
-    void onSuccess(final ChannelHandlerContext outboundCtx);
-
-    void onFailure(final ChannelHandlerContext outboundCtx, final Throwable cause);
+    void onSuccess(ChannelHandlerContext outboundCtx);
+    void onFailure(ChannelHandlerContext outboundCtx, Throwable cause);
 }

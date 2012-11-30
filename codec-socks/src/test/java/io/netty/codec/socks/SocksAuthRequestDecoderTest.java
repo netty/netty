@@ -18,8 +18,8 @@ package io.netty.codec.socks;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 public class SocksAuthRequestDecoderTest {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksAuthRequestDecoderTest.class);
@@ -32,8 +32,8 @@ public class SocksAuthRequestDecoderTest {
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         msg = (SocksAuthRequest) embedder.readInbound();
-        assertTrue(msg.getUsername().equals(username));
-        assertTrue(msg.getUsername().equals(password));
+        assertEquals(msg.getUsername(), username);
+        assertEquals(msg.getUsername(), password);
         assertNull(embedder.readInbound());
     }
 }

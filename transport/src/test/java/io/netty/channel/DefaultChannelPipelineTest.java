@@ -70,17 +70,19 @@ public class DefaultChannelPipelineTest {
 
         final String prefixX = "x";
         for (int i = 0; i < handlerNum; i++) {
-            if (i % 2 == 0)
+            if (i % 2 == 0) {
                 pipeline.addFirst(prefixX + String.valueOf(i), handlers1[i]);
-            else
+            } else {
                 pipeline.addLast(prefixX + String.valueOf(i), handlers1[i]);
+            }
         }
 
         for (int i = 0; i < handlerNum; i++) {
-            if (i % 2 != 0)
+            if (i % 2 != 0) {
                 pipeline.addBefore(prefixX + String.valueOf(i), String.valueOf(i), handlers2[i]);
-            else
+            } else {
                 pipeline.addAfter(prefixX + String.valueOf(i), String.valueOf(i), handlers2[i]);
+            }
         }
 
         verifyContextNumber(pipeline, handlerNum * 2);
@@ -115,17 +117,18 @@ public class DefaultChannelPipelineTest {
 
     private int next(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext next = ctx.next;
-        if (next == null)
+        if (next == null) {
             return Integer.MAX_VALUE;
+        }
 
         return toInt(next.name());
     }
 
-    private int toInt(String name) {
+    private static int toInt(String name) {
         return Integer.parseInt(name);
     }
 
-    private void verifyContextNumber(DefaultChannelPipeline pipeline, int expectedNumber) {
+    private static void verifyContextNumber(DefaultChannelPipeline pipeline, int expectedNumber) {
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
         int handlerNumber = 0;
         while (ctx != null) {
@@ -139,8 +142,9 @@ public class DefaultChannelPipelineTest {
         assert num > 0;
 
         ChannelHandler[] handlers = new ChannelHandler[num];
-        for (int i = 0; i < num; i++)
+        for (int i = 0; i < num; i++) {
             handlers[i] = newHandler();
+        }
 
         return handlers;
     }

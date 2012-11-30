@@ -54,14 +54,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return heapBuffer(initialCapacity, maxCapacity);
     }
 
+    @Override
     public ByteBuf heapBuffer() {
         return heapBuffer(256, Integer.MAX_VALUE);
     }
 
+    @Override
     public ByteBuf heapBuffer(int initialCapacity) {
         return buffer(initialCapacity, Integer.MAX_VALUE);
     }
 
+    @Override
     public ByteBuf heapBuffer(int initialCapacity, int maxCapacity) {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
@@ -69,14 +72,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return newHeapBuffer(initialCapacity, maxCapacity);
     }
 
+    @Override
     public ByteBuf directBuffer() {
         return directBuffer(256, Integer.MAX_VALUE);
     }
 
+    @Override
     public ByteBuf directBuffer(int initialCapacity) {
         return directBuffer(initialCapacity, Integer.MAX_VALUE);
     }
 
+    @Override
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
