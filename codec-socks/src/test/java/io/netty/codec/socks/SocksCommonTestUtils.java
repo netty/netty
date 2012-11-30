@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 
-class SocksCommonTestUtils {
+final class SocksCommonTestUtils {
     /**
      * A constructor to stop this class being constructed.
      */

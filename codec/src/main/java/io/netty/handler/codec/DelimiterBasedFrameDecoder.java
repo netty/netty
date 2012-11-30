@@ -208,7 +208,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
      * Return {@code true} if the current instance is a subclass of DelimiterBasedFrameDecoder
      */
     private boolean isSubclass() {
-        return this.getClass() != DelimiterBasedFrameDecoder.class;
+        return getClass() != DelimiterBasedFrameDecoder.class;
     }
     @Override
     public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
