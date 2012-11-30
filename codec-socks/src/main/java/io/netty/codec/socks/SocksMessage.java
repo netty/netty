@@ -73,7 +73,7 @@ public abstract class SocksMessage {
         }
 
         public byte getByteValue() {
-            return this.b;
+            return b;
         }
     }
 
@@ -99,7 +99,7 @@ public abstract class SocksMessage {
         }
 
         public byte getByteValue() {
-            return this.b;
+            return b;
         }
     }
 
@@ -125,7 +125,7 @@ public abstract class SocksMessage {
         }
 
         public byte getByteValue() {
-            return this.b;
+            return b;
         }
     }
 
@@ -149,7 +149,7 @@ public abstract class SocksMessage {
         }
 
         public byte getByteValue() {
-            return this.b;
+            return b;
         }
     }
 
@@ -181,7 +181,7 @@ public abstract class SocksMessage {
         }
 
         public byte getByteValue() {
-            return this.b;
+            return b;
         }
     }
 
@@ -206,7 +206,7 @@ public abstract class SocksMessage {
         }
 
         public byte getByteValue() {
-            return this.b;
+            return b;
         }
     }
 

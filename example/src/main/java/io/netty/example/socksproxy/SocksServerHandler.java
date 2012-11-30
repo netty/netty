@@ -71,7 +71,7 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
     }
 
     @Override
-    public void exceptionCaught(io.netty.channel.ChannelHandlerContext ctx, Throwable throwable) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) throws Exception {
         throwable.printStackTrace();
         SocksServerUtils.closeOnFlush(ctx.channel());
     }

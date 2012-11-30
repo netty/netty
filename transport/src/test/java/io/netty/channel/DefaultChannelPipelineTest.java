@@ -71,17 +71,17 @@ public class DefaultChannelPipelineTest {
         final String prefixX = "x";
         for (int i = 0; i < handlerNum; i++) {
             if (i % 2 == 0) {
-                pipeline.addFirst(prefixX + String.valueOf(i), handlers1[i]);
+                pipeline.addFirst(prefixX + i, handlers1[i]);
             } else {
-                pipeline.addLast(prefixX + String.valueOf(i), handlers1[i]);
+                pipeline.addLast(prefixX + i, handlers1[i]);
             }
         }
 
         for (int i = 0; i < handlerNum; i++) {
             if (i % 2 != 0) {
-                pipeline.addBefore(prefixX + String.valueOf(i), String.valueOf(i), handlers2[i]);
+                pipeline.addBefore(prefixX + i, String.valueOf(i), handlers2[i]);
             } else {
-                pipeline.addAfter(prefixX + String.valueOf(i), String.valueOf(i), handlers2[i]);
+                pipeline.addAfter(prefixX + i, String.valueOf(i), handlers2[i]);
             }
         }
 
@@ -115,7 +115,7 @@ public class DefaultChannelPipelineTest {
         verifyContextNumber(pipeline, 8);
     }
 
-    private int next(DefaultChannelHandlerContext ctx) {
+    private static int next(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext next = ctx.next;
         if (next == null) {
             return Integer.MAX_VALUE;
