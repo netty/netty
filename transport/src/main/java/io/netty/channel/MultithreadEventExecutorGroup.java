@@ -15,6 +15,10 @@
  */
 package io.netty.channel;
 
+import io.netty.monitor.CounterMonitor;
+import io.netty.monitor.MonitorName;
+import io.netty.monitor.MonitorRegistries;
+
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,6 +27,8 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     private static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
+    private final CounterMonitor threadCounter = MonitorRegistries.instance()
+            .unique().newCounterMonitor(new MonitorName(getClass(), "total-threads"));
 
     final ChannelTaskScheduler scheduler;
     private final EventExecutor[] children;
@@ -40,6 +46,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         if (threadFactory == null) {
             threadFactory = new DefaultThreadFactory();
         }
+        threadCounter.inc(nThreads);
 
         scheduler = new ChannelTaskScheduler(threadFactory);
 
