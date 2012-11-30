@@ -129,7 +129,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
 
-    public void executeWhenWritable(AbstractNioChannel channel, NioTask<? extends SelectableChannel> task) {
+    void executeWhenWritable(AbstractNioChannel channel, NioTask<? extends SelectableChannel> task) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -357,25 +357,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                NioTask<SelectableChannel> task = null;
-                boolean flush = true;
-                for (;;) {
-                    task = ch.writableTasks.poll();
-                    if (task == null) {
-                        break;
-                    } else {
-                        processSelectedKey(ch.selectionKey(), task);
-                        // don't try to flush for now as a task is in use atm.
-                        flush = false;
-                    }
-
-                }
-                if (flush) {
+                if (ch.writableTasks.isEmpty()) {
                     unsafe.flushNow();
                 } else {
-                    int ops = k.interestOps();
-                    ops |= SelectionKey.OP_WRITE;
-                    k.interestOps(ops);
+                    NioTask<SelectableChannel> task = null;
+                    for (;;) {
+                        task = ch.writableTasks.poll();
+                        if (task == null) { break; }
+                        processSelectedKey(ch.selectionKey(), task);
+                    }
+
+                    k.interestOps(k.interestOps() | SelectionKey.OP_WRITE);
                 }
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {

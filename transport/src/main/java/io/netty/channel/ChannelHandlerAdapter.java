@@ -20,6 +20,11 @@ import java.net.SocketAddress;
 public class ChannelHandlerAdapter extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
     @Override
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+        ctx.sendFile(region, future);
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
         ctx.bind(localAddress, future);
     }

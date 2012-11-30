@@ -1261,4 +1261,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void readable(boolean readable) {
         pipeline.readable(this, readable);
     }
+
+    @Override
+    public ChannelFuture sendFile(FileRegion region) {
+        return pipeline.sendFile(region);
+    }
+
+    @Override
+    public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
+        return pipeline.sendFile(region, future);
+    }
 }

@@ -17,6 +17,7 @@ package io.netty.example.fileregion;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,10 +28,10 @@ import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.fileregion.DefaultFileRegion;
-import io.netty.handler.fileregion.FileRegionHandler;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.CharsetUtil;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,7 +61,7 @@ public class FileServer {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(
-                             new FileRegionHandler(), new FileHandler(), new ChannelInboundByteHandlerAdapter() {
+                             new FileHandler(), new ChannelInboundByteHandlerAdapter() {
                          @Override
                          public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                              in.clear();
@@ -96,8 +97,14 @@ public class FileServer {
     private final class FileHandler extends ChannelStateHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.channel().write(new DefaultFileRegion(new FileInputStream(file).getChannel(),
-                    0, file.length())).addListener(ChannelFutureListener.CLOSE);
+            ChannelFuture future = null;
+            for (int i = 0; i < 10; i++) {
+                future = ctx.channel().write(new DefaultFileRegion(new FileInputStream(file).getChannel(),
+                        0, file.length()));
+                future = ctx.channel().write(Unpooled.copiedBuffer("Written!\r\n", CharsetUtil.ISO_8859_1));
+            }
+            future.addListener(ChannelFutureListener.CLOSE);
+
         }
     }
 }

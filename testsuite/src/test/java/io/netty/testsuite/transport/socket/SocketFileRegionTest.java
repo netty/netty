@@ -24,7 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerLifeCycleException;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.handler.fileregion.DefaultFileRegion;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.fileregion.FileRegionHandler;
 import org.junit.Test;
 

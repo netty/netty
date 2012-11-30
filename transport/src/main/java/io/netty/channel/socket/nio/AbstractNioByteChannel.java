@@ -17,13 +17,16 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.FileRegion;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.WritableByteChannel;
 
 abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
@@ -105,6 +108,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
+
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
@@ -126,8 +130,75 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
+
+    @Override
+    protected void doFlushFileRegion(final FileRegion region, final ChannelFuture future) throws Exception {
+        if (javaChannel() instanceof WritableByteChannel) {
+            final WritableByteChannel wch = (WritableByteChannel) javaChannel();
+            try {
+                long written = 0;
+                for (;;) {
+                    long w = region.transferTo(wch, written);
+                    if (w == 0) {
+                        final long transfered = written;
+                        ((NioEventLoop) eventLoop()).executeWhenWritable(this, new NioTask<SelectableChannel>() {
+                            long written = transfered;
+
+                            @Override
+                            public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
+                                try {
+                                    for (;;) {
+                                        long w = region.transferTo(wch, written);
+                                        if (w == 0) {
+                                            // reschedule for write once the channel is writable again
+                                            ((NioEventLoop) eventLoop()).executeWhenWritable(AbstractNioByteChannel.this, this);
+                                            break;
+                                        } else if (w == -1 ) {
+                                            future.setSuccess();
+                                            return;
+                                        } else {
+                                            written =+ w;
+                                            if (written >= region.getCount()) {
+                                                future.setSuccess();
+                                                return;
+                                            }
+                                        }
+                                    }
+                                } catch (Throwable cause) {
+                                    future.setFailure(cause);
+                                    pipeline().fireExceptionCaught(cause);
+                                }
+                            }
+
+                            @Override
+                            public void channelUnregistered(SelectableChannel ch) throws Exception {
+                                // TODO: notify future ?
+                            }
+                        });
+                    } else if (w == -1) {
+                        future.setSuccess();
+                        return;
+                    } else {
+                        written =+ w;
+                        if (written >= region.getCount()) {
+                            future.setSuccess();
+                            return;
+                        }
+
+                    }
+                }
+            } catch (Throwable t) {
+                future.setFailure(t);
+                pipeline().fireExceptionCaught(t);
+            }
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
+
 
     // 0 - not expanded because the buffer is writable
     // 1 - expanded because the buffer was not writable

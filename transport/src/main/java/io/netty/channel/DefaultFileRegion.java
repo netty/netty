@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.fileregion;
+package io.netty.channel;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
