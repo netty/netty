@@ -153,7 +153,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             attrs.put(key, value);
         }
 
-        return (B) this;
+        @SuppressWarnings("unchecked")
+        B b = (B) this;
+        return b;
     }
 
     /**

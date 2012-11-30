@@ -32,6 +32,7 @@ public class DefaultAttributeMap implements AttributeMap {
             map = this.map = new IdentityHashMap<AttributeKey<?>, Attribute<?>>(2);
         }
 
+        @SuppressWarnings("unchecked")
         Attribute<T> attr = (Attribute<T>) map.get(key);
         if (attr == null) {
             attr = new DefaultAttribute<T>();
