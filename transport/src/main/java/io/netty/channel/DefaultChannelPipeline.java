@@ -844,8 +844,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public MessageBuf<Object> inboundMessageBuffer() {
-        return head.nextInboundMessageBuffer();
+    @SuppressWarnings("unchecked")
+    public <T> MessageBuf<T> inboundMessageBuffer() {
+        return (MessageBuf<T>) head.nextInboundMessageBuffer();
     }
 
     @Override
@@ -854,8 +855,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public MessageBuf<Object> outboundMessageBuffer() {
-        return nextOutboundMessageBuffer(tail);
+    @SuppressWarnings("unchecked")
+    public <T> MessageBuf<T> outboundMessageBuffer() {
+        return (MessageBuf<T>) nextOutboundMessageBuffer(tail);
     }
 
     @Override

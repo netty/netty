@@ -173,7 +173,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
 
         for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
-            channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            @SuppressWarnings("unchecked")
+            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+            channel.attr(key).set(e.getValue());
         }
 
         ChannelPipeline p = future.channel().pipeline();
