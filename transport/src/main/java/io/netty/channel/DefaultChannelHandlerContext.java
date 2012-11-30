@@ -355,7 +355,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } else if (buf instanceof MessageBuf) {
             outByteBuf = null;
             outByteBridge = null;
-            outMsgBuf = (MessageBuf<Object>) buf;
+            @SuppressWarnings("unchecked")
+            MessageBuf<Object> msgBuf = (MessageBuf<Object>) buf;
+            outMsgBuf = msgBuf;
             outMsgBridge = new AtomicReference<MessageBridge>();
         } else {
             throw new Error();

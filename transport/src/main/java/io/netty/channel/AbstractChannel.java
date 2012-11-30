@@ -278,8 +278,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public MessageBuf<Object> outboundMessageBuffer() {
-        return pipeline.outboundMessageBuffer();
+    @SuppressWarnings("unchecked")
+    public <T> MessageBuf<T> outboundMessageBuffer() {
+        return (MessageBuf<T>) pipeline.outboundMessageBuffer();
     }
 
     @Override

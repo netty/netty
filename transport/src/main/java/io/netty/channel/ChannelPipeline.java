@@ -205,9 +205,9 @@ import java.util.NoSuchElementException;
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
-    MessageBuf<Object> inboundMessageBuffer();
+    <T> MessageBuf<T> inboundMessageBuffer();
     ByteBuf inboundByteBuffer();
-    MessageBuf<Object> outboundMessageBuffer();
+    <T> MessageBuf<T> outboundMessageBuffer();
     ByteBuf outboundByteBuffer();
 
     /**

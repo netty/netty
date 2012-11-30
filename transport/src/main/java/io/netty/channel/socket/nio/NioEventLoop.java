@@ -306,7 +306,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 if (a instanceof AbstractNioChannel) {
                     processSelectedKey(k, (AbstractNioChannel) a);
                 } else {
-                    processSelectedKey(k, (NioTask<SelectableChannel>) a);
+                    @SuppressWarnings("unchecked")
+                    NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                    processSelectedKey(k, task);
                 }
 
                 if (cleanedCancelledKeys) {
@@ -376,7 +378,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 channels.add((Channel) a);
             } else {
                 k.cancel();
-                invokeChannelUnregistered((NioTask<SelectableChannel>) a, k);
+                @SuppressWarnings("unchecked")
+                NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                invokeChannelUnregistered(task, k);
             }
         }
 
