@@ -17,12 +17,13 @@ package io.netty.codec.socks;
 
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import org.junit.Test;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 public class SocksCmdResponseDecoderTest {
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SocksCmdResponseDecoderTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(SocksCmdResponseDecoderTest.class);
 
     private static void testSocksCmdResponseDecoderWithDifferentParams(SocksMessage.CmdStatus cmdStatus, SocksMessage.AddressType addressType){
         logger.debug("Testing cmdStatus: " + cmdStatus + " addressType: " + addressType);
