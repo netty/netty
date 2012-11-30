@@ -15,6 +15,8 @@
  */
 package io.netty.monitor;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.monitor.spi.MonitorProvider;
 import io.netty.monitor.spi.MonitorRegistryFactory;
 
@@ -38,9 +40,19 @@ import java.util.ServiceLoader;
  * </p>
  */
 public final class MonitorRegistries implements Iterable<MonitorRegistry> {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(MonitorRegistries.class);
+    //set of initialization states
+    private static final int UNINITIALIZED = 0;
+    private static final int ONGOING_INITIALIZATION = 1;
+    private static final int SUCCESSFUL_INITIALIZATION = 2;
+    private static final int NOP_FALLBACK_INITIALIZATION = 3;
+
+    private static int INITIALIZATION_STATE = UNINITIALIZED;
+    private static MonitorRegistry selectedRegistry;
 
     /**
      * Return <em>the</em> singleton {@code MonitorRegistries} instance.
+     *
      * @return <em>The</em> singleton {@code MonitorRegistries} instance
      */
     public static MonitorRegistries instance() {
@@ -57,14 +69,15 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
     /**
      * Create a new {@link MonitorRegistry} that supports the supplied
      * {@link MonitorProvider provider}.
+     *
      * @param provider The {@link MonitorProvider provider} we are interested in
      * @return A {@link MonitorRegistry} implemented by the supplied
      *         {@link MonitorProvider provider}
-     * @throws NullPointerException If {@code provider} is {@code null}
+     * @throws NullPointerException     If {@code provider} is {@code null}
      * @throws IllegalArgumentException If no {@code MonitorRegistry} matching
-     *             the given {@link MonitorProvider provider} could be found
+     *                                  the given {@link MonitorProvider provider} could be found
      */
-    public MonitorRegistry forProvider(final MonitorProvider provider) {
+    public static MonitorRegistry forProvider(final MonitorProvider provider) {
         if (provider == null) {
             throw new NullPointerException("provider");
         }
@@ -79,34 +92,49 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
 
     /**
      * <p>
-     * Look up and return <em>the</em> uniquely determined
-     * {@link MonitorRegistry} implementation. This method will work in the
-     * standard situation where exactly one {@link MonitorRegistryFactory} is
-     * registered in
+     * Look up and return <em>the</em> a uniquely determined
+     * {@link MonitorRegistry} implementation. This method will select
+     * exactly one {@link MonitorRegistryFactory} from those registered in
      * {@code META-INF/services/io.netty.monitor.spi.MonitorRegistryFactory}.
-     * Otherwise, if either none or more than one such provider is found on the
-     * classpath, it will throw an {@code IllegalStateException}.
+     * if no implementation is found then a NOOP registry is returned.
+     * If multiple implementations are found then the first one returned by
+     * {@link #iterator()} is used and a message is logged to say which one is
+     * selected.
      * </p>
-     * @return <em>The</em> uniquely determined {@link MonitorRegistry}
+     *
+     * @return <em>the</em> uniquely determined {@link MonitorRegistry}
      *         implementation
-     * @throws IllegalStateException If either none or more that one
-     *             {@link MonitorRegistries} provider was found on the
-     *             classpath
      */
     public MonitorRegistry unique() {
+        //Implementation based on SLF4J's
+        if (INITIALIZATION_STATE == UNINITIALIZED) {
+            INITIALIZATION_STATE = ONGOING_INITIALIZATION;
+            performInitialization();
+        }
+        switch (INITIALIZATION_STATE) {
+            case SUCCESSFUL_INITIALIZATION:
+                return selectedRegistry;
+            case NOP_FALLBACK_INITIALIZATION:
+            case ONGOING_INITIALIZATION:
+            default:
+                return MonitorRegistry.NOOP;
+        }
+    }
+
+    private void performInitialization() {
         final Iterator<MonitorRegistry> registries = iterator();
-        if (!registries.hasNext()) {
-            throw new IllegalStateException("Could not find any MonitorRegistries the classpath - "
-                    + "implementations need to be registered in META-INF/services/"
-                    + MonitorRegistryFactory.class.getName());
-        }
-        final MonitorRegistry candidate = registries.next();
         if (registries.hasNext()) {
-            throw new IllegalStateException("Found more than one MonitorRegistryFactory on the classpath - "
-                    + "check if there is more than one implementation registered in META-INF/services/"
-                    + MonitorRegistryFactory.class.getName());
+            selectedRegistry = registries.next();
+            INITIALIZATION_STATE = SUCCESSFUL_INITIALIZATION;
         }
-        return candidate;
+        if (selectedRegistry != null && registries.hasNext()) {
+            logger.warn(String.format("Multiple metrics implementations found. " +
+                    "Selected %s, ignoring other implementations", selectedRegistry.getClass().getName()));
+        }
+        if (selectedRegistry == null) {
+            INITIALIZATION_STATE = NOP_FALLBACK_INITIALIZATION;
+            logger.debug("No metrics implementation found on the classpath.");
+        }
     }
 
     /**
