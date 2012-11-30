@@ -32,10 +32,10 @@ final class SocksCommonUtils {
     }
 
     public static String intToIp(int i) {
-        return new StringBuilder().append((i >> FIRST_ADDRESS_OCTET_SHIFT) & XOR_DEFAULT_VALUE).append(".")
-                .append((i >> SECOND_ADDRESS_OCTET_SHIFT) & XOR_DEFAULT_VALUE).append(".")
-                .append((i >> THIRD_ADDRESS_OCTET_SHIFT) & XOR_DEFAULT_VALUE).append(".")
-                .append(i & XOR_DEFAULT_VALUE).toString();
+        return String.valueOf(i >> FIRST_ADDRESS_OCTET_SHIFT & XOR_DEFAULT_VALUE) + '.' +
+               (i >> SECOND_ADDRESS_OCTET_SHIFT & XOR_DEFAULT_VALUE) + '.' +
+               (i >> THIRD_ADDRESS_OCTET_SHIFT & XOR_DEFAULT_VALUE) + '.' +
+               (i & XOR_DEFAULT_VALUE);
     }
 
     private static final char[] ipv6conseqZeroFiller = {':', ':'};
@@ -64,7 +64,7 @@ final class SocksCommonUtils {
                 cmprHextet = hextet;
                 cmprSize = size;
             }
-            hextet = (curByte / 2) + 1;
+            hextet = curByte / 2 + 1;
         }
         if (cmprHextet == -1 || cmprSize < 2) {
             //No compression can be applied
@@ -93,8 +93,8 @@ final class SocksCommonUtils {
     private static void ipv6toStr(StringBuilder sb, byte[] src,
                                   int fromHextet, int toHextet) {
         for (int i = fromHextet; i < toHextet; i++) {
-            sb.append(Integer.toHexString(((src[i << 1] << 8) & 0xff00)
-                    | (src[(i << 1) + 1] & 0xff)));
+            sb.append(Integer.toHexString(src[i << 1] << 8 & 0xff00
+                    | src[(i << 1) + 1] & 0xff));
             if (i < toHextet - 1) {
                 sb.append(ipv6hextetSeparator);
             }

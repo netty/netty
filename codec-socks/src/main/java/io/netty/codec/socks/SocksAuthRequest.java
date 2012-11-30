@@ -31,13 +31,6 @@ public final class SocksAuthRequest extends SocksRequest {
     private final String username;
     private final String password;
 
-    /**
-     *
-     * @param username
-     * @param password
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
-     */
     public SocksAuthRequest(String username, String password) {
         super(SocksRequestType.AUTH);
         if (username == null) {

@@ -29,12 +29,7 @@ public abstract class SocksMessage {
     private final MessageType messageType;
     private final ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
 
-    /**
-     *
-     * @param messageType
-     * @throws NullPointerException
-     */
-    public SocksMessage(MessageType messageType) {
+    protected SocksMessage(MessageType messageType) {
         if (messageType == null) {
             throw new NullPointerException("messageType");
         }
@@ -64,7 +59,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private AuthScheme(byte b) {
+        AuthScheme(byte b) {
             this.b = b;
         }
 
@@ -90,7 +85,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private CmdType(byte b) {
+        CmdType(byte b) {
             this.b = b;
         }
 
@@ -116,7 +111,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private AddressType(byte b) {
+        AddressType(byte b) {
             this.b = b;
         }
 
@@ -140,7 +135,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private AuthStatus(byte b) {
+        AuthStatus(byte b) {
             this.b = b;
         }
 
@@ -172,7 +167,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private CmdStatus(byte b) {
+        CmdStatus(byte b) {
             this.b = b;
         }
 
@@ -197,7 +192,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private ProtocolVersion(byte b) {
+        ProtocolVersion(byte b) {
             this.b = b;
         }
 

@@ -16,14 +16,13 @@
 package io.netty.example.socksproxy;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.codec.socks.SocksCmdRequest;
 import io.netty.codec.socks.SocksCmdResponse;
@@ -48,17 +47,20 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
         CallbackNotifier cb = new CallbackNotifier() {
+            @Override
             public void onSuccess(final ChannelHandlerContext outboundCtx) {
                 ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.SUCCESS, request.getAddressType()))
                              .addListener(new ChannelFutureListener() {
+                    @Override
                     public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                        ctx.pipeline().remove(SocksServerConnectHandler.getName());
+                        ctx.pipeline().remove(getName());
                         outboundCtx.channel().pipeline().addLast(new RelayHandler(ctx.channel()));
                         ctx.channel().pipeline().addLast(new RelayHandler(outboundCtx.channel()));
                     }
                 });
             }
 
+            @Override
             public void onFailure(ChannelHandlerContext outboundCtx, Throwable cause) {
                 ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.FAILURE, request.getAddressType()));
                 SocksServerUtils.closeOnFlush(ctx.channel());
@@ -72,7 +74,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .handler(new DirectClientInitializer(cb))
                 .remoteAddress(request.getHost(), request.getPort());
-        ChannelFuture f = b.connect();
+        b.connect();
     }
 
     @Override
