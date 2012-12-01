@@ -1281,6 +1281,8 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      */
     int  readBytes(GatheringByteChannel out, int length) throws IOException;
 
+    String readUTF8() throws IOException;
+    
     /**
      * Increases the current {@code readerIndex} by the specified
      * {@code length} in this buffer.
@@ -1509,6 +1511,8 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      */
     ByteBuf writeZero(int length);
 
+    ByteBuf writeUTF8(String str) throws IOException;
+    
     /**
      * Locates the first occurrence of the specified {@code value} in this
      * buffer.  The search takes place from the specified {@code fromIndex}
