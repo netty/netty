@@ -210,6 +210,30 @@ public abstract class SocksMessage {
         }
     }
 
+    public enum SubnegotiationVersion {
+        AUTH_PASSWORD((byte) 0x01),
+        UNKNOWN((byte) 0xff);
+
+        private final byte b;
+
+        private SubnegotiationVersion(byte b) {
+            this.b = b;
+        }
+
+        public static SubnegotiationVersion fromByte(byte b) {
+            for (SubnegotiationVersion code : values()) {
+                if (code.b == b) {
+                    return code;
+                }
+            }
+            return UNKNOWN;
+        }
+
+        public byte getByteValue() {
+            return b;
+        }
+    }
+
     /**
      * Returns the {@link ProtocolVersion} of this {@link SocksMessage}
      *
