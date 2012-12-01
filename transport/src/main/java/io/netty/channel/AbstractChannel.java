@@ -23,6 +23,7 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.DetectionUtil;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -902,6 +903,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         throw new UnsupportedOperationException();
     }
 
+    protected static void checkEOF(FileRegion region, long writtenBytes, ChannelFuture future) throws IOException {
+        if (writtenBytes < region.getCount()) {
+            throw new EOFException("Expected to be able to write "
+                    + region.getCount() + " bytes, but only wrote "
+                    + writtenBytes);
+        }
+    }
 
     protected abstract boolean isFlushPending();
 

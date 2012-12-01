@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -165,7 +164,8 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                                 AbstractNioByteChannel.this, this);
                         return;
                     } else if (localWrittenBytes == -1) {
-                        notifyEOF(region, writtenBytes, future);
+                        checkEOF(region, writtenBytes, future);
+                        future.setSuccess();
                         return;
                     } else {
                         writtenBytes += localWrittenBytes;
@@ -189,16 +189,6 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         @Override
         public void channelUnregistered(SelectableChannel ch) throws Exception {
             // TODO: notify future ?
-        }
-    }
-
-    private static void notifyEOF(FileRegion region, long writtenBytes, ChannelFuture future) {
-        if (writtenBytes < region.getCount()) {
-            future.setFailure(new EOFException("Expected to be able to write "
-                    + region.getCount() + " bytes, but only wrote "
-                    + writtenBytes));
-        } else {
-            future.setSuccess();
         }
     }
 
