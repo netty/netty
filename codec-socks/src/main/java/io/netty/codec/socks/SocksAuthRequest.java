@@ -28,6 +28,7 @@ import java.nio.charset.CharsetEncoder;
  */
 public final class SocksAuthRequest extends SocksRequest {
     private static final CharsetEncoder asciiEncoder = CharsetUtil.getEncoder(CharsetUtil.US_ASCII);
+    private static final SubnegotiationVersion SUBNEGOTIATION_VERSION = SubnegotiationVersion.AUTH_PASSWORD;
     private final String username;
     private final String password;
 
@@ -73,7 +74,7 @@ public final class SocksAuthRequest extends SocksRequest {
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
+        byteBuf.writeByte(SUBNEGOTIATION_VERSION.getByteValue());
         byteBuf.writeByte(username.length());
         byteBuf.writeBytes(username.getBytes(CharsetUtil.US_ASCII));
         byteBuf.writeByte(password.length());

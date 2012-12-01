@@ -31,7 +31,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
         return name;
     }
 
-    private SocksMessage.ProtocolVersion version;
+    private SocksMessage.SubnegotiationVersion version;
     private int fieldLength;
     private String username;
     private String password;
@@ -45,8 +45,8 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
     public SocksRequest decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksMessage.SubnegotiationVersion.fromByte(byteBuf.readByte());
+                if (version != SocksMessage.SubnegotiationVersion.AUTH_PASSWORD) {
                     break;
                 }
                 checkpoint(State.READ_USERNAME);
