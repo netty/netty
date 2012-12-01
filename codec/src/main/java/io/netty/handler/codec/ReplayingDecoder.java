@@ -16,12 +16,12 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelHandlerUtil;
+import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.Signal;
 
 /**
@@ -282,8 +282,8 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
-    private final ByteBuf cumulation = Unpooled.buffer();
-    private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(cumulation);
+    private ByteBuf cumulation;
+    private ReplayingDecoderBuffer replayable;
     private S state;
     private int checkpoint = -1;
 
@@ -357,6 +357,8 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
     @Override
     public ByteBuf newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
+        cumulation = ctx.alloc().buffer();
+        replayable = new ReplayingDecoderBuffer(cumulation);
         return cumulation;
     }
 
@@ -457,7 +459,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
     private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
         final int oldReaderIndex = in.readerIndex();
-        in.unsafe().discardSomeReadBytes();
+        ((UnsafeByteBuf) in).discardSomeReadBytes();
         final int newReaderIndex = in.readerIndex();
         checkpoint -= oldReaderIndex - newReaderIndex;
         ctx.fireInboundBufferUpdated();

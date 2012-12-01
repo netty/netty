@@ -15,11 +15,16 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufAllocator;
+
 /**
- * Factory which is responsible to create new {@link ChannelFuture}'s
- *
+ * Provides common methods between {@link Channel} and {@link ChannelHandlerContext}.
  */
-public interface ChannelFutureFactory {
+interface ChannelPropertyAccess {
+
+    ChannelPipeline pipeline();
+
+    ByteBufAllocator alloc();
 
     /**
      * Create a new {@link ChannelFuture}

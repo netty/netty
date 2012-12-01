@@ -20,10 +20,4 @@ public interface ChannelBuf {
      * The ChannelBufType which will be handled by the ChannelBuf implementation
      */
     ChannelBufType type();
-
-    /**
-     * Return {@code true} if the ChannelBuf is pooled.
-     *
-     */
-    boolean isPooled();
 }

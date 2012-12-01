@@ -247,6 +247,49 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return attrs;
     }
 
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append('(');
+        if (group != null) {
+            buf.append("group: ");
+            buf.append(group.getClass().getSimpleName());
+            buf.append(", ");
+        }
+        if (factory != null) {
+            buf.append("factory: ");
+            buf.append(factory);
+            buf.append(", ");
+        }
+        if (localAddress != null) {
+            buf.append("localAddress: ");
+            buf.append(localAddress);
+            buf.append(", ");
+        }
+        if (options != null && !options.isEmpty()) {
+            buf.append("options: ");
+            buf.append(options);
+            buf.append(", ");
+        }
+        if (attrs != null && !attrs.isEmpty()) {
+            buf.append("attrs: ");
+            buf.append(attrs);
+            buf.append(", ");
+        }
+        if (handler != null) {
+            buf.append("handler: ");
+            buf.append(handler);
+            buf.append(", ");
+        }
+        if (buf.charAt(buf.length() - 1) == '(') {
+            buf.append(')');
+        } else {
+            buf.setCharAt(buf.length() - 2, ')');
+            buf.setLength(buf.length() - 1);
+        }
+        return buf.toString();
+    }
+
     private static final class BootstrapChannelFactory implements ChannelFactory {
         private final Class<? extends Channel> clazz;
 
@@ -263,6 +306,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             }
         }
 
+        public String toString() {
+            return clazz.getSimpleName() + ".class";
+        }
     }
 
     /**

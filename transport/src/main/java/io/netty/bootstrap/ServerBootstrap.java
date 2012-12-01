@@ -15,6 +15,7 @@
  */
 package io.netty.bootstrap;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -229,6 +230,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             return Unpooled.messageBuffer();
         }
 
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            // Nothing to free
+        }
+
         @SuppressWarnings("unchecked")
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) {
@@ -265,10 +271,50 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
     }
 
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(super.toString());
+        buf.setLength(buf.length() - 1);
+        buf.append(", ");
+        if (childGroup != null) {
+            buf.append("childGroup: ");
+            buf.append(childGroup.getClass().getSimpleName());
+            buf.append(", ");
+        }
+        if (childOptions != null && !childOptions.isEmpty()) {
+            buf.append("childOptions: ");
+            buf.append(childOptions);
+            buf.append(", ");
+        }
+        if (childAttrs != null && !childAttrs.isEmpty()) {
+            buf.append("childAttrs: ");
+            buf.append(childAttrs);
+            buf.append(", ");
+        }
+        if (childHandler != null) {
+            buf.append("childHandler: ");
+            buf.append(childHandler);
+            buf.append(", ");
+        }
+        if (buf.charAt(buf.length() - 1) == '(') {
+            buf.append(')');
+        } else {
+            buf.setCharAt(buf.length() - 2, ')');
+            buf.setLength(buf.length() - 1);
+        }
+
+        return buf.toString();
+    }
+
     private final class AioServerSocketChannelFactory implements ChannelFactory {
         @Override
         public Channel newChannel() {
-            return new AioServerSocketChannel((AioEventLoopGroup) group(),  (AioEventLoopGroup) childGroup);
+            return new AioServerSocketChannel((AioEventLoopGroup) group(), (AioEventLoopGroup) childGroup);
+        }
+
+        @Override
+        public String toString() {
+            return AioServerSocketChannel.class.getSimpleName() + ".class";
         }
     }
 }

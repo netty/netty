@@ -25,10 +25,10 @@ import io.netty.channel.socket.aio.AioServerSocketChannel;
 import io.netty.channel.socket.aio.AioSocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSctpServerChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.NioSctpChannel;
+import io.netty.channel.socket.nio.NioSctpServerChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
@@ -96,6 +96,11 @@ final class SocketTestPermutation {
                     @Override
                     public Channel newChannel() {
                        return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                    }
+
+                    @Override
+                    public String toString() {
+                        return NioDatagramChannel.class.getSimpleName() + ".class";
                     }
                 });
             }
@@ -188,13 +193,7 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 final AioEventLoopGroup parentGroup = new AioEventLoopGroup();
                 final AioEventLoopGroup childGroup = new AioEventLoopGroup();
-                return new ServerBootstrap().group(parentGroup, childGroup).channelFactory(new ChannelFactory() {
-
-                    @Override
-                    public Channel newChannel() {
-                        return new AioServerSocketChannel(parentGroup, childGroup);
-                    }
-                });
+                return new ServerBootstrap().group(parentGroup, childGroup).channel(AioServerSocketChannel.class);
             }
         });
         list.add(new Factory<ServerBootstrap>() {
@@ -221,12 +220,7 @@ final class SocketTestPermutation {
             @Override
             public Bootstrap newInstance() {
                 final AioEventLoopGroup loop = new AioEventLoopGroup();
-                return new Bootstrap().group(loop).channelFactory(new ChannelFactory() {
-                    @Override
-                    public Channel newChannel() {
-                        return new AioSocketChannel(loop);
-                    }
-                });
+                return new Bootstrap().group(loop).channel(AioSocketChannel.class);
             }
         });
         list.add(new Factory<Bootstrap>() {

@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class MessageToMessageDecoder<I, O>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
@@ -34,6 +35,11 @@ public abstract class MessageToMessageDecoder<I, O>
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
     }
 
     @Override

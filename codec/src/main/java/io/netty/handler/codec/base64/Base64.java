@@ -20,6 +20,7 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
@@ -115,10 +116,10 @@ public final class Base64 {
         }
 
         int len43 = len * 4 / 3;
-        ByteBuf dest = src.unsafe().newBuffer(
+        ByteBuf dest = Unpooled.buffer(
                 len43 +
-                (len % 3 > 0? 4 : 0) + // Account for padding
-                (breakLines? len43 / MAX_LINE_LENGTH : 0)).order(src.order()); // New lines
+                        (len % 3 > 0 ? 4 : 0) + // Account for padding
+                        (breakLines ? len43 / MAX_LINE_LENGTH : 0)).order(src.order()); // New lines
         int d = 0;
         int e = 0;
         int len2 = len - 2;
@@ -219,7 +220,7 @@ public final class Base64 {
         byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        ByteBuf dest = src.unsafe().newBuffer(len34).order(src.order()); // Upper limit on size of output
+        ByteBuf dest = Unpooled.buffer(len34).order(src.order()); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];

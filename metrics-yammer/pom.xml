@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-metrics-yammer</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <name>Netty/Yammer Metrics Provider</name>
 
@@ -41,27 +41,5 @@
 		<scope>compile</scope>
 	</dependency>
   </dependencies>
-  
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-        <configuration>
-          <instructions>
-            <Import-Package>
-              *
-            </Import-Package>
-            <Export-Package>
-              io.netty.monitor.yammer,
-              io.netty.monitor.yammer.spi
-            </Export-Package>
-          </instructions>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>  
-    
+      
 </project>
-

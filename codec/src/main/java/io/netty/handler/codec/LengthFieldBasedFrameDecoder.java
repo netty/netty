@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
@@ -426,7 +427,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
      * is overridden to avoid memory copy.
      */
     protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
-        ByteBuf frame = buffer.unsafe().newBuffer(length);
+        ByteBuf frame = Unpooled.buffer(length);
         frame.writeBytes(buffer, index, length);
         return frame;
     }

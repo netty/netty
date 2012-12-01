@@ -15,13 +15,14 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
-import io.netty.channel.ChannelHandlerUtil;
 
 public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
         extends ChannelHandlerAdapter
@@ -73,6 +74,11 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
+    }
+
+    @Override
     public void inboundBufferUpdated(
             ChannelHandlerContext ctx) throws Exception {
         decoder.inboundBufferUpdated(ctx);
@@ -81,6 +87,11 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     @Override
     public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return encoder.newOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
     }
 
     @Override

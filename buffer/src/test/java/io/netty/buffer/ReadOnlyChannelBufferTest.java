@@ -15,9 +15,7 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +24,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-import org.junit.Test;
+import static io.netty.buffer.Unpooled.*;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 /**
  * Tests read-only channel buffers
@@ -46,7 +46,7 @@ public class ReadOnlyChannelBufferTest {
     @Test
     public void testUnwrap() {
         ByteBuf buf = buffer(1);
-        assertSame(buf, ((WrappedByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
+        assertSame(buf, ((UnsafeByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
     }
 
     @Test
@@ -74,7 +74,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
-        ByteBuf buf = createStrictMock(ByteBuf.class);
+        ByteBuf buf = createStrictMock(UnsafeByteBuf.class);
         expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
         expect(buf.maxCapacity()).andReturn(65536).anyTimes();
         expect(buf.readerIndex()).andReturn(0).anyTimes();

@@ -38,20 +38,9 @@ final class LocalEventLoop extends SingleThreadEventLoop {
                 // Waken up by interruptThread()
             }
 
-            if (isShutdown()) {
-                task = pollTask();
-                if (task == null) {
-                    break;
-                }
-                task.run();
+            if (isShutdown() && confirmShutdown()) {
+                break;
             }
-        }
-    }
-
-    @Override
-    protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && isShutdown()) {
-            interruptThread();
         }
     }
 }

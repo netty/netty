@@ -191,10 +191,30 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
         return super.channel(channelClass);
     }
 
+    @Override
+    public String toString() {
+        if (remoteAddress == null) {
+            return super.toString();
+        }
+
+        StringBuilder buf = new StringBuilder(super.toString());
+        buf.setLength(buf.length() - 1);
+        buf.append(", remoteAddress: ");
+        buf.append(remoteAddress);
+        buf.append(')');
+
+        return buf.toString();
+    }
+
     private final class AioSocketChannelFactory implements ChannelFactory {
         @Override
         public Channel newChannel() {
             return new AioSocketChannel((AioEventLoopGroup) group());
+        }
+
+        @Override
+        public String toString() {
+            return AioSocketChannel.class.getSimpleName() + ".class";
         }
     }
 }

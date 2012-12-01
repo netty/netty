@@ -69,7 +69,7 @@
 
   <properties>
     <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
-    <yammer.metrics.version>2.1.2</yammer.metrics.version>
+    <yammer.metrics.version>2.1.4</yammer.metrics.version>
   </properties>
  
   <modules>
@@ -344,6 +344,13 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
+          <argLine>
+            -server 
+            -dsa -da -ea:io.netty...
+            -XX:+AggressiveOpts -XX:+UseFastAccessorMethods
+            -XX:+OptimizeStringConcat
+            -XX:+HeapDumpOnOutOfMemoryError
+          </argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -388,6 +395,7 @@
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
+       
     </plugins>
 
     <pluginManagement>
@@ -425,19 +433,12 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.7</version>
-        </plugin>
+        </plugin>               
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
           <version>2.3.7</version>
-          <configuration>
-            <instructions>
-              <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-              <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
-            </instructions>
-          </configuration>
-        </plugin>
-        
+        </plugin>             
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
              See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
@@ -501,4 +502,3 @@
     </pluginManagement>
   </build>
 </project>
-

@@ -43,8 +43,26 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
 
+    /**
+     * Wait at least 2 seconds after shutdown() until there are no pending tasks anymore.
+     * @see #confirmShutdown()
+     */
+    private static final long SHUTDOWN_DELAY_NANOS = TimeUnit.SECONDS.toNanos(2);
+
     static final ThreadLocal<SingleThreadEventExecutor> CURRENT_EVENT_LOOP =
             new ThreadLocal<SingleThreadEventExecutor>();
+
+    private static final int ST_NOT_STARTED = 1;
+    private static final int ST_STARTED = 2;
+    private static final int ST_SHUTDOWN = 3;
+    private static final int ST_TERMINATED = 4;
+
+    private static final Runnable WAKEUP_TASK = new Runnable() {
+        @Override
+        public void run() {
+            // Do nothing.
+        }
+    };
 
     public static SingleThreadEventExecutor currentEventLoop() {
         return CURRENT_EVENT_LOOP.get();
@@ -57,8 +75,8 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private final Semaphore threadLock = new Semaphore(0);
     private final ChannelTaskScheduler scheduler;
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
-    /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
-    private volatile int state;
+    private volatile int state = ST_NOT_STARTED;
+    private long lastAccessTimeNanos;
 
     protected SingleThreadEventExecutor(
             EventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
@@ -76,19 +94,29 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
             @Override
             public void run() {
                 CURRENT_EVENT_LOOP.set(SingleThreadEventExecutor.this);
+                boolean success = false;
                 try {
                     SingleThreadEventExecutor.this.run();
+                    success = true;
                 } finally {
+                    // Check if confirmShutdown() was called at the end of the loop.
+                    if (success && lastAccessTimeNanos == 0) {
+                        logger.error(
+                                "Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
+                                SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must be called " +
+                                "before run() implementation terminates.");
+                    }
+
                     try {
                         // Run all remaining tasks and shutdown hooks.
-                        try {
-                            cleanupTasks();
-                        } finally {
-                            synchronized (stateLock) {
-                                state = 3;
+                        for (;;) {
+                            if (confirmShutdown()) {
+                                break;
                             }
                         }
-                        cleanupTasks();
+                        synchronized (stateLock) {
+                            state = ST_TERMINATED;
+                        }
                     } finally {
                         try {
                             cleanup();
@@ -96,17 +124,6 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                             threadLock.release();
                             assert taskQueue.isEmpty();
                         }
-                    }
-                }
-            }
-
-            private void cleanupTasks() {
-                for (;;) {
-                    boolean ran = false;
-                    ran |= runAllTasks();
-                    ran |= runShutdownHooks();
-                    if (!ran && !hasTasks()) {
-                        break;
                     }
                 }
             }
@@ -161,7 +178,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         if (task == null) {
             throw new NullPointerException("task");
         }
-        if (isShutdown()) {
+        if (isTerminated()) {
             reject();
         }
         taskQueue.add(task);
@@ -182,6 +199,10 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                 break;
             }
 
+            if (task == WAKEUP_TASK) {
+                continue;
+            }
+
             try {
                 task.run();
                 ran = true;
@@ -198,7 +219,11 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         // Do nothing. Subclasses will override.
     }
 
-    protected abstract void wakeup(boolean inEventLoop);
+    protected void wakeup(boolean inEventLoop) {
+        if (!inEventLoop || state == ST_SHUTDOWN) {
+            addTask(WAKEUP_TASK);
+        }
+    }
 
     @Override
     public boolean inEventLoop() {
@@ -256,29 +281,30 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
     @Override
     public void shutdown() {
+        if (isShutdown()) {
+            return;
+        }
+
         boolean inEventLoop = inEventLoop();
-        boolean wakeup = false;
+        boolean wakeup = true;
+
         if (inEventLoop) {
             synchronized (stateLock) {
-                assert state == 1;
-                state = 2;
-                wakeup = true;
+                assert state == ST_STARTED;
+                state = ST_SHUTDOWN;
             }
         } else {
             synchronized (stateLock) {
                 switch (state) {
-                case 0:
-                    state = 3;
-                    try {
-                        cleanup();
-                    } finally {
-                        threadLock.release();
-                    }
+                case ST_NOT_STARTED:
+                    state = ST_SHUTDOWN;
+                    thread.start();
                     break;
-                case 1:
-                    state = 2;
-                    wakeup = true;
+                case ST_STARTED:
+                    state = ST_SHUTDOWN;
                     break;
+                default:
+                    wakeup = false;
                 }
             }
         }
@@ -296,12 +322,49 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
     @Override
     public boolean isShutdown() {
-        return state >= 2;
+        return state >= ST_SHUTDOWN;
     }
 
     @Override
     public boolean isTerminated() {
-        return state == 3;
+        return state == ST_TERMINATED;
+    }
+
+    protected boolean confirmShutdown() {
+        if (!isShutdown()) {
+            throw new IllegalStateException("must be invoked after shutdown()");
+        }
+        if (!inEventLoop()) {
+            throw new IllegalStateException("must be invoked from an event loop");
+        }
+
+        if (runAllTasks() || runShutdownHooks()) {
+            // There were tasks in the queue. Wait a little bit more until no tasks are queued for SHUTDOWN_DELAY_NANOS.
+            lastAccessTimeNanos = 0;
+            wakeup(true);
+            return false;
+        }
+
+        if (lastAccessTimeNanos == 0 || System.nanoTime() - lastAccessTimeNanos < SHUTDOWN_DELAY_NANOS) {
+            if (lastAccessTimeNanos == 0) {
+                lastAccessTimeNanos = System.nanoTime();
+            }
+
+            // Check if any tasks were added to the queue every 100ms.
+            // TODO: Change the behavior of takeTask() so that it returns on timeout.
+            wakeup(true);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // Ignore
+            }
+
+            return false;
+        }
+
+        // No tasks were added for last SHUTDOWN_DELAY_NANOS - hopefully safe to shut down.
+        // (Hopefully because we really cannot make a guarantee that there will be no execute() calls by a user.)
+        return true;
     }
 
     @Override
@@ -332,13 +395,13 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
             wakeup(true);
         } else {
             synchronized (stateLock) {
-                if (state == 0) {
-                    state = 1;
+                if (state == ST_NOT_STARTED) {
+                    state = ST_STARTED;
                     thread.start();
                 }
             }
             addTask(task);
-            if (isShutdown() && removeTask(task)) {
+            if (isTerminated() && removeTask(task)) {
                 reject();
             }
             wakeup(false);
@@ -346,7 +409,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     private static void reject() {
-        throw new RejectedExecutionException("event executor shut down");
+        throw new RejectedExecutionException("event executor terminated");
     }
 
     @Override

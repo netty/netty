@@ -16,7 +16,6 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -64,7 +63,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.buffer();
+        return ctx.alloc().buffer();
     }
 
     @Override

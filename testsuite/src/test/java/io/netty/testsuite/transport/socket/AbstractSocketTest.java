@@ -22,15 +22,14 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetworkConstants;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map.Entry;
-
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
 public abstract class AbstractSocketTest {
 
@@ -59,7 +58,7 @@ public abstract class AbstractSocketTest {
             cb.remoteAddress(addr);
 
             logger.info(String.format(
-                    "Running: %s %d of %d", testName.getMethodName(), ++ i, COMBO.size()));
+                    "Running: %s %d of %d (%s + %s)", testName.getMethodName(), ++ i, COMBO.size(), sb, cb));
             try {
                 Method m = getClass().getDeclaredMethod(
                         testName.getMethodName(), ServerBootstrap.class, Bootstrap.class);

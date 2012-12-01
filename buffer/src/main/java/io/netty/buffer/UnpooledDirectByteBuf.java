@@ -33,7 +33,7 @@ import java.nio.channels.ScatteringByteChannel;
  * constructor explicitly.
  */
 @SuppressWarnings("restriction")
-public class DirectByteBuf extends AbstractByteBuf {
+public class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     private static final Field CLEANER_FIELD;
 
@@ -52,6 +52,11 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     private static void freeDirect(ByteBuffer buffer) {
+        if (CLEANER_FIELD == null) {
+            // Doomed to wait for GC.
+            return;
+        }
+
         Cleaner cleaner;
         try {
             cleaner = (Cleaner) CLEANER_FIELD.get(buffer);
@@ -61,12 +66,12 @@ public class DirectByteBuf extends AbstractByteBuf {
         }
     }
 
-    private final Unsafe unsafe = new DirectUnsafe();
-
-    private boolean doNotFree;
+    private final ByteBufAllocator alloc;
     private ByteBuffer buffer;
-    private ByteBuffer tmpBuf;
+    private ByteBuffer tmpNioBuf;
     private int capacity;
+    private boolean freed;
+    private boolean doNotFree;
 
     /**
      * Creates a new direct buffer.
@@ -74,8 +79,11 @@ public class DirectByteBuf extends AbstractByteBuf {
      * @param initialCapacity the initial capacity of the underlying direct buffer
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
-    public DirectByteBuf(int initialCapacity, int maxCapacity) {
-        super(ByteOrder.BIG_ENDIAN, maxCapacity);
+    public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(maxCapacity);
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity);
         }
@@ -87,6 +95,7 @@ public class DirectByteBuf extends AbstractByteBuf {
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
+        this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
     }
 
@@ -95,9 +104,11 @@ public class DirectByteBuf extends AbstractByteBuf {
      *
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
-    public DirectByteBuf(ByteBuffer initialBuffer, int maxCapacity) {
-        super(ByteOrder.BIG_ENDIAN, maxCapacity);
-
+    public UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
+        super(maxCapacity);
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         if (initialBuffer == null) {
             throw new NullPointerException("initialBuffer");
         }
@@ -114,6 +125,7 @@ public class DirectByteBuf extends AbstractByteBuf {
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
+        this.alloc = alloc;
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
@@ -130,7 +142,7 @@ public class DirectByteBuf extends AbstractByteBuf {
         }
 
         this.buffer = buffer;
-        tmpBuf = buffer.duplicate();
+        tmpNioBuf = null;
         capacity = buffer.remaining();
     }
 
@@ -146,6 +158,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
+        assert !freed;
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -182,6 +195,16 @@ public class DirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public ByteBufAllocator alloc() {
+        return alloc;
+    }
+
+    @Override
+    public ByteOrder order() {
+        return ByteOrder.BIG_ENDIAN;
+    }
+
+    @Override
     public boolean hasArray() {
         return false;
     }
@@ -198,34 +221,40 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public byte getByte(int index) {
+        assert !freed;
         return buffer.get(index);
     }
 
     @Override
     public short getShort(int index) {
+        assert !freed;
         return buffer.getShort(index);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
+        assert !freed;
         return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
     }
 
     @Override
     public int getInt(int index) {
+        assert !freed;
         return buffer.getInt(index);
     }
 
     @Override
     public long getLong(int index) {
+        assert !freed;
         return buffer.getLong(index);
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        if (dst instanceof DirectByteBuf) {
-            DirectByteBuf bbdst = (DirectByteBuf) dst;
-            ByteBuffer data = bbdst.tmpBuf;
+        assert !freed;
+        if (dst instanceof UnpooledDirectByteBuf) {
+            UnpooledDirectByteBuf bbdst = (UnpooledDirectByteBuf) dst;
+            ByteBuffer data = bbdst.internalNioBuffer();
             data.clear().position(dstIndex).limit(dstIndex + length);
             getBytes(index, data);
         } else if (buffer.hasArray()) {
@@ -238,6 +267,8 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+        assert !freed;
+        ByteBuffer tmpBuf = internalNioBuffer();
         try {
             tmpBuf.clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
@@ -250,7 +281,9 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
+        assert !freed;
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
+        ByteBuffer tmpBuf = internalNioBuffer();
         try {
             tmpBuf.clear().position(index).limit(index + bytesToCopy);
         } catch (IllegalArgumentException e) {
@@ -263,18 +296,21 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setByte(int index, int value) {
+        assert !freed;
         buffer.put(index, (byte) value);
         return this;
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
+        assert !freed;
         buffer.putShort(index, (short) value);
         return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
+        assert !freed;
         setByte(index, (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>> 8));
         setByte(index + 2, (byte) value);
@@ -283,21 +319,24 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setInt(int index, int value) {
+        assert !freed;
         buffer.putInt(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
+        assert !freed;
         buffer.putLong(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        if (src instanceof DirectByteBuf) {
-            DirectByteBuf bbsrc = (DirectByteBuf) src;
-            ByteBuffer data = bbsrc.tmpBuf;
+        assert !freed;
+        if (src instanceof UnpooledDirectByteBuf) {
+            UnpooledDirectByteBuf bbsrc = (UnpooledDirectByteBuf) src;
+            ByteBuffer data = bbsrc.internalNioBuffer();
 
             data.clear().position(srcIndex).limit(srcIndex + length);
             setBytes(index, data);
@@ -311,6 +350,8 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+        assert !freed;
+        ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);
         return this;
@@ -318,6 +359,8 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
+        assert !freed;
+        ByteBuffer tmpBuf = internalNioBuffer();
         if (src == tmpBuf) {
             src = src.duplicate();
         }
@@ -329,6 +372,7 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
+        assert !freed;
         if (length == 0) {
             return this;
         }
@@ -337,6 +381,7 @@ public class DirectByteBuf extends AbstractByteBuf {
             out.write(buffer.array(), index + buffer.arrayOffset(), length);
         } else {
             byte[] tmp = new byte[length];
+            ByteBuffer tmpBuf = internalNioBuffer();
             tmpBuf.clear().position(index);
             tmpBuf.get(tmp);
             out.write(tmp);
@@ -346,33 +391,38 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
+        assert !freed;
         if (length == 0) {
             return 0;
         }
 
+        ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         return out.write(tmpBuf);
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-
+        assert !freed;
         if (buffer.hasArray()) {
             return in.read(buffer.array(), buffer.arrayOffset() + index, length);
         } else {
             byte[] tmp = new byte[length];
             int readBytes = in.read(tmp);
-            tmpBuf.clear().position(index);
-            tmpBuf.put(tmp);
+            ByteBuffer tmpNioBuf = internalNioBuffer();
+            tmpNioBuf.clear().position(index);
+            tmpNioBuf.put(tmp);
             return readBytes;
         }
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        tmpBuf.clear().position(index).limit(index + length);
+        assert !freed;
+        ByteBuffer tmpNioBuf = internalNioBuffer();
+        tmpNioBuf.clear().position(index).limit(index + length);
         try {
-            return in.read(tmpBuf);
+            return in.read(tmpNioBuf);
         } catch (ClosedChannelException e) {
             return -1;
         }
@@ -385,10 +435,11 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
+        assert !freed;
         if (index == 0 && length == capacity()) {
             return buffer.duplicate();
         } else {
-            return ((ByteBuffer) tmpBuf.clear().position(index).limit(index + length)).slice();
+            return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
         }
     }
 
@@ -404,9 +455,10 @@ public class DirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
+        assert !freed;
         ByteBuffer src;
         try {
-            src = (ByteBuffer) tmpBuf.clear().position(index).limit(index + length);
+            src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
         } catch (IllegalArgumentException e) {
             throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
         }
@@ -416,67 +468,52 @@ public class DirectByteBuf extends AbstractByteBuf {
         dst.put(src);
         dst.order(order());
         dst.clear();
-        return new DirectByteBuf(dst, maxCapacity());
+        return new UnpooledDirectByteBuf(alloc(), dst, maxCapacity());
     }
 
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    public ByteBuffer internalNioBuffer() {
+        ByteBuffer tmpNioBuf = this.tmpNioBuf;
+        if (tmpNioBuf == null) {
+            this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
+        }
+        return tmpNioBuf;
     }
 
-    private class DirectUnsafe implements Unsafe {
-        @Override
-        public ByteBuffer nioBuffer() {
-            return tmpBuf;
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        final int readerIndex = readerIndex();
+        if (readerIndex == writerIndex()) {
+            discardReadBytes();
+            return;
         }
 
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            throw new UnsupportedOperationException();
+        if (readerIndex > 0 && readerIndex >= capacity >>> 1) {
+            discardReadBytes();
+        }
+    }
+
+    @Override
+    public void free() {
+        if (freed) {
+            return;
         }
 
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return new DirectByteBuf(initialCapacity, Math.max(initialCapacity, maxCapacity()));
+        freed = true;
+        if (doNotFree) {
+            return;
         }
 
-        @Override
-        public void discardSomeReadBytes() {
-            final int readerIndex = readerIndex();
-            if (readerIndex == writerIndex()) {
-                discardReadBytes();
-                return;
-            }
+        freeDirect(buffer);
+    }
 
-            if (readerIndex > 0 && readerIndex >= capacity >>> 1) {
-                discardReadBytes();
-            }
-        }
-
-        @Override
-        public void acquire() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt ++;
-        }
-
-        @Override
-        public void release() {
-            if (refCnt <= 0) {
-                throw new IllegalStateException();
-            }
-            refCnt --;
-            if (refCnt == 0) {
-                if (doNotFree) {
-                    doNotFree = false;
-                } else {
-                    freeDirect(buffer);
-                }
-
-                buffer = null;
-                tmpBuf = null;
-            }
-        }
+    @Override
+    public ByteBuf unwrap() {
+        return null;
     }
 }
