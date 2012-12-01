@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 
@@ -37,6 +38,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -292,6 +294,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
+    @Override
+    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+        TransferTask task = new TransferTask(region, future);
+        task.transfer();
+    }
+
     private void beginRead() {
         if (inBeginRead || asyncReadInProgress || readSuspended.get()) {
             return;
@@ -537,6 +545,68 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 } else {
                     eventLoop().execute(readTask);
                 }
+            }
+        }
+    }
+
+    private final class TransferTask {
+        private final FileRegion region;
+        private final ChannelFuture future;
+        private long written;
+
+        public TransferTask(FileRegion region, ChannelFuture future) {
+            this.region = region;
+            this.future = future;
+        }
+
+        public void transfer() throws IOException {
+            region.transferTo(new WritableByteChannelAdapter(), written);
+        }
+
+        private final class WritableByteChannelAdapter implements WritableByteChannel {
+            @Override
+            public int write(final ByteBuffer src) throws IOException {
+                javaChannel().write(src, null, new CompletionHandler<Integer, Object>() {
+
+                    @Override
+                    public void completed(Integer result, Object attachment) {
+                        if (result == 0) {
+                            javaChannel().write(src, null, this);
+                            return;
+                        } else {
+                            written += result;
+                        }
+                        if (written >= region.getCount()) {
+                            future.setSuccess();
+                            return;
+                        }
+                        if (src.hasRemaining()) {
+                            javaChannel().write(src, null, this);
+                        } else {
+                            try {
+                                region.transferTo(WritableByteChannelAdapter.this, written);
+                            } catch (IOException e) {
+                                future.setFailure(e);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void failed(Throwable exc, Object attachment) {
+                        future.setFailure(exc);
+                    }
+                });
+                return 0;
+            }
+
+            @Override
+            public boolean isOpen() {
+                return javaChannel().isOpen();
+            }
+
+            @Override
+            public void close() throws IOException {
+                javaChannel().close();
             }
         }
     }
