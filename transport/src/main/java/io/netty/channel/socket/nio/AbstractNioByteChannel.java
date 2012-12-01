@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -36,7 +37,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected NioByteUnsafe newUnsafe() {
+    protected AbstractNioUnsafe newUnsafe() {
         return new NioByteUnsafe();
     }
 
@@ -134,65 +135,70 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     @Override
     protected void doFlushFileRegion(final FileRegion region, final ChannelFuture future) throws Exception {
         if (javaChannel() instanceof WritableByteChannel) {
-            final WritableByteChannel wch = (WritableByteChannel) javaChannel();
+            TransferTask transferTask = new TransferTask(region, (WritableByteChannel) javaChannel(), future);
+            transferTask.transfer();
+        } else {
+            throw new UnsupportedOperationException("Underlying Channel is not of instance "
+                    + WritableByteChannel.class);
+        }
+    }
+
+    private final class TransferTask implements NioTask<SelectableChannel> {
+        private long writtenBytes;
+        private final FileRegion region;
+        private final WritableByteChannel wch;
+        private final ChannelFuture future;
+
+        TransferTask(FileRegion region, WritableByteChannel wch, ChannelFuture future) {
+            this.region = region;
+            this.wch = wch;
+            this.future = future;
+        }
+
+        public void transfer() {
             try {
-                long written = 0;
                 for (;;) {
-                    long w = region.transferTo(wch, written);
-                    if (w == 0) {
-                        final long transfered = written;
-                        ((NioEventLoop) eventLoop()).executeWhenWritable(this, new NioTask<SelectableChannel>() {
-                            long written = transfered;
-
-                            @Override
-                            public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
-                                try {
-                                    for (;;) {
-                                        long w = region.transferTo(wch, written);
-                                        if (w == 0) {
-                                            // reschedule for write once the channel is writable again
-                                            ((NioEventLoop) eventLoop()).executeWhenWritable(AbstractNioByteChannel.this, this);
-                                            break;
-                                        } else if (w == -1 ) {
-                                            future.setSuccess();
-                                            return;
-                                        } else {
-                                            written =+ w;
-                                            if (written >= region.getCount()) {
-                                                future.setSuccess();
-                                                return;
-                                            }
-                                        }
-                                    }
-                                } catch (Throwable cause) {
-                                    future.setFailure(cause);
-                                    pipeline().fireExceptionCaught(cause);
-                                }
-                            }
-
-                            @Override
-                            public void channelUnregistered(SelectableChannel ch) throws Exception {
-                                // TODO: notify future ?
-                            }
-                        });
-                    } else if (w == -1) {
-                        future.setSuccess();
+                    long localWrittenBytes = region.transferTo(wch, writtenBytes);
+                    if (localWrittenBytes == 0) {
+                        // reschedule for write once the channel is writable again
+                        eventLoop().executeWhenWritable(
+                                AbstractNioByteChannel.this, this);
+                        return;
+                    } else if (localWrittenBytes == -1) {
+                        notifyEOF(region, writtenBytes, future);
                         return;
                     } else {
-                        written =+ w;
-                        if (written >= region.getCount()) {
+                        writtenBytes += localWrittenBytes;
+                        if (writtenBytes >= region.getCount()) {
                             future.setSuccess();
                             return;
                         }
-
                     }
                 }
-            } catch (Throwable t) {
-                future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
+            } catch (Throwable cause) {
+                future.setFailure(cause);
+                pipeline().fireExceptionCaught(cause);
             }
+        }
+
+        @Override
+        public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
+            transfer();
+        }
+
+        @Override
+        public void channelUnregistered(SelectableChannel ch) throws Exception {
+            // TODO: notify future ?
+        }
+    }
+
+    private static void notifyEOF(FileRegion region, long writtenBytes, ChannelFuture future) {
+        if (writtenBytes < region.getCount()) {
+            future.setFailure(new EOFException("Expected to be able to write "
+                    + region.getCount() + " bytes, but only wrote "
+                    + writtenBytes));
         } else {
-            throw new UnsupportedOperationException();
+            future.setSuccess();
         }
     }
 

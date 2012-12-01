@@ -22,10 +22,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerLifeCycleException;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.handler.fileregion.FileRegionHandler;
 import org.junit.Test;
 
 import java.io.File;
@@ -60,7 +58,17 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        FileRegionHandler ch = new FileRegionHandler();
+        ChannelInboundByteHandlerAdapter ch = new ChannelInboundByteHandlerAdapter() {
+            @Override
+            public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+                in.clear();
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                ctx.close();
+            }
+        };
         TestHandler sh = new TestHandler();
 
         sb.childHandler(sh);
@@ -68,13 +76,10 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().sync().channel();
 
-        boolean lifecycleException = false;
-
         try {
             Channel cc = cb.connect().sync().channel();
-            ChannelFuture future = cc.write(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length())).syncUninterruptibly();
+            ChannelFuture future = cc.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length())).syncUninterruptibly();
             assertTrue(future.isSuccess());
-
             while (sh.counter < data.length) {
                 if (sh.exception.get() != null) {
                     break;
@@ -98,9 +103,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             if (sh.exception.get() != null) {
                 throw sh.exception.get();
             }
-        } catch (ChannelHandlerLifeCycleException e) {
+        } catch (UnsupportedOperationException e) {
             e.printStackTrace();
-            // ignore as it is ok for non NIO channels
+            // ignore as it is ok for non NIO channels atm
         }
     }
 
@@ -128,10 +133,12 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             in.readBytes(actual);
 
             int lastIdx = counter;
+            if (lastIdx == data.length) {
+                //return;
+            }
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
-
             counter += actual.length;
         }
 

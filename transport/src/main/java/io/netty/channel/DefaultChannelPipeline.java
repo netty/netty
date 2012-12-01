@@ -1194,7 +1194,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return sendFile(firstContext(DIR_OUTBOUND), region, future);
     }
 
-    ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, FileRegion region, final ChannelFuture future) {
+    ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, final FileRegion region,
+                           final ChannelFuture future) {
         validateFuture(future);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -1208,7 +1209,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    flush(ctx, future);
+                    sendFile(ctx, region, future);
                 }
             });
         }

@@ -101,7 +101,8 @@ public class FileServer {
             for (int i = 0; i < 10; i++) {
                 future = ctx.channel().write(new DefaultFileRegion(new FileInputStream(file).getChannel(),
                         0, file.length()));
-                future = ctx.channel().write(Unpooled.copiedBuffer("Written!\r\n", CharsetUtil.ISO_8859_1));
+                future = ctx.channel().write(Unpooled.copiedBuffer("Written: " + file.length() + "\r\n",
+                        CharsetUtil.ISO_8859_1));
             }
             future.addListener(ChannelFutureListener.CLOSE);
 

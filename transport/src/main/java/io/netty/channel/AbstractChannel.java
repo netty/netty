@@ -436,6 +436,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void sendFile(final FileRegion region, final ChannelFuture future) {
+
             if (eventLoop().inEventLoop()) {
                 if (outboundBufSize() > 0) {
                     flushNotifier(newFuture()).addListener(new ChannelFutureListener() {
@@ -445,6 +446,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     });
                 } else {
+
                     // nothing pending try to send the fileRegion now!
                     sendFile0(region, future);
                 }

@@ -114,6 +114,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return ch;
     }
 
+    @Override
+    public NioEventLoop eventLoop() {
+        return (NioEventLoop) super.eventLoop();
+    }
+
     protected SelectionKey selectionKey() {
         assert selectionKey != null;
         return selectionKey;
