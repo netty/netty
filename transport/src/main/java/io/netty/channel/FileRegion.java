@@ -55,12 +55,12 @@ public interface FileRegion {
     /**
      * Returns the offset in the file where the transfer began.
      */
-    long getPosition();
+    long position();
 
     /**
      * Returns the number of bytes to transfer.
      */
-    long getCount();
+    long count();
 
     /**
      * Transfers the content of this file region to the specified channel.
@@ -68,8 +68,8 @@ public interface FileRegion {
      * @param target    the destination of the transfer
      * @param position  the relative offset of the file where the transfer
      *                  begins from.  For example, <tt>0</tt> will make the
-     *                  transfer start from {@link #getPosition()}th byte and
-     *                  <tt>{@link #getCount()} - 1</tt> will make the last
+     *                  transfer start from {@link #position()}th byte and
+     *                  <tt>{@link #count()} - 1</tt> will make the last
      *                  byte of the region transferred.
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;

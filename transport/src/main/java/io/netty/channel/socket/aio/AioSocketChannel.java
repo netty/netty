@@ -565,29 +565,35 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         private final class WritableByteChannelAdapter implements WritableByteChannel {
             @Override
-            public int write(final ByteBuffer src) throws IOException {
+            public int write(final ByteBuffer src) {
                 javaChannel().write(src, null, new CompletionHandler<Integer, Object>() {
 
                     @Override
                     public void completed(Integer result, Object attachment) {
-                        if (result == 0) {
-                            javaChannel().write(src, null, this);
-                            return;
-                        } else {
-                            written += result;
-                        }
-                        if (written >= region.getCount()) {
-                            future.setSuccess();
-                            return;
-                        }
-                        if (src.hasRemaining()) {
-                            javaChannel().write(src, null, this);
-                        } else {
-                            try {
-                                region.transferTo(WritableByteChannelAdapter.this, written);
-                            } catch (IOException e) {
-                                future.setFailure(e);
+                        try {
+
+                            if (result == 0) {
+                                javaChannel().write(src, null, this);
+                                return;
                             }
+                            if (result == -1) {
+                                checkEOF(region, written);
+                                future.setSuccess();
+                                return;
+                            }
+                            written += result;
+
+                            if (written >= region.count()) {
+                                future.setSuccess();
+                                return;
+                            }
+                            if (src.hasRemaining()) {
+                                javaChannel().write(src, null, this);
+                            } else {
+                                region.transferTo(WritableByteChannelAdapter.this, written);
+                            }
+                        } catch (Throwable cause) {
+                            future.setFailure(cause);
                         }
                     }
 

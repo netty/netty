@@ -164,12 +164,12 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                                 AbstractNioByteChannel.this, this);
                         return;
                     } else if (localWrittenBytes == -1) {
-                        checkEOF(region, writtenBytes, future);
+                        checkEOF(region, writtenBytes);
                         future.setSuccess();
                         return;
                     } else {
                         writtenBytes += localWrittenBytes;
-                        if (writtenBytes >= region.getCount()) {
+                        if (writtenBytes >= region.count()) {
                             future.setSuccess();
                             return;
                         }

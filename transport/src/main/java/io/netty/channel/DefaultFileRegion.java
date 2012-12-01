@@ -37,12 +37,12 @@ public class DefaultFileRegion implements FileRegion {
     }
 
     @Override
-    public long getPosition() {
+    public long position() {
         return position;
     }
 
     @Override
-    public long getCount() {
+    public long count() {
         return count;
     }
 
