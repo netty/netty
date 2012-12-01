@@ -51,7 +51,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        File file = File.createTempFile("netty-",".tmp");
+        File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
         FileOutputStream out = new FileOutputStream(file);
@@ -76,36 +76,32 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().sync().channel();
 
-        try {
-            Channel cc = cb.connect().sync().channel();
-            ChannelFuture future = cc.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length())).syncUninterruptibly();
-            assertTrue(future.isSuccess());
-            while (sh.counter < data.length) {
-                if (sh.exception.get() != null) {
-                    break;
-                }
-
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
-
-            sh.channel.close().sync();
-            cc.close().sync();
-            sc.close().sync();
-
-            if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
-                throw sh.exception.get();
-            }
-
+        Channel cc = cb.connect().sync().channel();
+        ChannelFuture future = cc.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(),
+                0L, file.length())).syncUninterruptibly();
+        assertTrue(future.isSuccess());
+        while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
-                throw sh.exception.get();
+                break;
             }
-        } catch (UnsupportedOperationException e) {
-            e.printStackTrace();
-            // ignore as it is ok for non NIO channels atm
+
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                // Ignore.
+            }
+        }
+
+        sh.channel.close().sync();
+        cc.close().sync();
+        sc.close().sync();
+
+        if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
+            throw sh.exception.get();
+        }
+
+        if (sh.exception.get() != null) {
+            throw sh.exception.get();
         }
     }
 
