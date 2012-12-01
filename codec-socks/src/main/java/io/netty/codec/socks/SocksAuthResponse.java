@@ -24,7 +24,7 @@ import io.netty.buffer.ByteBuf;
  * @see SocksAuthResponseDecoder
  */
 public final class SocksAuthResponse extends SocksResponse {
-
+    private static final SubnegotiationVersion SUBNEGOTIATION_VERSION = SubnegotiationVersion.AUTH_PASSWORD;
     private final AuthStatus authStatus;
 
     /**
@@ -52,7 +52,7 @@ public final class SocksAuthResponse extends SocksResponse {
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
+        byteBuf.writeByte(SUBNEGOTIATION_VERSION.getByteValue());
         byteBuf.writeByte(authStatus.getByteValue());
     }
 }
