@@ -170,12 +170,14 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     } else {
                         writtenBytes += localWrittenBytes;
                         if (writtenBytes >= region.count()) {
+                            region.close();
                             future.setSuccess();
                             return;
                         }
                     }
                 }
             } catch (Throwable cause) {
+                region.close();
                 future.setFailure(cause);
                 pipeline().fireExceptionCaught(cause);
             }

@@ -584,6 +584,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             written += result;
 
                             if (written >= region.count()) {
+                                region.close();
                                 future.setSuccess();
                                 return;
                             }
@@ -593,12 +594,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                                 region.transferTo(WritableByteChannelAdapter.this, written);
                             }
                         } catch (Throwable cause) {
+                            region.close();
                             future.setFailure(cause);
                         }
                     }
 
                     @Override
                     public void failed(Throwable exc, Object attachment) {
+                        region.close();
                         future.setFailure(exc);
                     }
                 });

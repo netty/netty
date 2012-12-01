@@ -243,6 +243,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
             long localWritten = region.transferTo(outChannel, written);
             if (localWritten == -1) {
                 checkEOF(region, written);
+                region.close();
                 future.setSuccess();
                 return;
             }
