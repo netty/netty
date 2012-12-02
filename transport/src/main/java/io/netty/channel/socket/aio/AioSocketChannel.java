@@ -314,13 +314,19 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 asyncReadInProgress = true;
                 if (byteBuf.hasNioBuffers()) {
                     ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());
-                    javaChannel().read(buffers, 0, buffers.length, config.getWriteTimeout(),
-                            TimeUnit.MILLISECONDS, this, SCATTERING_READ_HANDLER);
+                    if (buffers.length == 1) {
+                        javaChannel().read(
+                                buffers[0], config.getReadTimeout(), TimeUnit.MILLISECONDS, this, READ_HANDLER);
+                    } else {
+                        javaChannel().read(
+                                buffers, 0, buffers.length, config.getReadTimeout(), TimeUnit.MILLISECONDS,
+                                this, SCATTERING_READ_HANDLER);
+                    }
                 } else {
                     // Get a ByteBuffer view on the ByteBuf
                     ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-                    javaChannel().read(buffer, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                            this, READ_HANDLER);
+                    javaChannel().read(
+                            buffer, config.getReadTimeout(), TimeUnit.MILLISECONDS, this, READ_HANDLER);
                 }
 
                 if (asyncReadInProgress) {
