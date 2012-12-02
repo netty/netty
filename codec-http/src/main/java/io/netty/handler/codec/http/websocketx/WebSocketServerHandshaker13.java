@@ -155,7 +155,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                     p.remove(HttpChunkAggregator.class);
                 }
 
-                p.replace(HttpRequestDecoder.class, "wsdecoder",
+                p.get(HttpRequestDecoder.class).replace("wsdecoder",
                         new WebSocket13FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
                 p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
             }
