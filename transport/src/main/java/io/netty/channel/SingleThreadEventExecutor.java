@@ -98,6 +98,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                 try {
                     SingleThreadEventExecutor.this.run();
                     success = true;
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception from an event executor: ", t);
+                    shutdown();
                 } finally {
                     // Check if confirmShutdown() was called at the end of the loop.
                     if (success && lastAccessTimeNanos == 0) {
@@ -122,7 +125,11 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
                             cleanup();
                         } finally {
                             threadLock.release();
-                            assert taskQueue.isEmpty();
+                            if (!taskQueue.isEmpty()) {
+                                logger.warn(
+                                        "An event executor terminated with " +
+                                        "non-empty task queue (" + taskQueue.size() + ')');
+                            }
                         }
                     }
                 }
