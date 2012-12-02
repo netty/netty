@@ -266,3 +266,4 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
     @Override
     public void resumeIntermediaryDeallocations() { }
 }
+
