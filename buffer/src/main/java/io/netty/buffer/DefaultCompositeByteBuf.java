@@ -24,12 +24,14 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Queue;
 
 
 /**
@@ -48,6 +50,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     private Component lastAccessed;
     private int lastAccessedId;
     private boolean freed;
+    private Queue<UnsafeByteBuf> suspendedDeallocations;
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents) {
         super(Integer.MAX_VALUE);
@@ -1259,7 +1262,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         return result + ", components=" + components.size() + ')';
     }
 
-    private static final class Component {
+    private final class Component {
         final UnsafeByteBuf buf;
         final int length;
         final boolean allocatedBySelf;
@@ -1282,10 +1285,14 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             for (buf = this.buf; buf.unwrap() != null; buf = (UnsafeByteBuf) buf.unwrap()) {
                 continue;
             }
-            buf.free(); // We should not get a NPE here. If so, it must be a bug.
+
+            if (suspendedDeallocations == null) {
+                buf.free(); // We should not get a NPE here. If so, it must be a bug.
+            } else {
+                suspendedDeallocations.add(buf);
+            }
         }
     }
-
 
     @Override
     public CompositeByteBuf readerIndex(int readerIndex) {
@@ -1536,6 +1543,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         discardReadComponents();
     }
 
+    @Override
     public boolean isFreed() {
         return freed;
     }
@@ -1547,8 +1555,30 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         freed = true;
+        resumeIntermediaryDeallocations();
         for (Component c: components) {
             c.freeIfNecessary();
+        }
+    }
+
+    @Override
+    public void suspendIntermediaryDeallocations() {
+        if (suspendedDeallocations == null) {
+            suspendedDeallocations = new ArrayDeque<UnsafeByteBuf>(2);
+        }
+    }
+
+    @Override
+    public void resumeIntermediaryDeallocations() {
+        if (suspendedDeallocations == null) {
+            return;
+        }
+
+        Queue<UnsafeByteBuf> suspendedDeallocations = this.suspendedDeallocations;
+        this.suspendedDeallocations = null;
+
+        for (UnsafeByteBuf buf: suspendedDeallocations) {
+            buf.free();
         }
     }
 
