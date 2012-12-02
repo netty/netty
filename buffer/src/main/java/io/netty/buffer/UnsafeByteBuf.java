@@ -43,6 +43,11 @@ public interface UnsafeByteBuf extends ByteBuf {
     void discardSomeReadBytes();
 
     /**
+     * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.
+     */
+    boolean isFreed();
+
+    /**
      * Deallocates the internal memory block of this buffer or returns it to the {@link ByteBufAllocator} it came
      * from.  The result of accessing a released buffer is unspecified and can even cause JVM crash.
      */

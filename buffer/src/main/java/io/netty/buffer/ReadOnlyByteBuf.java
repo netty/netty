@@ -253,5 +253,10 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return buffer.isFreed();
+    }
+
+    @Override
     public void free() { }
 }
