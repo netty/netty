@@ -876,6 +876,16 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
+    public void suspendIntermediaryDeallocations() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public void resumeIntermediaryDeallocations() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
     public ByteBuf unwrap() {
         throw new UnreplayableOperationException();
     }

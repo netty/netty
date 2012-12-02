@@ -386,6 +386,12 @@ public class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public void suspendIntermediaryDeallocations() { }
+
+    @Override
+    public void resumeIntermediaryDeallocations() { }
+
+    @Override
     public ByteBuf unwrap() {
         return null;
     }

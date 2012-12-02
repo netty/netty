@@ -54,6 +54,19 @@ public interface UnsafeByteBuf extends ByteBuf {
     void free();
 
     /**
+     * Suspends the intermediary deallocation of the internal memory block of this buffer until asked via
+     * {@link #resumeIntermediaryDeallocations()}. An intermediary deallocation is usually made when the capacity of
+     * a buffer changes.
+     */
+    void suspendIntermediaryDeallocations();
+
+    /**
+     * Resumes the intermediary deallocation of the internal memory block of this buffer, suspended by
+     * {@link #suspendIntermediaryDeallocations()}.
+     */
+    void resumeIntermediaryDeallocations();
+
+    /**
      * Return the underlying buffer instance if this buffer is a wrapper.
      *
      * @return {@code null} if this buffer is not a wrapper

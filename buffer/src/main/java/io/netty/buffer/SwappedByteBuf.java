@@ -816,4 +816,14 @@ public class SwappedByteBuf implements UnsafeByteBuf {
 
     @Override
     public void free() { }
+
+    @Override
+    public void suspendIntermediaryDeallocations() {
+        buf.suspendIntermediaryDeallocations();
+    }
+
+    @Override
+    public void resumeIntermediaryDeallocations() {
+        buf.resumeIntermediaryDeallocations();
+    }
 }

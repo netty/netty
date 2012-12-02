@@ -259,4 +259,10 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
 
     @Override
     public void free() { }
+
+    @Override
+    public void suspendIntermediaryDeallocations() { }
+
+    @Override
+    public void resumeIntermediaryDeallocations() { }
 }
