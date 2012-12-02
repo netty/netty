@@ -810,5 +810,10 @@ public class SwappedByteBuf implements UnsafeByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return buf.isFreed();
+    }
+
+    @Override
     public void free() { }
 }

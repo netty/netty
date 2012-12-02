@@ -325,5 +325,10 @@ public class SlicedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return buffer.isFreed();
+    }
+
+    @Override
     public void free() { }
 }
