@@ -258,7 +258,11 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void free() {
+    public void free() { }
 
-    }
+    @Override
+    public void suspendIntermediaryDeallocations() { }
+
+    @Override
+    public void resumeIntermediaryDeallocations() { }
 }

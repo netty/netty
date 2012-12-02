@@ -271,6 +271,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
                     if (asyncWriteInProgress) {
                         // JDK decided to write data (or notify handler) later.
+                        ((UnsafeByteBuf) buf).suspendIntermediaryDeallocations();
                         break;
                     }
 
@@ -346,7 +347,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
             channel.asyncWriteInProgress = false;
+
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
+            ((UnsafeByteBuf) buf).resumeIntermediaryDeallocations();
+
             int writtenBytes = result.intValue();
             if (writtenBytes > 0) {
                 // Update the readerIndex with the amount of read bytes
