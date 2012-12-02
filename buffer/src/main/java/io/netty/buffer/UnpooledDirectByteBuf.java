@@ -499,6 +499,11 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return freed;
+    }
+
+    @Override
     public void free() {
         if (freed) {
             return;

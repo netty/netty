@@ -866,6 +866,11 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return ((UnsafeByteBuf) buffer).isFreed();
+    }
+
+    @Override
     public void free() {
         throw new UnreplayableOperationException();
     }

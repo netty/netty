@@ -17,6 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
+import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
@@ -244,6 +245,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             if (buf.readable()) {
                 for (;;) {
+                    if (((UnsafeByteBuf) buf).isFreed()) {
+                        break;
+                    }
                     // Ensure the readerIndex of the buffer is 0 before beginning an async write.
                     // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
                     // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
@@ -288,7 +292,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private void beginRead() {
-        if (inBeginRead || asyncReadInProgress || inputShutdown || readSuspended.get()) {
+        if (inBeginRead || asyncReadInProgress || readSuspended.get()) {
             return;
         }
 
@@ -297,6 +301,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             for (;;) {
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
+                if (((UnsafeByteBuf) byteBuf).isFreed()) {
+                    break;
+                }
+
                 if (!byteBuf.readable()) {
                     byteBuf.discardReadBytes();
                 }
