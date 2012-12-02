@@ -181,7 +181,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                 if (p.get(HttpChunkAggregator.class) != null) {
                     p.remove(HttpChunkAggregator.class);
                 }
-                p.replace(HttpRequestDecoder.class, "wsdecoder",
+                p.get(HttpRequestDecoder.class).replace("wsdecoder",
                         new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
 
                 p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
