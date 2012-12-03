@@ -30,7 +30,7 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksResponse, So
         return name;
     }
 
-    private SocksMessage.ProtocolVersion version;
+    private SocksMessage.SubnegotiationVersion version;
     private SocksMessage.AuthStatus authStatus;
     private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
 
@@ -42,8 +42,8 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksResponse, So
     public SocksResponse decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksMessage.SubnegotiationVersion.fromByte(byteBuf.readByte());
+                if (version != SocksMessage.SubnegotiationVersion.AUTH_PASSWORD) {
                     break;
                 }
                 checkpoint(State.READ_AUTH_RESPONSE);
