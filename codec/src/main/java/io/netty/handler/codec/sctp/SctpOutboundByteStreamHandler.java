@@ -33,7 +33,6 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
-
     /**
      * @param streamIdentifier stream number, this should be >=0 or <= max stream number of the association.
      * @param protocolIdentifier supported application protocol id.

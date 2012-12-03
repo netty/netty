@@ -187,7 +187,6 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
         this.failFast = failFast;
     }
 
-
     /** Returns true if the delimiters are "\n" and "\r\n".  */
     private static boolean isLineBased(final ByteBuf[] delimiters) {
         if (delimiters.length != 2) {

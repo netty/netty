@@ -47,7 +47,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         public void run() {
             selectionKey().interestOps(selectionKey().interestOps() & ~readInterestOp);
         }
-
     };
 
     final Runnable resumeReadTask = new Runnable() {
@@ -80,7 +79,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     logger.warn(
                             "Failed to close a partially initialized socket.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);

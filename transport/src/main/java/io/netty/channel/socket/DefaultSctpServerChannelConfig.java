@@ -54,7 +54,6 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
                 ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, ChannelOption.SCTP_INIT_MAXSTREAMS);
     }
 
-
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {

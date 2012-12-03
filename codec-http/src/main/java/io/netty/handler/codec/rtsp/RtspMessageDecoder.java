@@ -73,7 +73,6 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
         aggregator = new EmbeddedMessageChannel(new HttpChunkAggregator(maxContentLength));
     }
 
-
     @Override
     public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         Object o = super.decode(ctx, buffer);

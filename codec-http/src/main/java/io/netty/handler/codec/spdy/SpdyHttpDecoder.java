@@ -117,7 +117,6 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object, HttpMessage
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                     ctx.write(spdyRstStreamFrame);
                 }
-
             } else {
                 // SYN_STREAM frames initiated by the client are HTTP requests
                 try {

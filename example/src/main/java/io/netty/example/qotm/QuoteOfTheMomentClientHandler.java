@@ -22,7 +22,6 @@ import io.netty.util.CharsetUtil;
 
 public class QuoteOfTheMomentClientHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
 
-
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, DatagramPacket msg)

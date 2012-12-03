@@ -40,7 +40,6 @@ public class LocalTimeServer {
              .childHandler(new LocalTimeServerInitializer());
 
             b.bind().sync().channel().closeFuture().sync();
-
         } finally {
             b.shutdown();
         }

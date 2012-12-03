@@ -61,7 +61,6 @@ public final class NetworkConstants {
             InternalLoggerFactory.getInstance(NetworkConstants.class);
 
     static {
-
         //Start the process of discovering localhost
         InetAddress localhost;
         try {

@@ -68,7 +68,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
             Map<String, String> customHeaders, int maxFramePayloadLength) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
-
     }
 
     /**
@@ -162,7 +161,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
-
 
         if (customHeaders != null) {
             for (Map.Entry<String, String> e : customHeaders.entrySet()) {

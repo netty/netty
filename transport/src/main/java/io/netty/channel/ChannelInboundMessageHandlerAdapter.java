@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
-
     private final Class<?>[] acceptedMsgTypes;
 
     protected ChannelInboundMessageHandlerAdapter(Class<?>... acceptedMsgTypes) {
@@ -80,7 +79,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
         endMessageReceived(ctx);
     }
-
 
     /**
      * Returns {@code true} if and only if the specified message can be handled by this handler.

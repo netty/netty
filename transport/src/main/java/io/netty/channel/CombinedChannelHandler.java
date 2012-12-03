@@ -53,7 +53,6 @@ public class CombinedChannelHandler
                     ChannelStateHandler.class.getSimpleName() + " to get combined.");
         }
 
-
         if (in != null) {
             throw new IllegalStateException("init() cannot be called more than once.");
         }

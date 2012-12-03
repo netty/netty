@@ -84,7 +84,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                     logger.warn(
                             "Failed to close a partially initialized sctp channel.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
@@ -249,7 +248,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             data.getBytes(data.readerIndex(), nioData);
             nioData.flip();
         }
-
 
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
         mi.payloadProtocolID(packet.getProtocolIdentifier());

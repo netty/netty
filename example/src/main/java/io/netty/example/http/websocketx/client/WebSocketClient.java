@@ -66,7 +66,6 @@ public class WebSocketClient {
     public void run() throws Exception {
         Bootstrap b = new Bootstrap();
         try {
-
             String protocol = uri.getScheme();
             if (!"ws".equals(protocol)) {
                 throw new IllegalArgumentException("Unsupported protocol: " + protocol);

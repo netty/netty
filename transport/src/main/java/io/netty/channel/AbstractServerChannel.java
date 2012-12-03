@@ -64,7 +64,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return null;
     }
 
-
     @Override
     protected SocketAddress remoteAddress0() {
         return null;

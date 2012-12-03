@@ -40,7 +40,6 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, Soc
     private int port;
     private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
 
-
     public SocksCmdResponseDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);
     }
