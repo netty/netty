@@ -70,7 +70,6 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
         sendNumbers();
     }
 
-
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, final BigInteger msg) {

@@ -223,7 +223,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
     }
 
-
     private class Acceptor
             extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
 

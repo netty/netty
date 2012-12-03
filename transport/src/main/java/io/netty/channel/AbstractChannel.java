@@ -129,7 +129,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 allChannels.remove(id());
             }
         });
-
     }
 
     @Override
@@ -440,7 +439,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
             }
-
         }
 
         private void register0(ChannelFuture future) {

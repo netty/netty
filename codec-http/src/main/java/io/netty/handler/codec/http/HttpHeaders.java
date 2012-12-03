@@ -477,7 +477,6 @@ public class HttpHeaders {
         }
     }
 
-
     /**
      * Returns {@code true} if and only if the connection can remain open and
      * thus 'kept alive'.  This methods respects the value of the
@@ -725,7 +724,6 @@ public class HttpHeaders {
         } else {
             message.setHeader(name, null);
         }
-
     }
 
     /**
@@ -861,7 +859,6 @@ public class HttpHeaders {
     public static void setHost(HttpMessage message, String value) {
         message.setHeader(Names.HOST, value);
     }
-
 
     /**
      * Returns the value of the {@code "Date"} header.

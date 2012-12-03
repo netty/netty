@@ -30,14 +30,12 @@ public class DiscardServerHandler extends ChannelInboundByteHandlerAdapter {
     private static final Logger logger = Logger.getLogger(
             DiscardServerHandler.class.getName());
 
-
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
         // Discard the received data silently.
         in.clear();
     }
-
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx,

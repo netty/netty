@@ -124,7 +124,6 @@ public final class CookieDecoder {
                             System.currentTimeMillis();
 
                         maxAge = maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0);
-
                     } catch (ParseException e) {
                         // Ignore.
                     }

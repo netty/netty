@@ -42,7 +42,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
     private SocketAddress remoteAddress;
 
-
     /**
      * The {@link SocketAddress} to connect to once the {@link #connect()} method
      * is called.

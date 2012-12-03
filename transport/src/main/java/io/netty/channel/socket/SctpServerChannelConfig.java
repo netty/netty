@@ -55,7 +55,6 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      */
     void setBacklog(int backlog);
 
-
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_SNDBUF}</a> option.
@@ -79,7 +78,6 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      *     {@code SO_RCVBUF}</a> option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
-
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">

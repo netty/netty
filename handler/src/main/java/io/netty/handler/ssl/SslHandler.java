@@ -344,7 +344,6 @@ public class SslHandler
         return close(ctx.newFuture());
     }
 
-
     /**
      * See {@link #close()}
 
@@ -592,7 +591,6 @@ public class SslHandler
                 ctx.close();
             }
             return;
-
         }
         super.exceptionCaught(ctx, cause);
     }
@@ -615,7 +613,6 @@ public class SslHandler
             if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
                 return true;
             }
-
 
             // Inspect the StackTraceElements to see if it was a connection reset / broken pipe or not
             StackTraceElement[] elements = t.getStackTrace();
@@ -658,7 +655,6 @@ public class SslHandler
                 } catch (ClassNotFoundException e) {
                     // This should not happen just ignore
                 }
-
             }
         }
 
@@ -1001,7 +997,6 @@ public class SslHandler
         } else {
             timeoutFuture = null;
         }
-
 
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {
