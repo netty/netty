@@ -364,7 +364,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         } catch (CancelledKeyException e) {
             if (readyOps != 1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
-                unregisterWirtableTasks(ch);
+                unregisterWritableTasks(ch);
             }
             unsafe.close(unsafe.voidFuture());
         }
@@ -384,7 +384,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private static void unregisterWirtableTasks(AbstractNioChannel ch) {
+    private static void unregisterWritableTasks(AbstractNioChannel ch) {
         NioTask<SelectableChannel> task = null;
         for (;;) {
             task = ch.writableTasks.poll();
@@ -431,17 +431,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         for (AbstractNioChannel ch: channels) {
-            NioTask<SelectableChannel> task = null;
-            boolean flush = true;
-            for (;;) {
-                task = ch.writableTasks.poll();
-                if (task == null) {
-                    break;
-                } else {
-                    invokeChannelUnregistered(task, ch.selectionKey());
-                }
-
-            }
+            unregisterWritableTasks(ch);
             ch.unsafe().close(ch.unsafe().voidFuture());
         }
     }
