@@ -1256,6 +1256,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message, ChannelFuture future) {
+        if (message instanceof FileRegion) {
+            return sendFile((FileRegion) message, future);
+        }
         return write(tail, message, future);
     }
 

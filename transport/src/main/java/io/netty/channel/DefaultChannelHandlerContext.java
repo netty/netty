@@ -1264,11 +1264,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(region);
+        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, newFuture());
     }
 
     @Override
     public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
-        return pipeline.sendFile(region, future);
+        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, future);
     }
 }
