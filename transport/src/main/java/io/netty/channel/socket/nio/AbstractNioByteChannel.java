@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
@@ -190,13 +191,19 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
         @Override
         public void channelUnregistered(SelectableChannel ch) throws Exception {
-            // TODO: notify future ?
+            if (writtenBytes < region.count()) {
+                if(!isOpen()) {
+                    future.setFailure(new ClosedChannelException());
+                } else {
+                    future.setFailure(new IllegalStateException(
+                            "Channel was unregistered before the region could be fully written"));
+                }
+            }
         }
     }
 
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
-
 
     // 0 - not expanded because the buffer is writable
     // 1 - expanded because the buffer was not writable

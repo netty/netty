@@ -37,6 +37,4 @@ public interface ChannelOutboundInvoker {
     ChannelFuture flush(ChannelFuture future);
     ChannelFuture write(Object message, ChannelFuture future);
     ChannelFuture sendFile(FileRegion region, ChannelFuture future);
-
-
 }

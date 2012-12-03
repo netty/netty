@@ -18,7 +18,6 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -86,7 +85,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             }
 
             try {
-                Thread.sleep(1);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
                 // Ignore.
             }
@@ -111,11 +110,6 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         volatile int counter;
 
         @Override
-        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.buffer();
-        }
-
-        @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
@@ -129,9 +123,6 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             in.readBytes(actual);
 
             int lastIdx = counter;
-            if (lastIdx == data.length) {
-                //return;
-            }
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
