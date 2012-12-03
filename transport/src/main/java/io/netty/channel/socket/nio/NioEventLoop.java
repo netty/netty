@@ -357,37 +357,42 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                if (ch.writableTasks.isEmpty()) {
-                    unsafe.flushNow();
-                } else {
-                    NioTask<SelectableChannel> task = null;
-                    for (;;) {
-                        task = ch.writableTasks.poll();
-                        if (task == null) { break; }
-                        processSelectedKey(ch.selectionKey(), task);
-                    }
-
-                    k.interestOps(k.interestOps() | SelectionKey.OP_WRITE);
-                }
+                processWritable(k, ch);
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                 unsafe.finishConnect();
             }
         } catch (CancelledKeyException e) {
-            NioTask<SelectableChannel> task = null;
-
             if (readyOps != 1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
-                for (;;) {
-                    task = ch.writableTasks.poll();
-                    if (task == null) {
-                        break;
-                    } else {
-                        invokeChannelUnregistered(task, ch.selectionKey());
-                    }
-
-                }
+                unregisterWirtableTasks(ch);
             }
             unsafe.close(unsafe.voidFuture());
+        }
+    }
+
+    private static void processWritable(SelectionKey k, AbstractNioChannel ch) {
+        if (ch.writableTasks.isEmpty()) {
+            ch.unsafe().flushNow();
+        } else {
+            NioTask<SelectableChannel> task = null;
+            for (;;) {
+                task = ch.writableTasks.poll();
+                if (task == null) { break; }
+                processSelectedKey(ch.selectionKey(), task);
+            }
+            k.interestOps(k.interestOps() | SelectionKey.OP_WRITE);
+        }
+    }
+
+    private static void unregisterWirtableTasks(AbstractNioChannel ch) {
+        NioTask<SelectableChannel> task = null;
+        for (;;) {
+            task = ch.writableTasks.poll();
+            if (task == null) {
+                break;
+            } else {
+                invokeChannelUnregistered(task, ch.selectionKey());
+            }
         }
     }
 
