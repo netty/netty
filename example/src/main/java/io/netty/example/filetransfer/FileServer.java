@@ -94,11 +94,16 @@ public class FileServer {
         public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             File file = new File(msg);
             if (file.exists()) {
-                ctx.write(file + " " + file.length() + "\r\n");
+                if (!file.isFile()) {
+                    ctx.write("Not a file: " + file + "\n");
+                    return;
+                }
+                ctx.write(file + " " + file.length() + "\n");
                 ctx.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length()));
+                ctx.write("\n");
 
             } else {
-                ctx.write("File not found: " + file + "\r\n");
+                ctx.write("File not found: " + file + "\n");
             }
         }
 
