@@ -13,22 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.fileregion;
+package io.netty.example.filetransfer;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.CharsetUtil;
@@ -37,14 +36,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.net.InetSocketAddress;
 
+/**
+ * Server that accept the path of a file an echo back its content.
+ */
 public class FileServer {
 
     private final int port;
-    private final File file;
 
-    public FileServer(int port, File file) {
+    public FileServer(int port) {
         this.port = port;
-        this.file = file;
     }
 
     public void run() throws Exception {
@@ -61,12 +61,10 @@ public class FileServer {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(
-                             new FileHandler(), new ChannelInboundByteHandlerAdapter() {
-                         @Override
-                         public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                             in.clear();
-                         }
-                     });
+                             new StringEncoder(CharsetUtil.UTF_8),
+                             new LineBasedFrameDecoder(8192),
+                             new StringDecoder(CharsetUtil.UTF_8),
+                             new FileHandler());
                  }
              });
 
@@ -82,30 +80,32 @@ public class FileServer {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 2) {
-            int port = Integer.parseInt(args[0]);
-            File file = new File(args[1]);
-            new FileServer(port, file).run();
-
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
         } else {
-            System.err.println("Usage: " + FileServer.class.getName() + " <port> <file>");
-            System.exit(1);
+            port = 8080;
         }
-
+        new FileServer(port).run();
     }
 
-    private final class FileHandler extends ChannelStateHandlerAdapter {
+    private static final class FileHandler extends ChannelInboundMessageHandlerAdapter<String> {
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ChannelFuture future = null;
-            for (int i = 0; i < 10; i++) {
-                future = ctx.channel().write(new DefaultFileRegion(new FileInputStream(file).getChannel(),
-                        0, file.length()));
-                future = ctx.channel().write(Unpooled.copiedBuffer("Written: " + file.length() + "\r\n",
-                        CharsetUtil.ISO_8859_1));
-            }
-            future.addListener(ChannelFutureListener.CLOSE);
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+            File file = new File(msg);
+            if (file.exists()) {
+                ctx.write(file + " " + file.length() + "\r\n");
+                ctx.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length()));
 
+            } else {
+                ctx.write("File not found: " + file + "\r\n");
+            }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            cause.printStackTrace();
+            ctx.close();
         }
     }
 }
