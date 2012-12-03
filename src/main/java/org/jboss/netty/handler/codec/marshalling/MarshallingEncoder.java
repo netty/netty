@@ -83,7 +83,6 @@ public class MarshallingEncoder extends OneToOneEncoder {
         marshaller.finish();
         marshaller.close();
 
-
         ChannelBuffer encoded = output.getBuffer();
         encoded.setInt(0, encoded.writerIndex() - 4);
 

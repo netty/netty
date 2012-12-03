@@ -33,8 +33,6 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
         super(channel);
     }
 
-
-
     @Override
     boolean process() throws IOException {
 
@@ -57,8 +55,6 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
                 packet.getSocketAddress());
         return true;
     }
-
-
 
     static void write(
             OioDatagramChannel channel, ChannelFuture future,
@@ -101,7 +97,6 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
             }
         }
     }
-
 
     static void disconnect(OioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();

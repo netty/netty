@@ -66,7 +66,6 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
             return EMPTY_BUFFER;
         }
 
-
         if (src instanceof CompositeChannelBuffer && ((CompositeChannelBuffer) src).useGathering()) {
             return new GatheringSendBuffer(src.toByteBuffers());
         }
@@ -305,14 +304,12 @@ final class SocketSendBufferPool implements ExternalResourceReleasable {
         public void release() {
             // nothing todo
         }
-
     }
 
     final class FileSendBuffer implements SendBuffer {
 
         private final FileRegion file;
         private long writtenBytes;
-
 
         FileSendBuffer(FileRegion file) {
             this.file = file;

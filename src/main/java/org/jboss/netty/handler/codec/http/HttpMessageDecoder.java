@@ -401,7 +401,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         default: {
             throw new Error("Shouldn't reach here.");
         }
-
         }
     }
 
@@ -430,7 +429,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
         return false;
     }
-
 
     private Object reset() {
         HttpMessage message = this.message;
@@ -619,7 +617,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 throw new TooLongFrameException(
                         "HTTP header is larger than " +
                         maxHeaderSize + " bytes.");
-
             }
 
             sb.append(nextByte);

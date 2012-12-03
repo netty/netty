@@ -304,7 +304,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
             } finally {
                 updateCumulation(ctx, input);
             }
-
         } else {
             input = appendToCumulation(input);
             try {
@@ -529,7 +528,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
         } finally {
             pipeline.remove(this);
         }
-
     }
 
     /**
@@ -541,8 +539,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler implemen
     protected int actualReadableBytes() {
         return internalBuffer().readableBytes();
     }
-
-
 
     /**
      * Returns the internal cumulative buffer of this decoder.  You usually

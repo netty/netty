@@ -116,11 +116,9 @@ public class WebSocketServerProtocolHandler extends SimpleChannelUpstreamHandler
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
     }
 
-
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
     }
 
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
     }
-
 }

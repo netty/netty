@@ -184,7 +184,6 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             }
         }
 
-
         ChannelFuture future = channel.write(res);
 
         // Upgrade the connection and send the handshake response.

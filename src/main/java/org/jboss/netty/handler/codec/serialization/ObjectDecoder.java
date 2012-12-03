@@ -53,7 +53,6 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
         this(1048576);
     }
 
-
     /**
      * Creates a new decoder whose maximum object size is {@code 1048576}
      * bytes.  If the size of the received object is greater than
@@ -97,7 +96,6 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
         }
         this.classResolver = classResolver;
     }
-
 
     /**
      * Create a new decoder with the specified maximum object size and the {@link ClassLoader}

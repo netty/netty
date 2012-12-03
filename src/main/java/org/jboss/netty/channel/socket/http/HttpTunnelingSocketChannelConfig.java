@@ -276,7 +276,6 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
 
     public void setSendBufferSize(int sendBufferSize) {
         channel.realChannel.getConfig().setSendBufferSize(sendBufferSize);
-
     }
 
     public void setSoLinger(int soLinger) {

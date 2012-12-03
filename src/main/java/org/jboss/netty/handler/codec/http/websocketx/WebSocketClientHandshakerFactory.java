@@ -82,7 +82,5 @@ public class WebSocketClientHandshakerFactory {
         }
 
         throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
-
     }
-
 }

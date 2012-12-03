@@ -512,7 +512,6 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
                         Channels.write(ctx, writeFuture, partialDataFrame, remoteAddress);
                         return;
-
                     } else {
                         // Stream is stalled -- enqueue Data frame and return
                         spdySession.putPendingWrite(streamID, e);
@@ -801,7 +800,6 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
                     }
 
                     Channels.write(ctx, e.getFuture(), spdyDataFrame, e.getRemoteAddress());
-
                 } else {
                     // We can send a partial frame
                     spdySession.updateSendWindowSize(streamID, -1 * newWindowSize);

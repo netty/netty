@@ -35,7 +35,6 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
 
-
     private final BossPool<NioClientBoss> bossPool;
 
     NioClientSocketPipelineSink(BossPool<NioClientBoss> bossPool) {

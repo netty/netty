@@ -38,7 +38,6 @@ public class ChannelLocal<T> implements Iterable<Entry<Channel, T>> {
     private final ConcurrentMap<Channel, T> map =
         new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
 
-
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         public void operationComplete(ChannelFuture future) throws Exception {
             remove(future.getChannel());

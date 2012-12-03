@@ -149,7 +149,6 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         spdyVersion = version;
     }
 
-
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent evt)
             throws Exception {
         if (!(evt instanceof MessageEvent)) {

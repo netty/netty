@@ -283,12 +283,10 @@ import java.net.SocketAddress;
 public abstract class ReplayingDecoder<T extends Enum<T>>
         extends FrameDecoder {
 
-
     private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(this);
     private T state;
     private int checkpoint;
     private boolean needsCleanup;
-
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).

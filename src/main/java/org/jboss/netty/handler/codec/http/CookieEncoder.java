@@ -165,7 +165,6 @@ public class CookieEncoder {
                     sb.setCharAt(sb.length() - 1, (char) HttpConstants.DOUBLE_QUOTE);
                     sb.append((char) HttpConstants.SEMICOLON);
                     sb.append((char) HttpConstants.SP);
-
                 }
                 if (cookie.isDiscard()) {
                     sb.append(CookieHeaderNames.DISCARD);
@@ -264,7 +263,6 @@ public class CookieEncoder {
         sb.append((char) HttpConstants.DOUBLE_QUOTE);
         sb.append((char) HttpConstants.SEMICOLON);
         sb.append((char) HttpConstants.SP);
-
     }
 
     private static void add(StringBuilder sb, String name, int val) {

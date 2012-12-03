@@ -283,8 +283,6 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         }
     }
 
-
-
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {
             Channels.fireExceptionCaught(

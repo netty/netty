@@ -475,7 +475,6 @@ public class HttpHeaders {
         }
     }
 
-
     /**
      * Returns {@code true} if and only if the connection can remain open and
      * thus 'kept alive'.  This methods respects the value of the

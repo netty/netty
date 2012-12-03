@@ -44,10 +44,9 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
     public void run() {
         boolean fireConnected = channel instanceof OioAcceptedSocketChannel;
         if (fireConnected && channel.isOpen()) {
-             // Fire the channelConnected event for OioAcceptedSocketChannel.
+            // Fire the channelConnected event for OioAcceptedSocketChannel.
             // See #287
             fireChannelConnected(channel, channel.getRemoteAddress());
-
         }
         super.run();
     }
@@ -117,7 +116,6 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                             fr.releaseExternalResources();
                         }
                     }
-
                 }
             } else {
                 ChannelBuffer a = (ChannelBuffer) message;
@@ -150,6 +148,4 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
             }
         }
     }
-
-
 }

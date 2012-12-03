@@ -395,7 +395,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         return frame;
     }
 
-
     private void failIfNecessary(ChannelHandlerContext ctx, boolean firstDetectionOfTooLongFrame) {
         if (bytesToDiscard == 0) {
             // Reset to the initial state and tell the handlers that
@@ -413,7 +412,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
                 fail(ctx, tooLongFrameLength);
             }
         }
-
     }
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {

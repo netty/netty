@@ -113,7 +113,6 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<VoidEnum> {
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
         if (e.getCause() instanceof TooLongFrameException) {
             e.getChannel().close();
-
         } else {
             super.exceptionCaught(ctx, e);
         }

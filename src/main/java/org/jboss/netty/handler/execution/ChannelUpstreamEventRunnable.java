@@ -27,7 +27,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  */
 public class ChannelUpstreamEventRunnable extends ChannelEventRunnable {
 
-
     /**
      * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
      * upstream via the specified {@link ChannelHandlerContext}.
@@ -35,7 +34,6 @@ public class ChannelUpstreamEventRunnable extends ChannelEventRunnable {
     public ChannelUpstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e, Executor executor) {
         super(ctx, e, executor);
     }
-
 
     /**
      * Sends the event upstream.

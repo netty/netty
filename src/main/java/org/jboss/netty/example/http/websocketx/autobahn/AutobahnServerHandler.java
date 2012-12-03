@@ -86,7 +86,6 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
                     .format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
         }
 
-
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {

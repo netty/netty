@@ -28,7 +28,6 @@ public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runn
         this.task = task;
     }
 
-
     public void run() {
         synchronized (this) {
             if (!isCancelled()) {
@@ -52,7 +51,4 @@ public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runn
         }
         return super.cancel();
     }
-
-
-
 }

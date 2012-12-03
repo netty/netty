@@ -207,7 +207,6 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         sink = new NioClientSocketPipelineSink(bossPool);
     }
 
-
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         return new NioClientSocketChannel(this, pipeline, sink, workerPool.nextWorker());
     }

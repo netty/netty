@@ -82,7 +82,6 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable {
         releaseExternal(next);
     }
 
-
     private static void releaseExternal(Executor executor) {
         if (executor instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) executor).releaseExternalResources();

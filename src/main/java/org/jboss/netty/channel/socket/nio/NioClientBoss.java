@@ -144,7 +144,6 @@ public final class NioClientBoss implements Boss {
         if (wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
-
     }
 
     public void run() {
@@ -187,9 +186,7 @@ public final class NioClientBoss implements Boss {
                             // this may be the cause of the jdk epoll(..) bug, so increment the counter
                             // which we use later to see if its really the jdk bug.
                             selectReturnsImmediately ++;
-
                         }
-
                     } else {
                         selectReturnsImmediately = 0;
                     }
@@ -269,7 +266,6 @@ public final class NioClientBoss implements Boss {
                                         logger.warn(
                                                 "Failed to close a selector.", e);
                                     }
-
                                 } finally {
                                     this.selector = null;
                                 }
@@ -290,7 +286,6 @@ public final class NioClientBoss implements Boss {
                     logger.warn(
                             "Unexpected exception in the selector loop.", t);
                 }
-
 
                 // Prevent possible consecutive immediate failures.
                 try {

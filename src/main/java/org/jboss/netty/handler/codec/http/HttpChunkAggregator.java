@@ -214,7 +214,6 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
         } else {
             currentMessage.setContent(ChannelBuffers.wrappedBuffer(cumulation, input));
         }
-
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {

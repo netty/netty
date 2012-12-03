@@ -61,7 +61,6 @@ public class CIDR6 extends CIDR {
         }
     }
 
-
     public int compareTo(CIDR arg) {
         if (arg instanceof CIDR4) {
             BigInteger net = ipv6AddressToBigInteger(arg.baseAddress);

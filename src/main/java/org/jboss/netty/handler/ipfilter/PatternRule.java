@@ -173,7 +173,6 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
             }
         }
         return false;
-
     }
 
     public int compareTo(Object o) {

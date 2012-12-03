@@ -420,7 +420,6 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
-
     }
 
     private final class WriterIdleTimeoutTask implements TimerTask {

@@ -274,7 +274,6 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
                     }
                 }
                 consolidatedWrite(pendingWrites);
-
             } else {
                 for (;;) {
                     MessageEvent e = queue.poll();
@@ -383,7 +382,6 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
                 cause = new ClosedChannelException();
             }
             ev.getFuture().setFailure(cause);
-
         }
         if (cause != null) {
             Channels.fireExceptionCaught(ctx.getChannel(), cause);
@@ -394,12 +392,10 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // Nothing to do
-
     }
 
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // Nothing to do
-
     }
 
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
@@ -424,12 +420,10 @@ public class BufferedWriteHandler extends SimpleChannelHandler implements LifeCy
                 cause = new IOException("Unable to flush message");
             }
             ev.getFuture().setFailure(cause);
-
         }
+
         if (cause != null) {
             Channels.fireExceptionCaughtLater(ctx.getChannel(), cause);
         }
     }
-
-
 }

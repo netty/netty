@@ -133,7 +133,6 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             } else {
                 return chunk.getContent();
             }
-
         }
 
         // Unknown message type.

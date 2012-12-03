@@ -35,8 +35,6 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink {
             return wrapper;
         }
         return super.execute(pipeline, task);
-
-
     }
 
     @Override
@@ -48,5 +46,4 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink {
         }
         return fireLater;
     }
-
 }

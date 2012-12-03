@@ -63,7 +63,6 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
                         + "writeBufferHighWaterMark; setting to the half of the "
                         + "writeBufferHighWaterMark.");
             }
-
         }
     }
 
@@ -193,7 +192,6 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
                 throw new ChannelException(e);
             }
         }
-
     }
 
     @Override
@@ -244,6 +242,4 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             }
         }
     }
-
-
 }

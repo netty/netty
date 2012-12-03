@@ -92,7 +92,6 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     boolean inWriteNowLoop;
     boolean writeSuspended;
 
-
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
 
@@ -166,7 +165,6 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     void setRawInterestOpsNow(int interestOps) {
         setInterestOpsNow(interestOps);
     }
-
 
     @Override
     public int getInterestOps() {

@@ -80,7 +80,6 @@ public abstract class AbstractNioBossPool<E extends Boss>
         return (E) bosses[Math.abs(bossIndex.getAndIncrement() % bosses.length)];
     }
 
-
     public void releaseExternalResources() {
         ExecutorUtil.terminate(bossExecutor);
         for (Boss boss: bosses) {

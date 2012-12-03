@@ -519,7 +519,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                         HttpPostBodyUtil.FILE + "; " + HttpPostBodyUtil.FILENAME + "=\"" +
                         encodeAttribute(fileUpload.getFilename(), charset) +
                         "\"\r\n");
-
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
                 // Content-Disposition: form-data; name="files"; filename="file1.txt"
@@ -940,7 +939,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
     public boolean isEndOfInput() throws Exception {
         return isLastChunkSent;
     }
-
 
     public boolean hasNextChunk() throws Exception {
       return !isLastChunkSent;

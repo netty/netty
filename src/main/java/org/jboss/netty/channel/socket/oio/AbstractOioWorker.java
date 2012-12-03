@@ -51,7 +51,6 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
         channel.worker = this;
     }
 
-
     public void run() {
         thread = channel.workerThread = Thread.currentThread();
 
@@ -105,13 +104,11 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
         // just to make we don't have something left
         processEventQueue();
-
     }
 
     static boolean isIoThread(AbstractOioChannel channel) {
         return Thread.currentThread() == channel.workerThread;
     }
-
 
     public void executeInIoThread(Runnable task) {
         // check if the current thread is the worker thread
@@ -138,7 +135,6 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             task.run();
         }
     }
-
 
     /**
      * Process the incoming messages and also is responsible for call

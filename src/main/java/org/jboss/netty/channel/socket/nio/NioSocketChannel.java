@@ -37,7 +37,6 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
 
     private final NioSocketChannelConfig config;
 
-
     public NioSocketChannel(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
@@ -89,7 +88,6 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
         return false;
     }
 
-
     @Override
     InetSocketAddress getLocalSocketAddress() throws Exception {
         return (InetSocketAddress) channel.socket().getLocalSocketAddress();
@@ -99,7 +97,6 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
     InetSocketAddress getRemoteSocketAddress() throws Exception {
         return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
     }
-
 
     @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {

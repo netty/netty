@@ -89,7 +89,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
     }
 
-
     /**
      * <p>
      * Sends the opening request to the server:
@@ -266,8 +265,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         channel.getPipeline().get(HttpResponseDecoder.class).replace("ws-decoder",
                 new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
-
-
     }
 
     private static String insertRandomCharacters(String key) {

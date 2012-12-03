@@ -627,7 +627,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
         }
     }
 
-
     /**
      * Creates a new, empty map with the specified initial capacity and load
      * factor and with the default reference types (weak keys, strong values),
@@ -1207,13 +1206,11 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
         public SimpleEntry(K key, V value) {
             this.key = key;
             this.value = value;
-
         }
 
         public SimpleEntry(Entry<? extends K, ? extends V> entry) {
             key = entry.getKey();
             value = entry.getValue();
-
         }
 
         public K getKey() {
@@ -1283,7 +1280,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
             put(getKey(), value);
             return v;
         }
-
     }
 
     final class EntryIterator extends HashIterator implements
@@ -1297,7 +1293,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
     final class KeySet extends AbstractSet<K> {
         @Override
         public Iterator<K> iterator() {
-
             return new KeyIterator();
         }
 
@@ -1319,7 +1314,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
         @Override
         public boolean remove(Object o) {
             return ConcurrentIdentityHashMap.this.remove(o) != null;
-
         }
 
         @Override

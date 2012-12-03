@@ -470,7 +470,6 @@ public class StaticChannelPipeline implements ChannelPipeline {
             canHandleUpstream = handler instanceof ChannelUpstreamHandler;
             canHandleDownstream = handler instanceof ChannelDownstreamHandler;
 
-
             if (!canHandleUpstream && !canHandleDownstream) {
                 throw new IllegalArgumentException(
                         "handler must be either " +

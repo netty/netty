@@ -83,7 +83,6 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
         if (allocateFullBuffer) {
             return factory.getBuffer(frameLength);
-
         }
         return super.newCumulationBuffer(ctx, minimumCapacity);
     }

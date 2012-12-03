@@ -190,7 +190,6 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
             }
         }
 
-
         return lineBuf.toString();
     }
 

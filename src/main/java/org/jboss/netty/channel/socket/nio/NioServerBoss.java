@@ -79,7 +79,6 @@ public final class NioServerBoss implements Boss {
 
     private Thread currentThread;
 
-
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
@@ -121,7 +120,6 @@ public final class NioServerBoss implements Boss {
                             close(channel, future);
                         }
                     }
-
                 }
             });
             assert offered;
@@ -307,7 +305,6 @@ public final class NioServerBoss implements Boss {
                         break;
                     }
                     registerAcceptedChannel(channel, acceptedSocket, currentThread);
-
                 }
             } catch (CancelledKeyException e) {
                 // Raised by accept() when the server socket was closed.
@@ -358,7 +355,6 @@ public final class NioServerBoss implements Boss {
                             "Failed to close a partially accepted socket.",
                             e2);
                 }
-
             }
         }
     }

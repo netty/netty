@@ -98,11 +98,6 @@ class LimitingByteInput implements ByteInput {
      *
      */
     static final class TooBigObjectException extends IOException {
-
-        /**
-         *
-         */
         private static final long serialVersionUID = 1L;
-
     }
 }

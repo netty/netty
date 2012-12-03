@@ -44,7 +44,6 @@ public class NioClientBossPool extends AbstractNioBossPool<NioClientBoss> {
         init();
     }
 
-
     /**
      * Create a new instance using a new {@link HashedWheelTimer} and no {@link ThreadNameDeterminer}
      *

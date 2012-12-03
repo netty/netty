@@ -55,7 +55,6 @@ import static org.jboss.netty.channel.Channels.*;
 
 abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
 
-
     private static final AtomicInteger nextId = new AtomicInteger();
 
     final int id = nextId.incrementAndGet();
@@ -69,7 +68,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
-
 
     /**
      * Executor used to execute {@link Runnable}s such as channel registration
@@ -118,7 +116,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
 
     private final Queue<Runnable> eventQueue = new ConcurrentLinkedQueue<Runnable>();
 
-
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
@@ -147,7 +144,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
             }
-
         }
     }
 
@@ -221,7 +217,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         assert selector != null && selector.isOpen();
     }
 
-
     public void run() {
         thread = Thread.currentThread();
 
@@ -271,9 +266,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                             // this may be the cause of the jdk epoll(..) bug, so increment the counter
                             // which we use later to see if its really the jdk bug.
                             selectReturnsImmediately ++;
-
                         }
-
                     } else {
                         selectReturnsImmediately = 0;
                     }
@@ -419,9 +412,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 }
             }
         }
-
     }
-
 
     private void processRegisterTaskQueue() throws IOException {
         for (;;) {
@@ -498,8 +489,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         return false;
     }
 
-
-
     private void close(SelectionKey k) {
         AbstractNioChannel<?> ch = (AbstractNioChannel<?>) k.attachment();
         close(ch, succeededFuture(ch));
@@ -574,7 +563,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                     } else {
                         future = evt.getFuture();
                         buf = channel.currentWriteBuffer;
-
                     }
 
                     long localWrittenBytes = 0;
@@ -712,7 +700,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-
     void close(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
@@ -804,8 +791,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                     fireExceptionCaught = true;
                 }
                 evt.getFuture().setFailure(cause);
-
-
             }
         }
 
@@ -919,7 +904,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
             }
         }
     }
-
 
     public void releaseExternalResources() {
         sendBufferPool.releaseExternalResources();

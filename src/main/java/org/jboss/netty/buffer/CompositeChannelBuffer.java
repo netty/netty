@@ -614,7 +614,6 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
         //Return the component byte buffer
         return components[componentId(index)];
-
     }
 
     public ChannelBuffer slice(int index, int length) {

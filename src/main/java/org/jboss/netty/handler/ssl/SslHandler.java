@@ -464,7 +464,6 @@ public class SslHandler extends FrameDecoder
      */
     public ChannelFuture getSSLEngineInboundCloseFuture() {
         return sslEngineCloseFuture;
-
     }
 
     /**
@@ -654,7 +653,6 @@ public class SslHandler extends FrameDecoder
                 } catch (ClassNotFoundException e) {
                     // This should not happen just ignore
                 }
-
             }
         }
 
@@ -815,7 +813,6 @@ public class SslHandler extends FrameDecoder
             // reset the packet length so it will be parsed again on the next call
             packetLength = Integer.MIN_VALUE;
         }
-
     }
 
     /**
@@ -1022,7 +1019,6 @@ public class SslHandler extends FrameDecoder
                     ChannelBuffer msg =
                             ctx.getChannel().getConfig().getBufferFactory().getBuffer(outNetBuf.remaining());
 
-
                     // Transfer the bytes to the new ChannelBuffer using some safe method that will also
                     // work with "non" heap buffers
                     //
@@ -1106,7 +1102,6 @@ public class SslHandler extends FrameDecoder
                         !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
                         needsHandshake = true;
-
                     }
                 }
                 if (needsHandshake) {
@@ -1121,7 +1116,6 @@ public class SslHandler extends FrameDecoder
                 if (result.getStatus() == Status.CLOSED) {
                     sslEngineCloseFuture.setClosed();
                 }
-
 
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 handleRenegotiation(handshakeStatus);
@@ -1149,7 +1143,6 @@ public class SslHandler extends FrameDecoder
                     throw new IllegalStateException(
                             "Unknown handshake status: " + handshakeStatus);
                 }
-
             }
 
             if (needsWrap) {
@@ -1299,7 +1292,6 @@ public class SslHandler extends FrameDecoder
                             "SSLEngine.closeInbound() raised an exception after " +
                             "a handshake failure.", e);
                 }
-
             }
         }
 
@@ -1403,7 +1395,6 @@ public class SslHandler extends FrameDecoder
                 cause = new IOException("Unable to write data");
             }
             pw.future.setFailure(cause);
-
         }
 
         for (;;) {
@@ -1415,14 +1406,12 @@ public class SslHandler extends FrameDecoder
                 cause = new IOException("Unable to write data");
             }
             ev.getFuture().setFailure(cause);
-
         }
 
         if (cause != null) {
             fireExceptionCaughtLater(ctx, cause);
         }
     }
-
 
     /**
      * Calls {@link #handshake()} once the {@link Channel} is connected
@@ -1443,7 +1432,6 @@ public class SslHandler extends FrameDecoder
                         // See https://github.com/netty/netty/issues/358
                         ctx.sendUpstream(e);
                     }
-
                 }
             });
         } else {
@@ -1469,9 +1457,7 @@ public class SslHandler extends FrameDecoder
                     cause = new ClosedChannelException();
                 }
                 pw.future.setFailure(cause);
-
             }
-
 
             for (;;) {
                 MessageEvent ev = pendingEncryptedWrites.poll();
@@ -1482,7 +1468,6 @@ public class SslHandler extends FrameDecoder
                     cause = new ClosedChannelException();
                 }
                 ev.getFuture().setFailure(cause);
-
             }
         }
 

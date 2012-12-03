@@ -31,7 +31,6 @@ class ChannelBufferByteOutput implements ByteOutput {
 
     private final ChannelBuffer buffer;
 
-
     /**
      * Create a new instance which use the given {@link ChannelBuffer}
      */

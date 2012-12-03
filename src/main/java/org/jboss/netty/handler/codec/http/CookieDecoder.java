@@ -180,7 +180,6 @@ public class CookieDecoder {
         return cookies;
     }
 
-
     private static void extractKeyValuePairs(
             final String header, final List<String> names, final List<String> values) {
 

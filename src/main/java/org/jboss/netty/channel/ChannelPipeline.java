@@ -437,7 +437,6 @@ public interface ChannelPipeline {
      */
     ChannelHandlerContext getContext(Class<? extends ChannelHandler> handlerType);
 
-
     /**
      * Sends the specified {@link ChannelEvent} to the first
      * {@link ChannelUpstreamHandler} in this pipeline.

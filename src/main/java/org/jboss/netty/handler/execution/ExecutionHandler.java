@@ -120,7 +120,6 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
         this(executor, false, true);
     }
 
-
     /**
      * Use {@link #ExecutionHandler(Executor, boolean, boolean)}
      *

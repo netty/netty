@@ -62,17 +62,13 @@ abstract class AbstractOioChannel extends AbstractChannel {
         }
     }
 
-
     public boolean isBound() {
         return isOpen() && isSocketBound();
     }
 
-
     public boolean isConnected() {
         return isOpen() && isSocketConnected();
     }
-
-
 
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
@@ -86,7 +82,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
         }
         return localAddress;
     }
-
 
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;

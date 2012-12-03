@@ -32,16 +32,11 @@ public class PrematureChannelClosureException extends Exception {
         super(msg);
     }
 
-
     public PrematureChannelClosureException(String msg, Throwable t) {
         super(msg, t);
     }
 
-
     public PrematureChannelClosureException(Throwable t) {
         super(t);
     }
-
-
-
 }

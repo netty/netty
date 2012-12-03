@@ -158,7 +158,6 @@ public class ChunkedWriteHandler
                 break;
             }
 
-
             Object m = currentEvent.getMessage();
             if (m instanceof ChunkedInput) {
                 closeInput((ChunkedInput) m);
@@ -170,7 +169,6 @@ public class ChunkedWriteHandler
             }
             currentEvent.getFuture().setFailure(cause);
         }
-
 
         if (cause != null) {
             if (fireNow) {
@@ -190,7 +188,6 @@ public class ChunkedWriteHandler
         if (acquired = flush.compareAndSet(false, true)) {
             flushNeeded = false;
             try {
-
                 if (!channel.isConnected()) {
                     discard(ctx, fireNow);
                     return;
@@ -293,7 +290,6 @@ public class ChunkedWriteHandler
                 // mark the flush as done
                 flush.set(false);
             }
-
         }
 
         if (acquired && (!channel.isConnected() || channel.isWritable() && !queue.isEmpty() && !suspend
@@ -314,12 +310,10 @@ public class ChunkedWriteHandler
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // nothing to do
-
     }
 
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // nothing to do
-
     }
 
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
@@ -333,7 +327,6 @@ public class ChunkedWriteHandler
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // Fail all MessageEvent's that are left. This is needed because otherwise we would never notify the
         // ChannelFuture and the registered FutureListener. See #304
-        //
         Throwable cause = null;
         boolean fireExceptionCaught = false;
 

@@ -36,7 +36,6 @@ final class SocketReceiveBufferAllocator implements ExternalResourceReleasable {
         this.percentual = percentual;
     }
 
-
     ByteBuffer get(int size) {
         if (buf == null) {
             return newBuffer(size);

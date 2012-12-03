@@ -34,7 +34,6 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
         return channel;
     }
 
-
     /**
      * Release all the previous created channels.
      * This takes care of calling {@link LocalChannelRegistry#unregister(LocalAddress)} for each of them.

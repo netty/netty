@@ -96,7 +96,6 @@ final class WebSocketUtil {
         }
     }
 
-
     /**
      * @deprecated use {@link #base64(ChannelBuffer)}
      */
@@ -146,7 +145,6 @@ final class WebSocketUtil {
     static int randomNumber(int min, int max) {
         return (int) (Math.random() * max + min);
     }
-
 
     private WebSocketUtil() {
         // Unused

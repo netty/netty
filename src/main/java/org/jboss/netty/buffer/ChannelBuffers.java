@@ -447,7 +447,6 @@ public final class ChannelBuffers {
         return EMPTY_BUFFER;
     }
 
-
     /**
      * Creates a new composite buffer which wraps the slices of the specified
      * NIO buffers without copying them.  A modification on the content of the

@@ -109,7 +109,6 @@ public class SslBufferPool {
         return acquireBuffer();
     }
 
-
     /**
      * Release a previous acquired {@link ByteBuffer}
      */

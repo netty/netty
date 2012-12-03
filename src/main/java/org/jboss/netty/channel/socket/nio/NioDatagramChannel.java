@@ -59,7 +59,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         config = new DefaultNioDatagramChannelConfig(channel);
 
         fireChannelOpen(this);
-
     }
 
     private static DatagramChannel openNonBlockingChannel(InternetProtocolFamily family) {
@@ -96,8 +95,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         }
     }
 
-
-
     @Override
     public NioDatagramWorker getWorker() {
         return (NioDatagramWorker) super.getWorker();
@@ -125,8 +122,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         return channel;
     }
 
-
-
     public ChannelFuture joinGroup(InetAddress multicastAddress) {
        try {
             return joinGroup(
@@ -135,7 +130,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             return failedFuture(this, e);
         }
     }
-
 
     public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         return joinGroup(multicastAddress.getAddress(), networkInterface, null);
@@ -169,7 +163,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             synchronized (this) {
                 if (memberships == null) {
                     memberships = new HashMap<InetAddress, List<MembershipKey>>();
-
                 }
                 List<MembershipKey> keys = memberships.get(multicastAddress);
                 if (keys == null) {
@@ -191,7 +184,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         } catch (SocketException e) {
             return failedFuture(this, e);
         }
-
     }
 
     public ChannelFuture leaveGroup(InetSocketAddress multicastAddress,
@@ -224,12 +216,11 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                         while (keyIt.hasNext()) {
                             MembershipKey key = keyIt.next();
                             if (networkInterface.equals(key.networkInterface())) {
-                               if (source == null && key.sourceAddress() == null ||
-                                   source != null && source.equals(key.sourceAddress())) {
-                                   key.drop();
-                                   keyIt.remove();
-                               }
-
+                                if (source == null && key.sourceAddress() == null ||
+                                    source != null && source.equals(key.sourceAddress())) {
+                                    key.drop();
+                                    keyIt.remove();
+                                }
                             }
                         }
                         if (keys.isEmpty()) {
@@ -276,15 +267,13 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
                 }
             }
             return succeededFuture(this);
-
-
         }
     }
 
     /**
-* Block the given sourceToBlock address for the given multicastAddress
-*
-*/
+     * Block the given sourceToBlock address for the given multicastAddress
+     *
+     */
     public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
         try {
             block(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), sourceToBlock);
@@ -292,8 +281,8 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
             return failedFuture(this, e);
         }
         return succeededFuture(this);
-
     }
+
     @Override
     InetSocketAddress getLocalSocketAddress() throws Exception {
         return (InetSocketAddress) channel.socket().getLocalSocketAddress();
@@ -311,6 +300,5 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         } else {
             return super.write(message, remoteAddress);
         }
-
     }
 }

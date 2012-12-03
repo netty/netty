@@ -101,7 +101,6 @@ final class NioProviderMetadata {
                             "Using the autodetected NIO constraint level: " +
                             constraintLevel);
                 }
-
             }
         }
 

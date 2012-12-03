@@ -99,7 +99,6 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         }
     }
 
-
     private final InternalLogger logger;
     private final InternalLogLevel level;
     private final boolean hexDump;

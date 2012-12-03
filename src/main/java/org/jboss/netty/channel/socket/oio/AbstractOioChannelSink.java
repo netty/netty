@@ -40,8 +40,6 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink {
         }
 
         return super.execute(pipeline, task);
-
-
     }
 
     @Override

@@ -309,9 +309,7 @@ public final class Channels {
                 fireWriteComplete(channel, amount);
             }
         });
-
     }
-
 
     /**
      * Sends a {@code "writeComplete"} event to the first
@@ -347,7 +345,6 @@ public final class Channels {
 
             public void run() {
                 fireChannelInterestChanged(channel);
-
             }
         });
     }
@@ -426,7 +423,6 @@ public final class Channels {
         });
     }
 
-
     /**
      * Sends a {@code "channelUnbound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -449,8 +445,6 @@ public final class Channels {
                 ctx.getChannel(), ChannelState.BOUND, null));
     }
 
-
-
     /**
      * Sends a {@code "channelClosed"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -463,9 +457,7 @@ public final class Channels {
                 fireChannelClosed(channel);
             }
         });
-
     }
-
 
     /**
      * Sends a {@code "channelClosed"} event to the first

@@ -117,7 +117,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             ChannelBuffer frame = ChannelBuffers.wrappedBuffer(header, data);
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
-
         }
 
         if (msg instanceof SpdySynStreamFrame) {
@@ -163,7 +162,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
             }
             return;
-
         }
 
         if (msg instanceof SpdySynReplyFrame) {
@@ -199,7 +197,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
             }
             return;
-
         }
 
         if (msg instanceof SpdyRstStreamFrame) {
@@ -214,7 +211,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             frame.writeInt(spdyRstStreamFrame.getStatus().getCode());
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
-
         }
 
         if (msg instanceof SpdySettingsFrame) {
@@ -257,7 +253,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             }
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
-
         }
 
         if (msg instanceof SpdyNoOpFrame) {
@@ -269,7 +264,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             frame.writeInt(0);
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
-
         }
 
         if (msg instanceof SpdyPingFrame) {
@@ -283,7 +277,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             frame.writeInt(spdyPingFrame.getId());
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
-
         }
 
         if (msg instanceof SpdyGoAwayFrame) {
@@ -301,7 +294,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             }
             Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
             return;
-
         }
 
         if (msg instanceof SpdyHeadersFrame) {
@@ -333,7 +325,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
                 Channels.write(ctx, e.getFuture(), buffer, e.getRemoteAddress());
             }
             return;
-
         }
 
         if (msg instanceof SpdyWindowUpdateFrame) {

@@ -287,7 +287,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             // TODO: What todo if the add return false ?
             tasks.add(command);
 
-
             if (!isRunning.get()) {
                 doUnorderedExecute(this);
             }
@@ -330,7 +329,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                 if (acquired && !isRunning.get() && tasks.peek() != null) {
                     doUnorderedExecute(this);
                 }
-
             }
         }
     }

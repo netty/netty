@@ -58,7 +58,6 @@ final class NioClientSocketChannel extends NioSocketChannel {
                                 "Failed to close a partially initialized socket.",
                                 e);
                     }
-
                 }
             }
         }

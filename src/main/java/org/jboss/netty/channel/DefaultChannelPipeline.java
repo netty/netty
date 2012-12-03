@@ -721,7 +721,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             canHandleUpstream = handler instanceof ChannelUpstreamHandler;
             canHandleDownstream = handler instanceof ChannelDownstreamHandler;
 
-
             if (!canHandleUpstream && !canHandleDownstream) {
                 throw new IllegalArgumentException(
                         "handler must be either " +
@@ -796,14 +795,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (logger.isWarnEnabled()) {
                 logger.warn("Not attached yet; discarding: " + e);
             }
-
         }
 
         public void exceptionCaught(ChannelPipeline pipeline,
                 ChannelEvent e, ChannelPipelineException cause) throws Exception {
             throw cause;
         }
-
 
         public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
             if (logger.isWarnEnabled()) {

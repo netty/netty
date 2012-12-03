@@ -1287,13 +1287,11 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         public SimpleEntry(K key, V value) {
             this.key = key;
             this.value = value;
-
         }
 
         public SimpleEntry(Entry<? extends K, ? extends V> entry) {
             key = entry.getKey();
             value = entry.getValue();
-
         }
 
         public K getKey() {
@@ -1363,7 +1361,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             put(getKey(), value);
             return v;
         }
-
     }
 
     final class EntryIterator extends HashIterator implements
@@ -1377,7 +1374,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     final class KeySet extends AbstractSet<K> {
         @Override
         public Iterator<K> iterator() {
-
             return new KeyIterator();
         }
 
@@ -1399,7 +1395,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         @Override
         public boolean remove(Object o) {
             return ConcurrentIdentityWeakKeyHashMap.this.remove(o) != null;
-
         }
 
         @Override

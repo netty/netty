@@ -260,7 +260,6 @@ public final class RtspResponseStatuses {
     public static final HttpResponseStatus OPTION_NOT_SUPPORTED = new HttpResponseStatus(
             551, "Option not supported");
 
-
     /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
      * If the specified code is a standard RTSP status code, a cached instance

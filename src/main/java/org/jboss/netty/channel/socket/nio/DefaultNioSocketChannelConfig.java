@@ -62,7 +62,6 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
                         "writeBufferHighWaterMark; setting to the half of the " +
                         "writeBufferHighWaterMark.");
             }
-
         }
     }
 

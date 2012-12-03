@@ -117,7 +117,6 @@ public class ZlibDecoder extends OneToOneDecoder {
                 z.next_out_index = 0;
                 z.avail_out = out.length;
 
-
                 loop: for (;;) {
                     // Decompress 'in' into 'out'
                     int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);

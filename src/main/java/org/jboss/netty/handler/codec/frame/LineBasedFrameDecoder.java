@@ -97,7 +97,6 @@ public class LineBasedFrameDecoder extends FrameDecoder {
                     frame = extractFrame(buffer, buffer.readerIndex(), length + delimLength);
                 }
                 buffer.skipBytes(length + delimLength);
-
             }
             return frame;
         }
@@ -114,7 +113,6 @@ public class LineBasedFrameDecoder extends FrameDecoder {
         }
         return null;
     }
-
 
     private void fail(final ChannelHandlerContext ctx, final String msg) {
         Channels.fireExceptionCaught(ctx.getChannel(),

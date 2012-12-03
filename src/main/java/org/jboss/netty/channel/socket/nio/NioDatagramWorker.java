@@ -108,7 +108,6 @@ public class NioDatagramWorker extends AbstractNioWorker {
         return true;
     }
 
-
     @Override
     public void releaseExternalResources() {
         super.releaseExternalResources();
@@ -137,7 +136,6 @@ public class NioDatagramWorker extends AbstractNioWorker {
         return false;
     }
 
-
     static void disconnect(NioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean iothread = isIoThread(channel);
@@ -160,7 +158,6 @@ public class NioDatagramWorker extends AbstractNioWorker {
             }
         }
     }
-
 
     @Override
     protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {

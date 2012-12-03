@@ -26,7 +26,6 @@ import java.util.concurrent.Executor;
 public class NioServerBossPool extends AbstractNioBossPool<NioServerBoss> {
     private final ThreadNameDeterminer determiner;
 
-
     /**
      * Create a new instance
      *
@@ -49,7 +48,6 @@ public class NioServerBossPool extends AbstractNioBossPool<NioServerBoss> {
     public NioServerBossPool(Executor bossExecutor, int bossCount) {
         this(bossExecutor, bossCount, null);
     }
-
 
     @Override
     protected NioServerBoss newBoss(Executor executor) {

@@ -113,7 +113,6 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
      */
     public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
-
     }
 
     /**
@@ -121,7 +120,6 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
      */
     public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
-
     }
 
     /**
@@ -136,7 +134,6 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
      */
     public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
-
     }
 
     /**
@@ -144,7 +141,6 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
      */
     public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
-
     }
 
     /**

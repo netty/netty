@@ -33,7 +33,6 @@ public class NioWorkerPool extends AbstractNioWorkerPool<NioWorker> {
         this(workerExecutor, workerCount, null);
     }
 
-
     public NioWorkerPool(Executor workerExecutor, int workerCount, ThreadNameDeterminer determiner) {
         super(workerExecutor, workerCount, false);
         this.determiner = determiner;
@@ -44,5 +43,4 @@ public class NioWorkerPool extends AbstractNioWorkerPool<NioWorker> {
     protected NioWorker createWorker(Executor executor) {
         return new NioWorker(executor, determiner);
     }
-
 }

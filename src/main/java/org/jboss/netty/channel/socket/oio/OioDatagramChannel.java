@@ -62,7 +62,6 @@ final class OioDatagramChannel extends AbstractOioChannel
         config = new DefaultDatagramChannelConfig(socket);
 
         fireChannelOpen(this);
-
     }
 
     public DatagramChannelConfig getConfig() {
@@ -146,6 +145,4 @@ final class OioDatagramChannel extends AbstractOioChannel
     boolean isSocketClosed() {
         return socket.isClosed();
     }
-
-
 }

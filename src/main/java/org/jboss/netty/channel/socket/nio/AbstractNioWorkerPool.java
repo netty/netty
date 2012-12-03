@@ -103,7 +103,6 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
         return (E) workers[Math.abs(workerIndex.getAndIncrement() % workers.length)];
     }
 
-
     public void releaseExternalResources() {
         ExecutorUtil.terminate(workerExecutor);
         for (AbstractNioWorker worker: workers) {

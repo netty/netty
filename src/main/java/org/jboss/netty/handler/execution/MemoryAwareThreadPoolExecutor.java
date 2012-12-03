@@ -314,7 +314,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                     channels = new HashSet<Channel>();
                 }
 
-
                 // store the Channel of the event for later notification of the exceptionCaught event
                 channels.add(event.getChannel());
             }
@@ -386,7 +385,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         return totalLimiter.limit;
     }
 
-
     /**
      * @deprecated <tt>maxTotalMemorySize</tt> is not modifiable anymore.
      */
@@ -424,8 +422,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     public boolean getNotifyChannelFuturesOnShutdown() {
         return notifyOnShutdown;
     }
-
-
 
     @Override
     public void execute(Runnable command) {
@@ -626,7 +622,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             task.run();
         }
     }
-
 
     private static class Limiter {
 

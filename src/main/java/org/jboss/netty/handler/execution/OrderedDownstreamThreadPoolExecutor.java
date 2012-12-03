@@ -73,7 +73,6 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
                 keepAliveTime, unit, threadFactory);
     }
 
-
     /**
      * Return {@code null}
      */
@@ -153,7 +152,6 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
             if (oldExecutor != null) {
                 executor = oldExecutor;
             } else {
-
                 // register a listener so that the ChildExecutor will get removed once the channel was closed
                 e.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
 
@@ -166,6 +164,4 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
 
         return executor;
     }
-
-
 }

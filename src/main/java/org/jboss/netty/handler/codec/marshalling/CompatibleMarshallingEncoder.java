@@ -36,7 +36,6 @@ public class CompatibleMarshallingEncoder extends OneToOneEncoder {
 
     private final MarshallerProvider provider;
 
-
     /**
      * Create a new instance of the {@link CompatibleMarshallingEncoder}
      *
@@ -45,7 +44,6 @@ public class CompatibleMarshallingEncoder extends OneToOneEncoder {
     public CompatibleMarshallingEncoder(MarshallerProvider provider) {
         this.provider = provider;
     }
-
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {

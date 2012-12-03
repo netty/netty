@@ -133,7 +133,6 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                         new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
                 }
-
             } else {
                 // SYN_STREAM frames initiated by the client are HTTP requests
                 try {

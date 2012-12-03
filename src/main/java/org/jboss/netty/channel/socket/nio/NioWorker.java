@@ -81,7 +81,6 @@ public class NioWorker extends AbstractNioWorker {
             buffer.setBytes(0, bb);
             buffer.writerIndex(readBytes);
 
-
             // Update the predictor.
             predictor.previousReceiveBufferSize(readBytes);
 
@@ -97,7 +96,6 @@ public class NioWorker extends AbstractNioWorker {
 
         return true;
     }
-
 
     @Override
     protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
@@ -200,8 +198,6 @@ public class NioWorker extends AbstractNioWorker {
                             "Failed to register a socket to the selector.", e);
                 }
             }
-
         }
     }
-
 }

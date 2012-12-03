@@ -30,6 +30,4 @@ public interface WorkerPool<E extends Worker> {
      * @return worker
      */
     E nextWorker();
-
-
 }

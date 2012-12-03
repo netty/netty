@@ -221,7 +221,6 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
                                             "Failed to close a partially accepted socket.",
                                             e2);
                                 }
-
                             }
                         }
                     } catch (SocketTimeoutException e) {
