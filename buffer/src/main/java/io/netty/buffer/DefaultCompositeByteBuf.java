@@ -94,7 +94,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-
     }
 
     @Override
@@ -174,7 +173,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             throw new NullPointerException("buffers");
         }
 
-
         int readableBytes = 0;
         for (ByteBuf b: buffers) {
             if (b == null) {
@@ -249,7 +247,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
         return addComponents0(cIndex, list.toArray(new ByteBuf[list.size()]));
     }
-
 
     /**
      * This should only be called as last operation from a method as this may adjust the underlying
@@ -1388,7 +1385,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     public CompositeByteBuf setBytes(int index, byte[] src) {
         return (CompositeByteBuf) super.setBytes(index, src);
     }
-
 
     @Override
     public CompositeByteBuf setZero(int index, int length) {

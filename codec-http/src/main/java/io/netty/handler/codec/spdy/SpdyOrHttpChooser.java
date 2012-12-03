@@ -76,7 +76,6 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
             ctx.pipeline().remove(this);
 
             ctx.fireInboundBufferUpdated();
-
         }
     }
 

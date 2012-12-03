@@ -43,7 +43,6 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
         content = new byte[messageSize];
     }
 
-
     @Override
     public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
@@ -52,14 +51,12 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
         generateTraffic();
     }
 
-
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
         in.clear();
     }
-
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx,

@@ -122,7 +122,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
-
                 } catch (Throwable t) {
                     future.setFailure(t);
                     pipeline().fireExceptionCaught(t);

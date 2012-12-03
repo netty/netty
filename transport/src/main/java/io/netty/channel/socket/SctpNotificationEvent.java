@@ -21,7 +21,6 @@ public final class SctpNotificationEvent {
     private final Notification notification;
     private final Object attachment;
 
-
     public SctpNotificationEvent(Notification notification, Object attachment) {
         this.notification = notification;
         this.attachment = attachment;

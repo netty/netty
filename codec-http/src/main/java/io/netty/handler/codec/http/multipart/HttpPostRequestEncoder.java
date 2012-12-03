@@ -555,7 +555,6 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpChunk> {
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
                         + HttpPostBodyUtil.FILENAME + "=\"" + encodeAttribute(fileUpload.getFilename(), charset)
                         + "\"\r\n");
-
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
                 // Content-Disposition: form-data; name="files";

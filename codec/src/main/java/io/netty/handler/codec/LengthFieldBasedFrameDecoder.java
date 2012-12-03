@@ -408,7 +408,6 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
                 fail(ctx, tooLongFrameLength);
             }
         }
-
     }
 
     /**

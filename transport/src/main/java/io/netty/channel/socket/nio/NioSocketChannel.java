@@ -68,7 +68,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     logger.warn(
                             "Failed to close a partially initialized socket.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);

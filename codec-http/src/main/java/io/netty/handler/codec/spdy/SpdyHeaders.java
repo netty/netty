@@ -94,7 +94,6 @@ public class SpdyHeaders {
         private Spdy2HttpNames() { }
     }
 
-
     /**
      * Returns the header value with the specified header name.  If there are
      * more than one header value for the specified header name, the first
@@ -356,7 +355,6 @@ public class SpdyHeaders {
             block.setHeader(HttpNames.VERSION, httpVersion.getText());
         }
     }
-
 
     private static final int BUCKET_SIZE = 17;
 

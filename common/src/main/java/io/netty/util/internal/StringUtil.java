@@ -40,7 +40,6 @@ public final class StringUtil {
         }
 
         NEWLINE = newLine;
-
     }
 
     private static final String EMPTY_STRING = "";

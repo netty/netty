@@ -427,7 +427,6 @@ public class SpdySessionHandler
         super.exceptionCaught(ctx, cause);
     }
 
-
     @Override
     public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         sendGoAwayFrame(ctx);
@@ -541,7 +540,6 @@ public class SpdySessionHandler
 
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         return;
-
                     } else {
                         // Stream is stalled -- enqueue Data frame and return
                         spdySession.putPendingWrite(streamID, spdyDataFrame);
@@ -836,7 +834,6 @@ public class SpdySessionHandler
                     }
 
                     ctx.nextOutboundMessageBuffer().add(spdyDataFrame);
-
                 } else {
                     // We can send a partial frame
                     spdySession.updateSendWindowSize(streamID, -1 * newWindowSize);

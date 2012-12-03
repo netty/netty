@@ -386,7 +386,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         });
                     context = oldTail;
                 }
-
             } else {
                 if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
                     remove0(ctx);
@@ -515,7 +514,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     checkDuplicateName(newName);
                     addLast0(newName, tail, newTail);
                     return ctx.handler();
-
                 } else {
                     future = oldTail.executor().submit(new Runnable() {
                             @Override
@@ -528,7 +526,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                             }
                         });
                 }
-
             } else {
                 boolean sameName = ctx.name().equals(newName);
                 if (!sameName) {

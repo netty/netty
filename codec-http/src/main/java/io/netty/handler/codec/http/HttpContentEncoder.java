@@ -170,7 +170,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      */
     protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
 
-
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         cleanup();
