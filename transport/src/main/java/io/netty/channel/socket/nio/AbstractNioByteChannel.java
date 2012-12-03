@@ -193,7 +193,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         public void channelUnregistered(SelectableChannel ch) throws Exception {
             if (writtenBytes < region.count()) {
                 region.close();
-                if(!isOpen()) {
+                if (!isOpen()) {
                     future.setFailure(new ClosedChannelException());
                 } else {
                     future.setFailure(new IllegalStateException(
