@@ -224,6 +224,8 @@ public final class NioServerBoss implements Boss {
                     selector.wakeup();
                 }
                 processTaskQueue();
+                selector = this.selector; // processTaskQueue() can call rebuildSelector()
+
                 processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle.
