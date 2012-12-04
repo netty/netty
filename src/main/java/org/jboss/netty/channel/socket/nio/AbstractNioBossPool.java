@@ -80,6 +80,12 @@ public abstract class AbstractNioBossPool<E extends Boss>
         return (E) bosses[Math.abs(bossIndex.getAndIncrement() % bosses.length)];
     }
 
+    public void rebuildSelectors() {
+        for (Boss boss: bosses) {
+            boss.rebuildSelector();
+        }
+    }
+
     public void releaseExternalResources() {
         ExecutorUtil.terminate(bossExecutor);
         for (Boss boss: bosses) {

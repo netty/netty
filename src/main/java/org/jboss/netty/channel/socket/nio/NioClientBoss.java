@@ -33,6 +33,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -58,10 +59,11 @@ public final class NioClientBoss implements Boss {
             InternalLoggerFactory.getInstance(NioClientBoss.class);
 
     private volatile Selector selector;
+    private volatile Thread thread;
     private boolean started;
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final Object startStopLock = new Object();
-    private final Queue<Runnable> registerTaskQueue = new ConcurrentLinkedQueue<Runnable>();
+    private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
     private final TimerTask wakeupTask = new TimerTask() {
         public void run(Timeout timeout) throws Exception {
             // This is needed to prevent a possible race that can lead to a NPE
@@ -131,7 +133,7 @@ public final class NioClientBoss implements Boss {
             assert selector != null && selector.isOpen();
 
             started = true;
-            boolean offered = registerTaskQueue.offer(registerTask);
+            boolean offered = taskQueue.offer(registerTask);
             assert offered;
         }
         int timeout = channel.getConfig().getConnectTimeoutMillis();
@@ -147,6 +149,8 @@ public final class NioClientBoss implements Boss {
     }
 
     public void run() {
+        thread = Thread.currentThread();
+
         boolean shutdown = false;
         int selectReturnsImmediately = 0;
 
@@ -195,7 +199,8 @@ public final class NioClientBoss implements Boss {
                         // The selector returned immediately for 10 times in a row,
                         // so recreate one selector as it seems like we hit the
                         // famous epoll(..) jdk bug.
-                        selector = recreateSelector();
+                        rebuildSelector();
+                        selector = this.selector;
                         selectReturnsImmediately = 0;
                         wakenupFromLoop = false;
                         // try to select again
@@ -240,7 +245,8 @@ public final class NioClientBoss implements Boss {
                 } else {
                     wakenupFromLoop = false;
                 }
-                processRegisterTaskQueue();
+                processTaskQueue();
+                selector = this.selector; // processTaskQueue() can call rebuildSelector()
                 processSelectedKeys(selector.selectedKeys());
 
                 // Handle connection timeout every 10 milliseconds approximately.
@@ -257,7 +263,7 @@ public final class NioClientBoss implements Boss {
                             bossExecutor instanceof ExecutorService && ((ExecutorService) bossExecutor).isShutdown()) {
 
                         synchronized (startStopLock) {
-                            if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
+                            if (taskQueue.isEmpty() && selector.keys().isEmpty()) {
                                 started = false;
                                 try {
                                     selector.close();
@@ -297,9 +303,9 @@ public final class NioClientBoss implements Boss {
         }
     }
 
-    private void processRegisterTaskQueue() {
+    private void processTaskQueue() {
         for (;;) {
-            final Runnable task = registerTaskQueue.poll();
+            final Runnable task = taskQueue.poll();
             if (task == null) {
                 break;
             }
@@ -308,7 +314,7 @@ public final class NioClientBoss implements Boss {
         }
     }
 
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+    private static void processSelectedKeys(Set<SelectionKey> selectedKeys) {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
@@ -338,7 +344,7 @@ public final class NioClientBoss implements Boss {
         }
     }
 
-    private void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
+    private static void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
         ConnectException cause = null;
         for (SelectionKey k: keys) {
             if (!k.isValid()) {
@@ -368,7 +374,7 @@ public final class NioClientBoss implements Boss {
         }
     }
 
-    private void connect(SelectionKey k) throws IOException {
+    private static void connect(SelectionKey k) throws IOException {
         NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
         if (ch.channel.finishConnect()) {
             k.cancel();
@@ -379,48 +385,79 @@ public final class NioClientBoss implements Boss {
         }
     }
 
-    private void close(SelectionKey k) {
+    private static void close(SelectionKey k) {
         NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
         ch.worker.close(ch, succeededFuture(ch));
     }
 
-    // Create a new selector and "transfer" all channels from the old
-    // selector to the new one
-    private Selector recreateSelector() throws IOException {
-        Selector newSelector = Selector.open();
-        Selector selector = this.selector;
-        this.selector = newSelector;
-
-        // loop over all the keys that are registered with the old Selector
-        // and register them with the new one
-        for (SelectionKey key: selector.keys()) {
-            SelectableChannel ch = key.channel();
-            int ops = key.interestOps();
-            Object att = key.attachment();
-            // cancel the old key
-            key.cancel();
-
-            try {
-                // register the channel with the new selector now
-                ch.register(newSelector, ops, att);
-            } catch (ClosedChannelException e) {
-                // close the Channel if we can't register it
-                close(key);
+    public void rebuildSelector() {
+        if (Thread.currentThread() != thread) {
+            Selector selector = this.selector;
+            if (selector == null) {
+                return;
             }
+
+            taskQueue.add(new Runnable() {
+                public void run() {
+                    rebuildSelector();
+                }
+            });
+            selector.wakeup();
+        }
+
+        final Selector oldSelector = selector;
+        final Selector newSelector;
+
+        if (oldSelector == null) {
+            return;
         }
 
         try {
+            newSelector = Selector.open();
+        } catch (Exception e) {
+            logger.warn("Failed to create a new Selector.", e);
+            return;
+        }
+
+        // Register all channels to the new Selector.
+        int nChannels = 0;
+        for (;;) {
+            try {
+                for (SelectionKey key: oldSelector.keys()) {
+                    try {
+                        if (key.channel().keyFor(newSelector) != null) {
+                            continue;
+                        }
+
+                        key.cancel();
+                        key.channel().register(newSelector, key.interestOps(), key.attachment());
+                        nChannels ++;
+                    } catch (Exception e) {
+                        logger.warn("Failed to re-register a Channel to the new Selector,", e);
+                        NioClientSocketChannel ch = (NioClientSocketChannel) key.attachment();
+                        ch.worker.close(ch, succeededFuture(ch));
+                    }
+                }
+            } catch (ConcurrentModificationException e) {
+                // Probably due to concurrent modification of the key set.
+                continue;
+            }
+
+            break;
+        }
+
+        selector = newSelector;
+
+        try {
             // time to close the old selector as everything else is registered to the new one
-            selector.close();
+            oldSelector.close();
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a selector.", t);
+                logger.warn("Failed to close the old Selector.", t);
             }
         }
-        if (logger.isWarnEnabled()) {
-            logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
-        }
-        return newSelector;
+
+        logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
     }
 
     private static final class RegisterTask implements Runnable {

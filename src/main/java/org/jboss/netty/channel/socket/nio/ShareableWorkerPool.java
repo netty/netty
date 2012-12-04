@@ -37,6 +37,10 @@ public final class ShareableWorkerPool<E extends Worker> implements WorkerPool<E
         return wrapped.nextWorker();
     }
 
+    public void rebuildSelectors() {
+        wrapped.rebuildSelectors();
+    }
+
     /**
      * Destroy the {@link ShareableWorkerPool} and release all resources. After this is called its not usable anymore
      */

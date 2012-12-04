@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import java.nio.channels.Selector;
+
 /**
  * A Pool that holds {@link Boss} instances
  */
@@ -25,4 +27,9 @@ public interface BossPool<E extends Boss> {
      */
     E nextBoss();
 
+    /**
+     * Replaces the current {@link Selector}s of the {@link Boss}es with new {@link Selector}s to work around the
+     * infamous epoll 100% CPU bug.
+     */
+    void rebuildSelectors();
 }

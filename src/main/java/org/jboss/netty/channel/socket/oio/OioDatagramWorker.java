@@ -15,7 +15,9 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -23,9 +25,7 @@ import java.net.DatagramPacket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import static org.jboss.netty.channel.Channels.*;
 
 class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
 
@@ -122,5 +122,4 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
             }
         }
     }
-
 }

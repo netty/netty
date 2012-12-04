@@ -106,6 +106,10 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
         processEventQueue();
     }
 
+    public void rebuildSelector() {
+        // OIO has no selector.
+    }
+
     static boolean isIoThread(AbstractOioChannel channel) {
         return Thread.currentThread() == channel.workerThread;
     }
