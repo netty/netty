@@ -28,7 +28,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
@@ -105,26 +104,6 @@ public class NioWorker extends AbstractNioWorker {
         if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 registerTask(channel.writeTask);
-            }
-
-            if (!(channel instanceof NioAcceptedSocketChannel) ||
-                ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
-                final Selector workerSelector = selector;
-                if (workerSelector != null) {
-                    if (wakenUp.compareAndSet(false, true)) {
-                        workerSelector.wakeup();
-                    }
-                }
-            } else {
-                // A write request can be made from an acceptor thread (boss)
-                // when a user attempted to write something in:
-                //
-                //   * channelOpen()
-                //   * channelBound()
-                //   * channelConnected().
-                //
-                // In this case, there's no need to wake up the selector because
-                // the channel is not even registered yet at this moment.
             }
 
             return true;
