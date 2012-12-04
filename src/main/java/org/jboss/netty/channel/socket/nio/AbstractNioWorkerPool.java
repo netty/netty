@@ -18,7 +18,6 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -111,7 +110,6 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(workerExecutor);
         for (AbstractNioWorker worker: workers) {
             worker.releaseExternalResources();
         }

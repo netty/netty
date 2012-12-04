@@ -18,6 +18,7 @@ package org.jboss.netty.channel.socket.nio;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.Timeout;
@@ -38,8 +39,9 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,7 +51,7 @@ import static org.jboss.netty.channel.Channels.*;
 /**
  * {@link Boss} implementation that handles the  connection attempts of clients
  */
-public final class NioClientBoss implements Boss {
+public final class NioClientBoss implements Boss, ExternalResourceReleasable {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -62,7 +64,6 @@ public final class NioClientBoss implements Boss {
     private volatile Thread thread;
     private boolean started;
     private final AtomicBoolean wakenUp = new AtomicBoolean();
-    private final Object startStopLock = new Object();
     private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
     private final TimerTask wakeupTask = new TimerTask() {
         public void run(Timeout timeout) throws Exception {
@@ -80,81 +81,84 @@ public final class NioClientBoss implements Boss {
         }
     };
     private final Executor bossExecutor;
-    private final ThreadNameDeterminer determiner;
     private final Timer timer;
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+    private volatile boolean shutdown;
 
     NioClientBoss(Executor bossExecutor, Timer timer, ThreadNameDeterminer determiner) {
         this.bossExecutor = bossExecutor;
-        this.determiner = determiner;
         this.timer = timer;
+        openSelector(determiner);
+    }
+
+    /**
+     * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for
+     * the {@link AbstractNioChannel}'s when they get registered
+     */
+    private void openSelector(ThreadNameDeterminer determiner) {
+        try {
+            selector = Selector.open();
+        } catch (Throwable t) {
+            throw new ChannelException("Failed to create a selector.", t);
+        }
+
+        // Start the worker thread with the new Selector.
+        boolean success = false;
+        try {
+            DeadLockProofWorker.start(bossExecutor, new ThreadRenamingRunnable(this, "New I/O boss #" + id,
+                    determiner));
+            success = true;
+        } finally {
+            if (!success) {
+                // Release the Selector if the execution fails.
+                try {
+                    selector.close();
+                } catch (Throwable t) {
+                    logger.warn("Failed to close a selector.", t);
+                }
+                selector = null;
+                // The method will return to the caller at this point.
+            }
+        }
+        assert selector != null && selector.isOpen();
     }
 
     void register(NioClientSocketChannel channel) {
-        Runnable registerTask = new RegisterTask(this, channel);
-        Selector selector;
+        Runnable task = new RegisterTask(this, channel);
+        taskQueue.add(task);
 
-        synchronized (startStopLock) {
-            if (!started) {
-                // Open a selector if this worker didn't start yet.
-                try {
-                    this.selector = selector =  Selector.open();
-                } catch (Throwable t) {
-                    throw new ChannelException(
-                            "Failed to create a selector.", t);
+        if (selector != null) {
+            int timeout = channel.getConfig().getConnectTimeoutMillis();
+            if (timeout > 0) {
+                if (!channel.isConnected()) {
+                    channel.timoutTimer = timer.newTimeout(wakeupTask,
+                            timeout, TimeUnit.MILLISECONDS);
                 }
-
-                // Start the worker thread with the new Selector.
-                boolean success = false;
-                try {
-                    DeadLockProofWorker.start(bossExecutor,
-                            new ThreadRenamingRunnable(this,
-                                    "New I/O client boss #" + id , determiner));
-
-                    success = true;
-                } finally {
-                    if (!success) {
-                        // Release the Selector if the execution fails.
-                        try {
-                            selector.close();
-                        } catch (Throwable t) {
-                            if (logger.isWarnEnabled()) {
-                                logger.warn("Failed to close a selector.", t);
-                            }
-                        }
-                        this.selector = selector = null;
-                        // The method will return to the caller at this point.
-                    }
+            }
+            Selector selector = this.selector;
+            if (selector != null) {
+                if (wakenUp.compareAndSet(false, true)) {
+                    selector.wakeup();
                 }
-            } else {
-                // Use the existing selector if this worker has been started.
-                selector = this.selector;
             }
-
-            assert selector != null && selector.isOpen();
-
-            started = true;
-            boolean offered = taskQueue.offer(registerTask);
-            assert offered;
-        }
-        int timeout = channel.getConfig().getConnectTimeoutMillis();
-        if (timeout > 0) {
-            if (!channel.isConnected()) {
-                channel.timoutTimer = timer.newTimeout(wakeupTask,
-                        timeout, TimeUnit.MILLISECONDS);
+        } else {
+            if (taskQueue.remove(task)) {
+                // the selector was null this means the Boss has already been shutdown.
+                throw new RejectedExecutionException("Boss has already been shutdown");
             }
-        }
-        if (wakenUp.compareAndSet(false, true)) {
-            selector.wakeup();
         }
     }
 
     public void run() {
         thread = Thread.currentThread();
 
-        boolean shutdown = false;
         int selectReturnsImmediately = 0;
 
         Selector selector = this.selector;
+        if (selector == null) {
+            // this can happen if we call releaseExternal before the thread was able to started
+            return;
+        }
 
         // use 80% of the timeout for measure
         final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS * 80 / 100;
@@ -247,45 +251,31 @@ public final class NioClientBoss implements Boss {
                 }
                 processTaskQueue();
                 selector = this.selector; // processTaskQueue() can call rebuildSelector()
-                processSelectedKeys(selector.selectedKeys());
 
-                // Handle connection timeout every 10 milliseconds approximately.
-                long currentTimeNanos = System.nanoTime();
-                processConnectTimeout(selector.keys(), currentTimeNanos);
+                if (shutdown) {
+                    this.selector = null;
 
-                // Exit the loop when there's nothing to handle.
-                // The shutdown flag is used to delay the shutdown of this
-                // loop to avoid excessive Selector creation when
-                // connection attempts are made in a one-by-one manner
-                // instead of concurrent manner.
-                if (selector.keys().isEmpty()) {
-                    if (shutdown ||
-                            bossExecutor instanceof ExecutorService && ((ExecutorService) bossExecutor).isShutdown()) {
+                    // process one time again
+                    processTaskQueue();
 
-                        synchronized (startStopLock) {
-                            if (taskQueue.isEmpty() && selector.keys().isEmpty()) {
-                                started = false;
-                                try {
-                                    selector.close();
-                                } catch (IOException e) {
-                                    if (logger.isWarnEnabled()) {
-                                        logger.warn(
-                                                "Failed to close a selector.", e);
-                                    }
-                                } finally {
-                                    this.selector = null;
-                                }
-                                break;
-                            } else {
-                                shutdown = false;
-                            }
-                        }
-                    } else {
-                        // Give one more second.
-                        shutdown = true;
+                    for (Iterator<SelectionKey> i = selector.keys().iterator(); i.hasNext();) {
+                        close(i.next());
                     }
-                } else {
-                    shutdown = false;
+
+                    try {
+                        selector.close();
+                    } catch (IOException e) {
+                        logger.warn(
+                                "Failed to close a selector.", e);
+                    }
+                    shutdownLatch.countDown();
+                    break;
+                }  else {
+                    processSelectedKeys(selector.selectedKeys());
+
+                    // Handle connection timeout every 10 milliseconds approximately.
+                    long currentTimeNanos = System.nanoTime();
+                    processConnectTimeout(selector.keys(), currentTimeNanos);
                 }
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
@@ -458,6 +448,24 @@ public final class NioClientBoss implements Boss {
         }
 
         logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
+    }
+
+    public void releaseExternalResources() {
+        if (Thread.currentThread() == thread) {
+            throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
+        }
+
+        shutdown = true;
+        Selector selector = this.selector;
+        if (selector != null) {
+            selector.wakeup();
+        }
+        try {
+            shutdownLatch.await();
+        } catch (InterruptedException e) {
+            logger.error("Interrupted while wait for resources to be released of boss #" + id);
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static final class RegisterTask implements Runnable {

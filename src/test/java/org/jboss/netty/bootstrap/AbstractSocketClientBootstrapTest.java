@@ -66,18 +66,19 @@ public abstract class AbstractSocketClientBootstrapTest {
         future.awaitUninterruptibly();
         assertFalse(future.isSuccess());
         assertTrue(future.getCause() instanceof IOException);
+        bootstrap.releaseExternalResources();
     }
 
     @Test(timeout = 10000)
     public void testSuccessfulConnectionAttempt() throws Throwable {
+        ClientBootstrap bootstrap =
+                new ClientBootstrap(newClientSocketChannelFactory(executor));
+
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
         try {
             serverSocket.configureBlocking(false);
-
-            ClientBootstrap bootstrap =
-                new ClientBootstrap(newClientSocketChannelFactory(executor));
 
             bootstrap.getPipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
@@ -102,19 +103,21 @@ public abstract class AbstractSocketClientBootstrapTest {
             } catch (IOException e) {
                 // Ignore.
             }
+            bootstrap.releaseExternalResources();
         }
     }
 
     @Test(timeout = 10000)
     public void testSuccessfulConnectionAttemptWithLocalAddress() throws Throwable {
+        ClientBootstrap bootstrap =
+                new ClientBootstrap(newClientSocketChannelFactory(executor));
+
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
         try {
             serverSocket.configureBlocking(false);
 
-            ClientBootstrap bootstrap =
-                new ClientBootstrap(newClientSocketChannelFactory(executor));
 
             bootstrap.getPipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
@@ -140,6 +143,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             } catch (IOException e) {
                 // Ignore.
             }
+            bootstrap.releaseExternalResources();
         }
     }
 

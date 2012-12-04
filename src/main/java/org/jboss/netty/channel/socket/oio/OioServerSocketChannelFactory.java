@@ -89,6 +89,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
     final Executor bossExecutor;
     private final Executor workerExecutor;
     private final ChannelSink sink;
+    private boolean shutdownExecutor;
 
     /**
      * Create a new {@link OioServerSocketChannelFactory} with a {@link Executors#newCachedThreadPool()}
@@ -98,6 +99,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
      */
     public OioServerSocketChannelFactory() {
         this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        this.shutdownExecutor = true;
     }
 
     /**
@@ -126,6 +128,8 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor, workerExecutor);
+        if (shutdownExecutor) {
+            ExecutorUtil.terminate(bossExecutor, workerExecutor);
+        }
     }
 }

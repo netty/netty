@@ -27,6 +27,7 @@ import java.util.concurrent.Executor;
 public class NioClientBossPool extends AbstractNioBossPool<NioClientBoss> {
     private final ThreadNameDeterminer determiner;
     private final Timer timer;
+    private boolean stopTimer;
 
     /**
      * Create a new instance
@@ -52,6 +53,7 @@ public class NioClientBossPool extends AbstractNioBossPool<NioClientBoss> {
      */
     public NioClientBossPool(Executor bossExecutor, int bossCount) {
         this(bossExecutor, bossCount, new HashedWheelTimer(), null);
+        stopTimer = true;
     }
 
     @Override
@@ -62,7 +64,9 @@ public class NioClientBossPool extends AbstractNioBossPool<NioClientBoss> {
     @Override
     public void releaseExternalResources() {
         super.releaseExternalResources();
-        timer.stop();
+        if (stopTimer) {
+            timer.stop();
+        }
     }
 }
 

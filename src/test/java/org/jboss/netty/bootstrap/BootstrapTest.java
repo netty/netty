@@ -60,6 +60,7 @@ public class BootstrapTest {
         } catch (IllegalStateException e) {
             // Success.
         }
+        b.releaseExternalResources();
     }
 
     @Test(expected = NullPointerException.class)
@@ -93,6 +94,7 @@ public class BootstrapTest {
         ChannelPipelineFactory oldPipelineFactory = b.getPipelineFactory();
         b.setPipeline(createMock(ChannelPipeline.class));
         assertNotSame(oldPipelineFactory, b.getPipelineFactory());
+        b.releaseExternalResources();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -100,6 +102,7 @@ public class BootstrapTest {
         Bootstrap b = new Bootstrap();
         b.setPipelineFactory(createMock(ChannelPipelineFactory.class));
         b.getPipeline();
+        b.releaseExternalResources();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -107,6 +110,7 @@ public class BootstrapTest {
         Bootstrap b = new Bootstrap();
         b.setPipelineFactory(createMock(ChannelPipelineFactory.class));
         b.getPipelineAsMap();
+        b.releaseExternalResources();
     }
 
     @Test(expected = NullPointerException.class)
@@ -145,6 +149,7 @@ public class BootstrapTest {
         assertSame(p.get("d"), e.getValue());
 
         assertFalse(m.hasNext());
+        b.releaseExternalResources();
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -157,6 +162,7 @@ public class BootstrapTest {
 
         Bootstrap b = new Bootstrap();
         b.setPipelineAsMap(m);
+        b.releaseExternalResources();
     }
 
     @Test
@@ -191,6 +197,7 @@ public class BootstrapTest {
         } catch (NoSuchElementException e) {
             // Success.
         }
+        b.releaseExternalResources();
     }
 
     @Test
@@ -210,6 +217,7 @@ public class BootstrapTest {
         assertEquals("x", o.get("s"));
         assertEquals(true, o.get("b"));
         assertEquals(42, o.get("i"));
+        b.releaseExternalResources();
     }
 
     @Test
@@ -229,6 +237,7 @@ public class BootstrapTest {
 
         assertNotSame(o1, o2);
         assertEquals(o1, o2);
+        b.releaseExternalResources();
     }
 
     @Test
@@ -241,6 +250,7 @@ public class BootstrapTest {
         b.setOption("s", null);
         assertNull(b.getOption("s"));
         assertTrue(b.getOptions().isEmpty());
+        b.releaseExternalResources();
     }
 
     @Test(expected = NullPointerException.class)

@@ -96,15 +96,17 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     @Test(timeout = 30000, expected = ChannelException.class)
     public void testFailedBindAttempt() throws Exception {
+        ServerBootstrap bootstrap = new ServerBootstrap();
+
         final ServerSocket ss = new ServerSocket(0);
         final int boundPort = ss.getLocalPort();
         try {
-            ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.setFactory(newServerSocketChannelFactory(executor));
             bootstrap.setOption("localAddress", new InetSocketAddress(boundPort));
             bootstrap.bind().close().awaitUninterruptibly();
         } finally {
             ss.close();
+            bootstrap.releaseExternalResources();
         }
     }
 
@@ -172,6 +174,7 @@ public abstract class AbstractSocketServerBootstrapTest {
 
         // Confirm the received child events.
         assertEquals("12", pch.result.toString());
+        bootstrap.releaseExternalResources();
     }
 
     @Test(expected = ChannelPipelineException.class)
@@ -184,6 +187,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         replay(pipelineFactory);
 
         bootstrap.connect(new InetSocketAddress(TestUtil.getLocalHost(), 1));
+        bootstrap.releaseExternalResources();
     }
 
     @Test(expected = IllegalStateException.class)

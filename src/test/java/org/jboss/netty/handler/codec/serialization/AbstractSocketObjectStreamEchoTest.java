@@ -135,6 +135,8 @@ public abstract class AbstractSocketObjectStreamEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

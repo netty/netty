@@ -44,8 +44,8 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -91,16 +91,14 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
      */
     protected final AtomicBoolean wakenUp = new AtomicBoolean();
 
-    /**
-     * Monitor object used to synchronize selector open/close.
-     */
-    private final Object startStopLock = new Object();
-
     final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
+
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+    private volatile boolean shutdown;
 
     AbstractNioWorker(Executor executor) {
         this(executor, null);
@@ -112,17 +110,20 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     }
 
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
+        Runnable task = createRegisterTask(channel, future);
 
-        synchronized (startStopLock) {
-            if (selector == null) {
-                // the selector was null this means the Worker has already been shutdown.
-                throw new RejectedExecutionException("Worker has already been shutdown");
-            }
+        taskQueue.add(task);
 
-            taskQueue.add(createRegisterTask(channel, future));
+        Selector selector = this.selector;
 
+        if (selector != null) {
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
+            }
+        } else {
+            if (taskQueue.remove(task)) {
+                // the selector was null this means the Worker has already been shutdown.
+                throw new RejectedExecutionException("Worker has already been shutdown");
             }
         }
     }
@@ -207,7 +208,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         // Start the worker thread with the new Selector.
         boolean success = false;
         try {
-            DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id, determiner));
+            DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O worker #" + id, determiner));
             success = true;
         } finally {
             if (!success) {
@@ -227,10 +228,14 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     public void run() {
         thread = Thread.currentThread();
 
-        boolean shutdown = false;
         int selectReturnsImmediately = 0;
         Selector selector = this.selector;
 
+        if (selector == null) {
+            // this can happen if we call releaseExternal before the thread was able to started
+            sendBufferPool.releaseExternalResources();
+            return;
+        }
         // use 80% of the timeout for measure
         final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS * 80 / 100;
         boolean wakenupFromLoop = false;
@@ -325,35 +330,29 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 cancelledKeys = 0;
                 processTaskQueue();
                 selector = this.selector; // processTaskQueue() can call rebuildSelector()
-                processSelectedKeys(selector.selectedKeys());
 
-                // Exit the loop when there's nothing to handle.
-                // The shutdown flag is used to delay the shutdown of this
-                // loop to avoid excessive Selector creation when
-                // connections are registered in a one-by-one manner instead of
-                // concurrent manner.
-                if (selector.keys().isEmpty()) {
-                    if (shutdown ||
-                        executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
+                if (shutdown) {
+                    this.selector = null;
 
-                        synchronized (startStopLock) {
-                            if (taskQueue.isEmpty() && selector.keys().isEmpty()) {
-                                try {
-                                    selector.close();
-                                } catch (IOException e) {
-                                    logger.warn(
-                                            "Failed to close a selector.", e);
-                                } finally {
-                                    this.selector = null;
-                                }
-                                break;
-                            } else {
-                                shutdown = false;
-                            }
-                        }
+                    // process one time again
+                    processTaskQueueSafe();
+
+                    for (Iterator<SelectionKey> i = selector.keys().iterator(); i.hasNext();) {
+                        close(i.next());
                     }
+
+                    try {
+                        selector.close();
+                    } catch (IOException e) {
+                        logger.warn(
+                                "Failed to close a selector.", e);
+                    }
+                    // release the pool now!
+                    sendBufferPool.releaseExternalResources();
+                    shutdownLatch.countDown();
+                    break;
                 } else {
-                    shutdown = false;
+                    processSelectedKeys(selector.selectedKeys());
                 }
             } catch (Throwable t) {
                 logger.warn(
@@ -389,25 +388,17 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         } else {
             taskQueue.offer(task);
 
-            synchronized (startStopLock) {
-                // check if the selector was shutdown already or was not started yet. If so execute all
-                // submitted tasks in the calling thread
-                if (selector == null) {
-                    // execute everything in the event queue as the
-                    for (;;) {
-                        Runnable r = taskQueue.poll();
-                        if (r == null) {
-                            break;
-                        }
-                        r.run();
-                    }
-                } else {
-                    if (wakenUp.compareAndSet(false, true))  {
-                        // wake up the selector to speed things
-                        Selector selector = this.selector;
-                        if (selector != null) {
-                            selector.wakeup();
-                        }
+            if (selector == null) {
+                // remove it from the qeue again if possible
+                taskQueue.remove(task);
+                throw new RejectedExecutionException("Worker was shutdown already");
+            } else {
+                // wake up the selector to speed things
+                Selector selector = this.selector;
+
+                if (wakenUp.compareAndSet(false, true))  {
+                    if (selector != null) {
+                        selector.wakeup();
                     }
                 }
             }
@@ -422,6 +413,16 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
             }
             task.run();
             cleanUpCancelledKeys();
+        }
+    }
+
+    private void processTaskQueueSafe() {
+        for (;;) {
+            final Runnable task = taskQueue.poll();
+            if (task == null) {
+                break;
+            }
+            task.run();
         }
     }
 
@@ -836,7 +837,21 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     }
 
     public void releaseExternalResources() {
-        sendBufferPool.releaseExternalResources();
+        if (Thread.currentThread() == thread) {
+            throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
+        }
+
+        Selector selector = this.selector;
+        shutdown = true;
+        if (selector != null) {
+           selector.wakeup();
+        }
+        try {
+            shutdownLatch.await();
+        } catch (InterruptedException e) {
+            logger.error("Interrupted while wait for resources to be released of worker #" + id);
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

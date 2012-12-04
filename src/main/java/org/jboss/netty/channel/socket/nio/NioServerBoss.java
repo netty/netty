@@ -21,6 +21,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
@@ -38,8 +39,8 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,7 +50,7 @@ import static org.jboss.netty.channel.Channels.*;
 /**
  * Boss implementation which handles accepting of new connections
  */
-public final class NioServerBoss implements Boss {
+public final class NioServerBoss implements Boss, ExternalResourceReleasable {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -68,11 +69,6 @@ public final class NioServerBoss implements Boss {
     private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     /**
-     * Monitor object used to synchronize selector open/close.
-     */
-    private final Object startStopLock = new Object();
-
-    /**
      * Boolean that controls determines if a blocked Selector.select should
      * break out of its selection process. In our case we use a timeone for
      * the select method and the select method will block for that time unless
@@ -82,6 +78,9 @@ public final class NioServerBoss implements Boss {
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+    private volatile boolean shutdown;
 
     NioServerBoss(Executor bossExecutor) {
         this(bossExecutor, null);
@@ -94,41 +93,48 @@ public final class NioServerBoss implements Boss {
 
     void bind(final NioServerSocketChannel channel, final ChannelFuture future,
               final SocketAddress localAddress) {
-        synchronized (startStopLock) {
-            if (selector == null) {
-                // the selector was null this means the Worker has already been shutdown.
-                throw new RejectedExecutionException("Worker has already been shutdown");
-            }
+        Runnable task = new Runnable() {
+            public void run() {
+                boolean bound = false;
+                boolean registered = false;
+                try {
+                    channel.socket.socket().bind(localAddress, channel.getConfig().getBacklog());
+                    bound = true;
 
-            boolean offered = taskQueue.offer(new Runnable() {
-                public void run() {
-                    boolean bound = false;
-                    boolean registered = false;
-                    try {
-                        channel.socket.socket().bind(localAddress, channel.getConfig().getBacklog());
-                        bound = true;
+                    future.setSuccess();
+                    fireChannelBound(channel, channel.getLocalAddress());
+                    channel.socket.register(selector, SelectionKey.OP_ACCEPT, channel);
 
-                        future.setSuccess();
-                        fireChannelBound(channel, channel.getLocalAddress());
-                        channel.socket.register(selector, SelectionKey.OP_ACCEPT, channel);
-
-                        registered = true;
-                    } catch (Throwable t) {
-                        future.setFailure(t);
-                        fireExceptionCaught(channel, t);
-                    } finally {
-                        if (!registered && bound) {
-                            close(channel, future);
-                        }
+                    registered = true;
+                } catch (Throwable t) {
+                    future.setFailure(t);
+                    fireExceptionCaught(channel, t);
+                } finally {
+                    if (!registered && bound) {
+                        close(channel, future);
                     }
                 }
-            });
-            assert offered;
+            }
+        };
 
+        taskQueue.add(task);
+
+        Selector selector = this.selector;
+        if (selector != null) {
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
             }
+        } else {
+            if (taskQueue.remove(task)) {
+                // the selector was null this means the Worker has already been shutdown.
+                throw new RejectedExecutionException("Boss has already been shutdown");
+            }
         }
+    }
+
+    private void close(SelectionKey k) {
+        NioServerSocketChannel ch = (NioServerSocketChannel) k.attachment();
+        close(ch, succeededFuture(ch));
     }
 
     void close(NioServerSocketChannel channel, ChannelFuture future) {
@@ -184,7 +190,13 @@ public final class NioServerBoss implements Boss {
 
     public void run() {
         thread = Thread.currentThread();
-        boolean shutdown = false;
+        Selector selector = this.selector;
+
+        if (selector == null) {
+            // this can happen if we call releaseExternal before the thread was able to started
+            return;
+        }
+
         for (;;) {
             wakenUp.set(false);
 
@@ -225,36 +237,26 @@ public final class NioServerBoss implements Boss {
                 }
                 processTaskQueue();
                 selector = this.selector; // processTaskQueue() can call rebuildSelector()
+                if (shutdown) {
+                    this.selector = null;
 
-                processSelectedKeys(selector.selectedKeys());
+                    // process one time again
+                    processTaskQueue();
 
-                // Exit the loop when there's nothing to handle.
-                // The shutdown flag is used to delay the shutdown of this
-                // loop to avoid excessive Selector creation when
-                // connections are registered in a one-by-one manner instead of
-                // concurrent manner.
-                if (selector.keys().isEmpty()) {
-                    if (shutdown || bossExecutor instanceof ExecutorService &&
-                            ((ExecutorService) bossExecutor).isShutdown()) {
-
-                        synchronized (startStopLock) {
-                            if (selector.keys().isEmpty()) {
-                                try {
-                                    selector.close();
-                                } catch (IOException e) {
-                                    logger.warn(
-                                            "Failed to close a selector.", e);
-                                } finally {
-                                    selector = null;
-                                }
-                                break;
-                            } else {
-                                shutdown = false;
-                            }
-                        }
+                    for (Iterator<SelectionKey> i = selector.keys().iterator(); i.hasNext();) {
+                        close(i.next());
                     }
+
+                    try {
+                        selector.close();
+                    } catch (IOException e) {
+                        logger.warn(
+                                "Failed to close a selector.", e);
+                    }
+                    shutdownLatch.countDown();
+                    break;
                 } else {
-                    shutdown = false;
+                    processSelectedKeys(selector.selectedKeys());
                 }
             } catch (Throwable e) {
                 if (logger.isWarnEnabled()) {
@@ -430,5 +432,23 @@ public final class NioServerBoss implements Boss {
         }
 
         logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
+    }
+
+    public void releaseExternalResources() {
+        if (Thread.currentThread() == thread) {
+            throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
+        }
+
+        shutdown = true;
+        Selector selector = this.selector;
+        if (selector != null) {
+            selector.wakeup();
+        }
+        try {
+            shutdownLatch.await();
+        } catch (InterruptedException e) {
+            logger.error("Interrupted while wait for resources to be released of boss #" + id);
+            Thread.currentThread().interrupt();
+        }
     }
 }

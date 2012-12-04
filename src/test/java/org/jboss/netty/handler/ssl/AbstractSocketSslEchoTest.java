@@ -172,6 +172,9 @@ public abstract class AbstractSocketSslEchoTest {
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
 
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
+
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
         }

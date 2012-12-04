@@ -83,6 +83,7 @@ public abstract class AbstractDatagramTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
-
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
     }
 }
