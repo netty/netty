@@ -15,16 +15,12 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -34,105 +30,32 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ConcurrentModificationException;
 import java.util.Iterator;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.jboss.netty.channel.Channels.*;
 
 /**
  * Boss implementation which handles accepting of new connections
  */
-public final class NioServerBoss implements Boss, ExternalResourceReleasable {
-
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NioServerBoss.class);
-
-    private final int id = nextId.incrementAndGet();
-
-    private volatile Selector selector;
-    private volatile Thread thread;
-
-    private final Executor bossExecutor;
-    /**
-     * Queue of channel registration tasks.
-     */
-    private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-    /**
-     * Boolean that controls determines if a blocked Selector.select should
-     * break out of its selection process. In our case we use a timeone for
-     * the select method and the select method will block for that time unless
-     * waken up.
-     */
-    private final AtomicBoolean wakenUp = new AtomicBoolean();
-
-    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
-    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
-
-    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
-    private volatile boolean shutdown;
+public final class NioServerBoss extends AbstractNioSelector implements Boss {
 
     NioServerBoss(Executor bossExecutor) {
-        this(bossExecutor, null);
+        super(bossExecutor);
     }
 
     NioServerBoss(Executor bossExecutor, ThreadNameDeterminer determiner) {
-        this.bossExecutor = bossExecutor;
-        openSelector(determiner);
+        super(bossExecutor, determiner);
     }
 
     void bind(final NioServerSocketChannel channel, final ChannelFuture future,
               final SocketAddress localAddress) {
-        Runnable task = new Runnable() {
-            public void run() {
-                boolean bound = false;
-                boolean registered = false;
-                try {
-                    channel.socket.socket().bind(localAddress, channel.getConfig().getBacklog());
-                    bound = true;
-
-                    future.setSuccess();
-                    fireChannelBound(channel, channel.getLocalAddress());
-                    channel.socket.register(selector, SelectionKey.OP_ACCEPT, channel);
-
-                    registered = true;
-                } catch (Throwable t) {
-                    future.setFailure(t);
-                    fireExceptionCaught(channel, t);
-                } finally {
-                    if (!registered && bound) {
-                        close(channel, future);
-                    }
-                }
-            }
-        };
-
-        taskQueue.add(task);
-
-        Selector selector = this.selector;
-        if (selector != null) {
-            if (wakenUp.compareAndSet(false, true)) {
-                selector.wakeup();
-            }
-        } else {
-            if (taskQueue.remove(task)) {
-                // the selector was null this means the Worker has already been shutdown.
-                throw new RejectedExecutionException("Boss has already been shutdown");
-            }
-        }
+        registerTask(new RegisterTask(channel, future, localAddress));
     }
 
-    private void close(SelectionKey k) {
+    @Override
+    protected void close(SelectionKey k) {
         NioServerSocketChannel ch = (NioServerSocketChannel) k.attachment();
         close(ch, succeededFuture(ch));
     }
@@ -142,7 +65,7 @@ public final class NioServerBoss implements Boss, ExternalResourceReleasable {
 
         try {
             channel.socket.close();
-            cancelledKeys ++;
+            increaseCancelledKeys();
 
             if (channel.setClosed()) {
                 future.setSuccess();
@@ -160,140 +83,8 @@ public final class NioServerBoss implements Boss, ExternalResourceReleasable {
         }
     }
 
-    private void openSelector(ThreadNameDeterminer determiner) {
-        try {
-            selector = Selector.open();
-        } catch (Throwable t) {
-            throw new ChannelException("Failed to create a selector.", t);
-        }
-
-        // Start the worker thread with the new Selector.
-        boolean success = false;
-        try {
-            DeadLockProofWorker.start(bossExecutor, new ThreadRenamingRunnable(this,
-                    "New I/O server boss #" + id, determiner));
-            success = true;
-        } finally {
-            if (!success) {
-                // Release the Selector if the execution fails.
-                try {
-                    selector.close();
-                } catch (Throwable t) {
-                    logger.warn("Failed to close a selector.", t);
-                }
-                selector = null;
-                // The method will return to the caller at this point.
-            }
-        }
-        assert selector != null && selector.isOpen();
-    }
-
-    public void run() {
-        thread = Thread.currentThread();
-        Selector selector = this.selector;
-
-        if (selector == null) {
-            // this can happen if we call releaseExternal before the thread was able to started
-            return;
-        }
-
-        for (;;) {
-            wakenUp.set(false);
-
-            try {
-                // Just do a blocking select without any timeout
-                // as this thread does not execute anything else.
-                selector.select();
-
-                // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                // before calling 'selector.wakeup()' to reduce the wake-up
-                // overhead. (Selector.wakeup() is an expensive operation.)
-                //
-                // However, there is a race condition in this approach.
-                // The race condition is triggered when 'wakenUp' is set to
-                // true too early.
-                //
-                // 'wakenUp' is set to true too early if:
-                // 1) Selector is waken up between 'wakenUp.set(false)' and
-                //    'selector.select(...)'. (BAD)
-                // 2) Selector is waken up between 'selector.select(...)' and
-                //    'if (wakenUp.get()) { ... }'. (OK)
-                //
-                // In the first case, 'wakenUp' is set to true and the
-                // following 'selector.select(...)' will wake up immediately.
-                // Until 'wakenUp' is set to false again in the next round,
-                // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                // any attempt to wake up the Selector will fail, too, causing
-                // the following 'selector.select(...)' call to block
-                // unnecessarily.
-                //
-                // To fix this problem, we wake up the selector again if wakenUp
-                // is true immediately after selector.select(...).
-                // It is inefficient in that it wakes up the selector for both
-                // the first case (BAD - wake-up required) and the second case
-                // (OK - no wake-up required).
-                if (wakenUp.get()) {
-                    selector.wakeup();
-                }
-                processTaskQueue();
-                selector = this.selector; // processTaskQueue() can call rebuildSelector()
-                if (shutdown) {
-                    this.selector = null;
-
-                    // process one time again
-                    processTaskQueue();
-
-                    for (Iterator<SelectionKey> i = selector.keys().iterator(); i.hasNext();) {
-                        close(i.next());
-                    }
-
-                    try {
-                        selector.close();
-                    } catch (IOException e) {
-                        logger.warn(
-                                "Failed to close a selector.", e);
-                    }
-                    shutdownLatch.countDown();
-                    break;
-                } else {
-                    processSelectedKeys(selector.selectedKeys());
-                }
-            } catch (Throwable e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(
-                            "Failed to accept a connection.", e);
-                }
-
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e1) {
-                    // Ignore
-                }
-            }
-        }
-    }
-
-    private void processTaskQueue() throws IOException {
-        for (;;) {
-            final Runnable task = taskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-    private boolean cleanUpCancelledKeys() throws IOException {
-        if (cancelledKeys >= CLEANUP_INTERVAL) {
-            cancelledKeys = 0;
-            selector.selectNow();
-            return true;
-        }
-        return false;
-    }
-
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+    @Override
+    protected void processSelectedKeys(Set<SelectionKey> selectedKeys) {
         if (selectedKeys.isEmpty()) {
             return;
         }
@@ -364,91 +155,56 @@ public final class NioServerBoss implements Boss, ExternalResourceReleasable {
         }
     }
 
-    public void rebuildSelector() {
-        if (Thread.currentThread() != thread) {
-            Selector selector = this.selector;
-            if (selector != null) {
-                taskQueue.add(new Runnable() {
-                    public void run() {
-                        rebuildSelector();
-                    }
-                });
-                selector.wakeup();
-            }
-            return;
+    @Override
+    protected int select(Selector selector) throws IOException {
+        // Just do a blocking select without any timeout
+        // as this thread does not execute anything else.
+        return selector.select();
+    }
+
+    @Override
+    protected ThreadRenamingRunnable newThreadRenamingRunnable(int id, ThreadNameDeterminer determiner) {
+        return new ThreadRenamingRunnable(this,
+                "New I/O server boss #" + id, determiner);
+    }
+
+    @Override
+    protected Runnable createRegisterTask(Channel channel, ChannelFuture future) {
+        return new RegisterTask((NioServerSocketChannel) channel, future, null);
+    }
+
+    private final class RegisterTask implements Runnable {
+        private final NioServerSocketChannel channel;
+        private final ChannelFuture future;
+        private final SocketAddress localAddress;
+
+        public RegisterTask(final NioServerSocketChannel channel, final ChannelFuture future,
+                            final SocketAddress localAddress) {
+            this.channel = channel;
+            this.future = future;
+            this.localAddress = localAddress;
         }
 
-        final Selector oldSelector = selector;
-        final Selector newSelector;
-
-        if (oldSelector == null) {
-            return;
-        }
-
-        try {
-            newSelector = Selector.open();
-        } catch (Exception e) {
-            logger.warn("Failed to create a new Selector.", e);
-            return;
-        }
-
-        // Register all channels to the new Selector.
-        int nChannels = 0;
-        for (;;) {
+        public void run() {
+            boolean bound = false;
+            boolean registered = false;
             try {
-                for (SelectionKey key: oldSelector.keys()) {
-                    try {
-                        if (key.channel().keyFor(newSelector) != null) {
-                            continue;
-                        }
+                channel.socket.socket().bind(localAddress, channel.getConfig().getBacklog());
+                bound = true;
 
-                        int interestOps = key.interestOps();
-                        key.cancel();
-                        key.channel().register(newSelector, interestOps, key.attachment());
-                        nChannels ++;
-                    } catch (Exception e) {
-                        logger.warn("Failed to re-register a Channel to the new Selector,", e);
-                        NioServerSocketChannel ch = (NioServerSocketChannel) key.attachment();
-                        close(ch, succeededFuture(ch));
-                    }
+                future.setSuccess();
+                fireChannelBound(channel, channel.getLocalAddress());
+                channel.socket.register(selector, SelectionKey.OP_ACCEPT, channel);
+
+                registered = true;
+            } catch (Throwable t) {
+                future.setFailure(t);
+                fireExceptionCaught(channel, t);
+            } finally {
+                if (!registered && bound) {
+                    close(channel, future);
                 }
-            } catch (ConcurrentModificationException e) {
-                // Probably due to concurrent modification of the key set.
-                continue;
-            }
-
-            break;
-        }
-
-        selector = newSelector;
-
-        try {
-            // time to close the old selector as everything else is registered to the new one
-            oldSelector.close();
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close the old Selector.", t);
             }
         }
-
-        logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
-    }
-
-    public void releaseExternalResources() {
-        if (Thread.currentThread() == thread) {
-            throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
-        }
-
-        shutdown = true;
-        Selector selector = this.selector;
-        if (selector != null) {
-            selector.wakeup();
-        }
-        try {
-            shutdownLatch.await();
-        } catch (InterruptedException e) {
-            logger.error("Interrupted while wait for resources to be released of boss #" + id);
-            Thread.currentThread().interrupt();
-        }
-    }
+    };
 }

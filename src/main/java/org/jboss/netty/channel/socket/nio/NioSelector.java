@@ -13,22 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package org.jboss.netty.channel.socket.nio;
 
-package org.jboss.netty.channel.socket;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 
-/**
- * A {@link Worker} is responsible to dispatch IO operations
- *
- */
-public interface Worker extends Runnable {
+
+public interface NioSelector extends Runnable {
+
+    void register(Channel channel, ChannelFuture future);
 
     /**
-     * Execute the given {@link Runnable} in the IO-Thread. This may be now or
-     * later once the IO-Thread do some other work.
-     *
-     * @param task
-     *            the {@link Runnable} to execute
+     * Replaces the current {@link java.nio.channels.Selector} with a
+     * new {@link java.nio.channels.Selector} to work around the infamous epoll 100% CPU
+     * bug.
      */
-    void executeInIoThread(Runnable task);
-
+    void rebuildSelector();
 }

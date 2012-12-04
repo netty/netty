@@ -17,6 +17,7 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
@@ -133,13 +134,7 @@ public class NioWorker extends AbstractNioWorker {
     }
 
     @Override
-    public void releaseExternalResources() {
-        super.releaseExternalResources();
-        recvBufferPool.releaseExternalResources();
-    }
-
-    @Override
-    protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+    protected Runnable createRegisterTask(Channel channel, ChannelFuture future) {
         boolean server = !(channel instanceof NioClientSocketChannel);
         return new RegisterTask((NioSocketChannel) channel, future, server);
     }
@@ -197,5 +192,11 @@ public class NioWorker extends AbstractNioWorker {
                 }
             }
         }
+    }
+
+    @Override
+    public void run() {
+        super.run();
+        recvBufferPool.releaseExternalResources();
     }
 }

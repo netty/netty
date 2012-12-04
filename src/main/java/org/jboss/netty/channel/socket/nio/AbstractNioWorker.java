@@ -16,357 +16,40 @@
 package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+
 
 import static org.jboss.netty.channel.Channels.*;
 
-abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
-
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    final int id = nextId.incrementAndGet();
-
-    /**
-     * Internal Netty logger.
-     */
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(AbstractNioWorker.class);
-
-    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
-
-    /**
-     * Executor used to execute {@link Runnable}s such as channel registration
-     * task.
-     */
-    private final Executor executor;
-
-    /**
-     * If this worker has been started thread will be a reference to the thread
-     * used when starting. i.e. the current thread when the run method is executed.
-     */
-    protected volatile Thread thread;
-
-    /**
-     * The NIO {@link Selector}.
-     */
-    volatile Selector selector;
-
-    /**
-     * Boolean that controls determines if a blocked Selector.select should
-     * break out of its selection process. In our case we use a timeone for
-     * the select method and the select method will block for that time unless
-     * waken up.
-     */
-    protected final AtomicBoolean wakenUp = new AtomicBoolean();
-
-    final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
+abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
 
     protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
-    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
-    private volatile boolean shutdown;
-
     AbstractNioWorker(Executor executor) {
-        this(executor, null);
+        super(executor);
     }
 
     AbstractNioWorker(Executor executor, ThreadNameDeterminer determiner) {
-        this.executor = executor;
-        openSelector(determiner);
-    }
-
-    void register(AbstractNioChannel<?> channel, ChannelFuture future) {
-        Runnable task = createRegisterTask(channel, future);
-
-        taskQueue.add(task);
-
-        Selector selector = this.selector;
-
-        if (selector != null) {
-            if (wakenUp.compareAndSet(false, true)) {
-                selector.wakeup();
-            }
-        } else {
-            if (taskQueue.remove(task)) {
-                // the selector was null this means the Worker has already been shutdown.
-                throw new RejectedExecutionException("Worker has already been shutdown");
-            }
-        }
-    }
-
-    public void rebuildSelector() {
-        if (Thread.currentThread() != thread) {
-            executeInIoThread(new Runnable() {
-                public void run() {
-                    rebuildSelector();
-                }
-            }, true);
-            return;
-        }
-
-        final Selector oldSelector = selector;
-        final Selector newSelector;
-
-        if (oldSelector == null) {
-            return;
-        }
-
-        try {
-            newSelector = Selector.open();
-        } catch (Exception e) {
-            logger.warn("Failed to create a new Selector.", e);
-            return;
-        }
-
-        // Register all channels to the new Selector.
-        int nChannels = 0;
-        for (;;) {
-            try {
-                for (SelectionKey key: oldSelector.keys()) {
-                    try {
-                        if (key.channel().keyFor(newSelector) != null) {
-                            continue;
-                        }
-
-                        int interestOps = key.interestOps();
-                        key.cancel();
-                        key.channel().register(newSelector, interestOps, key.attachment());
-                        nChannels ++;
-                    } catch (Exception e) {
-                        logger.warn("Failed to re-register a Channel to the new Selector,", e);
-                        AbstractNioChannel<?> channel = (AbstractNioChannel<?>) key.attachment();
-                        close(channel, succeededFuture(channel));
-                    }
-                }
-            } catch (ConcurrentModificationException e) {
-                // Probably due to concurrent modification of the key set.
-                continue;
-            }
-
-            break;
-        }
-
-        selector = newSelector;
-
-        try {
-            // time to close the old selector as everything else is registered to the new one
-            oldSelector.close();
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close the old Selector.", t);
-            }
-        }
-
-        logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
-    }
-
-    /**
-     * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for
-     * the {@link AbstractNioChannel}'s when they get registered
-     */
-    private void openSelector(ThreadNameDeterminer determiner) {
-        try {
-            selector = Selector.open();
-        } catch (Throwable t) {
-            throw new ChannelException("Failed to create a selector.", t);
-        }
-
-        // Start the worker thread with the new Selector.
-        boolean success = false;
-        try {
-            DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O worker #" + id, determiner));
-            success = true;
-        } finally {
-            if (!success) {
-                // Release the Selector if the execution fails.
-                try {
-                    selector.close();
-                } catch (Throwable t) {
-                    logger.warn("Failed to close a selector.", t);
-                }
-                selector = null;
-                // The method will return to the caller at this point.
-            }
-        }
-        assert selector != null && selector.isOpen();
-    }
-
-    public void run() {
-        thread = Thread.currentThread();
-
-        int selectReturnsImmediately = 0;
-        Selector selector = this.selector;
-
-        if (selector == null) {
-            // this can happen if we call releaseExternal before the thread was able to started
-            sendBufferPool.releaseExternalResources();
-            return;
-        }
-        // use 80% of the timeout for measure
-        final long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS * 80 / 100;
-        boolean wakenupFromLoop = false;
-        for (;;) {
-            wakenUp.set(false);
-
-            try {
-                long beforeSelect = System.nanoTime();
-                int selected = SelectorUtil.select(selector);
-                if (SelectorUtil.EPOLL_BUG_WORKAROUND && selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
-                    long timeBlocked = System.nanoTime() - beforeSelect;
-
-                    if (timeBlocked < minSelectTimeout) {
-                        boolean notConnected = false;
-                        // loop over all keys as the selector may was unblocked because of a closed channel
-                        for (SelectionKey key: selector.keys()) {
-                            SelectableChannel ch = key.channel();
-                            try {
-                                if (ch instanceof DatagramChannel && !((DatagramChannel) ch).isConnected() ||
-                                        ch instanceof SocketChannel && !((SocketChannel) ch).isConnected()) {
-                                    notConnected = true;
-                                    // cancel the key just to be on the safe side
-                                    key.cancel();
-                                }
-                            } catch (CancelledKeyException e) {
-                                // ignore
-                            }
-                        }
-                        if (notConnected) {
-                            selectReturnsImmediately = 0;
-                        } else {
-                            // returned before the minSelectTimeout elapsed with nothing select.
-                            // this may be the cause of the jdk epoll(..) bug, so increment the counter
-                            // which we use later to see if its really the jdk bug.
-                            selectReturnsImmediately ++;
-                        }
-                    } else {
-                        selectReturnsImmediately = 0;
-                    }
-
-                    if (selectReturnsImmediately == 1024) {
-                        // The selector returned immediately for 10 times in a row,
-                        // so recreate one selector as it seems like we hit the
-                        // famous epoll(..) jdk bug.
-                        rebuildSelector();
-                        selector = this.selector;
-                        selectReturnsImmediately = 0;
-                        wakenupFromLoop = false;
-                        // try to select again
-                        continue;
-                    }
-                } else {
-                    // reset counter
-                    selectReturnsImmediately = 0;
-                }
-
-                // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                // before calling 'selector.wakeup()' to reduce the wake-up
-                // overhead. (Selector.wakeup() is an expensive operation.)
-                //
-                // However, there is a race condition in this approach.
-                // The race condition is triggered when 'wakenUp' is set to
-                // true too early.
-                //
-                // 'wakenUp' is set to true too early if:
-                // 1) Selector is waken up between 'wakenUp.set(false)' and
-                //    'selector.select(...)'. (BAD)
-                // 2) Selector is waken up between 'selector.select(...)' and
-                //    'if (wakenUp.get()) { ... }'. (OK)
-                //
-                // In the first case, 'wakenUp' is set to true and the
-                // following 'selector.select(...)' will wake up immediately.
-                // Until 'wakenUp' is set to false again in the next round,
-                // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                // any attempt to wake up the Selector will fail, too, causing
-                // the following 'selector.select(...)' call to block
-                // unnecessarily.
-                //
-                // To fix this problem, we wake up the selector again if wakenUp
-                // is true immediately after selector.select(...).
-                // It is inefficient in that it wakes up the selector for both
-                // the first case (BAD - wake-up required) and the second case
-                // (OK - no wake-up required).
-
-                if (wakenUp.get()) {
-                    wakenupFromLoop = true;
-                    selector.wakeup();
-                } else {
-                    wakenupFromLoop = false;
-                }
-
-                cancelledKeys = 0;
-                processTaskQueue();
-                selector = this.selector; // processTaskQueue() can call rebuildSelector()
-
-                if (shutdown) {
-                    this.selector = null;
-
-                    // process one time again
-                    processTaskQueueSafe();
-
-                    for (Iterator<SelectionKey> i = selector.keys().iterator(); i.hasNext();) {
-                        close(i.next());
-                    }
-
-                    try {
-                        selector.close();
-                    } catch (IOException e) {
-                        logger.warn(
-                                "Failed to close a selector.", e);
-                    }
-                    // release the pool now!
-                    sendBufferPool.releaseExternalResources();
-                    shutdownLatch.countDown();
-                    break;
-                } else {
-                    processSelectedKeys(selector.selectedKeys());
-                }
-            } catch (Throwable t) {
-                logger.warn(
-                        "Unexpected exception in the selector loop.", t);
-
-                // Prevent possible consecutive immediate failures that lead to
-                // excessive CPU consumption.
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
-        }
+        super(executor, determiner);
     }
 
     public void executeInIoThread(Runnable task) {
@@ -405,28 +88,30 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    private void processTaskQueue() throws IOException {
-        for (;;) {
-            final Runnable task = taskQueue.poll();
-            if (task == null) {
-                break;
-            }
-            task.run();
-            cleanUpCancelledKeys();
-        }
+    @Override
+    protected void close(SelectionKey k) {
+        AbstractNioChannel<?> ch = (AbstractNioChannel<?>) k.attachment();
+        close(ch, succeededFuture(ch));
     }
 
-    private void processTaskQueueSafe() {
-        for (;;) {
-            final Runnable task = taskQueue.poll();
-            if (task == null) {
-                break;
-            }
-            task.run();
-        }
+    @Override
+    protected ThreadRenamingRunnable newThreadRenamingRunnable(int id, ThreadNameDeterminer determiner) {
+        return new ThreadRenamingRunnable(this, "New I/O worker #" + id, determiner);
     }
 
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
+    @Override
+    public void run() {
+        super.run();
+        sendBufferPool.releaseExternalResources();
+    }
+
+    @Override
+    protected int select(Selector selector) throws IOException {
+        return SelectorUtil.select(selector);
+    }
+
+    @Override
+    protected void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
@@ -455,20 +140,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 break; // break the loop to avoid ConcurrentModificationException
             }
         }
-    }
-
-    private boolean cleanUpCancelledKeys() throws IOException {
-        if (cancelledKeys >= CLEANUP_INTERVAL) {
-            cancelledKeys = 0;
-            selector.selectNow();
-            return true;
-        }
-        return false;
-    }
-
-    private void close(SelectionKey k) {
-        AbstractNioChannel<?> ch = (AbstractNioChannel<?>) k.attachment();
-        close(ch, succeededFuture(ch));
     }
 
     void writeFromUserCode(final AbstractNioChannel<?> channel) {
@@ -669,14 +340,14 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    void close(AbstractNioChannel<?> channel, ChannelFuture future) {
+    protected void close(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         boolean iothread = isIoThread(channel);
 
         try {
             channel.channel.close();
-            cancelledKeys ++;
+            increaseCancelledKeys();
 
             if (channel.setClosed()) {
                 future.setSuccess();
@@ -836,24 +507,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    public void releaseExternalResources() {
-        if (Thread.currentThread() == thread) {
-            throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
-        }
-
-        Selector selector = this.selector;
-        shutdown = true;
-        if (selector != null) {
-           selector.wakeup();
-        }
-        try {
-            shutdownLatch.await();
-        } catch (InterruptedException e) {
-            logger.error("Interrupted while wait for resources to be released of worker #" + id);
-            Thread.currentThread().interrupt();
-        }
-    }
-
     /**
      * Read is called when a Selector has been notified that the underlying channel
      * was something to be read. The channel would previously have registered its interest
@@ -862,10 +515,5 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
      * @param k The selection key which contains the Selector registration information.
      */
     protected abstract boolean read(SelectionKey k);
-
-    /**
-     * Create a new {@link Runnable} which will register the {@link AbstractNioWorker} with the {@link Channel}
-     */
-    protected abstract Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future);
 
 }

@@ -104,7 +104,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     }
 
     public void rebuildSelectors() {
-        for (Worker worker: workers) {
+        for (AbstractNioWorker worker: workers) {
             worker.rebuildSelector();
         }
     }

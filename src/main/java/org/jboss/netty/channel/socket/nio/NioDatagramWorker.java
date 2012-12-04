@@ -17,6 +17,7 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
@@ -109,12 +110,6 @@ public class NioDatagramWorker extends AbstractNioWorker {
     }
 
     @Override
-    public void releaseExternalResources() {
-        super.releaseExternalResources();
-        bufferAllocator.releaseExternalResources();
-    }
-
-    @Override
     protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
         final Thread workerThread = thread;
         if (workerThread == null || Thread.currentThread() != workerThread) {
@@ -159,7 +154,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
     }
 
     @Override
-    protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+    protected Runnable createRegisterTask(Channel channel, ChannelFuture future) {
         return new ChannelRegistionTask((NioDatagramChannel) channel, future);
     }
 
@@ -350,4 +345,9 @@ public class NioDatagramWorker extends AbstractNioWorker {
         fireWriteComplete(channel, writtenBytes);
     }
 
+    @Override
+    public void run() {
+        super.run();
+        bufferAllocator.releaseExternalResources();
+    }
 }
