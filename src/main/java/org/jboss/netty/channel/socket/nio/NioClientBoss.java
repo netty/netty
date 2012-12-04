@@ -64,11 +64,6 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
     }
 
     @Override
-    protected int select(Selector selector) throws IOException {
-        return SelectorUtil.select(selector);
-    }
-
-    @Override
     protected ThreadRenamingRunnable newThreadRenamingRunnable(int id, ThreadNameDeterminer determiner) {
         return new ThreadRenamingRunnable(this, "New I/O boss #" + id, determiner);
     }

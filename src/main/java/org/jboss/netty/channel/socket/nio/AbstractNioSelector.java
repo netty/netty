@@ -43,11 +43,11 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class AbstractNioSelector implements NioSelector, ExternalResourceReleasable {
+abstract class AbstractNioSelector implements NioSelector, ExternalResourceReleasable {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
-    final int id = nextId.incrementAndGet();
+    private final int id = nextId.incrementAndGet();
 
     /**
      * Internal Netty logger.
@@ -55,7 +55,7 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
     protected static final InternalLogger logger = InternalLoggerFactory
             .getInstance(AbstractNioSelector.class);
 
-    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+    private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
     /**
      * Executor used to execute {@link Runnable}s such as channel registration
@@ -72,7 +72,7 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
     /**
      * The NIO {@link Selector}.
      */
-    volatile Selector selector;
+    protected volatile Selector selector;
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
@@ -82,7 +82,7 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
      */
     protected final AtomicBoolean wakenUp = new AtomicBoolean();
 
-    final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
+    protected final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
@@ -120,8 +120,12 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
         }
     }
 
+    protected final boolean isIoThread() {
+        return Thread.currentThread() == thread;
+    }
+
     public void rebuildSelector() {
-        if (Thread.currentThread() != thread) {
+        if (!isIoThread()) {
             taskQueue.add(new Runnable() {
                 public void run() {
                     rebuildSelector();
@@ -325,14 +329,6 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
         }
     }
 
-    protected void process(Selector selector) throws IOException {
-        processSelectedKeys(selector.selectedKeys());
-    }
-
-    protected abstract int select(Selector selector) throws IOException;
-
-    protected abstract void close(SelectionKey k);
-
     /**
      * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for
      * the {@link AbstractNioChannel}'s when they get registered
@@ -364,8 +360,6 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
         assert selector != null && selector.isOpen();
     }
 
-    protected abstract ThreadRenamingRunnable newThreadRenamingRunnable(int id, ThreadNameDeterminer determiner);
-
     private void processTaskQueue() {
         for (;;) {
             final Runnable task = taskQueue.poll();
@@ -381,11 +375,11 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
         }
     }
 
-    protected void increaseCancelledKeys() {
+    protected final void increaseCancelledKeys() {
         cancelledKeys ++;
     }
 
-    protected boolean cleanUpCancelledKeys() throws IOException {
+    protected final boolean cleanUpCancelledKeys() throws IOException {
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
             selector.selectNow();
@@ -395,7 +389,7 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
     }
 
     public void releaseExternalResources() {
-        if (Thread.currentThread() == thread) {
+        if (isIoThread()) {
             throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
         }
 
@@ -411,6 +405,18 @@ public abstract class AbstractNioSelector implements NioSelector, ExternalResour
             Thread.currentThread().interrupt();
         }
     }
+
+    protected void process(Selector selector) throws IOException {
+        processSelectedKeys(selector.selectedKeys());
+    }
+
+    protected int select(Selector selector) throws IOException {
+        return SelectorUtil.select(selector);
+    }
+
+    protected abstract void close(SelectionKey k);
+
+    protected abstract ThreadRenamingRunnable newThreadRenamingRunnable(int id, ThreadNameDeterminer determiner);
 
     protected abstract void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException;
 

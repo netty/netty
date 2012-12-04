@@ -106,11 +106,6 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
     }
 
     @Override
-    protected int select(Selector selector) throws IOException {
-        return SelectorUtil.select(selector);
-    }
-
-    @Override
     protected void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
