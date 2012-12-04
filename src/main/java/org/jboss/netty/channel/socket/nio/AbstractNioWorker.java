@@ -35,7 +35,6 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 
 
 import static org.jboss.netty.channel.Channels.*;
@@ -66,25 +65,10 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
      *            in an async fashion even if the current Thread == IO Thread
      */
     public void executeInIoThread(Runnable task, boolean alwaysAsync) {
-        if (!alwaysAsync && Thread.currentThread() == thread) {
+        if (!alwaysAsync && isIoThread()) {
             task.run();
         } else {
-            taskQueue.offer(task);
-
-            if (selector == null) {
-                // remove it from the qeue again if possible
-                taskQueue.remove(task);
-                throw new RejectedExecutionException("Worker was shutdown already");
-            } else {
-                // wake up the selector to speed things
-                Selector selector = this.selector;
-
-                if (wakenUp.compareAndSet(false, true))  {
-                    if (selector != null) {
-                        selector.wakeup();
-                    }
-                }
-            }
+            registerTask(task);
         }
     }
 

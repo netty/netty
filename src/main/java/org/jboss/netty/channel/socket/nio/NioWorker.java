@@ -104,7 +104,7 @@ public class NioWorker extends AbstractNioWorker {
         final Thread workerThread = thread;
         if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                taskQueue.add(channel.writeTask);
+                registerTask(channel.writeTask);
             }
 
             if (!(channel instanceof NioAcceptedSocketChannel) ||
