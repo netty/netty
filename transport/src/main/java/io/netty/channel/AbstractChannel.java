@@ -393,8 +393,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
-
-
     protected abstract class AbstractUnsafe implements Unsafe {
 
         private final class FlushTask {
@@ -446,11 +444,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     });
                 } else {
-
                     // nothing pending try to send the fileRegion now!
                     sendFile0(region, future);
                 }
-
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
@@ -736,7 +732,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 flushNotifierAndFlush(future);
-
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override

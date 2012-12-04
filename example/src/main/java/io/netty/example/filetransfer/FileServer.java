@@ -101,7 +101,6 @@ public class FileServer {
                 ctx.write(file + " " + file.length() + "\n");
                 ctx.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length()));
                 ctx.write("\n");
-
             } else {
                 ctx.write("File not found: " + file + "\n");
             }

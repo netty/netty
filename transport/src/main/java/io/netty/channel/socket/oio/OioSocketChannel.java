@@ -253,6 +253,5 @@ public class OioSocketChannel extends AbstractOioByteChannel
                 return;
             }
         }
-
     }
 }

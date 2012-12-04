@@ -565,7 +565,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 @Override
                 public void completed(Integer result, Object attachment) {
                     try {
-
                         if (result == 0) {
                             javaChannel().write(src, null, this);
                             return;

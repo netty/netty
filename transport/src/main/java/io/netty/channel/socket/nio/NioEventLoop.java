@@ -128,7 +128,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-
     void executeWhenWritable(AbstractNioChannel channel, NioTask<? extends SelectableChannel> task) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -141,7 +140,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         SelectionKey key = channel.selectionKey();
         channel.writableTasks.offer((NioTask<SelectableChannel>) task);
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-
     }
 
     // Create a new selector and "transfer" all channels from the old
