@@ -37,7 +37,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
         }
     }
 
-    private void handleServerSocket(ChannelEvent e) {
+    private static void handleServerSocket(ChannelEvent e) {
         if (!(e instanceof ChannelStateEvent)) {
             return;
         }

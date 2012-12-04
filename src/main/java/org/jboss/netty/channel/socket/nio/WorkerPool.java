@@ -18,13 +18,11 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.channel.socket.Worker;
 
-import java.nio.channels.Selector;
-
 /**
  * The {@link WorkerPool} is responsible to hand of {@link Worker}'s on demand
  *
  */
-public interface WorkerPool<E extends Worker> {
+public interface WorkerPool<E extends Worker> extends NioSelectorPool {
 
     /**
      * Return the next {@link Worker} to use
@@ -32,10 +30,4 @@ public interface WorkerPool<E extends Worker> {
      * @return worker
      */
     E nextWorker();
-
-    /**
-     * Replaces the current {@link Selector}s of the {@link Worker}s with new {@link Selector}s to work around the
-     * infamous epoll 100% CPU bug.
-     */
-    void rebuildSelectors();
 }

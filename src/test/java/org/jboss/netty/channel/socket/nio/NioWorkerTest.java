@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import org.easymock.EasyMock;
+
 import java.util.concurrent.Executor;
 
 public class NioWorkerTest extends AbstractNioWorkerTest {
@@ -22,5 +24,10 @@ public class NioWorkerTest extends AbstractNioWorkerTest {
     @Override
     protected AbstractNioWorker createWorker(Executor executor) {
         return new NioWorker(executor);
+    }
+
+    @Override
+    protected AbstractNioChannel<?> createMockChannel() {
+        return EasyMock.createMock(NioSocketChannel.class);
     }
 }

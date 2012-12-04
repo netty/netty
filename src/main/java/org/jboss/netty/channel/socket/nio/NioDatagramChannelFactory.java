@@ -81,6 +81,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     private final NioDatagramPipelineSink sink;
     private final WorkerPool<NioDatagramWorker> workerPool;
     private final InternetProtocolFamily family;
+    private boolean releasePool;
 
     /**
      * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}
@@ -91,7 +92,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
     public NioDatagramChannelFactory() {
-        this(Executors.newCachedThreadPool(), null);
+        this((InternetProtocolFamily) null);
     }
 
     /**
@@ -100,7 +101,10 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
     public NioDatagramChannelFactory(InternetProtocolFamily family) {
-        this(Executors.newCachedThreadPool(), family);
+        workerPool = new NioDatagramWorkerPool(Executors.newCachedThreadPool(), SelectorUtil.DEFAULT_IO_THREADS);
+        this.family = family;
+        sink = new NioDatagramPipelineSink(workerPool);
+        releasePool = true;
     }
 
     /**
@@ -203,7 +207,19 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
         return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker(), family);
     }
 
+    public void shutdown() {
+        workerPool.shutdown();
+        if (releasePool) {
+            releasePool();
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
+        releasePool();
+    }
+
+    private void releasePool() {
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }

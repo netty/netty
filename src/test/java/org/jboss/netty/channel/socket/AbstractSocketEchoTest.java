@@ -124,6 +124,11 @@ public abstract class AbstractSocketEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
+        cb.shutdown();
+        sb.shutdown();
+
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
@@ -137,6 +142,7 @@ public abstract class AbstractSocketEchoTest {
         if (ch.exception.get() != null) {
             throw ch.exception.get();
         }
+
     }
 
     private static class EchoHandler extends SimpleChannelUpstreamHandler {

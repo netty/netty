@@ -74,7 +74,7 @@ public class NioClientSocketShutdownTimeTest {
                 // Ignore.
             }
         }
-
+        b.releaseExternalResources();
         long shutdownTime = stopTime - startTime;
         assertTrue("Shutdown takes too long: " + shutdownTime + " ms", shutdownTime < 500);
     }

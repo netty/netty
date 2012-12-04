@@ -16,8 +16,6 @@
 
 package org.jboss.netty.channel.socket;
 
-import java.nio.channels.Selector;
-
 /**
  * A {@link Worker} is responsible to dispatch IO operations
  *
@@ -33,9 +31,4 @@ public interface Worker extends Runnable {
      */
     void executeInIoThread(Runnable task);
 
-    /**
-     * Replaces the current {@link Selector} with a new {@link Selector} to work around the infamous epoll 100% CPU
-     * bug.
-     */
-    void rebuildSelector();
 }

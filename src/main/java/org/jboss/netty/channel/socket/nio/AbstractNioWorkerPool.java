@@ -105,15 +105,19 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     }
 
     public void rebuildSelectors() {
-        for (Worker worker: workers) {
+        for (AbstractNioWorker worker: workers) {
             worker.rebuildSelector();
         }
     }
 
     public void releaseExternalResources() {
+        shutdown();
         ExecutorUtil.terminate(workerExecutor);
+    }
+
+    public void shutdown() {
         for (AbstractNioWorker worker: workers) {
-            worker.releaseExternalResources();
+            worker.shutdown();
         }
     }
 

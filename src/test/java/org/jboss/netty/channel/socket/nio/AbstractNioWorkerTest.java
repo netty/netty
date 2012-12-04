@@ -32,7 +32,7 @@ public abstract class AbstractNioWorkerTest {
 
     @Test
     public void testShutdownWorkerThrowsException() throws InterruptedException {
-        AbstractNioChannel<?> mockChannel = createMock(AbstractNioChannel.class);
+        AbstractNioChannel<?> mockChannel = createMockChannel();
         replay(mockChannel);
         
         ChannelFuture mockFuture = createMock(ChannelFuture.class);
@@ -41,8 +41,7 @@ public abstract class AbstractNioWorkerTest {
         
         ExecutorService executor = Executors.newCachedThreadPool();
         AbstractNioWorker worker = createWorker(executor);
-
-        executor.shutdownNow();
+        worker.shutdown();
 
         // give the Selector time to detect the shutdown
         Thread.sleep(SelectorUtil.DEFAULT_SELECT_TIMEOUT * 10);
@@ -57,4 +56,6 @@ public abstract class AbstractNioWorkerTest {
     }
 
     protected abstract AbstractNioWorker createWorker(Executor executor);
+
+    protected abstract AbstractNioChannel<?> createMockChannel();
 }

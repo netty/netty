@@ -87,11 +87,13 @@ public abstract class AbstractNioBossPool<E extends Boss>
     }
 
     public void releaseExternalResources() {
+        shutdown();
         ExecutorUtil.terminate(bossExecutor);
+    }
+
+    public void shutdown() {
         for (Boss boss: bosses) {
-            if (boss instanceof ExternalResourceReleasable) {
-                ((ExternalResourceReleasable) boss).releaseExternalResources();
-            }
+            boss.shutdown();
         }
     }
 }

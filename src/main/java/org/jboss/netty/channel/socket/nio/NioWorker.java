@@ -17,6 +17,7 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
@@ -27,7 +28,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
@@ -103,27 +103,7 @@ public class NioWorker extends AbstractNioWorker {
         final Thread workerThread = thread;
         if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                taskQueue.add(channel.writeTask);
-            }
-
-            if (!(channel instanceof NioAcceptedSocketChannel) ||
-                ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
-                final Selector workerSelector = selector;
-                if (workerSelector != null) {
-                    if (wakenUp.compareAndSet(false, true)) {
-                        workerSelector.wakeup();
-                    }
-                }
-            } else {
-                // A write request can be made from an acceptor thread (boss)
-                // when a user attempted to write something in:
-                //
-                //   * channelOpen()
-                //   * channelBound()
-                //   * channelConnected().
-                //
-                // In this case, there's no need to wake up the selector because
-                // the channel is not even registered yet at this moment.
+                registerTask(channel.writeTask);
             }
 
             return true;
@@ -133,13 +113,7 @@ public class NioWorker extends AbstractNioWorker {
     }
 
     @Override
-    public void releaseExternalResources() {
-        super.releaseExternalResources();
-        recvBufferPool.releaseExternalResources();
-    }
-
-    @Override
-    protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+    protected Runnable createRegisterTask(Channel channel, ChannelFuture future) {
         boolean server = !(channel instanceof NioClientSocketChannel);
         return new RegisterTask((NioSocketChannel) channel, future, server);
     }
@@ -197,5 +171,11 @@ public class NioWorker extends AbstractNioWorker {
                 }
             }
         }
+    }
+
+    @Override
+    public void run() {
+        super.run();
+        recvBufferPool.releaseExternalResources();
     }
 }

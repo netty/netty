@@ -87,6 +87,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final BossPool<NioClientBoss> bossPool;
     private final WorkerPool<NioWorker> workerPool;
     private final NioClientSocketPipelineSink sink;
+    private boolean releasePools;
 
     /**
      * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()}
@@ -96,6 +97,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
      */
     public NioClientSocketChannelFactory() {
         this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        releasePools = true;
     }
 
     /**
@@ -211,7 +213,20 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         return new NioClientSocketChannel(this, pipeline, sink, workerPool.nextWorker());
     }
 
+    public void shutdown() {
+        bossPool.shutdown();
+        workerPool.shutdown();
+        if (releasePools) {
+            releasePools();
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
+        releasePools();
+    }
+
+    private void releasePools() {
         if (bossPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) bossPool).releaseExternalResources();
         }

@@ -15,13 +15,17 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-/**
- * A Pool that holds {@link Boss} instances
- */
-public interface BossPool<E extends Boss> extends NioSelectorPool {
+
+public interface NioSelectorPool {
+
     /**
-     * Return the next {@link Boss} to use
-     *
+     * Replaces the current {@link java.nio.channels.Selector}s of the {@link Boss}es with new
+     * {@link java.nio.channels.Selector}s to work around the  infamous epoll 100% CPU bug.
      */
-    E nextBoss();
+    void rebuildSelectors();
+
+    /**
+     * Shutdown the {@link NioSelectorPool} and all internal created resources
+     */
+    void shutdown();
 }

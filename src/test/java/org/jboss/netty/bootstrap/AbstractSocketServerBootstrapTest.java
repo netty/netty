@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.channel.Channel;
@@ -38,9 +37,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -80,38 +76,28 @@ public abstract class AbstractSocketServerBootstrapTest {
         }
     }
 
-    private static ExecutorService executor;
-
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
-
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
 
     @Test(timeout = 30000, expected = ChannelException.class)
     public void testFailedBindAttempt() throws Exception {
+        ServerBootstrap bootstrap = new ServerBootstrap();
+
         final ServerSocket ss = new ServerSocket(0);
         final int boundPort = ss.getLocalPort();
         try {
-            ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.setFactory(newServerSocketChannelFactory(executor));
+            bootstrap.setFactory(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
             bootstrap.setOption("localAddress", new InetSocketAddress(boundPort));
             bootstrap.bind().close().awaitUninterruptibly();
         } finally {
             ss.close();
+            bootstrap.releaseExternalResources();
         }
     }
 
     @Test(timeout = 30000)
     public void testSuccessfulBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap(
-                newServerSocketChannelFactory(executor));
+                newServerSocketChannelFactory(Executors.newCachedThreadPool()));
 
         bootstrap.setParentHandler(new ParentChannelHandler());
         bootstrap.setOption("localAddress", new InetSocketAddress(0));
@@ -172,6 +158,7 @@ public abstract class AbstractSocketServerBootstrapTest {
 
         // Confirm the received child events.
         assertEquals("12", pch.result.toString());
+        bootstrap.releaseExternalResources();
     }
 
     @Test(expected = ChannelPipelineException.class)
@@ -184,6 +171,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         replay(pipelineFactory);
 
         bootstrap.connect(new InetSocketAddress(TestUtil.getLocalHost(), 1));
+        bootstrap.releaseExternalResources();
     }
 
     @Test(expected = IllegalStateException.class)

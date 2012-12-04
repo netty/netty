@@ -116,7 +116,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                 });
                 cf.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 channel.connectFuture = cf;
-                nextBoss().register(channel);
+                nextBoss().register(channel, cf);
             }
 
         } catch (Throwable t) {

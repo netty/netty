@@ -47,4 +47,8 @@ public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChan
     public void releaseExternalResources() {
         clientSocketChannelFactory.releaseExternalResources();
     }
+
+    public void shutdown() {
+        clientSocketChannelFactory.shutdown();
+    }
 }

@@ -15,15 +15,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import java.nio.channels.Selector;
-
 /**
  * Serves the boss tasks like connecting/accepting
  */
-public interface Boss extends Runnable {
-    /**
-     * Replaces the current {@link Selector} with a new {@link Selector} to work around the infamous epoll 100% CPU
-     * bug.
-     */
-    void rebuildSelector();
+public interface Boss extends NioSelector {
 }

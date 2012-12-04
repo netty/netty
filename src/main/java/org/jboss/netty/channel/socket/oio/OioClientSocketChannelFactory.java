@@ -76,6 +76,7 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     private final Executor workerExecutor;
     final OioClientSocketPipelineSink sink;
+    private boolean shutdownExecutor;
 
     /**
      * Creates a new instance with a {@link Executors#newCachedThreadPool()} as worker executor.
@@ -84,6 +85,7 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
      */
     public OioClientSocketChannelFactory() {
         this(Executors.newCachedThreadPool());
+        shutdownExecutor = true;
     }
 
     /**
@@ -104,7 +106,14 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
         return new OioClientSocketChannel(this, pipeline, sink);
     }
 
+    public void shutdown() {
+        if (shutdownExecutor) {
+            ExecutorUtil.terminate(workerExecutor);
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
         ExecutorUtil.terminate(workerExecutor);
     }
 }

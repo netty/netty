@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,9 +35,6 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
@@ -46,7 +42,6 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
     static final Random random = new Random();
     static final String[] data = new String[1024];
 
-    private static ExecutorService executor;
 
     static {
         for (int i = 0; i < data.length; i ++) {
@@ -60,15 +55,6 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         }
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
@@ -76,8 +62,8 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
     @Test
     @SuppressWarnings("deprecation")
     public void testCompatibleObjectEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
@@ -134,6 +120,10 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
+        cb.shutdown();
+        sb.shutdown();
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

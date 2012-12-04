@@ -75,6 +75,7 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
 
     private final Executor workerExecutor;
     final OioDatagramPipelineSink sink;
+    private boolean shutdownExecutor;
 
     /**
      * Creates a new instance with a {@link Executors#newCachedThreadPool()}
@@ -83,6 +84,7 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
      */
     public OioDatagramChannelFactory() {
         this(Executors.newCachedThreadPool());
+        shutdownExecutor = true;
     }
 
     /**
@@ -103,7 +105,14 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
         return new OioDatagramChannel(this, pipeline, sink);
     }
 
+    public void shutdown() {
+        if (shutdownExecutor) {
+            ExecutorUtil.terminate(workerExecutor);
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
         ExecutorUtil.terminate(workerExecutor);
     }
 }
