@@ -45,11 +45,6 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     final AbstractNioWorker worker;
 
     /**
-     * Monitor object to synchronize access to InterestedOps.
-     */
-    final Object interestOpsLock = new Object();
-
-    /**
      * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
      */
     final Object writeLock = new Object();

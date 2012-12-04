@@ -15,7 +15,12 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.util.ThreadNameDeterminer;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -26,12 +31,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.util.ThreadNameDeterminer;
+import static org.jboss.netty.channel.Channels.*;
 
 public class NioWorker extends AbstractNioWorker {
 
@@ -103,8 +103,7 @@ public class NioWorker extends AbstractNioWorker {
         final Thread workerThread = thread;
         if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                boolean offered = writeTaskQueue.offer(channel.writeTask);
-                assert offered;
+                taskQueue.add(channel.writeTask);
             }
 
             if (!(channel instanceof NioAcceptedSocketChannel) ||
@@ -175,10 +174,9 @@ public class NioWorker extends AbstractNioWorker {
                     channel.channel.configureBlocking(false);
                 }
 
-                synchronized (channel.interestOpsLock) {
-                    channel.channel.register(
-                            selector, channel.getRawInterestOps(), channel);
-                }
+                channel.channel.register(
+                        selector, channel.getRawInterestOps(), channel);
+
                 if (future != null) {
                     channel.setConnected();
                     future.setSuccess();

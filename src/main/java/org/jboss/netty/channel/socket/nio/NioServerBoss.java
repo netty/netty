@@ -33,6 +33,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -58,11 +59,13 @@ public final class NioServerBoss implements Boss {
     private final int id = nextId.incrementAndGet();
 
     private volatile Selector selector;
+    private volatile Thread thread;
+
     private final Executor bossExecutor;
     /**
      * Queue of channel registration tasks.
      */
-    private final Queue<Runnable> bindTaskQueue = new ConcurrentLinkedQueue<Runnable>();
+    private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     /**
      * Monitor object used to synchronize selector open/close.
@@ -76,8 +79,6 @@ public final class NioServerBoss implements Boss {
      * waken up.
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
-
-    private Thread currentThread;
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
@@ -99,7 +100,7 @@ public final class NioServerBoss implements Boss {
                 throw new RejectedExecutionException("Worker has already been shutdown");
             }
 
-            boolean offered = bindTaskQueue.offer(new Runnable() {
+            boolean offered = taskQueue.offer(new Runnable() {
                 public void run() {
                     boolean bound = false;
                     boolean registered = false;
@@ -182,7 +183,7 @@ public final class NioServerBoss implements Boss {
     }
 
     public void run() {
-        currentThread = Thread.currentThread();
+        thread = Thread.currentThread();
         boolean shutdown = false;
         for (;;) {
             wakenUp.set(false);
@@ -222,7 +223,9 @@ public final class NioServerBoss implements Boss {
                 if (wakenUp.get()) {
                     selector.wakeup();
                 }
-                processBindTaskQueue();
+                processTaskQueue();
+                selector = this.selector; // processTaskQueue() can call rebuildSelector()
+
                 processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle.
@@ -268,9 +271,9 @@ public final class NioServerBoss implements Boss {
         }
     }
 
-    private void processBindTaskQueue() throws IOException {
+    private void processTaskQueue() throws IOException {
         for (;;) {
-            final Runnable task = bindTaskQueue.poll();
+            final Runnable task = taskQueue.poll();
             if (task == null) {
                 break;
             }
@@ -304,7 +307,7 @@ public final class NioServerBoss implements Boss {
                     if (acceptedSocket == null) {
                         break;
                     }
-                    registerAcceptedChannel(channel, acceptedSocket, currentThread);
+                    registerAcceptedChannel(channel, acceptedSocket, thread);
                 }
             } catch (CancelledKeyException e) {
                 // Raised by accept() when the server socket was closed.
@@ -357,5 +360,75 @@ public final class NioServerBoss implements Boss {
                 }
             }
         }
+    }
+
+    public void rebuildSelector() {
+        if (Thread.currentThread() != thread) {
+            Selector selector = this.selector;
+            if (selector != null) {
+                taskQueue.add(new Runnable() {
+                    public void run() {
+                        rebuildSelector();
+                    }
+                });
+                selector.wakeup();
+            }
+            return;
+        }
+
+        final Selector oldSelector = selector;
+        final Selector newSelector;
+
+        if (oldSelector == null) {
+            return;
+        }
+
+        try {
+            newSelector = Selector.open();
+        } catch (Exception e) {
+            logger.warn("Failed to create a new Selector.", e);
+            return;
+        }
+
+        // Register all channels to the new Selector.
+        int nChannels = 0;
+        for (;;) {
+            try {
+                for (SelectionKey key: oldSelector.keys()) {
+                    try {
+                        if (key.channel().keyFor(newSelector) != null) {
+                            continue;
+                        }
+
+                        int interestOps = key.interestOps();
+                        key.cancel();
+                        key.channel().register(newSelector, interestOps, key.attachment());
+                        nChannels ++;
+                    } catch (Exception e) {
+                        logger.warn("Failed to re-register a Channel to the new Selector,", e);
+                        NioServerSocketChannel ch = (NioServerSocketChannel) key.attachment();
+                        close(ch, succeededFuture(ch));
+                    }
+                }
+            } catch (ConcurrentModificationException e) {
+                // Probably due to concurrent modification of the key set.
+                continue;
+            }
+
+            break;
+        }
+
+        selector = newSelector;
+
+        try {
+            // time to close the old selector as everything else is registered to the new one
+            oldSelector.close();
+        } catch (Throwable t) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close the old Selector.", t);
+            }
+        }
+
+        logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
     }
 }

@@ -16,12 +16,12 @@
 
 package org.jboss.netty.channel.socket.nio;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract base class for {@link WorkerPool} implementations that create the {@link Worker}'s
@@ -72,12 +72,12 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
 
     /**
      * Only here for backward compability and will be removed in later releases. Please use
-     * {@link #newWorker(java.util.concurrent.Executor)}
+     * {@link #newWorker(Executor)}
      *
      *
      * @param executor the {@link Executor} to use
      * @return worker the new {@link Worker}
-     * @deprecated use {@link #newWorker(java.util.concurrent.Executor)}
+     * @deprecated use {@link #newWorker(Executor)}
      */
     @Deprecated
     protected E createWorker(Executor executor) {
@@ -87,13 +87,14 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     /**
      * Create a new {@link Worker} which uses the given {@link Executor} to service IO.
      *
-     * This method will be made abstract in further releases (once {@link #createWorker(java.util.concurrent.Executor)}
+     * This method will be made abstract in further releases (once {@link #createWorker(Executor)}
      * was removed).
      *
      *
      * @param executor the {@link Executor} to use
      * @return worker the new {@link Worker}
      */
+    @SuppressWarnings("deprecation")
     protected E newWorker(Executor executor) {
         return createWorker(executor);
     }
@@ -101,6 +102,12 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
     @SuppressWarnings("unchecked")
     public E nextWorker() {
         return (E) workers[Math.abs(workerIndex.getAndIncrement() % workers.length)];
+    }
+
+    public void rebuildSelectors() {
+        for (Worker worker: workers) {
+            worker.rebuildSelector();
+        }
     }
 
     public void releaseExternalResources() {

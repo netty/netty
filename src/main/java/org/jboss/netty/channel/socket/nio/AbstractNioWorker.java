@@ -39,6 +39,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -48,8 +49,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.jboss.netty.channel.Channels.*;
 
@@ -64,8 +63,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
      */
     private static final InternalLogger logger = InternalLoggerFactory
             .getInstance(AbstractNioWorker.class);
-
-    private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
@@ -95,26 +92,11 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
     protected final AtomicBoolean wakenUp = new AtomicBoolean();
 
     /**
-     * Lock for this workers Selector.
-     */
-    private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
-
-    /**
      * Monitor object used to synchronize selector open/close.
      */
     private final Object startStopLock = new Object();
 
-    /**
-     * Queue of channel registration tasks.
-     */
-    private final Queue<Runnable> registerTaskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-    /**
-     * Queue of WriteTasks
-     */
-    protected final Queue<Runnable> writeTaskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-    private final Queue<Runnable> eventQueue = new ConcurrentLinkedQueue<Runnable>();
+    final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
@@ -136,10 +118,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 // the selector was null this means the Worker has already been shutdown.
                 throw new RejectedExecutionException("Worker has already been shutdown");
             }
-            Runnable registerTask = createRegisterTask(channel, future);
 
-            boolean offered = registerTaskQueue.offer(registerTask);
-            assert offered;
+            taskQueue.add(createRegisterTask(channel, future));
 
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
@@ -147,43 +127,70 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    // Create a new selector and "transfer" all channels from the old
-    // selector to the new one
-    private Selector recreateSelector() throws IOException {
-        Selector newSelector = Selector.open();
-        Selector selector = this.selector;
-        this.selector = newSelector;
-
-        // loop over all the keys that are registered with the old Selector
-        // and register them with the new one
-        for (SelectionKey key: selector.keys()) {
-            SelectableChannel ch = key.channel();
-            int ops = key.interestOps();
-            Object att = key.attachment();
-            // cancel the old key
-            key.cancel();
-
-            try {
-                // register the channel with the new selector now
-                ch.register(newSelector, ops, att);
-            } catch (ClosedChannelException e) {
-                // close channel
-                AbstractNioChannel<?> channel = (AbstractNioChannel<?>) att;
-                close(channel, succeededFuture(channel));
-            }
+    public void rebuildSelector() {
+        if (Thread.currentThread() != thread) {
+            executeInIoThread(new Runnable() {
+                public void run() {
+                    rebuildSelector();
+                }
+            }, true);
+            return;
         }
+
+        final Selector oldSelector = selector;
+        final Selector newSelector;
+
+        if (oldSelector == null) {
+            return;
+        }
+
+        try {
+            newSelector = Selector.open();
+        } catch (Exception e) {
+            logger.warn("Failed to create a new Selector.", e);
+            return;
+        }
+
+        // Register all channels to the new Selector.
+        int nChannels = 0;
+        for (;;) {
+            try {
+                for (SelectionKey key: oldSelector.keys()) {
+                    try {
+                        if (key.channel().keyFor(newSelector) != null) {
+                            continue;
+                        }
+
+                        int interestOps = key.interestOps();
+                        key.cancel();
+                        key.channel().register(newSelector, interestOps, key.attachment());
+                        nChannels ++;
+                    } catch (Exception e) {
+                        logger.warn("Failed to re-register a Channel to the new Selector,", e);
+                        AbstractNioChannel<?> channel = (AbstractNioChannel<?>) key.attachment();
+                        close(channel, succeededFuture(channel));
+                    }
+                }
+            } catch (ConcurrentModificationException e) {
+                // Probably due to concurrent modification of the key set.
+                continue;
+            }
+
+            break;
+        }
+
+        selector = newSelector;
+
         try {
             // time to close the old selector as everything else is registered to the new one
-            selector.close();
+            oldSelector.close();
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a selector.", t);
+                logger.warn("Failed to close the old Selector.", t);
             }
         }
-        if (logger.isWarnEnabled()) {
-            logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
-        }
-        return newSelector;
+
+        logger.info("Migrated " + nChannels + " channel(s) to the new Selector,");
     }
 
     /**
@@ -230,13 +237,6 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         for (;;) {
             wakenUp.set(false);
 
-            if (CONSTRAINT_LEVEL != 0) {
-                selectorGuard.writeLock().lock();
-                    // This empty synchronization block prevents the selector
-                    // from acquiring its lock.
-                selectorGuard.writeLock().unlock();
-            }
-
             try {
                 long beforeSelect = System.nanoTime();
                 int selected = SelectorUtil.select(selector);
@@ -275,7 +275,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                         // The selector returned immediately for 10 times in a row,
                         // so recreate one selector as it seems like we hit the
                         // famous epoll(..) jdk bug.
-                        selector = recreateSelector();
+                        rebuildSelector();
+                        selector = this.selector;
                         selectReturnsImmediately = 0;
                         wakenupFromLoop = false;
                         // try to select again
@@ -322,9 +323,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 }
 
                 cancelledKeys = 0;
-                processRegisterTaskQueue();
-                processEventQueue();
-                processWriteTaskQueue();
+                processTaskQueue();
+                selector = this.selector; // processTaskQueue() can call rebuildSelector()
                 processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle.
@@ -337,7 +337,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                         executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
 
                         synchronized (startStopLock) {
-                            if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
+                            if (taskQueue.isEmpty() && selector.keys().isEmpty()) {
                                 try {
                                     selector.close();
                                 } catch (IOException e) {
@@ -387,7 +387,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         if (!alwaysAsync && Thread.currentThread() == thread) {
             task.run();
         } else {
-            eventQueue.offer(task);
+            taskQueue.offer(task);
 
             synchronized (startStopLock) {
                 // check if the selector was shutdown already or was not started yet. If so execute all
@@ -395,7 +395,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 if (selector == null) {
                     // execute everything in the event queue as the
                     for (;;) {
-                        Runnable r = eventQueue.poll();
+                        Runnable r = taskQueue.poll();
                         if (r == null) {
                             break;
                         }
@@ -414,33 +414,9 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    private void processRegisterTaskQueue() throws IOException {
+    private void processTaskQueue() throws IOException {
         for (;;) {
-            final Runnable task = registerTaskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-
-    private void processWriteTaskQueue() throws IOException {
-        for (;;) {
-            final Runnable task = writeTaskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-
-    private void processEventQueue() throws IOException {
-        for (;;) {
-            final Runnable task = eventQueue.poll();
+            final Runnable task = taskQueue.poll();
             if (task == null) {
                 break;
             }
@@ -665,15 +641,11 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
             return;
         }
 
-        // interestOps can change at any time and at any thread.
-        // Acquire a lock to avoid possible race condition.
-        synchronized (channel.interestOpsLock) {
-            int interestOps = channel.getRawInterestOps();
-            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                interestOps |= SelectionKey.OP_WRITE;
-                key.interestOps(interestOps);
-                channel.setRawInterestOpsNow(interestOps);
-            }
+        int interestOps = channel.getRawInterestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+            interestOps |= SelectionKey.OP_WRITE;
+            key.interestOps(interestOps);
+            channel.setRawInterestOpsNow(interestOps);
         }
     }
 
@@ -688,15 +660,11 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
             return;
         }
 
-        // interestOps can change at any time and at any thread.
-        // Acquire a lock to avoid possible race condition.
-        synchronized (channel.interestOpsLock) {
-            int interestOps = channel.getRawInterestOps();
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                interestOps &= ~SelectionKey.OP_WRITE;
-                key.interestOps(interestOps);
-                channel.setRawInterestOpsNow(interestOps);
-            }
+        int interestOps = channel.getRawInterestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+            interestOps &= ~SelectionKey.OP_WRITE;
+            key.interestOps(interestOps);
+            channel.setRawInterestOpsNow(interestOps);
         }
     }
 
@@ -803,105 +771,67 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    void setInterestOps(AbstractNioChannel<?> channel, ChannelFuture future, int interestOps) {
-        boolean changed = false;
+    void setInterestOps(final AbstractNioChannel<?> channel, final ChannelFuture future, final int interestOps) {
         boolean iothread = isIoThread(channel);
+        if (!iothread) {
+            channel.getPipeline().execute(new Runnable() {
+                public void run() {
+                    setInterestOps(channel, future, interestOps);
+                }
+            });
+            return;
+        }
+
+        boolean changed = false;
         try {
-            // interestOps can change at any time and at any thread.
-            // Acquire a lock to avoid possible race condition.
-            synchronized (channel.interestOpsLock) {
-                Selector selector = this.selector;
-                SelectionKey key = channel.channel.keyFor(selector);
+            Selector selector = this.selector;
+            SelectionKey key = channel.channel.keyFor(selector);
 
-                // Override OP_WRITE flag - a user cannot change this flag.
-                interestOps &= ~Channel.OP_WRITE;
-                interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
+            // Override OP_WRITE flag - a user cannot change this flag.
+            int newInterestOps = interestOps & ~Channel.OP_WRITE | channel.getRawInterestOps() & Channel.OP_WRITE;
 
-                if (key == null || selector == null) {
-                    if (channel.getRawInterestOps() != interestOps) {
-                        changed = true;
-                    }
-
-                    // Not registered to the worker yet.
-                    // Set the rawInterestOps immediately; RegisterTask will pick it up.
-                    channel.setRawInterestOpsNow(interestOps);
-
-                    future.setSuccess();
-                    if (changed) {
-                        if (iothread) {
-                            fireChannelInterestChanged(channel);
-                        } else {
-                            fireChannelInterestChangedLater(channel);
-                        }
-                    }
-
-                    return;
+            if (key == null || selector == null) {
+                if (channel.getRawInterestOps() != newInterestOps) {
+                    changed = true;
                 }
 
-                switch (CONSTRAINT_LEVEL) {
-                case 0:
-                    if (channel.getRawInterestOps() != interestOps) {
-                        key.interestOps(interestOps);
-                        if (Thread.currentThread() != thread &&
-                            wakenUp.compareAndSet(false, true)) {
-                            selector.wakeup();
-                        }
-                        changed = true;
-                    }
-                    break;
-                case 1:
-                case 2:
-                    if (channel.getRawInterestOps() != interestOps) {
-                        if (Thread.currentThread() == thread) {
-                            key.interestOps(interestOps);
-                            changed = true;
-                        } else {
-                            selectorGuard.readLock().lock();
-                            try {
-                                if (wakenUp.compareAndSet(false, true)) {
-                                    selector.wakeup();
-                                }
-                                key.interestOps(interestOps);
-                                changed = true;
-                            } finally {
-                                selectorGuard.readLock().unlock();
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    throw new Error();
-                }
+                // Not registered to the worker yet.
+                // Set the rawInterestOps immediately; RegisterTask will pick it up.
+                channel.setRawInterestOpsNow(newInterestOps);
 
+                future.setSuccess();
                 if (changed) {
-                    channel.setRawInterestOpsNow(interestOps);
+                    if (iothread) {
+                        fireChannelInterestChanged(channel);
+                    } else {
+                        fireChannelInterestChangedLater(channel);
+                    }
                 }
+
+                return;
+            }
+
+            if (channel.getRawInterestOps() != newInterestOps) {
+                key.interestOps(newInterestOps);
+                if (Thread.currentThread() != thread &&
+                    wakenUp.compareAndSet(false, true)) {
+                    selector.wakeup();
+                }
+                channel.setRawInterestOpsNow(newInterestOps);
             }
 
             future.setSuccess();
             if (changed) {
-                if (iothread) {
-                    fireChannelInterestChanged(channel);
-                } else {
-                    fireChannelInterestChangedLater(channel);
-                }
+                fireChannelInterestChanged(channel);
             }
         } catch (CancelledKeyException e) {
             // setInterestOps() was called on a closed channel.
             ClosedChannelException cce = new ClosedChannelException();
             future.setFailure(cce);
-            if (iothread) {
-                fireExceptionCaught(channel, cce);
-            } else {
-                fireExceptionCaughtLater(channel, cce);
-            }
+            fireExceptionCaught(channel, cce);
         } catch (Throwable t) {
             future.setFailure(t);
-            if (iothread) {
-                fireExceptionCaught(channel, t);
-            } else {
-                fireExceptionCaughtLater(channel, t);
-            }
+            fireExceptionCaught(channel, t);
         }
     }
 
