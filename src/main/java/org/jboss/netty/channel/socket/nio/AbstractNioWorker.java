@@ -96,17 +96,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
      */
     private final Object startStopLock = new Object();
 
-    /**
-     * Queue of channel registration tasks.
-     */
-    private final Queue<Runnable> registerTaskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-    /**
-     * Queue of WriteTasks
-     */
-    protected final Queue<Runnable> writeTaskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-    private final Queue<Runnable> eventQueue = new ConcurrentLinkedQueue<Runnable>();
+    final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
@@ -128,10 +118,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 // the selector was null this means the Worker has already been shutdown.
                 throw new RejectedExecutionException("Worker has already been shutdown");
             }
-            Runnable registerTask = createRegisterTask(channel, future);
 
-            boolean offered = registerTaskQueue.offer(registerTask);
-            assert offered;
+            taskQueue.add(createRegisterTask(channel, future));
 
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
@@ -145,7 +133,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 public void run() {
                     rebuildSelector();
                 }
-            });
+            }, true);
+            return;
         }
 
         final Selector oldSelector = selector;
@@ -172,8 +161,9 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                             continue;
                         }
 
+                        int interestOps = key.interestOps();
                         key.cancel();
-                        key.channel().register(newSelector, key.interestOps(), key.attachment());
+                        key.channel().register(newSelector, interestOps, key.attachment());
                         nChannels ++;
                     } catch (Exception e) {
                         logger.warn("Failed to re-register a Channel to the new Selector,", e);
@@ -333,9 +323,8 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 }
 
                 cancelledKeys = 0;
-                processRegisterTaskQueue();
-                processEventQueue();
-                processWriteTaskQueue();
+                processTaskQueue();
+                selector = this.selector; // processTaskQueue() can call rebuildSelector()
                 processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle.
@@ -348,7 +337,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                         executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
 
                         synchronized (startStopLock) {
-                            if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
+                            if (taskQueue.isEmpty() && selector.keys().isEmpty()) {
                                 try {
                                     selector.close();
                                 } catch (IOException e) {
@@ -398,7 +387,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         if (!alwaysAsync && Thread.currentThread() == thread) {
             task.run();
         } else {
-            eventQueue.offer(task);
+            taskQueue.offer(task);
 
             synchronized (startStopLock) {
                 // check if the selector was shutdown already or was not started yet. If so execute all
@@ -406,7 +395,7 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
                 if (selector == null) {
                     // execute everything in the event queue as the
                     for (;;) {
-                        Runnable r = eventQueue.poll();
+                        Runnable r = taskQueue.poll();
                         if (r == null) {
                             break;
                         }
@@ -425,33 +414,9 @@ abstract class AbstractNioWorker implements Worker, ExternalResourceReleasable {
         }
     }
 
-    private void processRegisterTaskQueue() throws IOException {
+    private void processTaskQueue() throws IOException {
         for (;;) {
-            final Runnable task = registerTaskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-
-    private void processWriteTaskQueue() throws IOException {
-        for (;;) {
-            final Runnable task = writeTaskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-
-    private void processEventQueue() throws IOException {
-        for (;;) {
-            final Runnable task = eventQueue.poll();
+            final Runnable task = taskQueue.poll();
             if (task == null) {
                 break;
             }

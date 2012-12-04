@@ -120,8 +120,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
         if (workerThread == null || Thread.currentThread() != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 // "add" the channels writeTask to the writeTaskQueue.
-                boolean offered = writeTaskQueue.offer(channel.writeTask);
-                assert offered;
+                taskQueue.add(channel.writeTask);
             }
 
             final Selector selector = this.selector;

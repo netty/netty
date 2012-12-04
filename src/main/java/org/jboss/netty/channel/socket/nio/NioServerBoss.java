@@ -363,16 +363,15 @@ public final class NioServerBoss implements Boss {
     public void rebuildSelector() {
         if (Thread.currentThread() != thread) {
             Selector selector = this.selector;
-            if (selector == null) {
-                return;
+            if (selector != null) {
+                taskQueue.add(new Runnable() {
+                    public void run() {
+                        rebuildSelector();
+                    }
+                });
+                selector.wakeup();
             }
-
-            taskQueue.add(new Runnable() {
-                public void run() {
-                    rebuildSelector();
-                }
-            });
-            selector.wakeup();
+            return;
         }
 
         final Selector oldSelector = selector;
@@ -399,8 +398,9 @@ public final class NioServerBoss implements Boss {
                             continue;
                         }
 
+                        int interestOps = key.interestOps();
                         key.cancel();
-                        key.channel().register(newSelector, key.interestOps(), key.attachment());
+                        key.channel().register(newSelector, interestOps, key.attachment());
                         nChannels ++;
                     } catch (Exception e) {
                         logger.warn("Failed to re-register a Channel to the new Selector,", e);
