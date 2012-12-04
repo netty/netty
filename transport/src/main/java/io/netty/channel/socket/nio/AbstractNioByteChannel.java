@@ -109,7 +109,6 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
-
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         if (!buf.readable()) {
@@ -130,7 +129,6 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
     }
-
 
     @Override
     protected void doFlushFileRegion(final FileRegion region, final ChannelFuture future) throws Exception {

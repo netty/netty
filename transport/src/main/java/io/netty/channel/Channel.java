@@ -278,6 +278,5 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void resumeRead();
 
         void sendFile(FileRegion region, ChannelFuture future);
-
     }
 }
