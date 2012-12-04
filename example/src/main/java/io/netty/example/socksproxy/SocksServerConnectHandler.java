@@ -24,9 +24,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.codec.socks.SocksCmdRequest;
-import io.netty.codec.socks.SocksCmdResponse;
-import io.netty.codec.socks.SocksMessage;
+import io.netty.handler.codec.socks.SocksCmdRequest;
+import io.netty.handler.codec.socks.SocksCmdResponse;
+import io.netty.handler.codec.socks.SocksMessage;
 
 
 @ChannelHandler.Sharable
