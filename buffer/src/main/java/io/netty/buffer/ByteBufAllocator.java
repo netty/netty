@@ -15,8 +15,6 @@
  */
 package io.netty.buffer;
 
-import java.util.concurrent.TimeUnit;
-
 public interface ByteBufAllocator {
 
     ByteBuf buffer();
@@ -30,8 +28,12 @@ public interface ByteBufAllocator {
     ByteBuf directBuffer(int initialCapacity, int maxCapacity);
     ByteBuf ioBuffer();
 
-    void shutdown();
-    boolean isShutdown();
-    boolean isTerminated();
-    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+    CompositeByteBuf compositeBuffer();
+    CompositeByteBuf compositeBuffer(int maxNumComponents);
+    CompositeByteBuf compositeHeapBuffer();
+    CompositeByteBuf compositeHeapBuffer(int maxNumComponents);
+    CompositeByteBuf compositeDirectBuffer();
+    CompositeByteBuf compositeDirectBuffer(int maxNumComponents);
+
+    int bufferMaxCapacity();
 }

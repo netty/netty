@@ -54,7 +54,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
         CLEANER_FIELD = cleanerField;
     }
 
-    private static void freeDirect(ByteBuffer buffer) {
+    static void freeDirect(ByteBuffer buffer) {
         if (CLEANER_FIELD == null) {
             // Doomed to wait for GC.
             return;
@@ -265,8 +265,8 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
             ByteBuffer data = bbdst.internalNioBuffer();
             data.clear().position(dstIndex).limit(dstIndex + length);
             getBytes(index, data);
-        } else if (buffer.hasArray()) {
-            dst.setBytes(dstIndex, buffer.array(), index + buffer.arrayOffset(), length);
+        } else if (dst.hasArray()) {
+            getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
             dst.setBytes(dstIndex, this, index, length);
         }
@@ -417,9 +417,12 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
         } else {
             byte[] tmp = new byte[length];
             int readBytes = in.read(tmp);
+            if (readBytes <= 0) {
+                return readBytes;
+            }
             ByteBuffer tmpNioBuf = internalNioBuffer();
             tmpNioBuf.clear().position(index);
-            tmpNioBuf.put(tmp);
+            tmpNioBuf.put(tmp, 0, readBytes);
             return readBytes;
         }
     }
@@ -457,7 +460,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int offset, int length) {
+    public ByteBuffer[] nioBuffers(int index, int length) {
         throw new UnsupportedOperationException();
     }
 

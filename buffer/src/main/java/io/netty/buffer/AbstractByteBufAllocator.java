@@ -18,16 +18,26 @@ package io.netty.buffer;
 
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
+    private final int bufferMaxCapacity;
     private final boolean directByDefault;
     private final ByteBuf emptyBuf;
 
-    protected AbstractByteBufAllocator() {
-        this(false);
+    protected AbstractByteBufAllocator(int bufferMaxCapacity) {
+        this(bufferMaxCapacity, false);
     }
 
-    protected AbstractByteBufAllocator(boolean directByDefault) {
+    protected AbstractByteBufAllocator(int bufferMaxCapacity, boolean directByDefault) {
+        if (bufferMaxCapacity <= 0) {
+            throw new IllegalArgumentException("bufferMaxCapacity: " + bufferMaxCapacity + " (expected: 1+)");
+        }
         this.directByDefault = directByDefault;
+        this.bufferMaxCapacity = bufferMaxCapacity;
         emptyBuf = new UnpooledHeapByteBuf(this, 0, 0);
+    }
+
+    @Override
+    public int bufferMaxCapacity() {
+        return bufferMaxCapacity;
     }
 
     @Override
@@ -56,12 +66,12 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public ByteBuf heapBuffer() {
-        return heapBuffer(256, Integer.MAX_VALUE);
+        return heapBuffer(256, bufferMaxCapacity());
     }
 
     @Override
     public ByteBuf heapBuffer(int initialCapacity) {
-        return buffer(initialCapacity, Integer.MAX_VALUE);
+        return heapBuffer(initialCapacity, bufferMaxCapacity());
     }
 
     @Override
@@ -69,17 +79,18 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
+        validate(initialCapacity, maxCapacity);
         return newHeapBuffer(initialCapacity, maxCapacity);
     }
 
     @Override
     public ByteBuf directBuffer() {
-        return directBuffer(256, Integer.MAX_VALUE);
+        return directBuffer(256, bufferMaxCapacity());
     }
 
     @Override
     public ByteBuf directBuffer(int initialCapacity) {
-        return directBuffer(initialCapacity, Integer.MAX_VALUE);
+        return directBuffer(initialCapacity, bufferMaxCapacity());
     }
 
     @Override
@@ -87,7 +98,56 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
+        validate(initialCapacity, maxCapacity);
         return newDirectBuffer(initialCapacity, maxCapacity);
+    }
+
+    @Override
+    public CompositeByteBuf compositeBuffer() {
+        if (directByDefault) {
+            return compositeDirectBuffer();
+        }
+        return compositeHeapBuffer();
+    }
+
+    @Override
+    public CompositeByteBuf compositeBuffer(int maxNumComponents) {
+        if (directByDefault) {
+            return compositeDirectBuffer(maxNumComponents);
+        }
+        return compositeHeapBuffer(maxNumComponents);
+    }
+
+    @Override
+    public CompositeByteBuf compositeHeapBuffer() {
+        return compositeHeapBuffer(16);
+    }
+
+    @Override
+    public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
+        return new DefaultCompositeByteBuf(this, false, maxNumComponents);
+    }
+
+    @Override
+    public CompositeByteBuf compositeDirectBuffer() {
+        return compositeDirectBuffer(16);
+    }
+
+    @Override
+    public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
+        return new DefaultCompositeByteBuf(this, true, maxNumComponents);
+    }
+
+    private void validate(int initialCapacity, int maxCapacity) {
+        if (maxCapacity > bufferMaxCapacity()) {
+            throw new IllegalArgumentException(
+                    "maxCapacity: " + maxCapacity + " (expected: not greater than " + bufferMaxCapacity());
+        }
+        if (initialCapacity > maxCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "initialCapacity: %d (expected: not greater than maxCapacity(%d)",
+                    initialCapacity, maxCapacity));
+        }
     }
 
     protected abstract ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity);
