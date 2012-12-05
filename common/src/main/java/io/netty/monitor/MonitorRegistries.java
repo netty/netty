@@ -46,6 +46,7 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
     private static final int ONGOING_INITIALIZATION = 1;
     private static final int SUCCESSFUL_INITIALIZATION = 2;
     private static final int NOP_FALLBACK_INITIALIZATION = 3;
+
     private static int INITIALIZATION_STATE = UNINITIALIZED;
     private static MonitorRegistry selectedRegistry;
 
@@ -93,19 +94,19 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
      * <p>
      * Look up and return <em>the</em> a uniquely determined
      * {@link MonitorRegistry} implementation. This method will select
-     * exactly one{@link MonitorRegistryFactory} from those registered in
+     * exactly one {@link MonitorRegistryFactory} from those registered in
      * {@code META-INF/services/io.netty.monitor.spi.MonitorRegistryFactory}.
      * if no implementation is found then a NOOP registry is returned.
      * If multiple implementations are found then the first one returned by
      * {@link #iterator()} is used and a message is logged to say which one is
      * selected.
-     * Disclaimer: Implementation based on SLF4J's
      * </p>
      *
-     * @return <em>The</em> uniquely determined {@link MonitorRegistry}
+     * @return <em>the</em> uniquely determined {@link MonitorRegistry}
      *         implementation
      */
     public MonitorRegistry unique() {
+        //Implementation based on SLF4J's
         if (INITIALIZATION_STATE == UNINITIALIZED) {
             INITIALIZATION_STATE = ONGOING_INITIALIZATION;
             performInitialization();
