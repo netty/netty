@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -413,7 +412,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
-            ((UnsafeByteBuf) buf).free();
+            buf.unsafe().free();
         }
 
         @Override
@@ -460,7 +459,7 @@ public class LocalTransportThreadModelTest {
                     out.add(msg);
                 }
             }
-            ((UnsafeByteBuf) in).discardSomeReadBytes();
+            in.unsafe().discardSomeReadBytes();
             if (swallow) {
                 future.setSuccess();
             } else {
@@ -503,7 +502,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-            ((UnsafeByteBuf) buf).free();
+            buf.unsafe().free();
         }
 
         @Override

@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,11 +31,11 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link Unpooled#unmodifiableBuffer(ByteBuf)}
  * instead of calling the constructor explicitly.
  */
-public class ReadOnlyByteBuf extends AbstractByteBuf {
+final class ReadOnlyByteBuf extends AbstractByteBuf implements Unsafe {
 
-    private final UnsafeByteBuf buffer;
+    private final ByteBuf buffer;
 
-    public ReadOnlyByteBuf(UnsafeByteBuf buffer) {
+    public ReadOnlyByteBuf(ByteBuf buffer) {
         super(buffer.maxCapacity());
 
         if (buffer instanceof ReadOnlyByteBuf) {
@@ -125,14 +127,12 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
+    public int setBytes(int index, InputStream in, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) {
         throw new ReadOnlyBufferException();
     }
 
@@ -179,7 +179,7 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new ReadOnlyByteBuf((UnsafeByteBuf) buffer.slice(index, length));
+        return new ReadOnlyByteBuf(buffer.slice(index, length));
     }
 
     @Override
@@ -239,12 +239,12 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer() {
-        return buffer.internalNioBuffer();
+        return buffer.unsafe().internalNioBuffer();
     }
 
     @Override
     public ByteBuffer[] internalNioBuffers() {
-        return buffer.internalNioBuffers();
+        return buffer.unsafe().internalNioBuffers();
     }
 
     @Override
@@ -254,7 +254,7 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
 
     @Override
     public boolean isFreed() {
-        return buffer.isFreed();
+        return buffer.unsafe().isFreed();
     }
 
     @Override
@@ -265,4 +265,9 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
 
     @Override
     public void resumeIntermediaryDeallocations() { }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
+    }
 }

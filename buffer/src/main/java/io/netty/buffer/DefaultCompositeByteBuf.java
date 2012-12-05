@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
+final class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf, Unsafe {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
@@ -50,7 +51,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     private Component lastAccessed;
     private int lastAccessedId;
     private boolean freed;
-    private Queue<UnsafeByteBuf> suspendedDeallocations;
+    private Queue<ByteBuf> suspendedDeallocations;
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents) {
         super(Integer.MAX_VALUE);
@@ -265,7 +266,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             // noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < numComponents; i ++) {
                 Component c = components.get(i);
-                UnsafeByteBuf b = c.buf;
+                ByteBuf b = c.buf;
                 consolidated.writeBytes(b);
                 c.freeIfNecessary();
             }
@@ -1136,10 +1137,10 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
         for (int i = 0; i < numComponents; i ++) {
             Component c = components.get(i);
-            UnsafeByteBuf b = c.buf;
+            ByteBuf b = c.buf;
             consolidated.writeBytes(b);
             c.freeIfNecessary();
-       }
+        }
 
         components.clear();
         components.add(new Component(consolidated, true));
@@ -1260,14 +1261,14 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private final class Component {
-        final UnsafeByteBuf buf;
+        final ByteBuf buf;
         final int length;
         final boolean allocatedBySelf;
         int offset;
         int endOffset;
 
         Component(ByteBuf buf, boolean allocatedBySelf) {
-            this.buf = (UnsafeByteBuf) buf;
+            this.buf = buf;
             length = buf.readableBytes();
             this.allocatedBySelf = allocatedBySelf;
         }
@@ -1278,13 +1279,13 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             }
 
             // Unwrap so that we can free slices, too.
-            UnsafeByteBuf buf;
-            for (buf = this.buf; buf.unwrap() != null; buf = (UnsafeByteBuf) buf.unwrap()) {
+            ByteBuf buf;
+            for (buf = this.buf; buf.unwrap() != null; buf = buf.unwrap()) {
                 continue;
             }
 
             if (suspendedDeallocations == null) {
-                buf.free(); // We should not get a NPE here. If so, it must be a bug.
+                buf.unsafe().free(); // We should not get a NPE here. If so, it must be a bug.
             } else {
                 suspendedDeallocations.add(buf);
             }
@@ -1519,7 +1520,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public ByteBuffer internalNioBuffer() {
         if (components.size() == 1) {
-            return components.get(0).buf.internalNioBuffer();
+            return components.get(0).buf.unsafe().internalNioBuffer();
         }
         throw new UnsupportedOperationException();
     }
@@ -1529,7 +1530,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         ByteBuffer[] nioBuffers = new ByteBuffer[components.size()];
         int index = 0;
         for (Component component : components) {
-            nioBuffers[index++] = component.buf.internalNioBuffer();
+            nioBuffers[index++] = component.buf.unsafe().internalNioBuffer();
         }
         return nioBuffers;
     }
@@ -1560,7 +1561,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public void suspendIntermediaryDeallocations() {
         if (suspendedDeallocations == null) {
-            suspendedDeallocations = new ArrayDeque<UnsafeByteBuf>(2);
+            suspendedDeallocations = new ArrayDeque<ByteBuf>(2);
         }
     }
 
@@ -1570,16 +1571,21 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             return;
         }
 
-        Queue<UnsafeByteBuf> suspendedDeallocations = this.suspendedDeallocations;
+        Queue<ByteBuf> suspendedDeallocations = this.suspendedDeallocations;
         this.suspendedDeallocations = null;
 
-        for (UnsafeByteBuf buf: suspendedDeallocations) {
-            buf.free();
+        for (ByteBuf buf: suspendedDeallocations) {
+            buf.unsafe().free();
         }
     }
 
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
     }
 }

@@ -273,6 +273,13 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     ByteBuf order(ByteOrder endianness);
 
     /**
+     * Return the underlying buffer instance if this buffer is a wrapper of another buffer.
+     *
+     * @return {@code null} if this buffer is not a wrapper
+     */
+    ByteBuf unwrap();
+
+    /**
      * Returns {@code true} if and only if this buffer is backed by an
      * NIO direct buffer.
      */
@@ -1836,4 +1843,50 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      */
     @Override
     String toString();
+
+    /**
+     * Provides access to potentially unsafe operations of this buffer.
+     */
+    @Override
+    Unsafe unsafe();
+
+    /**
+     * Provides the potentially unsafe operations of {@link ByteBuf}.
+     */
+    interface Unsafe extends ChannelBuf.Unsafe {
+        /**
+         * Returns the internal NIO buffer that is reused for I/O.
+         *
+         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer
+         */
+        ByteBuffer internalNioBuffer();
+
+        /**
+         * Returns the internal NIO buffer array that is reused for I/O.
+         *
+         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer array
+         */
+        ByteBuffer[] internalNioBuffers();
+
+        /**
+         * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
+         * some, all, or none of read bytes depending on its internal implementation to reduce
+         * overall memory bandwidth consumption at the cost of potentially additional memory
+         * consumption.
+         */
+        void discardSomeReadBytes();
+
+        /**
+         * Suspends the intermediary deallocation of the internal memory block of this buffer until asked via
+         * {@link #resumeIntermediaryDeallocations()}. An intermediary deallocation is usually made when the capacity of
+         * a buffer changes.
+         */
+        void suspendIntermediaryDeallocations();
+
+        /**
+         * Resumes the intermediary deallocation of the internal memory block of this buffer, suspended by
+         * {@link #suspendIntermediaryDeallocations()}.
+         */
+        void resumeIntermediaryDeallocations();
+    }
 }

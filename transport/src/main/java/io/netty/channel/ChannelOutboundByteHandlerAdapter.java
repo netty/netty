@@ -16,18 +16,11 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuf;
-import io.netty.buffer.UnsafeByteBuf;
 
 public abstract class ChannelOutboundByteHandlerAdapter
         extends ChannelOutboundHandlerAdapter implements ChannelOutboundByteHandler {
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.alloc().buffer();
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        ((UnsafeByteBuf) buf).free();
     }
 }

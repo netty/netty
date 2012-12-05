@@ -46,7 +46,7 @@ public class ReadOnlyChannelBufferTest {
     @Test
     public void testUnwrap() {
         ByteBuf buf = buffer(1);
-        assertSame(buf, ((UnsafeByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
+        assertSame(buf, Unpooled.unmodifiableBuffer(buf).unwrap());
     }
 
     @Test
@@ -74,7 +74,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
-        ByteBuf buf = createStrictMock(UnsafeByteBuf.class);
+        ByteBuf buf = createStrictMock(ByteBuf.class);
         expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
         expect(buf.maxCapacity()).andReturn(65536).anyTimes();
         expect(buf.readerIndex()).andReturn(0).anyTimes();

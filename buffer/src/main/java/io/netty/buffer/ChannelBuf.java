@@ -20,4 +20,25 @@ public interface ChannelBuf {
      * The ChannelBufType which will be handled by the ChannelBuf implementation
      */
     ChannelBufType type();
+
+    /**
+     * Provides access to potentially unsafe operations of this buffer.
+     */
+    Unsafe unsafe();
+
+    /**
+     * Provides the potentially unsafe operations of {@link ByteBuf}.
+     */
+    interface Unsafe {
+        /**
+         * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.
+         */
+        boolean isFreed();
+
+        /**
+         * Deallocates the internal memory block of this buffer or returns it to the {@link ByteBufAllocator} it came
+         * from.  The result of accessing a released buffer is unspecified and can even cause JVM crash.
+         */
+        void free();
+    }
 }

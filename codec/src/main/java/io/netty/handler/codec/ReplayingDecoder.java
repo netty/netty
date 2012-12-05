@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -459,7 +458,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
     private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
         final int oldReaderIndex = in.readerIndex();
-        ((UnsafeByteBuf) in).discardSomeReadBytes();
+        in.unsafe().discardSomeReadBytes();
         final int newReaderIndex = in.readerIndex();
         checkpoint -= oldReaderIndex - newReaderIndex;
         ctx.fireInboundBufferUpdated();
