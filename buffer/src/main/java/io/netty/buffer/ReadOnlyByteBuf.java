@@ -31,7 +31,7 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link Unpooled#unmodifiableBuffer(ByteBuf)}
  * instead of calling the constructor explicitly.
  */
-final class ReadOnlyByteBuf extends AbstractByteBuf implements Unsafe {
+public class ReadOnlyByteBuf extends AbstractByteBuf implements Unsafe {
 
     private final ByteBuf buffer;
 

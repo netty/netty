@@ -40,7 +40,7 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-final class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf, Unsafe {
+public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf, Unsafe {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 

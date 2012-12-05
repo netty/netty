@@ -31,7 +31,7 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-final class DuplicatedByteBuf extends AbstractByteBuf  implements Unsafe {
+public class DuplicatedByteBuf extends AbstractByteBuf implements Unsafe {
 
     private final ByteBuf buffer;
 

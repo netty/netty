@@ -32,7 +32,7 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-final class SlicedByteBuf extends AbstractByteBuf implements Unsafe {
+public class SlicedByteBuf extends AbstractByteBuf implements Unsafe {
 
     private final ByteBuf buffer;
     private final int adjustment;
