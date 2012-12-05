@@ -662,7 +662,7 @@ public final class Unpooled {
      * {@code buffer}.
      */
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
-        return new ReadOnlyByteBuf((UnsafeByteBuf) buffer);
+        return new ReadOnlyByteBuf(buffer);
     }
 
     /**

@@ -15,20 +15,20 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ChannelBuf.Unsafe;
+
 import java.util.ArrayDeque;
 import java.util.Collection;
 
-public class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T> {
+final class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T>, Unsafe {
 
     private static final long serialVersionUID = 1229808623624907552L;
 
-    public DefaultMessageBuf() { }
+    private boolean freed;
 
-    public DefaultMessageBuf(Collection<? extends T> c) {
-        super(c);
-    }
+    DefaultMessageBuf() { }
 
-    public DefaultMessageBuf(int initialCapacity) {
+    DefaultMessageBuf(int initialCapacity) {
         super(initialCapacity);
     }
 
@@ -63,5 +63,20 @@ public class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T>
             cnt ++;
         }
         return cnt;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
+    }
+
+    @Override
+    public boolean isFreed() {
+        return freed;
+    }
+
+    @Override
+    public void free() {
+        freed = true;
     }
 }

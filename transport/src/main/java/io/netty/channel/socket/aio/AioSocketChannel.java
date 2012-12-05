@@ -17,7 +17,6 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBufType;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
@@ -247,7 +246,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             if (buf.readable()) {
                 for (;;) {
-                    if (((UnsafeByteBuf) buf).isFreed()) {
+                    if (buf.unsafe().isFreed()) {
                         break;
                     }
                     // Ensure the readerIndex of the buffer is 0 before beginning an async write.
@@ -273,7 +272,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
                     if (asyncWriteInProgress) {
                         // JDK decided to write data (or notify handler) later.
-                        ((UnsafeByteBuf) buf).suspendIntermediaryDeallocations();
+                        buf.unsafe().suspendIntermediaryDeallocations();
                         break;
                     }
 
@@ -309,7 +308,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             for (;;) {
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
-                if (((UnsafeByteBuf) byteBuf).isFreed()) {
+                if (byteBuf.unsafe().isFreed()) {
                     break;
                 }
 
@@ -356,7 +355,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.asyncWriteInProgress = false;
 
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-            ((UnsafeByteBuf) buf).resumeIntermediaryDeallocations();
+            buf.unsafe().resumeIntermediaryDeallocations();
 
             int writtenBytes = result.intValue();
             if (writtenBytes > 0) {

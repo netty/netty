@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,11 +34,6 @@ public abstract class MessageToMessageDecoder<I, O>
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
-    }
-
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        // Nothing to free
     }
 
     @Override

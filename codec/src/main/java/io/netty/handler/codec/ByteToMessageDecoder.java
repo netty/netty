@@ -16,8 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuf;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -38,11 +36,6 @@ public abstract class ByteToMessageDecoder<O>
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.alloc().buffer();
-    }
-
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        ((UnsafeByteBuf) buf).free();
     }
 
     @Override
@@ -98,7 +91,7 @@ public abstract class ByteToMessageDecoder<O>
                     break;
                 }
             } catch (Throwable t) {
-                ((UnsafeByteBuf) in).discardSomeReadBytes();
+                in.unsafe().discardSomeReadBytes();
 
                 if (decoded) {
                     decoded = false;
@@ -113,7 +106,7 @@ public abstract class ByteToMessageDecoder<O>
             }
         }
 
-        ((UnsafeByteBuf) in).discardSomeReadBytes();
+        in.unsafe().discardSomeReadBytes();
 
         if (decoded) {
             ctx.fireInboundBufferUpdated();

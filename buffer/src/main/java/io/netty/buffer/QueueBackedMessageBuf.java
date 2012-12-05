@@ -15,15 +15,18 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ChannelBuf.Unsafe;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 
-public class QueueBackedMessageBuf<T> implements MessageBuf<T> {
+final class QueueBackedMessageBuf<T> implements MessageBuf<T>, Unsafe {
 
     private final Queue<T> queue;
+    private boolean freed;
 
-    public QueueBackedMessageBuf(Queue<T> queue) {
+    QueueBackedMessageBuf(Queue<T> queue) {
         if (queue == null) {
             throw new NullPointerException("queue");
         }
@@ -151,6 +154,21 @@ public class QueueBackedMessageBuf<T> implements MessageBuf<T> {
             cnt ++;
         }
         return cnt;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
+    }
+
+    @Override
+    public boolean isFreed() {
+        return freed;
+    }
+
+    @Override
+    public void free() {
+        freed = true;
     }
 
     @Override

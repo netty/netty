@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -30,13 +32,13 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractByteBuf {
+final class SlicedByteBuf extends AbstractByteBuf implements Unsafe {
 
-    private final UnsafeByteBuf buffer;
+    private final ByteBuf buffer;
     private final int adjustment;
     private final int length;
 
-    public SlicedByteBuf(UnsafeByteBuf buffer, int index, int length) {
+    public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
         if (index < 0 || index > buffer.capacity()) {
             throw new IndexOutOfBoundsException("Invalid index of " + index
@@ -52,7 +54,7 @@ public class SlicedByteBuf extends AbstractByteBuf {
             this.buffer = ((SlicedByteBuf) buffer).buffer;
             adjustment = ((SlicedByteBuf) buffer).adjustment + index;
         } else if (buffer instanceof DuplicatedByteBuf) {
-            this.buffer = (UnsafeByteBuf) buffer.unwrap();
+            this.buffer = buffer.unwrap();
             adjustment = index;
         } else {
             this.buffer = buffer;
@@ -326,7 +328,7 @@ public class SlicedByteBuf extends AbstractByteBuf {
 
     @Override
     public boolean isFreed() {
-        return buffer.isFreed();
+        return buffer.unsafe().isFreed();
     }
 
     @Override
@@ -337,4 +339,9 @@ public class SlicedByteBuf extends AbstractByteBuf {
 
     @Override
     public void resumeIntermediaryDeallocations() { }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
+    }
 }
