@@ -320,6 +320,16 @@ public class Bootstrap implements ExternalResourceReleasable {
     }
 
     /**
+     * This method simply delegates the call to
+     * {@link ChannelFactory#shutdown()}.
+     */
+    public void shutdown() {
+        ChannelFactory factory = this.factory;
+        if (factory != null) {
+            factory.shutdown();
+        }
+    }
+    /**
      * Returns {@code true} if and only if the specified {@code map} is an
      * ordered map, like {@link LinkedHashMap} is.
      */

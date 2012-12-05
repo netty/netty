@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,17 +39,12 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public abstract class AbstractSocketSpdyEchoTest {
 
     private static final Random random = new Random();
     static final int ignoredBytes = 20;
-
-    private static ExecutorService executor;
 
     private static ChannelBuffer createFrames(int version) {
         int length = version < 3 ? 1176 : 1174;
@@ -174,15 +168,6 @@ public abstract class AbstractSocketSpdyEchoTest {
         return frames;
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
@@ -195,8 +180,8 @@ public abstract class AbstractSocketSpdyEchoTest {
     }
 
     private void testSpdyEcho(int version) throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         ChannelBuffer frames = createFrames(version);
 
@@ -236,6 +221,8 @@ public abstract class AbstractSocketSpdyEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
+        cb.shutdown();
+        sb.shutdown();
         cb.releaseExternalResources();
         sb.releaseExternalResources();
 

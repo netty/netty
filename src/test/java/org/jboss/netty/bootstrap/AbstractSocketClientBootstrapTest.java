@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
@@ -31,9 +31,6 @@ import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -42,24 +39,12 @@ import org.junit.Test;
  */
 public abstract class AbstractSocketClientBootstrapTest {
 
-    private static ExecutorService executor;
-
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
-
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test(timeout = 10000)
     public void testFailedConnectionAttempt() throws Exception {
         ClientBootstrap bootstrap = new ClientBootstrap();
-        bootstrap.setFactory(newClientSocketChannelFactory(executor));
+        bootstrap.setFactory(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
         bootstrap.getPipeline().addLast("dummy", new DummyHandler());
         bootstrap.setOption("remoteAddress", new InetSocketAddress("255.255.255.255", 1));
         ChannelFuture future = bootstrap.connect();
@@ -72,7 +57,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     @Test(timeout = 10000)
     public void testSuccessfulConnectionAttempt() throws Throwable {
         ClientBootstrap bootstrap =
-                new ClientBootstrap(newClientSocketChannelFactory(executor));
+                new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
@@ -103,6 +88,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             } catch (IOException e) {
                 // Ignore.
             }
+            bootstrap.shutdown();
             bootstrap.releaseExternalResources();
         }
     }
@@ -110,7 +96,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     @Test(timeout = 10000)
     public void testSuccessfulConnectionAttemptWithLocalAddress() throws Throwable {
         ClientBootstrap bootstrap =
-                new ClientBootstrap(newClientSocketChannelFactory(executor));
+                new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
@@ -143,6 +129,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             } catch (IOException e) {
                 // Ignore.
             }
+            bootstrap.shutdown();
             bootstrap.releaseExternalResources();
         }
     }
@@ -156,7 +143,10 @@ public abstract class AbstractSocketClientBootstrapTest {
         expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(TestUtil.getLocalHost(), 1));
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(TestUtil.getLocalHost(), 1));
+        future.awaitUninterruptibly();
+        bootstrap.shutdown();
+        bootstrap.releaseExternalResources();
     }
 
     @Test(expected = IllegalStateException.class)

@@ -53,7 +53,6 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
     public void run() {
         thread = channel.workerThread = Thread.currentThread();
-
         while (channel.isOpen()) {
             synchronized (channel.interestOpsLock) {
                 while (!channel.isReadable()) {
@@ -104,10 +103,6 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
         // just to make we don't have something left
         processEventQueue();
-    }
-
-    public void rebuildSelector() {
-        // OIO has no selector.
     }
 
     static boolean isIoThread(AbstractOioChannel channel) {

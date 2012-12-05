@@ -49,8 +49,6 @@ public abstract class AbstractSocketStringEchoTest {
     static final Random random = new Random();
     static final String[] data = new String[1024];
 
-    private static ExecutorService executor;
-
     static {
         for (int i = 0; i < data.length; i ++) {
             int eLen = random.nextInt(512);
@@ -63,23 +61,13 @@ public abstract class AbstractSocketStringEchoTest {
         }
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
-
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
     public void testStringEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
@@ -139,6 +127,10 @@ public abstract class AbstractSocketStringEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
+        cc.close().awaitUninterruptibly();
+        cb.shutdown();
+        sb.shutdown();
+
         cb.releaseExternalResources();
         sb.releaseExternalResources();
 

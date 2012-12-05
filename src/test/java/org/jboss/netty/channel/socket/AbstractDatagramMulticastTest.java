@@ -24,7 +24,6 @@ import java.net.SocketException;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -36,34 +35,22 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public abstract class AbstractDatagramMulticastTest {
 
 
-    private static ExecutorService executor;
 
-
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
 
     protected abstract DatagramChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract DatagramChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
     public void testMulticast() throws Throwable {
-        ConnectionlessBootstrap sb = new ConnectionlessBootstrap(newServerSocketChannelFactory(executor));
-        ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
+        ConnectionlessBootstrap sb = new ConnectionlessBootstrap(
+                newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+        ConnectionlessBootstrap cb = new ConnectionlessBootstrap(
+                newClientSocketChannelFactory(Executors.newCachedThreadPool()));
         DatagramChannel sc = null;
         DatagramChannel cc = null;
         try {

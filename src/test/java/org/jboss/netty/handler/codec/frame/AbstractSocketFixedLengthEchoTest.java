@@ -123,6 +123,9 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
+        cb.shutdown();
+        sb.shutdown();
+
         cb.releaseExternalResources();
         sb.releaseExternalResources();
 

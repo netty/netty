@@ -38,26 +38,16 @@ import org.junit.Test;
 
 public abstract class AbstractDatagramTest {
 
-    private static ExecutorService executor;
-
-
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor);
-    }
 
     protected abstract DatagramChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract DatagramChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
     public void testSimpleSend() throws Throwable {
-        ConnectionlessBootstrap sb = new ConnectionlessBootstrap(newServerSocketChannelFactory(executor));
-        ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
+        ConnectionlessBootstrap sb = new ConnectionlessBootstrap(
+                newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+        ConnectionlessBootstrap cb = new ConnectionlessBootstrap(
+                newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         final CountDownLatch latch = new CountDownLatch(1);
         sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler() {
@@ -83,6 +73,8 @@ public abstract class AbstractDatagramTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
+        cb.shutdown();
+        sb.shutdown();
         cb.releaseExternalResources();
         sb.releaseExternalResources();
     }

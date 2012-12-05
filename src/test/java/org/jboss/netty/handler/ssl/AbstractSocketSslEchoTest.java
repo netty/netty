@@ -45,9 +45,6 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public abstract class AbstractSocketSslEchoTest {
@@ -57,23 +54,10 @@ public abstract class AbstractSocketSslEchoTest {
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
 
-    private static ExecutorService executor;
-    private static ExecutorService eventExecutor;
-
     static {
         random.nextBytes(data);
     }
 
-    @BeforeClass
-    public static void init() {
-        executor = Executors.newCachedThreadPool();
-        eventExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
-    }
-
-    @AfterClass
-    public static void destroy() {
-        ExecutorUtil.terminate(executor, eventExecutor);
-    }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
@@ -84,8 +68,8 @@ public abstract class AbstractSocketSslEchoTest {
 
     @Test
     public void testSslEcho() throws Throwable {
-        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
-        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
+        ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+        ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(Executors.newCachedThreadPool()));
 
         EchoHandler sh = new EchoHandler(true);
         EchoHandler ch = new EchoHandler(false);
@@ -103,8 +87,9 @@ public abstract class AbstractSocketSslEchoTest {
         sb.getPipeline().addLast("handler", sh);
         cb.getPipeline().addFirst("ssl", new SslHandler(cse));
         cb.getPipeline().addLast("handler", ch);
-
+        ExecutorService eventExecutor = null;
         if (isExecutorRequired()) {
+            eventExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
             sb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
             cb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
         }
@@ -171,10 +156,14 @@ public abstract class AbstractSocketSslEchoTest {
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
-
+        cb.shutdown();
+        sb.shutdown();
         cb.releaseExternalResources();
         sb.releaseExternalResources();
 
+        if (eventExecutor != null) {
+            eventExecutor.shutdown();
+        }
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
         }
