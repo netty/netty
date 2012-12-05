@@ -156,8 +156,8 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         assert !freed;
-        if (dst instanceof UnpooledHeapByteBuf) {
-            getBytes(index, ((UnpooledHeapByteBuf) dst).array, dstIndex, length);
+        if (dst.hasArray()) {
+            getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
             dst.setBytes(dstIndex, array, index, length);
         }
@@ -201,8 +201,8 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         assert !freed;
-        if (src instanceof UnpooledHeapByteBuf) {
-            setBytes(index, ((UnpooledHeapByteBuf) src).array, srcIndex, length);
+        if (src.hasArray()) {
+            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
         }
@@ -256,7 +256,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int offset, int length) {
+    public ByteBuffer[] nioBuffers(int index, int length) {
         throw new UnsupportedOperationException();
     }
 

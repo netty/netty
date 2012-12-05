@@ -40,11 +40,12 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-final class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf, Unsafe {
+public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf, Unsafe {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
     private final ByteBufAllocator alloc;
+    private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
 
@@ -53,16 +54,17 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
     private boolean freed;
     private Queue<ByteBuf> suspendedDeallocations;
 
-    public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents) {
+    public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents) {
         super(Integer.MAX_VALUE);
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
         this.alloc = alloc;
+        this.direct = direct;
         this.maxNumComponents = maxNumComponents;
     }
 
-    public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents, ByteBuf... buffers) {
+    public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
         super(Integer.MAX_VALUE);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -73,6 +75,7 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         }
 
         this.alloc = alloc;
+        this.direct = direct;
         this.maxNumComponents = maxNumComponents;
 
         addComponents0(0, buffers);
@@ -80,7 +83,8 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         setIndex(0, capacity());
     }
 
-    public DefaultCompositeByteBuf(ByteBufAllocator alloc, int maxNumComponents, Iterable<ByteBuf> buffers) {
+    public DefaultCompositeByteBuf(
+            ByteBufAllocator alloc, boolean direct, int maxNumComponents, Iterable<ByteBuf> buffers) {
         super(Integer.MAX_VALUE);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -91,6 +95,7 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         }
 
         this.alloc = alloc;
+        this.direct = direct;
         this.maxNumComponents = maxNumComponents;
         addComponents0(0, buffers);
         consolidateIfNeeded();
@@ -260,7 +265,7 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         if (numComponents > maxNumComponents) {
             final int capacity = components.get(numComponents - 1).endOffset;
 
-            ByteBuf consolidated = alloc().buffer(capacity);
+            ByteBuf consolidated = allocBuffer(capacity);
 
             // We're not using foreach to avoid creating an iterator.
             // noinspection ForLoopReplaceableByForEach
@@ -440,13 +445,16 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         if (newCapacity > oldCapacity) {
             final int paddingLength = newCapacity - oldCapacity;
             ByteBuf padding;
-            if (components.isEmpty()) {
-                padding = alloc().buffer(paddingLength, paddingLength);
+            int nComponents = components.size();
+            if (nComponents < maxNumComponents) {
+                padding = allocBuffer(paddingLength);
                 padding.setIndex(0, paddingLength);
                 addComponent0(0, padding, true);
             } else {
-                padding = alloc().buffer(paddingLength);
+                padding = allocBuffer(paddingLength);
                 padding.setIndex(0, paddingLength);
+                // FIXME: No need to create a padding buffer and consolidate.
+                // Just create a big single buffer and put the current content there.
                 addComponent0(components.size(), padding, true);
                 consolidateIfNeeded();
             }
@@ -1133,7 +1141,7 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
 
         final Component last = components.get(numComponents - 1);
         final int capacity = last.endOffset;
-        final ByteBuf consolidated = alloc().buffer(capacity);
+        final ByteBuf consolidated = allocBuffer(capacity);
 
         for (int i = 0; i < numComponents; i ++) {
             Component c = components.get(i);
@@ -1158,7 +1166,7 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         final int endCIndex = cIndex + numComponents;
         final Component last = components.get(endCIndex - 1);
         final int capacity = last.endOffset - components.get(cIndex).offset;
-        final ByteBuf consolidated = alloc().buffer(capacity);
+        final ByteBuf consolidated = allocBuffer(capacity);
 
         for (int i = cIndex; i < endCIndex; i ++) {
             Component c = components.get(i);
@@ -1251,6 +1259,13 @@ final class DefaultCompositeByteBuf extends AbstractByteBuf implements Composite
         setIndex(0, writerIndex - readerIndex);
         adjustMarkers(readerIndex);
         return this;
+    }
+
+    private ByteBuf allocBuffer(int capacity) {
+        if (direct) {
+            return alloc().directBuffer(capacity);
+        }
+        return alloc().heapBuffer(capacity);
     }
 
     @Override
