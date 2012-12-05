@@ -90,7 +90,8 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
     }
 
     @Override
-    protected void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
+    protected void process(Selector selector) throws IOException {
+        Set<SelectionKey> selectedKeys = selector.selectedKeys();
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597

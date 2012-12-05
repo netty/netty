@@ -74,7 +74,16 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
     }
 
     @Override
-    protected void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+    protected void process(Selector selector) throws IOException {
+        processSelectedKeys(selector.selectedKeys());
+
+        // Handle connection timeout every 10 milliseconds approximately.
+        long currentTimeNanos = System.nanoTime();
+        processConnectTimeout(selector.keys(), currentTimeNanos);
+    }
+
+    private void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
@@ -102,15 +111,6 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
                 ch.worker.close(ch, succeededFuture(ch));
             }
         }
-    }
-
-    @Override
-    protected void process(Selector selector) throws IOException {
-        super.process(selector);
-
-        // Handle connection timeout every 10 milliseconds approximately.
-        long currentTimeNanos = System.nanoTime();
-        processConnectTimeout(selector.keys(), currentTimeNanos);
     }
 
     private static void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {

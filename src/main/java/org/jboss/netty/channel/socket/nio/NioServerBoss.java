@@ -84,7 +84,8 @@ public final class NioServerBoss extends AbstractNioSelector implements Boss {
     }
 
     @Override
-    protected void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+    protected void process(Selector selector) {
+        Set<SelectionKey> selectedKeys = selector.selectedKeys();
         if (selectedKeys.isEmpty()) {
             return;
         }
@@ -206,5 +207,5 @@ public final class NioServerBoss extends AbstractNioSelector implements Boss {
                 }
             }
         }
-    };
+    }
 }

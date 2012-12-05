@@ -117,13 +117,6 @@ public class NioDatagramWorker extends AbstractNioWorker {
                 // "add" the channels writeTask to the writeTaskQueue.
                 registerTask(channel.writeTask);
             }
-
-            final Selector selector = this.selector;
-            if (selector != null) {
-                if (wakenUp.compareAndSet(false, true)) {
-                    selector.wakeup();
-                }
-            }
             return true;
         }
 

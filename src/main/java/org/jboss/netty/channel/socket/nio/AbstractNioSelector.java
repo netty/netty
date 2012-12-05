@@ -35,7 +35,6 @@ import java.nio.channels.SocketChannel;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -406,9 +405,7 @@ abstract class AbstractNioSelector implements NioSelector, ExternalResourceRelea
         }
     }
 
-    protected void process(Selector selector) throws IOException {
-        processSelectedKeys(selector.selectedKeys());
-    }
+    protected abstract void process(Selector selector) throws IOException;
 
     protected int select(Selector selector) throws IOException {
         return SelectorUtil.select(selector);
@@ -417,8 +414,6 @@ abstract class AbstractNioSelector implements NioSelector, ExternalResourceRelea
     protected abstract void close(SelectionKey k);
 
     protected abstract ThreadRenamingRunnable newThreadRenamingRunnable(int id, ThreadNameDeterminer determiner);
-
-    protected abstract void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException;
 
     protected abstract Runnable createRegisterTask(Channel channel, ChannelFuture future);
 }
