@@ -35,4 +35,8 @@ final class EmbeddedChannelFactory implements ChannelFactory {
     public void releaseExternalResources() {
         // No external resources
     }
+
+    public void shutdown() {
+        // Nothing to shutdown
+    }
 }

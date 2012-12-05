@@ -41,4 +41,8 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
     public void releaseExternalResources() {
         group.close().awaitUninterruptibly();
     }
+
+    public void shutdown() {
+        // nothing to shutdown
+    }
 }

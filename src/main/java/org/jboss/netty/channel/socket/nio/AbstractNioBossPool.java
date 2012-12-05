@@ -16,6 +16,7 @@
 package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,10 +87,13 @@ public abstract class AbstractNioBossPool<E extends Boss>
     }
 
     public void releaseExternalResources() {
+        shutdown();
+        ExecutorUtil.terminate(bossExecutor);
+    }
+
+    public void shutdown() {
         for (Boss boss: bosses) {
-            if (boss instanceof ExternalResourceReleasable) {
-                ((ExternalResourceReleasable) boss).releaseExternalResources();
-            }
+            boss.shutdown();
         }
     }
 }

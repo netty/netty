@@ -26,7 +26,6 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side NIO-based
@@ -87,8 +86,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     private final WorkerPool<NioWorker> workerPool;
     private final NioServerSocketPipelineSink sink;
     private final BossPool<NioServerBoss> bossPool;
-    private final Executor bossExecutor;
-    private final Executor workerExecutor;
+    private boolean releasePools;
 
     /**
      * Create a new {@link NioServerSocketChannelFactory} using {@link Executors#newCachedThreadPool()}
@@ -97,11 +95,8 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      * See {@link #NioServerSocketChannelFactory(Executor, Executor)}
      */
     public NioServerSocketChannelFactory() {
-        bossExecutor = Executors.newCachedThreadPool();
-        workerExecutor = Executors.newCachedThreadPool();
-        bossPool = new NioServerBossPool(bossExecutor, 1);
-        workerPool = new NioWorkerPool(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
-        sink = new NioServerSocketPipelineSink();
+        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        releasePools = true;
     }
 
     /**
@@ -201,8 +196,6 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
         if (workerPool == null) {
             throw new NullPointerException("workerPool");
         }
-        bossExecutor = null;
-        workerExecutor = null;
         this.bossPool = bossPool;
         this.workerPool = workerPool;
         sink = new NioServerSocketPipelineSink();
@@ -212,19 +205,25 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
         return new NioServerSocketChannel(this, pipeline, sink, bossPool.nextBoss(), workerPool);
     }
 
+    public void shutdown() {
+        bossPool.shutdown();
+        workerPool.shutdown();
+        if (releasePools) {
+            releasePools();
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
+        releasePools();
+    }
+
+    private void releasePools() {
         if (bossPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) bossPool).releaseExternalResources();
         }
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
-        }
-
-        if (bossExecutor != null) {
-            ExecutorUtil.terminate(bossExecutor);
-        }
-        if (workerExecutor != null) {
-            ExecutorUtil.terminate(workerExecutor);
         }
     }
 }

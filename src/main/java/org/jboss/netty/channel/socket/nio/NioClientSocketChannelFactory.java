@@ -28,7 +28,6 @@ import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ClientSocketChannelFactory} which creates a client-side NIO-based
@@ -88,8 +87,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final BossPool<NioClientBoss> bossPool;
     private final WorkerPool<NioWorker> workerPool;
     private final NioClientSocketPipelineSink sink;
-    private final Executor bossExecutor;
-    private final Executor workerExecutor;
+    private boolean releasePools;
 
     /**
      * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()}
@@ -98,11 +96,8 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
      * See {@link #NioClientSocketChannelFactory(Executor, Executor)}
      */
     public NioClientSocketChannelFactory() {
-        bossExecutor = Executors.newCachedThreadPool();
-        workerExecutor = Executors.newCachedThreadPool();
-        bossPool = new NioClientBossPool(bossExecutor, DEFAULT_BOSS_COUNT);
-        workerPool = new NioWorkerPool(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
-        sink = new NioClientSocketPipelineSink(bossPool);
+        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        releasePools = true;
     }
 
     /**
@@ -211,8 +206,6 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         }
         this.bossPool = bossPool;
         this.workerPool = workerPool;
-        bossExecutor = null;
-        workerExecutor = null;
         sink = new NioClientSocketPipelineSink(bossPool);
     }
 
@@ -220,18 +213,25 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         return new NioClientSocketChannel(this, pipeline, sink, workerPool.nextWorker());
     }
 
+    public void shutdown() {
+        bossPool.shutdown();
+        workerPool.shutdown();
+        if (releasePools) {
+            releasePools();
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
+        releasePools();
+    }
+
+    private void releasePools() {
         if (bossPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) bossPool).releaseExternalResources();
         }
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
-        }
-        if (bossExecutor != null) {
-            ExecutorUtil.terminate(bossExecutor);
-        }
-        if (workerExecutor != null) {
-            ExecutorUtil.terminate(workerExecutor);
         }
     }
 }

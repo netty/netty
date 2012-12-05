@@ -45,8 +45,13 @@ public final class ShareableWorkerPool<E extends Worker> implements WorkerPool<E
      * Destroy the {@link ShareableWorkerPool} and release all resources. After this is called its not usable anymore
      */
     public void destroy() {
+        wrapped.shutdown();
         if (wrapped instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) wrapped).releaseExternalResources();
         }
+    }
+
+    public void shutdown() {
+        // do nothing
     }
 }

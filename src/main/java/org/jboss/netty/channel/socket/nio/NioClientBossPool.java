@@ -62,11 +62,17 @@ public class NioClientBossPool extends AbstractNioBossPool<NioClientBoss> {
     }
 
     @Override
-    public void releaseExternalResources() {
-        super.releaseExternalResources();
+    public void shutdown() {
+        super.shutdown();
         if (stopTimer) {
             timer.stop();
         }
+    }
+
+    @Override
+    public void releaseExternalResources() {
+        super.releaseExternalResources();
+        timer.stop();
     }
 }
 

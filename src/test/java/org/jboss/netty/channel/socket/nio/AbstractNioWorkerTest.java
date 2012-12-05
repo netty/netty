@@ -41,7 +41,7 @@ public abstract class AbstractNioWorkerTest {
         
         ExecutorService executor = Executors.newCachedThreadPool();
         AbstractNioWorker worker = createWorker(executor);
-        worker.releaseExternalResources();
+        worker.shutdown();
 
         // give the Selector time to detect the shutdown
         Thread.sleep(SelectorUtil.DEFAULT_SELECT_TIMEOUT * 10);

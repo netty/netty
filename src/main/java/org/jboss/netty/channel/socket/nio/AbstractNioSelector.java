@@ -20,7 +20,6 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
@@ -42,7 +41,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class AbstractNioSelector implements NioSelector, ExternalResourceReleasable {
+abstract class AbstractNioSelector implements NioSelector {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -387,7 +386,7 @@ abstract class AbstractNioSelector implements NioSelector, ExternalResourceRelea
         return false;
     }
 
-    public void releaseExternalResources() {
+    public void shutdown() {
         if (isIoThread()) {
             throw new IllegalStateException("Must not be called from a I/O-Thread to prevent deadlocks!");
         }

@@ -29,4 +29,6 @@ public interface NioSelector extends Runnable {
      * bug.
      */
     void rebuildSelector();
+
+    void shutdown();
 }

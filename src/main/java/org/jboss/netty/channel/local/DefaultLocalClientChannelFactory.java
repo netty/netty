@@ -44,4 +44,8 @@ public class DefaultLocalClientChannelFactory implements LocalClientChannelFacto
     public void releaseExternalResources() {
         // No external resources.
     }
+
+    public void shutdown() {
+        // nothing to shutdown
+    }
 }

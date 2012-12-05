@@ -68,6 +68,11 @@ public interface ChannelFactory extends ExternalResourceReleasable {
     Channel newChannel(ChannelPipeline pipeline);
 
     /**
+     * Shudown the ChannelFactory and all the resource it created internal.
+     */
+    void shutdown();
+
+    /**
      * Releases the external resources that this factory depends on to function.
      * An external resource is a resource that this factory didn't create by
      * itself.  For example, {@link Executor}s that you specified in the factory
@@ -76,6 +81,8 @@ public interface ChannelFactory extends ExternalResourceReleasable {
      * this factory or any other part of your application.  An unexpected
      * behavior will be resulted in if the resources are released when there's
      * an open channel which is managed by this factory.
+     *
+     * This will also call {@link #shutdown()} before do any action
      */
     void releaseExternalResources();
 }

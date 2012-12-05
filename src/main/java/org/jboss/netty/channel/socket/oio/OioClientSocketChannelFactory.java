@@ -106,9 +106,14 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
         return new OioClientSocketChannel(this, pipeline, sink);
     }
 
-    public void releaseExternalResources() {
+    public void shutdown() {
         if (shutdownExecutor) {
             ExecutorUtil.terminate(workerExecutor);
         }
+    }
+
+    public void releaseExternalResources() {
+        shutdown();
+        ExecutorUtil.terminate(workerExecutor);
     }
 }

@@ -28,7 +28,6 @@ import org.jboss.netty.channel.socket.InternetProtocolFamily;
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link DatagramChannelFactory} that creates a NIO-based connectionless
@@ -82,7 +81,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     private final NioDatagramPipelineSink sink;
     private final WorkerPool<NioDatagramWorker> workerPool;
     private final InternetProtocolFamily family;
-    private final Executor executor;
+    private boolean releasePool;
 
     /**
      * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}
@@ -93,10 +92,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
     public NioDatagramChannelFactory() {
-        executor = Executors.newCachedThreadPool();
-        workerPool = new NioDatagramWorkerPool(executor, SelectorUtil.DEFAULT_IO_THREADS);
-        family = null;
-        sink = new NioDatagramPipelineSink(workerPool);
+        this((InternetProtocolFamily) null);
     }
 
     /**
@@ -105,10 +101,10 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      * See {@link #NioDatagramChannelFactory(Executor)}
      */
     public NioDatagramChannelFactory(InternetProtocolFamily family) {
-        executor = Executors.newCachedThreadPool();
-        workerPool = new NioDatagramWorkerPool(executor, SelectorUtil.DEFAULT_IO_THREADS);
+        workerPool = new NioDatagramWorkerPool(Executors.newCachedThreadPool(), SelectorUtil.DEFAULT_IO_THREADS);
         this.family = family;
         sink = new NioDatagramPipelineSink(workerPool);
+        releasePool = true;
     }
 
     /**
@@ -202,7 +198,6 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      *        <strong>Be aware that this option is only considered when running on java7+</strong>
      */
     public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool, InternetProtocolFamily family) {
-        executor = null;
         this.workerPool = workerPool;
         this.family = family;
         sink = new NioDatagramPipelineSink(workerPool);
@@ -212,12 +207,21 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
         return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker(), family);
     }
 
+    public void shutdown() {
+        workerPool.shutdown();
+        if (releasePool) {
+            releasePool();
+        }
+    }
+
     public void releaseExternalResources() {
+        shutdown();
+        releasePool();
+    }
+
+    private void releasePool() {
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
-        }
-        if (executor != null) {
-            ExecutorUtil.terminate(executor);
         }
     }
 }
