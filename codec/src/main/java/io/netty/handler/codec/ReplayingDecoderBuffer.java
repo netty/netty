@@ -16,15 +16,14 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf.Unsafe;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.util.internal.Signal;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -33,7 +32,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-class ReplayingDecoderBuffer implements UnsafeByteBuf {
+final class ReplayingDecoderBuffer implements ByteBuf, Unsafe {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
@@ -206,14 +205,12 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public int getBytes(int index, GatheringByteChannel out, int length)
-            throws IOException {
+    public int getBytes(int index, GatheringByteChannel out, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public ByteBuf getBytes(int index, OutputStream out, int length)
-            throws IOException {
+    public ByteBuf getBytes(int index, OutputStream out, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -454,8 +451,7 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public int readBytes(GatheringByteChannel out, int length)
-            throws IOException {
+    public int readBytes(GatheringByteChannel out, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -472,7 +468,7 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public ByteBuf readBytes(OutputStream out, int length) throws IOException {
+    public ByteBuf readBytes(OutputStream out, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -599,8 +595,7 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
+    public int setBytes(int index, InputStream in, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -610,8 +605,7 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -778,13 +772,12 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     }
 
     @Override
-    public int writeBytes(InputStream in, int length) throws IOException {
+    public int writeBytes(InputStream in, int length) {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public int writeBytes(ScatteringByteChannel in, int length)
-            throws IOException {
+    public int writeBytes(ScatteringByteChannel in, int length) {
         throw new UnreplayableOperationException();
     }
 
@@ -867,7 +860,7 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
 
     @Override
     public boolean isFreed() {
-        return ((UnsafeByteBuf) buffer).isFreed();
+        return buffer.unsafe().isFreed();
     }
 
     @Override
@@ -888,5 +881,10 @@ class ReplayingDecoderBuffer implements UnsafeByteBuf {
     @Override
     public ByteBuf unwrap() {
         throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
     }
 }

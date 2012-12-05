@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -1471,9 +1470,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
-            if (buf instanceof UnsafeByteBuf) {
-                ((UnsafeByteBuf) buf).free();
-            }
+            buf.unsafe().free();
         }
 
         @Override

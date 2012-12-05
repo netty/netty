@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.util.DefaultAttributeMap;
 
 import java.net.SocketAddress;
@@ -60,9 +59,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     EventExecutor executor; // not thread-safe but OK because it never changes once set.
 
     private MessageBuf<Object> inMsgBuf;
-    private UnsafeByteBuf inByteBuf;
+    private ByteBuf inByteBuf;
     private MessageBuf<Object> outMsgBuf;
-    private UnsafeByteBuf outByteBuf;
+    private ByteBuf outByteBuf;
 
     // When the two handlers run in a different thread and they are next to each other,
     // each other's buffers can be accessed at the same time resulting in a race condition.
@@ -272,8 +271,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
             }
 
-            if (buf instanceof UnsafeByteBuf) {
-                inByteBuf = (UnsafeByteBuf) buf;
+            if (buf instanceof ByteBuf) {
+                inByteBuf = (ByteBuf) buf;
                 inByteBridge = new AtomicReference<ByteBridge>();
                 inMsgBuf = null;
                 inMsgBridge = null;
@@ -347,8 +346,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
         }
 
-        if (buf instanceof UnsafeByteBuf) {
-            outByteBuf = (UnsafeByteBuf) buf;
+        if (buf instanceof ByteBuf) {
+            outByteBuf = (ByteBuf) buf;
             outByteBridge = new AtomicReference<ByteBridge>();
             outMsgBuf = null;
             outMsgBridge = null;
@@ -695,7 +694,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ByteBuf currentInboundByteBuf = inboundByteBuffer();
 
-        inByteBuf = (UnsafeByteBuf) newInboundByteBuf;
+        inByteBuf = newInboundByteBuf;
         return currentInboundByteBuf;
     }
 
@@ -746,7 +745,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ByteBuf currentOutboundByteBuf = outboundByteBuffer();
 
-        outByteBuf = (UnsafeByteBuf) newOutboundByteBuf;
+        outByteBuf = newOutboundByteBuf;
         return currentOutboundByteBuf;
     }
 
@@ -1206,15 +1205,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     static final class ByteBridge {
-        final UnsafeByteBuf byteBuf;
+        final ByteBuf byteBuf;
 
-        private final Queue<UnsafeByteBuf> exchangeBuf = new ConcurrentLinkedQueue<UnsafeByteBuf>();
+        private final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
         private final ChannelHandlerContext ctx;
 
         ByteBridge(ChannelHandlerContext ctx) {
             this.ctx = ctx;
             // TODO Choose whether to use heap or direct buffer depending on the context's buffer type.
-            byteBuf = (UnsafeByteBuf) ctx.alloc().buffer();
+            byteBuf = ctx.alloc().buffer();
         }
 
         private void fill() {
@@ -1231,14 +1230,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
 
             byteBuf.readBytes(data);
-            byteBuf.discardSomeReadBytes();
+            byteBuf.unsafe().discardSomeReadBytes();
 
-            exchangeBuf.add((UnsafeByteBuf) data);
+            exchangeBuf.add(data);
         }
 
         private void flush(ByteBuf out) {
             for (;;) {
-                UnsafeByteBuf data = exchangeBuf.poll();
+                ByteBuf data = exchangeBuf.poll();
                 if (data == null) {
                     break;
                 }
@@ -1246,7 +1245,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 try {
                     out.writeBytes(data);
                 } finally {
-                    data.free();
+                    data.unsafe().free();
                 }
             }
         }

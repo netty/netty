@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -213,11 +212,6 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             // Do nothing.
         }
@@ -239,11 +233,6 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         @Override
         public ChannelBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundByteBuffer;
-        }
-
-        @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-            ((UnsafeByteBuf) buf).free();
         }
 
         @Override

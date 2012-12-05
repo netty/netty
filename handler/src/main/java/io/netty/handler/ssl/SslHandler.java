@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.ChannelBuf;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
@@ -385,12 +384,12 @@ public class SslHandler
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        ((UnsafeByteBuf) buf).free();
+        buf.unsafe().free();
     }
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        ((UnsafeByteBuf) buf).free();
+        buf.unsafe().free();
     }
 
     @Override
@@ -410,7 +409,7 @@ public class SslHandler
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        ((UnsafeByteBuf) out).discardSomeReadBytes();
+        out.unsafe().discardSomeReadBytes();
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -482,7 +481,7 @@ public class SslHandler
             setHandshakeFailure(e);
             throw e;
         } finally {
-            ((UnsafeByteBuf) in).discardSomeReadBytes();
+            in.unsafe().discardSomeReadBytes();
             flush0(ctx, bytesConsumed);
         }
     }

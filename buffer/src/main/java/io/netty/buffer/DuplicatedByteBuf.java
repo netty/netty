@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,11 +31,11 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedByteBuf extends AbstractByteBuf {
+final class DuplicatedByteBuf extends AbstractByteBuf  implements Unsafe {
 
-    private final UnsafeByteBuf buffer;
+    private final ByteBuf buffer;
 
-    public DuplicatedByteBuf(UnsafeByteBuf buffer) {
+    public DuplicatedByteBuf(ByteBuf buffer) {
         super(buffer.maxCapacity());
 
         if (buffer instanceof DuplicatedByteBuf) {
@@ -239,12 +241,12 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer() {
-        return buffer.internalNioBuffer();
+        return buffer.unsafe().internalNioBuffer();
     }
 
     @Override
     public ByteBuffer[] internalNioBuffers() {
-        return buffer.internalNioBuffers();
+        return buffer.unsafe().internalNioBuffers();
     }
 
     @Override
@@ -254,7 +256,7 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
 
     @Override
     public boolean isFreed() {
-        return buffer.isFreed();
+        return buffer.unsafe().isFreed();
     }
 
     @Override
@@ -265,5 +267,10 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
 
     @Override
     public void resumeIntermediaryDeallocations() { }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
+    }
 }
 

@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
 import sun.misc.Cleaner;
 
 import java.io.IOException;
@@ -35,7 +36,7 @@ import java.util.Queue;
  * constructor explicitly.
  */
 @SuppressWarnings("restriction")
-public class UnpooledDirectByteBuf extends AbstractByteBuf {
+final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
 
     private static final Field CLEANER_FIELD;
 
@@ -549,5 +550,10 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
     }
 }
