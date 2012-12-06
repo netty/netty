@@ -15,14 +15,13 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelTaskScheduler;
-import io.netty.channel.EventLoopException;
-import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.*;
 import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.monitor.CounterMonitor;
+import io.netty.monitor.MonitorName;
+import io.netty.monitor.MonitorRegistries;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -30,13 +29,10 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -45,6 +41,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 public final class NioEventLoop extends SingleThreadEventLoop {
+    private final CounterMonitor selectorWokeUpBeforeTime = MonitorRegistries.instance()
+            .unique().newCounterMonitor(new MonitorName(getClass(), "Selector.select-early-wake-up"));
 
     /**
      * Internal Netty logger.
@@ -184,6 +182,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             try {
                 long beforeSelect = System.nanoTime();
                 int selected = SelectorUtil.select(selector);
+
+                //measure how long select took & convert nano time to milliseconds
+                long totalSelectTime = System.nanoTime()-beforeSelect;
+                long selectTime=TimeUnit.MILLISECONDS.convert(totalSelectTime,TimeUnit.NANOSECONDS);
+                if(selectTime < SelectorUtil.SELECT_TIMEOUT) {
+                    selectorWokeUpBeforeTime.inc();
+                }
+
                 if (SelectorUtil.EPOLL_BUG_WORKAROUND) {
                     if (selected == 0) {
                         long timeBlocked = System.nanoTime()  - beforeSelect;
