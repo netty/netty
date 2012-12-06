@@ -316,7 +316,11 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
 
         V get(Object key, int hash) {
             if (count != 0) { // read-volatile
-                HashEntry<K, V> e = getFirst(hash);
+                HashEntry<K, V>[] tab = table;
+                HashEntry<K, V> e = tab[hash & tab.length - 1];
+                if (tab != table) {
+                    return get(key, hash);
+                }
                 while (e != null) {
                     if (e.hash == hash && keyEq(key, e.key())) {
                         V opaque = e.value();
@@ -334,7 +338,11 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
 
         boolean containsKey(Object key, int hash) {
             if (count != 0) { // read-volatile
-                HashEntry<K, V> e = getFirst(hash);
+                HashEntry<K, V>[] tab = table;
+                HashEntry<K, V> e = tab[hash & tab.length - 1];
+                if (tab != table) {
+                    return containsKey(key, hash);
+                }
                 while (e != null) {
                     if (e.hash == hash && keyEq(key, e.key())) {
                         return true;
@@ -362,6 +370,9 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
                             return true;
                         }
                     }
+                }
+                if (table != tab) {
+                    return containsValue(value);
                 }
             }
             return false;
@@ -504,6 +515,9 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
                 }
             }
             table = newTable;
+            for (int i = 0; i < oldCapacity; ++i) {
+              oldTable[i] = null;
+            }
             return reduce;
         }
 
