@@ -130,7 +130,7 @@ public abstract class ByteToMessageDecoder<O>
         ByteBuf in = ctx.inboundByteBuffer();
         try {
             if (in.readable()) {
-                ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());
+                ctx.nextInboundByteBuffer().writeBytes(in);
                 ctx.fireInboundBufferUpdated();
             }
         } finally {
