@@ -160,10 +160,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx.handler instanceof ChannelInboundHandler) {
                 ChannelInboundHandler h = (ChannelInboundHandler) ctx.handler;
                 try {
-                    if (ctx.inByteBuf != null) {
-                        h.freeInboundBuffer(ctx, ctx.inByteBuf);
+                    if (ctx.hasInboundByteBuffer()) {
+                        if (ctx.inByteBuf != null) {
+                            h.freeInboundBuffer(ctx, ctx.inByteBuf);
+                        }
                     } else {
-                        h.freeInboundBuffer(ctx, ctx.inMsgBuf);
+                        if (ctx.inMsgBuf != null) {
+                            h.freeInboundBuffer(ctx, ctx.inMsgBuf);
+                        }
                     }
                 } catch (Throwable t) {
                     pipeline.notifyHandlerException(t);
@@ -186,10 +190,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx.handler instanceof ChannelOutboundHandler) {
                 ChannelOutboundHandler h = (ChannelOutboundHandler) ctx.handler;
                 try {
-                    if (ctx.outByteBuf != null) {
-                        h.freeOutboundBuffer(ctx, ctx.outByteBuf);
+                    if (ctx.hasOutboundByteBuffer()) {
+                        if (ctx.outByteBuf != null) {
+                            h.freeOutboundBuffer(ctx, ctx.outByteBuf);
+                        }
                     } else {
-                        h.freeOutboundBuffer(ctx, ctx.outMsgBuf);
+                        if (ctx.outMsgBuf != null) {
+                            h.freeOutboundBuffer(ctx, ctx.outMsgBuf);
+                        }
                     }
                 } catch (Throwable t) {
                     pipeline.notifyHandlerException(t);
