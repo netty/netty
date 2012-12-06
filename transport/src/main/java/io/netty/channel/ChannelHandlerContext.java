@@ -215,7 +215,7 @@ public interface ChannelHandlerContext
      * method.  For example, instead of extending {@link io.netty.handler.codec.ByteToMessageDecoder},
      * extend what that class does (currently, {@link ChannelInboundHandlerAdapter} and
      * {@link ChannelInboundByteHandler}.  In other words, implementing your own
-     * {@link ChannelInboundHandlerAdapter#inboundBufferUpdated(ChannelHandlerContext)}/{@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)}
+     * {@link ChannelInboundHandlerAdapter#inboundBufferUpdated}/{@link ChannelStateHandler#inboundBufferUpdated}
      * will help guarantee a replaced buffer won't be missed.</p>
      *
      * @param newInboundByteBuf the new inbound byte buffer
@@ -232,7 +232,7 @@ public interface ChannelHandlerContext
      * method.  For example, instead of extending {@link io.netty.handler.codec.MessageToMessageDecoder},
      * extend what that class does (currently, {@link ChannelInboundHandlerAdapter} and
      * {@link ChannelInboundMessageHandler}.  In other words, implementing your own
-     * {@link ChannelInboundHandlerAdapter#inboundBufferUpdated(ChannelHandlerContext)}/{@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)}
+     * {@link ChannelInboundHandlerAdapter#inboundBufferUpdated}/{@link ChannelStateHandler#inboundBufferUpdated}
      * will help guarantee a replaced buffer won't be missed.</p>
      *
      * @param newInboundMsgBuf the new inbound message buffer
@@ -249,7 +249,7 @@ public interface ChannelHandlerContext
      * method.  For example, instead of extending {@link io.netty.handler.codec.ByteToByteEncoder},
      * extend what that class does (currently, {@link ChannelOutboundByteHandlerAdapter}).
      * In other words, implementing your own
-     * {@link ChannelOutboundHandlerAdapter#flush(ChannelHandlerContext, ChannelFuture)}/{@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelFuture)}
+     * {@link ChannelOutboundHandlerAdapter#flush}/{@link ChannelOperationHandler#flush}
      * will help guarantee a replaced buffer won't be missed.</p>
      *
      * @param newOutboundByteBuf the new inbound byte buffer
@@ -266,7 +266,7 @@ public interface ChannelHandlerContext
      * method.  For example, instead of extending {@link io.netty.handler.codec.MessageToByteEncoder}
      * or {@link io.netty.handler.codec.MessageToMessageEncoder}, extend what these classes do (currently,
      * {@link ChannelOutboundMessageHandlerAdapter}.  In other words, implementing your own
-     * {@link ChannelOutboundHandlerAdapter#flush(ChannelHandlerContext, ChannelFuture)}/{@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelFuture)}
+     * {@link ChannelOutboundHandlerAdapter#flush}/{@link ChannelOperationHandler#flush}
      * will help guarantee a replaced buffer won't be missed.</p>
      *
      * @param newOutboundMsgBuf the new inbound message buffer
