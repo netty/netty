@@ -24,12 +24,12 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-public class SwappedByteBuf implements UnsafeByteBuf {
+public final class SwappedByteBuf implements ByteBuf {
 
-    private final UnsafeByteBuf buf;
+    private final ByteBuf buf;
     private final ByteOrder order;
 
-    public SwappedByteBuf(UnsafeByteBuf buf) {
+    public SwappedByteBuf(ByteBuf buf) {
         if (buf == null) {
             throw new NullPointerException("buf");
         }
@@ -795,20 +795,7 @@ public class SwappedByteBuf implements UnsafeByteBuf {
     }
 
     @Override
-    public ByteBuffer internalNioBuffer() {
-        return buf.internalNioBuffer();
+    public Unsafe unsafe() {
+        return buf.unsafe();
     }
-
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        return buf.internalNioBuffers();
-    }
-
-    @Override
-    public void discardSomeReadBytes() {
-        buf.discardSomeReadBytes();
-    }
-
-    @Override
-    public void free() { }
 }

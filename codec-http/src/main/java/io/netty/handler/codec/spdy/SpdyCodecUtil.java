@@ -262,10 +262,8 @@ final class SpdyCodecUtil {
         SPDY2_DICT = SPDY2_DICT_;
     }
 
-
     private SpdyCodecUtil() {
     }
-
 
     /**
      * Reads a big-endian unsigned short integer from the buffer.

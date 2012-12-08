@@ -480,7 +480,6 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
             public void run() {
                 notifyListener(f, l);
             }
-
         });
     }
 

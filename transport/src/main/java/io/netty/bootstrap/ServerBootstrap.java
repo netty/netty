@@ -15,7 +15,6 @@
  */
 package io.netty.bootstrap;
 
-import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -173,7 +172,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
 
         for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
-            channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            @SuppressWarnings("unchecked")
+            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+            channel.attr(key).set(e.getValue());
         }
 
         ChannelPipeline p = future.channel().pipeline();
@@ -221,18 +222,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
     }
 
-
     private class Acceptor
             extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
 
         @Override
         public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-            // Nothing to free
         }
 
         @SuppressWarnings("unchecked")

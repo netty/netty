@@ -412,7 +412,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         default: {
             throw new Error("Shouldn't reach here.");
         }
-
         }
     }
 
@@ -509,7 +508,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         }
         return reset();
     }
-
 
     /**
      * Try to do an optimized "read" of len from the given {@link ByteBuf}.
@@ -644,7 +642,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                 throw new TooLongFrameException(
                         "HTTP header is larger than " +
                         maxHeaderSize + " bytes.");
-
             }
 
             sb.append(nextByte);
@@ -657,7 +654,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     protected abstract boolean isDecodingRequest();
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
-
 
     private static int getChunkSize(String hex) {
         hex = hex.trim();

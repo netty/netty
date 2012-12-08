@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -27,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * Big endian Java heap buffer implementation.
  */
-public class UnpooledHeapByteBuf extends AbstractByteBuf {
+final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
 
     private final ByteBufAllocator alloc;
     private byte[] array;
@@ -376,12 +378,28 @@ public class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return freed;
+    }
+
+    @Override
     public void free() {
         freed = true;
     }
 
     @Override
+    public void suspendIntermediaryDeallocations() { }
+
+    @Override
+    public void resumeIntermediaryDeallocations() { }
+
+    @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
     }
 }

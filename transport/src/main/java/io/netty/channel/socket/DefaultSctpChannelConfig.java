@@ -16,6 +16,7 @@
 package io.netty.channel.socket;
 
 import com.sun.nio.sctp.SctpChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -23,7 +24,6 @@ import io.netty.channel.DefaultChannelConfig;
 import java.io.IOException;
 import java.util.Map;
 
-import com.sun.nio.sctp.SctpStandardSocketOptions;
 import static io.netty.channel.ChannelOption.*;
 
 /**
@@ -46,7 +46,6 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, SCTP_NODELAY, SCTP_INIT_MAXSTREAMS);
     }
-
 
     @SuppressWarnings("unchecked")
     @Override
@@ -81,7 +80,6 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
         return true;
     }
-
 
     @Override
     public boolean isSctpNoDelay() {

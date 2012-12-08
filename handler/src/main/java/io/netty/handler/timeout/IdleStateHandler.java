@@ -265,7 +265,6 @@ public class IdleStateHandler extends ChannelHandlerAdapter {
         super.channelInactive(ctx);
     }
 
-
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         lastReadTime = System.currentTimeMillis();
@@ -370,7 +369,6 @@ public class IdleStateHandler extends ChannelHandlerAdapter {
                 readerIdleTimeout = ctx.executor().schedule(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
-
     }
 
     private final class WriterIdleTimeoutTask implements Runnable {

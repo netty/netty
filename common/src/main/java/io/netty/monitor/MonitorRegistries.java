@@ -167,7 +167,6 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
         public void remove() {
             throw new UnsupportedOperationException("Removing a MonitorRegistry is not supported");
         }
-
     }
 
     private MonitorRegistries() {

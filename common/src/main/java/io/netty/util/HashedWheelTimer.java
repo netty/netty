@@ -633,7 +633,6 @@ public class HashedWheelTimer implements Timer {
                             "An exception was thrown by " +
                             TimerTask.class.getSimpleName() + '.', t);
                 }
-
             }
         }
 

@@ -28,7 +28,7 @@ import java.nio.charset.Charset;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf implements UnsafeByteBuf {
+public abstract class AbstractByteBuf implements ByteBuf {
 
     private int readerIndex;
     private int writerIndex;

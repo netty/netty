@@ -89,8 +89,6 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
         closeOnFlush(ctx.channel());
     }
 
-
-
     /**
      * Closes the specified channel after all queued write requests are flushed.
      */

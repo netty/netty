@@ -29,6 +29,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -41,13 +43,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
+    final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
 
     final Runnable suspendReadTask = new Runnable() {
         @Override
         public void run() {
             selectionKey().interestOps(selectionKey().interestOps() & ~readInterestOp);
         }
-
     };
 
     final Runnable resumeReadTask = new Runnable() {
@@ -80,7 +82,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     logger.warn(
                             "Failed to close a partially initialized socket.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
@@ -109,6 +110,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     protected SelectableChannel javaChannel() {
         return ch;
+    }
+
+    @Override
+    public NioEventLoop eventLoop() {
+        return (NioEventLoop) super.eventLoop();
     }
 
     protected SelectionKey selectionKey() {

@@ -87,7 +87,6 @@ public final class WebSocketSslServerSslContext {
                 logger.error("Error initializing SslContextManager. " + ex.getMessage(), ex);
             }
             System.exit(1);
-
         } finally {
             _serverContext = serverContext;
         }

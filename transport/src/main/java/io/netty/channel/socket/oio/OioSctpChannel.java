@@ -128,7 +128,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         } else {
             return 1;
         }
-
     }
 
     @Override
@@ -144,7 +143,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             data.getBytes(data.readerIndex(), nioData);
             nioData.flip();
         }
-
 
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
         mi.payloadProtocolID(packet.getProtocolIdentifier());

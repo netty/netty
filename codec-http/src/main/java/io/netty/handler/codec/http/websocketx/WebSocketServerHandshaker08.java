@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -32,6 +30,9 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * <p>
@@ -143,7 +144,6 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             }
         }
 
-
         ChannelFuture future = channel.write(res);
 
         // Upgrade the connection and send the handshake response.
@@ -155,7 +155,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
                     p.remove(HttpChunkAggregator.class);
                 }
 
-                p.replace(HttpRequestDecoder.class, "wsdecoder",
+                p.get(HttpRequestDecoder.class).replace("wsdecoder",
                         new WebSocket08FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
                 p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
             }

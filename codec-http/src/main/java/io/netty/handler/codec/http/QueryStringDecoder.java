@@ -169,7 +169,6 @@ public class QueryStringDecoder {
         this.uri = newUri.replace(';', '&');
         this.charset = charset;
         this.maxParams = maxParams;
-
     }
 
     /**

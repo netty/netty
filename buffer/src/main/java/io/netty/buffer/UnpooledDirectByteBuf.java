@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
 import sun.misc.Cleaner;
 
 import java.io.IOException;
@@ -26,6 +27,8 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link Unpooled#directBuffer(int)}
@@ -33,7 +36,7 @@ import java.nio.channels.ScatteringByteChannel;
  * constructor explicitly.
  */
 @SuppressWarnings("restriction")
-public class UnpooledDirectByteBuf extends AbstractByteBuf {
+final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
 
     private static final Field CLEANER_FIELD;
 
@@ -72,6 +75,7 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
     private int capacity;
     private boolean freed;
     private boolean doNotFree;
+    private Queue<ByteBuffer> suspendedDeallocations;
 
     /**
      * Creates a new direct buffer.
@@ -137,7 +141,11 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
             if (doNotFree) {
                 doNotFree = false;
             } else {
-                freeDirect(oldBuffer);
+                if (suspendedDeallocations == null) {
+                    freeDirect(oldBuffer);
+                } else {
+                    suspendedDeallocations.add(oldBuffer);
+                }
             }
         }
 
@@ -499,6 +507,11 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isFreed() {
+        return freed;
+    }
+
+    @Override
     public void free() {
         if (freed) {
             return;
@@ -509,11 +522,38 @@ public class UnpooledDirectByteBuf extends AbstractByteBuf {
             return;
         }
 
+        resumeIntermediaryDeallocations();
         freeDirect(buffer);
+    }
+
+    @Override
+    public void suspendIntermediaryDeallocations() {
+        if (suspendedDeallocations == null) {
+            suspendedDeallocations = new ArrayDeque<ByteBuffer>(2);
+        }
+    }
+
+    @Override
+    public void resumeIntermediaryDeallocations() {
+        if (suspendedDeallocations == null) {
+            return;
+        }
+
+        Queue<ByteBuffer> suspendedDeallocations = this.suspendedDeallocations;
+        this.suspendedDeallocations = null;
+
+        for (ByteBuffer buf: suspendedDeallocations) {
+            freeDirect(buf);
+        }
     }
 
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return this;
     }
 }

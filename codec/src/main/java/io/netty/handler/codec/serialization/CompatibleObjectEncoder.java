@@ -17,7 +17,6 @@ package io.netty.handler.codec.serialization;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.UnsafeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.Attribute;
@@ -98,7 +97,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
                     oos.reset();
 
                     // Also discard the byproduct to avoid OOM on the sending side.
-                    ((UnsafeByteBuf) out).discardSomeReadBytes();
+                    out.unsafe().discardSomeReadBytes();
                 }
             }
 

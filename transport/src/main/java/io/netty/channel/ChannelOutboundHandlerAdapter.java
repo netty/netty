@@ -15,8 +15,15 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuf;
+
 public abstract class ChannelOutboundHandlerAdapter
         extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler {
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        buf.unsafe().free();
+    }
+
     @Override
     public abstract void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
 }

@@ -30,7 +30,6 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     private final int protocolIdentifier;
     private final int streamIdentifier;
 
-
     /**
      * @param streamIdentifier   accepted stream number, this should be >=0 or <= max stream number of the association.
      * @param protocolIdentifier supported application protocol.

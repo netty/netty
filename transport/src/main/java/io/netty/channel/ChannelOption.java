@@ -37,7 +37,6 @@ public class ChannelOption<T> extends UniqueName {
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE =
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
 
-
     public static final ChannelOption<Boolean> SO_BROADCAST =
             new ChannelOption<Boolean>("SO_BROADCAST");
     public static final ChannelOption<Boolean> SO_KEEPALIVE =

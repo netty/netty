@@ -18,14 +18,12 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.codec.socks.SocksCmdRequestDecoder;
-import io.netty.codec.socks.SocksInitResponse;
-import io.netty.codec.socks.SocksMessage;
-import io.netty.codec.socks.SocksRequest;
-import io.netty.codec.socks.SocksAuthResponse;
-import io.netty.codec.socks.SocksCmdRequest;
-import io.netty.codec.socks.SocksCmdResponse;
-
+import io.netty.handler.codec.socks.SocksCmdRequestDecoder;
+import io.netty.handler.codec.socks.SocksInitResponse;
+import io.netty.handler.codec.socks.SocksMessage;
+import io.netty.handler.codec.socks.SocksRequest;
+import io.netty.handler.codec.socks.SocksAuthResponse;
+import io.netty.handler.codec.socks.SocksCmdRequest;
 
 
 @ChannelHandler.Sharable
@@ -73,7 +71,7 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
     }
 
     @Override
-    public void exceptionCaught(io.netty.channel.ChannelHandlerContext ctx, Throwable throwable) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) throws Exception {
         throwable.printStackTrace();
         SocksServerUtils.closeOnFlush(ctx.channel());
     }

@@ -2016,10 +2016,7 @@ public class HttpPostRequestDecoder {
      * Exception when the body is fully decoded, even if there is still data
      */
     public static class EndOfDataDecoderException extends Exception {
-        /**
- */
         private static final long serialVersionUID = 1336267941020800769L;
-
     }
 
     /**
