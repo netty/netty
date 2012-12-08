@@ -66,12 +66,12 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public ByteBuf heapBuffer() {
-        return heapBuffer(256, Integer.MAX_VALUE);
+        return heapBuffer(256, bufferMaxCapacity());
     }
 
     @Override
     public ByteBuf heapBuffer(int initialCapacity) {
-        return buffer(initialCapacity, Integer.MAX_VALUE);
+        return buffer(initialCapacity, bufferMaxCapacity());
     }
 
     @Override
@@ -79,17 +79,18 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
+        validate(initialCapacity, maxCapacity);
         return newHeapBuffer(initialCapacity, maxCapacity);
     }
 
     @Override
     public ByteBuf directBuffer() {
-        return directBuffer(256, Integer.MAX_VALUE);
+        return directBuffer(256, bufferMaxCapacity());
     }
 
     @Override
     public ByteBuf directBuffer(int initialCapacity) {
-        return directBuffer(initialCapacity, Integer.MAX_VALUE);
+        return directBuffer(initialCapacity, bufferMaxCapacity());
     }
 
     @Override
@@ -97,7 +98,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
+        validate(initialCapacity, maxCapacity);
         return newDirectBuffer(initialCapacity, maxCapacity);
+    }
+
+    private void validate(int initialCapacity, int maxCapacity) {
+        if (maxCapacity > bufferMaxCapacity()) {
+            throw new IllegalArgumentException("maxCapacity: " + maxCapacity + " (expected: not greater than " + bufferMaxCapacity());
+        }
+        if (initialCapacity > maxCapacity) {
+            throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: not greater than maxCapacity(" + maxCapacity + ')');
+        }
     }
 
     protected abstract ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity);
