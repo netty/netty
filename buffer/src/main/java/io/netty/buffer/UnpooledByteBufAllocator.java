@@ -28,7 +28,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
     public static final UnpooledByteBufAllocator DIRECT_BY_DEFAULT = new UnpooledByteBufAllocator(true);
 
     private UnpooledByteBufAllocator(boolean directByDefault) {
-        super(directByDefault);
+        super(Integer.MAX_VALUE, directByDefault);
     }
 
     @Override

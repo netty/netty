@@ -30,6 +30,8 @@ public interface ByteBufAllocator {
     ByteBuf directBuffer(int initialCapacity, int maxCapacity);
     ByteBuf ioBuffer();
 
+    int bufferMaxCapacity();
+
     void shutdown();
     boolean isShutdown();
     boolean isTerminated();

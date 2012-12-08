@@ -18,16 +18,26 @@ package io.netty.buffer;
 
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
+    private final int bufferMaxCapacity;
     private final boolean directByDefault;
     private final ByteBuf emptyBuf;
 
-    protected AbstractByteBufAllocator() {
-        this(false);
+    protected AbstractByteBufAllocator(int bufferMaxCapacity) {
+        this(bufferMaxCapacity, false);
     }
 
-    protected AbstractByteBufAllocator(boolean directByDefault) {
+    protected AbstractByteBufAllocator(int bufferMaxCapacity, boolean directByDefault) {
+        if (bufferMaxCapacity <= 0) {
+            throw new IllegalArgumentException("bufferMaxCapacity: " + bufferMaxCapacity + " (expected: 1+)");
+        }
         this.directByDefault = directByDefault;
+        this.bufferMaxCapacity = bufferMaxCapacity;
         emptyBuf = new UnpooledHeapByteBuf(this, 0, 0);
+    }
+
+    @Override
+    public int bufferMaxCapacity() {
+        return bufferMaxCapacity;
     }
 
     @Override
