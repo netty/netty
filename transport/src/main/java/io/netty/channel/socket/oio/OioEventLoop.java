@@ -102,5 +102,6 @@ class OioEventLoop extends SingleThreadEventLoop {
         ch = null;
         parent.activeChildren.remove(this);
         parent.idleChildren.add(this);
+        channelCounter.decr();
     }
 }

@@ -15,7 +15,10 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.*;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelTaskScheduler;
+import io.netty.channel.EventLoopException;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -29,14 +32,18 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * {@link SingleThreadEventLoop} implementation which register the {@link Channel}'s to a
+ * {@link SingleThreadEventLoop} implementation which register the {@link io.netty.channel.Channel}'s to a
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
@@ -124,6 +131,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         } catch (Exception e) {
             throw new EventLoopException("failed to register a channel", e);
         }
+        channelCounter.inc();
     }
 
     void executeWhenWritable(AbstractNioChannel channel, NioTask<? extends SelectableChannel> task) {
@@ -198,9 +206,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int selected = SelectorUtil.select(selector);
 
                 //measure how long select took & convert nano time to milliseconds
-                long totalSelectTime = System.nanoTime()-beforeSelect;
-                long selectTime=TimeUnit.MILLISECONDS.convert(totalSelectTime,TimeUnit.NANOSECONDS);
-                if(selectTime < SelectorUtil.SELECT_TIMEOUT) {
+                long totalSelectTime = System.nanoTime() - beforeSelect;
+                long selectTime = TimeUnit.MILLISECONDS.convert(totalSelectTime, TimeUnit.NANOSECONDS);
+                //consider early wake up if woken before 80% of SELECT_TIMEOUT
+                if (selectTime < (0.8 * SelectorUtil.SELECT_TIMEOUT)) {
                     selectorWokeUpBeforeTime.inc();
                 }
 
@@ -305,6 +314,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             cleanedCancelledKeys = true;
             SelectorUtil.cleanupKeys(selector);
         }
+        channelCounter.decr();
     }
 
     private void processSelectedKeys() {
