@@ -20,6 +20,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MessageBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.monitor.EventRateMonitor;
+import io.netty.monitor.MonitorName;
+import io.netty.monitor.MonitorRegistries;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.DetectionUtil;
 
@@ -31,6 +34,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -43,7 +47,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final Random random = new Random();
 
-    /**
+    protected EventRateMonitor bytesWrittenThroughput = MonitorRegistries.instance().unique().newEventRateMonitor(
+              new MonitorName(getClass(), "bytes-written-throughput"), TimeUnit.SECONDS);
+     /**
      * Generates a negative unique integer ID.  This method generates only
      * negative integers to avoid conflicts with user-specified IDs where only
      * non-negative integers are allowed.
@@ -817,6 +823,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             if (newSize == 0) {
                                 out.discardReadBytes();
                             }
+                            bytesWrittenThroughput.events(writtenBytes);
                         }
                     }
                 } else {
