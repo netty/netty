@@ -16,23 +16,14 @@
 
 package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf.Unsafe;
 import io.netty.util.internal.StringUtil;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.GatheringByteChannel;
-import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
@@ -44,12 +35,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
-    private final Arena[] heapArenas;
-    private final ThreadLocal<Arena> threadLocalHeapArena = new ThreadLocal<Arena>() {
+    private final Arena<byte[]>[] heapArenas;
+    private final ThreadLocal<Arena<byte[]>> threadLocalHeapArena = new ThreadLocal<Arena<byte[]>>() {
         private final AtomicInteger index = new AtomicInteger();
         @Override
         @SuppressWarnings("ClassEscapesDefinedScope")
-        protected Arena initialValue() {
+        protected Arena<byte[]> initialValue() {
             return heapArenas[Math.abs(index.getAndIncrement() % heapArenas.length)];
         }
     };
@@ -75,9 +66,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         int pageShifts = validateAndCalculatePageShifts(pageSize);
         int chunkSize = bufferMaxCapacity();
 
+        //noinspection unchecked
         heapArenas = new Arena[nHeapArena];
         for (int i = 0; i < heapArenas.length; i ++) {
-            heapArenas[i] = new HeapArena(pageSize, maxOrder, pageShifts, chunkSize);
+            heapArenas[i] = new HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
         }
     }
 
@@ -124,7 +116,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        Arena arena = threadLocalHeapArena.get();
+        Arena<byte[]> arena = threadLocalHeapArena.get();
         // TODO: Create a composite buffer if initialCapacity is larger thank chunkSize.
         return arena.allocate(initialCapacity, maxCapacity);
     }
@@ -163,27 +155,29 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         buf.append(heapArenas.length);
         buf.append(" arena(s):");
         buf.append(StringUtil.NEWLINE);
-        for (Arena a: heapArenas) {
+        for (Arena<byte[]> a: heapArenas) {
             buf.append(a);
         }
         return buf.toString();
     }
 
-    private static abstract class Arena {
+    static abstract class Arena<T> {
 
-        private final ReentrantLock lock = new ReentrantLock();
+        final PooledByteBufAllocator parent;
 
-        protected final int pageSize;
-        protected final int maxOrder;
-        protected final int pageShifts;
-        protected final int chunkSize;
+        private final int pageSize;
+        private final int maxOrder;
+        private final int pageShifts;
+        private final int chunkSize;
 
-        private final Deque<Subpage>[] tinySubpagePools;
-        private final Deque<Subpage>[] smallSubpagePools;
         // TODO: Split this into Q0 Q25 Q50 Q75
-        private final List<Chunk> chunks = new ArrayList<Chunk>();
+        private final List<Chunk<T>> chunks = new ArrayList<Chunk<T>>();
 
-        Arena(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        private final Deque<Subpage<T>>[] tinySubpagePools;
+        private final Deque<Subpage<T>>[] smallSubpagePools;
+
+        protected Arena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            this.parent = parent;
             this.pageSize = pageSize;
             this.maxOrder = maxOrder;
             this.pageShifts = pageShifts;
@@ -194,92 +188,90 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             //noinspection unchecked
             smallSubpagePools = new Deque[pageShifts - 9];
             for (int i = 1; i < tinySubpagePools.length; i ++) {
-                tinySubpagePools[i] = new ArrayDeque<Subpage>();
+                tinySubpagePools[i] = new ArrayDeque<Subpage<T>>();
             }
             for (int i = 0; i < smallSubpagePools.length; i ++) {
-                smallSubpagePools[i] = new ArrayDeque<Subpage>();
+                smallSubpagePools[i] = new ArrayDeque<Subpage<T>>();
             }
         }
 
-        PooledByteBuf allocate(int minCapacity, int maxCapacity) {
-            lock.lock();
-            try {
-                final int capacity = normalizeCapacity(minCapacity);
 
-                if (capacity < pageSize) {
-                    int tableIdx;
-                    Deque<Subpage>[] table;
-                    if (capacity < 512) {
-                        tableIdx = capacity >>> 4;
-                        table = tinySubpagePools;
-                    } else {
-                        tableIdx = 0;
-                        int i = capacity >>> 10;
-                        while (i != 0) {
-                            i >>>= 1;
-                            tableIdx ++;
-                        }
-                        table = smallSubpagePools;
-                    }
+        PooledByteBuf<T> allocate(int minCapacity, int maxCapacity) {
+            PooledByteBuf<T> buf = newByteBuf(maxCapacity);
+            allocate(buf, minCapacity);
+            return buf;
+        }
 
-                    long handle;
-                    Deque<Subpage> subpages = table[tableIdx];
-                    while (!subpages.isEmpty()) {
-                        Subpage s = subpages.getFirst();
-                        handle = s.allocate();
-                        if (handle < 0) {
-                            subpages.removeFirst();
-                        } else {
-                            PooledByteBuf allocated = s.chunk.newByteBuf(handle, maxCapacity);
-                            if (s.numAvail == 0) {
-                                subpages.removeFirst();
-                            }
-                            return allocated;
-                        }
+        synchronized void allocate(PooledByteBuf<T> buf, int minCapacity) {
+            final int capacity = normalizeCapacity(minCapacity);
+
+            if (capacity < pageSize) {
+                int tableIdx;
+                Deque<Subpage<T>>[] table;
+                if (capacity < 512) {
+                    tableIdx = capacity >>> 4;
+                    table = tinySubpagePools;
+                } else {
+                    tableIdx = 0;
+                    int i = capacity >>> 10;
+                    while (i != 0) {
+                        i >>>= 1;
+                        tableIdx ++;
                     }
+                    table = smallSubpagePools;
                 }
 
-                final int nChunks = chunks.size();
-                //noinspection ForLoopReplaceableByForEach
-                for (int i = 0; i < nChunks; i ++) {
-                    Chunk c = chunks.get(i);
-                    long handle = c.allocate(capacity);
+                long handle;
+                Deque<Subpage<T>> subpages = table[tableIdx];
+                while (!subpages.isEmpty()) {
+                    Subpage<T> s = subpages.getFirst();
+                    handle = s.allocate();
                     if (handle < 0) {
-                        continue;
+                        subpages.removeFirst();
+                    } else {
+                        s.chunk.initBuf(buf, handle);
+                        return;
                     }
-
-                    return c.newByteBuf(handle, maxCapacity);
                 }
+            }
 
-                // Add a new chunk.
-                Chunk c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-                chunks.add(c);
+            final int nChunks = chunks.size();
+            //noinspection ForLoopReplaceableByForEach
+            for (int i = 0; i < nChunks; i ++) {
+                Chunk<T> c = chunks.get(i);
                 long handle = c.allocate(capacity);
-                assert handle >= 0;
-                return c.newByteBuf(handle, maxCapacity);
-            } finally {
-                lock.unlock();
-            }
-        }
-
-        void free(PooledByteBuf buf) {
-            lock.lock();
-            try {
-                Chunk c = buf.chunk;
-                if (!c.free(buf.handle)) {
-                    // Chunk got empty.
-                    // TODO: Free the chunk or leave it for later use.
-                    //       Probably better free it only when it is not touched for a while.
+                if (handle < 0) {
+                    continue;
                 }
-            } finally {
-                lock.unlock();
+
+                c.initBuf(buf, handle);
+                return;
+            }
+
+            // Add a new chunk.
+            Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
+            chunks.add(c);
+            long handle = c.allocate(capacity);
+            assert handle >= 0;
+            c.initBuf(buf, handle);
+        }
+
+        void free(PooledByteBuf<T> buf) {
+            free(buf.chunk, buf.handle);
+        }
+
+        synchronized void free(Chunk<T> chunk, long handle) {
+            if (!chunk.free(handle)) {
+                // Chunk got empty.
+                // TODO: Free the chunk or leave it for later use.
+                //       Probably better free it only when it is not touched for a while.
             }
         }
 
-        void addSubpage(Subpage subpage) {
+        void addSubpage(Subpage<T> subpage) {
             int tableIdx;
             int elemSize = subpage.elemSize;
-            Deque<Subpage>[] table;
+            Deque<Subpage<T>>[] table;
             if (elemSize < 512) {
                 tableIdx = elemSize >>> 4;
                 table = tinySubpagePools;
@@ -317,7 +309,53 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             return (capacity & ~15) + 16;
         }
 
-        protected abstract Chunk newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
+        synchronized void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
+            if (newCapacity < 0 || newCapacity > buf.maxCapacity()) {
+                throw new IllegalArgumentException("newCapacity: " + newCapacity);
+            }
+
+            Chunk<T> oldChunk = buf.chunk;
+            long oldHandle = buf.handle;
+            T oldMemory = buf.memory;
+            int oldOffset = buf.offset;
+            int oldCapacity = buf.length;
+
+            if (oldCapacity == newCapacity) {
+                return;
+            }
+
+            allocate(buf, newCapacity);
+            if (newCapacity > oldCapacity) {
+                int readerIndex = buf.readerIndex();
+                int writerIndex = buf.writerIndex();
+                memoryCopy(
+                        oldMemory, oldOffset + readerIndex,
+                        buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
+            } else if (newCapacity < oldCapacity) {
+                int readerIndex = buf.readerIndex();
+                if (readerIndex < newCapacity) {
+                    int writerIndex = buf.writerIndex();
+                    if (writerIndex > newCapacity) {
+                        buf.writerIndex(writerIndex = newCapacity);
+                    }
+                    memoryCopy(
+                            oldMemory, oldOffset + readerIndex,
+                            buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
+                } else {
+                    buf.setIndex(newCapacity, newCapacity);
+                }
+            }
+
+            if (freeOldMemory) {
+                free(oldChunk, oldHandle);
+            }
+        }
+
+        protected abstract Chunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
+        protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
+        protected abstract void memoryCopy(T src, int srcOffset, T dst, int dstOffset, int length);
+        protected abstract void destroyChunk(Chunk<T> chunk);
+
 
         public String toString() {
             StringBuilder buf = new StringBuilder();
@@ -325,7 +363,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             buf.append(" chunk(s)");
             buf.append(StringUtil.NEWLINE);
             if (!chunks.isEmpty()) {
-                for (Chunk c: chunks) {
+                for (Chunk<T> c: chunks) {
                     buf.append(c);
                 }
                 buf.append(StringUtil.NEWLINE);
@@ -333,7 +371,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             buf.append("tiny subpages:");
             buf.append(StringUtil.NEWLINE);
             for (int i = 1; i < tinySubpagePools.length; i ++) {
-                Deque<Subpage> subpages = tinySubpagePools[i];
+                Deque<Subpage<T>> subpages = tinySubpagePools[i];
                 if (subpages.isEmpty()) {
                     continue;
                 }
@@ -346,7 +384,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             buf.append("small subpages:");
             buf.append(StringUtil.NEWLINE);
             for (int i = 1; i < smallSubpagePools.length; i ++) {
-                Deque<Subpage> subpages = smallSubpagePools[i];
+                Deque<Subpage<T>> subpages = smallSubpagePools[i];
                 if (subpages.isEmpty()) {
                     continue;
                 }
@@ -361,27 +399,43 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
     }
 
-    private static final class HeapArena extends Arena {
+    private static final class HeapArena extends Arena<byte[]> {
 
-        HeapArena(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            super(pageSize, maxOrder, pageShifts, chunkSize);
+        HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
         }
 
         @Override
-        protected Chunk newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            return new HeapChunk(this, pageSize, maxOrder, pageShifts, chunkSize);
+        protected Chunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            return new Chunk<byte[]>(this, new byte[chunkSize], pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        @Override
+        protected void destroyChunk(Chunk<byte[]> chunk) {
+            // Rely on GC.
+        }
+
+        @Override
+        protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
+            return new PooledHeapByteBuf(this, maxCapacity);
+        }
+
+        @Override
+        protected void memoryCopy(byte[] src, int srcOffset, byte[] dst, int dstOffset, int length) {
+            System.arraycopy(src, srcOffset, dst, dstOffset, length);
         }
     }
 
-    private static abstract class Chunk {
+    static final class Chunk<T> {
         private static final int ST_UNUSED = 0;
         private static final int ST_BRANCH = 1;
         private static final int ST_ALLOCATED = 2;
         private static final int ST_ALLOCATED_SUBPAGE = 3;
 
-        private final Arena arena;
+        private final Arena<T> arena;
+        private final T memory;
         private final int[] memoryMap;
-        private final Subpage[] subpages;
+        private final Subpage<T>[] subpages;
         private final int pageSize;
         private final int pageShifts;
         private final int maxOrder;
@@ -391,8 +445,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         int freeBytes;
 
-        Chunk(Arena arena, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        Chunk(Arena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             this.arena = arena;
+            this.memory = memory;
             this.pageSize = pageSize;
             this.pageShifts = pageShifts;
             this.maxOrder = maxOrder;
@@ -413,10 +468,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 }
             }
 
+            //noinspection unchecked
             subpages = new Subpage[maxSubpageAllocs];
         }
 
-        long allocate(int capacity) {
+        private long allocate(int capacity) {
             return allocate(capacity, 0);
         }
 
@@ -437,9 +493,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                     freeBytes -= runLength;
 
                     int subpageIdx = subpageIdx(curIdx);
-                    Subpage subpage = subpages[subpageIdx];
+                    Subpage<T> subpage = subpages[subpageIdx];
                     if (subpage == null) {
-                        subpage = new Subpage(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
+                        subpage = new Subpage<T>(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
                         subpages[subpageIdx] = subpage;
                     } else {
                         subpage.init(capacity);
@@ -491,7 +547,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             case ST_ALLOCATED:
                 return -1;
             case ST_ALLOCATED_SUBPAGE: {
-                Subpage subpage = subpages[subpageIdx(curIdx)];
+                Subpage<T> subpage = subpages[subpageIdx(curIdx)];
                 int elemSize = subpage.elemSize;
                 if (capacity != elemSize) {
                     return -1;
@@ -513,7 +569,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
          * @return {@code true} if this chunk is in use.
          *         {@code false} if this chunk is not used by its arena and thus it's OK to be deallocated.
          */
-        boolean free(long handle) {
+        private boolean free(long handle) {
             int memoryMapIdx = (int) handle;
             int bitmapIdx = (int) (handle >>> 32);
 
@@ -523,7 +579,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 assert bitmapIdx == 0;
                 break;
             case ST_ALLOCATED_SUBPAGE:
-                Subpage subpage = subpages[subpageIdx(memoryMapIdx)];
+                Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
                 assert subpage != null && subpage.inUse;
                 if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
                     if (subpage.numAvail == 1) {
@@ -568,7 +624,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             return true;
         }
 
-        PooledByteBuf newByteBuf(long handle, int maxCapacity) {
+        private void initBuf(PooledByteBuf<T> buf, long handle) {
             int memoryMapIdx = (int) handle;
             int bitmapIdx = (int) (handle >>> 32);
 
@@ -576,17 +632,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             switch (val & 3) {
             case ST_ALLOCATED:
                 assert bitmapIdx == 0;
-                return newByteBuf(handle, runOffset(val), runLength(val), maxCapacity);
+                buf.init(this, handle, memory, runOffset(val), runLength(val));
+                break;
             case ST_ALLOCATED_SUBPAGE:
-                Subpage subpage = subpages[subpageIdx(memoryMapIdx)];
+                Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
                 assert subpage != null && subpage.inUse;
-                return newByteBuf(handle, runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize, maxCapacity);
+                buf.init(
+                        this, handle, memory,
+                        runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize);
+                break;
+            default:
+                throw new Error(String.valueOf(val & 3));
             }
-
-            throw new Error(String.valueOf(val & 3));
         }
-
-        protected abstract PooledByteBuf newByteBuf(long handle, int memoryOffset, int memoryLength, int maxCapacity);
 
         private static int parentIdx(int memoryMapIdx) {
             assert memoryMapIdx > 0;
@@ -662,7 +720,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             }
             buf.append("subpages:");
             buf.append(StringUtil.NEWLINE);
-            for (Subpage subpage: subpages) {
+            for (Subpage<T> subpage: subpages) {
                 if (subpage == null || !subpage.inUse) {
                     continue;
                 }
@@ -674,9 +732,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
     }
 
-    private static final class Subpage {
+    private static final class Subpage<T> {
 
-        final Chunk chunk;
+        final Chunk<T> chunk;
         final int memoryMapIdx;
         final int runOffset;
         final int runLength;
@@ -689,7 +747,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         int bitmapLength;
         int numAvail;
 
-        Subpage(Chunk chunk, int memoryMapIdx, int runOffset, int runLength, int pageSize, int elemSize) {
+        Subpage(Chunk<T> chunk, int memoryMapIdx, int runOffset, int runLength, int pageSize, int elemSize) {
             this.chunk = chunk;
             this.memoryMapIdx = memoryMapIdx;
             this.runOffset = runOffset;
@@ -785,247 +843,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
     }
 
-    private static final class HeapChunk extends Chunk {
-
-        private final byte[] memory;
-
-        HeapChunk(Arena arena, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            super(arena, pageSize, maxOrder, pageShifts, chunkSize);
-            memory = new byte[chunkSize];
-        }
-
-        @Override
-        protected PooledByteBuf newByteBuf(long handle, int memoryOffset, int memoryLength, int maxCapacity) {
-            return new PooledByteBuf(this, handle, memory, memoryOffset, maxCapacity);
-        }
-    }
-
-    // Dummy buffer for proof of concept.
-    private static final class PooledByteBuf extends AbstractByteBuf implements Unsafe {
-
-        final Chunk chunk;
-        final long handle;
-        final byte[] memory;
-        final int memoryOffset;
-        final int memoryLength;
-
-        PooledByteBuf(Chunk chunk, long handle, byte[] memory, int memoryOffset, int memoryLength) {
-            super(Integer.MAX_VALUE);
-            this.chunk = chunk;
-            this.handle = handle;
-            this.memory = memory;
-            this.memoryOffset = memoryOffset;
-            this.memoryLength = memoryLength;
-        }
-
-        @Override
-        public int capacity() {
-            return 0;
-        }
-
-        @Override
-        public ByteBuf capacity(int newCapacity) {
-            return null;
-        }
-
-        @Override
-        public ByteBufAllocator alloc() {
-            return null;
-        }
-
-        @Override
-        public ByteOrder order() {
-            return null;
-        }
-
-        @Override
-        public ByteBuf unwrap() {
-            return null;
-        }
-
-        @Override
-        public boolean isDirect() {
-            return false;
-        }
-
-        @Override
-        public byte getByte(int index) {
-            return 0;
-        }
-
-        @Override
-        public short getShort(int index) {
-            return 0;
-        }
-
-        @Override
-        public int getUnsignedMedium(int index) {
-            return 0;
-        }
-
-        @Override
-        public int getInt(int index) {
-            return 0;
-        }
-
-        @Override
-        public long getLong(int index) {
-            return 0;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, ByteBuffer dst) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-            return null;
-        }
-
-        @Override
-        public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-            return 0;
-        }
-
-        @Override
-        public ByteBuf setByte(int index, int value) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setShort(int index, int value) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setMedium(int index, int value) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setInt(int index, int value) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setLong(int index, long value) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-            return null;
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, ByteBuffer src) {
-            return null;
-        }
-
-        @Override
-        public int setBytes(int index, InputStream in, int length) throws IOException {
-            return 0;
-        }
-
-        @Override
-        public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-            return 0;
-        }
-
-        @Override
-        public ByteBuf copy(int index, int length) {
-            return null;
-        }
-
-        @Override
-        public boolean hasNioBuffer() {
-            return false;
-        }
-
-        @Override
-        public ByteBuffer nioBuffer(int index, int length) {
-            return null;
-        }
-
-        @Override
-        public boolean hasNioBuffers() {
-            return false;
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers(int offset, int length) {
-            return new ByteBuffer[0];
-        }
-
-        @Override
-        public boolean hasArray() {
-            return false;
-        }
-
-        @Override
-        public byte[] array() {
-            return new byte[0];
-        }
-
-        @Override
-        public int arrayOffset() {
-            return 0;
-        }
-
-        @Override
-        public Unsafe unsafe() {
-            return this;
-        }
-
-        @Override
-        public ByteBuffer internalNioBuffer() {
-            return null;
-        }
-
-        @Override
-        public ByteBuffer[] internalNioBuffers() {
-            return new ByteBuffer[0];
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-        }
-
-        @Override
-        public void suspendIntermediaryDeallocations() {
-        }
-
-        @Override
-        public void resumeIntermediaryDeallocations() {
-        }
-
-        @Override
-        public boolean isFreed() {
-            return false;
-        }
-
-        @Override
-        public void free() {
-            chunk.free(handle);
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         ByteBufAllocator alloc = new PooledByteBufAllocator(1, 1, 4096, 9);
         ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
@@ -1096,7 +913,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test(ByteBufAllocator alloc) {
-        final int size = 1024;
+        final int size = 256;
         Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
         for (int i = 0; i < 512; i ++) {
             queue.add(alloc.heapBuffer(size));
