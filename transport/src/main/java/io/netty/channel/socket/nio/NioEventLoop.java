@@ -294,8 +294,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // Ignore.
                 }
             }
-			loopTimer.event();
-		}
+            loopTimer.event();
+        }
     }
 
     @Override
