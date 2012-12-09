@@ -83,6 +83,7 @@ final class AioEventLoop extends SingleThreadEventLoop {
                     break;
                 }
             }
+			loopTimer.event();
         }
     }
 

@@ -95,6 +95,7 @@ class OioEventLoop extends SingleThreadEventLoop {
                     break;
                 }
             }
+			loopTimer.event();
         }
     }
 

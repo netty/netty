@@ -41,6 +41,7 @@ final class LocalEventLoop extends SingleThreadEventLoop {
             if (isShutdown() && confirmShutdown()) {
                 break;
             }
+			loopTimer.event();
         }
     }
 }
