@@ -180,18 +180,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private final int maxOrder;
         private final int pageShifts;
         private final int chunkSize;
+        private final int subpageOverflowMask;
 
-        private final ChunkList<T> chunks100;
-        private final ChunkList<T> chunks75to100;
+        private final Deque<Subpage<T>>[] tinySubpagePools;
+        private final Deque<Subpage<T>>[] smallSubpagePools;
+
+        // TODO: Destroy the old chunks in chunks0 periodically.
+
         private final ChunkList<T> chunks50to75;
         private final ChunkList<T> chunks25to50;
         private final ChunkList<T> chunks1to25;
         private final ChunkList<T> chunks0;
-
-        // TODO: Destroy the old chunks in chunks0 periodically.
-
-        private final Deque<Subpage<T>>[] tinySubpagePools;
-        private final Deque<Subpage<T>>[] smallSubpagePools;
+        private final ChunkList<T> chunks75to100;
+        private final ChunkList<T> chunks100;
 
         protected Arena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             this.parent = parent;
@@ -199,6 +200,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             this.maxOrder = maxOrder;
             this.pageShifts = pageShifts;
             this.chunkSize = chunkSize;
+            this.subpageOverflowMask = ~(pageSize - 1);
 
             //noinspection unchecked
             tinySubpagePools = new Deque[512 >>> 4];
@@ -233,7 +235,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         synchronized void allocate(PooledByteBuf<T> buf, int minCapacity) {
             final int capacity = normalizeCapacity(minCapacity);
-            if (capacity < pageSize) {
+            if ((capacity & subpageOverflowMask) == 0) { // capacity < pageSize
                 int tableIdx;
                 Deque<Subpage<T>>[] table;
                 if (capacity < 512) {
@@ -280,7 +282,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             // Add a new chunk.
             Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
             long handle = c.allocate(capacity);
-            assert handle >= 0;
+            assert handle > 0;
             c.initBuf(buf, handle);
             chunks1to25.add(c);
         }
@@ -318,7 +320,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 throw new IllegalArgumentException("capacity: " + capacity + " (expected: 1-" + chunkSize + ')');
             }
 
-            if (capacity >= 512) {
+            if ((capacity & 0xFFFFFE00) != 0) { // >= 512
                 // Doubled
                 int normalizedCapacity = 512;
                 while (normalizedCapacity < capacity) {
@@ -621,25 +623,28 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private static final int ST_UNUSED = 0;
         private static final int ST_BRANCH = 1;
         private static final int ST_ALLOCATED = 2;
-        private static final int ST_ALLOCATED_SUBPAGE = 3;
+        private static final int ST_ALLOCATED_SUBPAGE = ST_ALLOCATED | 1;
 
         final Arena<T> arena;
-
-        private ChunkList<T> parent;
-        private Chunk<T> prev;
-        private Chunk<T> next;
 
         private final T memory;
         private final int[] memoryMap;
         private final Subpage<T>[] subpages;
+        /** Used to determine if the requested capacity is equal to or greater than pageSize. */
+        private final int subpageOverflowMask;
         private final int pageSize;
         private final int pageShifts;
+
         private final int chunkSize;
-        private final int chunkSizeInPages;
         private final int maxSubpageAllocs;
 
         private int freeBytes;
+        private ChunkList<T> parent;
+        private Chunk<T> prev;
+        private Chunk<T> next;
+
         private long timestamp; // Arena updates and checks this timestamp to determine when to destroy this chunk.
+
 
         Chunk(Arena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             this.arena = arena;
@@ -647,14 +652,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             this.pageSize = pageSize;
             this.pageShifts = pageShifts;
             this.chunkSize = chunkSize;
+            this.subpageOverflowMask = ~(pageSize - 1);
             freeBytes = chunkSize;
 
-            chunkSizeInPages = chunkSize >>> pageShifts;
+            int chunkSizeInPages = chunkSize >>> pageShifts;
             maxSubpageAllocs = 1 << maxOrder;
 
             // Generate the memory map.
-            memoryMap = new int[(maxSubpageAllocs << 1) - 1];
-            int memoryMapIndex = 0;
+            memoryMap = new int[(maxSubpageAllocs << 1)];
+            int memoryMapIndex = 1;
             for (int i = 0; i <= maxOrder; i ++) {
                 int runSizeInPages = chunkSizeInPages >>> i;
                 for (int j = 0; j < chunkSizeInPages; j += runSizeInPages) {
@@ -680,100 +686,133 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         private long allocate(int capacity) {
-            return allocate(capacity, 0);
+            int firstVal = memoryMap[1];
+            if ((capacity & subpageOverflowMask) != 0) { // >= pageSize
+                return allocateRun(capacity, 1, firstVal);
+            } else {
+                return allocateSubpage(capacity, 1, firstVal);
+            }
         }
 
-        private long allocate(int capacity, int curIdx) {
-            int val = memoryMap[curIdx];
-            switch (val & 3) {
-            case ST_UNUSED: {
-                int runLength = runLength(val);
-                if (capacity > runLength) {
+        private long allocateRun(int capacity, int curIdx, int val) {
+            for (;;) {
+                if ((val & ST_ALLOCATED) != 0) { // state == ST_ALLOCATED || state == ST_ALLOCATED_SUBPAGE
                     return -1;
                 }
 
-                for (;;) {
-                    if (capacity == runLength) {
-                        // Found the run that fits.
-                        // Note that capacity has been normalized already, so we don't need to deal with
-                        // the values that are not power of 2.
-                        memoryMap[curIdx] = val & ~3 | ST_ALLOCATED;
-                        freeBytes -= runLength;
-                        return curIdx;
+                if ((val & ST_BRANCH) != 0) { // state == ST_BRANCH
+                    int nextIdx = curIdx << 1;
+                    long res = allocateRun(capacity, nextIdx, memoryMap[nextIdx]);
+                    if (res > 0) {
+                        return res;
                     }
 
-                    if (runLength == pageSize) {
-                        memoryMap[curIdx] = val & ~3 | ST_ALLOCATED_SUBPAGE;
-                        freeBytes -= runLength;
-
-                        int subpageIdx = subpageIdx(curIdx);
-                        Subpage<T> subpage = subpages[subpageIdx];
-                        if (subpage == null) {
-                            subpage = new Subpage<T>(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
-                            subpages[subpageIdx] = subpage;
-                        } else {
-                            subpage.init(capacity);
-                        }
-                        arena.addSubpage(subpage);
-                        return subpage.allocate();
-                    }
-
-                    int leftLeafIdx = (curIdx << 1) + 1;
-                    int rightLeafIdx = leftLeafIdx + 1;
-
-                    memoryMap[curIdx] = val & ~3 | ST_BRANCH;
-                    //noinspection PointlessBitwiseExpression
-                    memoryMap[rightLeafIdx] = memoryMap[rightLeafIdx] & ~3 | ST_UNUSED;
-
-                    runLength >>>= 1;
-                    curIdx = leftLeafIdx;
+                    curIdx = nextIdx ^ 1;
                     val = memoryMap[curIdx];
-                }
-            }
-            case ST_BRANCH: {
-                int leftLeafIdx = (curIdx << 1) + 1;
-                switch (memoryMap[leftLeafIdx] & 3) {
-                case ST_UNUSED:
-                case ST_BRANCH:
-                case ST_ALLOCATED_SUBPAGE:
-                    long res = allocate(capacity, leftLeafIdx);
-                    if (res > 0) {
-                        return res;
-                    }
+                    continue;
                 }
 
-                int rightLeafIdx = leftLeafIdx + 1;
-                switch (memoryMap[rightLeafIdx] & 3) {
-                case ST_UNUSED:
-                case ST_BRANCH:
-                case ST_ALLOCATED_SUBPAGE:
-                    long res = allocate(capacity, rightLeafIdx);
-                    if (res > 0) {
-                        return res;
-                    }
-                }
+                // state == ST_UNUSED
+                return allocateLeftmostRun(capacity, curIdx, val);
+            }
+        }
 
+        private long allocateLeftmostRun(int capacity, int curIdx, int val) {
+            int runLength = runLength(val);
+            if (capacity > runLength) {
                 return -1;
             }
-            case ST_ALLOCATED:
-                return -1;
-            case ST_ALLOCATED_SUBPAGE: {
+
+            for (;;) {
+                if (capacity == runLength) {
+                    // Found the run that fits.
+                    // Note that capacity has been normalized already, so we don't need to deal with
+                    // the values that are not power of 2.
+                    memoryMap[curIdx] = val & ~3 | ST_ALLOCATED;
+                    freeBytes -= runLength;
+                    return curIdx;
+                }
+
+                int leftLeafIdx = curIdx << 1;
+                int rightLeafIdx = leftLeafIdx ^ 1;
+
+                memoryMap[curIdx] = val & ~3 | ST_BRANCH;
+                //noinspection PointlessBitwiseExpression
+                memoryMap[rightLeafIdx] = memoryMap[rightLeafIdx] & ~3 | ST_UNUSED;
+
+                runLength >>>= 1;
+                curIdx = leftLeafIdx;
+                val = memoryMap[curIdx];
+            }
+        }
+
+        private long allocateSubpage(int capacity, int curIdx, int val) {
+            int state = val & 3;
+            if (state == ST_BRANCH) {
+                int leftLeafIdx = curIdx << 1;
+                long res = branchSubpage(capacity, leftLeafIdx);
+                if (res > 0) {
+                    return res;
+                }
+
+                return branchSubpage(capacity, leftLeafIdx ^ 1);
+            }
+
+            if (state == ST_UNUSED) {
+                return allocateLeftmostSubpage(capacity, curIdx, val);
+            }
+
+            if (state == ST_ALLOCATED_SUBPAGE) {
                 Subpage<T> subpage = subpages[subpageIdx(curIdx)];
                 int elemSize = subpage.elemSize;
                 if (capacity != elemSize) {
                     return -1;
                 }
 
-                long handle = subpage.allocate();
-                if (handle < 0) {
-                    return -1;
+                return subpage.allocate();
+            }
+
+            return -1;
+        }
+
+        private long allocateLeftmostSubpage(int capacity, int curIdx, int val) {
+            int runLength = runLength(val);
+            for (;;) {
+                if (runLength == pageSize) {
+                    memoryMap[curIdx] = val & ~3 | ST_ALLOCATED_SUBPAGE;
+                    freeBytes -= runLength;
+
+                    int subpageIdx = subpageIdx(curIdx);
+                    Subpage<T> subpage = subpages[subpageIdx];
+                    if (subpage == null) {
+                        subpage = new Subpage<T>(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
+                        subpages[subpageIdx] = subpage;
+                    } else {
+                        subpage.init(capacity);
+                    }
+                    arena.addSubpage(subpage);
+                    return subpage.allocate();
                 }
 
-                return handle;
+                int leftLeafIdx = curIdx << 1;
+                int rightLeafIdx = leftLeafIdx ^ 1;
+
+                memoryMap[curIdx] = val & ~3 | ST_BRANCH;
+                //noinspection PointlessBitwiseExpression
+                memoryMap[rightLeafIdx] = memoryMap[rightLeafIdx] & ~3 | ST_UNUSED;
+
+                runLength >>>= 1;
+                curIdx = leftLeafIdx;
+                val = memoryMap[curIdx];
             }
-            default:
-                throw new Error();
+        }
+
+        private long branchSubpage(int capacity, int nextIdx) {
+            int nextVal = memoryMap[nextIdx];
+            if ((nextVal & 3) != ST_ALLOCATED) {
+                return allocateSubpage(capacity, nextIdx, nextVal);
             }
+            return -1;
         }
 
         /**
@@ -800,7 +839,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             //noinspection PointlessBitwiseExpression
             memoryMap[memoryMapIdx] = val & ~3 | ST_UNUSED;
             freeBytes += runLength(val);
-            if (memoryMapIdx == 0) {
+            if (memoryMapIdx == 1) {
                 assert freeBytes == chunkSize;
                 return false;
             }
@@ -811,7 +850,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 //noinspection PointlessBitwiseExpression
                 memoryMap[parentIdx] = memoryMap[parentIdx] & ~3 | ST_UNUSED;
                 // Climb up the tree.
-                if (parentIdx != 0) {
+                if (parentIdx != 1) {
                     for (;;) {
                         if ((memoryMap[siblingIdx(parentIdx)] & 3) != ST_UNUSED) {
                             break;
@@ -821,7 +860,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                         //noinspection PointlessBitwiseExpression
                         memoryMap[grandParentIdx] = memoryMap[grandParentIdx] & ~3 | ST_UNUSED;
                         parentIdx = grandParentIdx;
-                        if (parentIdx == 0) {
+                        if (parentIdx == 1) {
                             break;
                         }
                     }
@@ -856,18 +895,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         private static int parentIdx(int memoryMapIdx) {
-            assert memoryMapIdx > 0;
-            return memoryMapIdx - 1 >>> 1;
+            return memoryMapIdx >>> 1;
         }
 
         private static int siblingIdx(int memoryMapIdx) {
-            assert memoryMapIdx > 0;
-
-            if ((memoryMapIdx & 1) == 0) {
-                return memoryMapIdx - 1;
-            }
-
-            return memoryMapIdx + 1;
+            return memoryMapIdx ^ 1;
         }
 
         private int runLength(int val) {
@@ -879,7 +911,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         private int subpageIdx(int memoryMapIdx) {
-            return memoryMapIdx - maxSubpageAllocs + 1;
+            return memoryMapIdx - maxSubpageAllocs;
         }
 
         public String toString() {
@@ -1049,7 +1081,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test(ByteBufAllocator alloc) {
-        final int size = 512;
+        final int size = 256;
         Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
         for (int i = 0; i < 256; i ++) {
             queue.add(alloc.heapBuffer(size));
