@@ -1237,23 +1237,30 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 data = ctx.alloc().buffer(dataLen, dataLen);
             }
 
-            byteBuf.readBytes(data);
+            byteBuf.readBytes(data, dataLen);
             byteBuf.unsafe().discardSomeReadBytes();
 
             exchangeBuf.add(data);
         }
 
         private void flush(ByteBuf out) {
-            for (;;) {
-                ByteBuf data = exchangeBuf.poll();
+            while (out.writable()) {
+                ByteBuf data = exchangeBuf.peek();
                 if (data == null) {
                     break;
                 }
 
-                try {
-                    out.writeBytes(data);
-                } finally {
-                    data.unsafe().free();
+                if (out.writerIndex() > out.maxCapacity() - data.readableBytes()) {
+                    // The target buffer is not going to be able to accept all data in the bridge.
+                    out.ensureWritableBytes(out.maxCapacity() - out.writerIndex());
+                    out.writeBytes(data, out.writableBytes());
+                } else {
+                    exchangeBuf.remove();
+                    try {
+                        out.writeBytes(data);
+                    } finally {
+                        data.unsafe().free();
+                    }
                 }
             }
         }
