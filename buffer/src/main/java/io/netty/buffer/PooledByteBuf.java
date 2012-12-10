@@ -17,7 +17,6 @@
 package io.netty.buffer;
 
 import io.netty.buffer.ByteBuf.Unsafe;
-import io.netty.buffer.PooledByteBufAllocator.Arena;
 import io.netty.buffer.PooledByteBufAllocator.Chunk;
 
 import java.nio.ByteBuffer;
@@ -27,9 +26,8 @@ import java.util.Queue;
 
 abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
 
-    protected final Arena<T> arena;
-    protected Chunk<T> chunk;
-    protected long handle;
+    Chunk<T> chunk;
+    long handle;
     protected T memory;
     protected int offset;
     protected int length;
@@ -37,9 +35,8 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     private ByteBuffer tmpNioBuf;
     private Queue<Allocation<T>> suspendedDeallocations;
 
-    protected PooledByteBuf(Arena<T> arena, int maxCapacity) {
+    protected PooledByteBuf(int maxCapacity) {
         super(maxCapacity);
-        this.arena = arena;
     }
 
     void init(Chunk<T> chunk, long handle, T memory, int offset, int length) {
@@ -61,10 +58,10 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     public ByteBuf capacity(int newCapacity) {
         assert !isFreed();
         if (suspendedDeallocations == null) {
-            arena.reallocate(this, newCapacity, true);
+            chunk.arena.reallocate(this, newCapacity, true);
         } else {
             Allocation<T> old = new Allocation<T>(chunk, handle);
-            arena.reallocate(this, newCapacity, false);
+            chunk.arena.reallocate(this, newCapacity, false);
             suspendedDeallocations.add(old);
         }
         return this;
@@ -72,7 +69,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
 
     @Override
     public ByteBufAllocator alloc() {
-        return arena.parent;
+        return chunk.arena.parent;
     }
 
     @Override
@@ -140,7 +137,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
         }
 
         for (Allocation<T> a: suspendedDeallocations) {
-            arena.free(a.chunk, a.handle);
+            chunk.arena.free(a.chunk, a.handle);
         }
     }
 
@@ -156,7 +153,27 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
             this.handle = -1;
             memory = null;
             resumeIntermediaryDeallocations();
-            arena.free(chunk, handle);
+            chunk.arena.free(chunk, handle);
+        }
+    }
+
+    protected int idx(int index) {
+        return offset + index;
+    }
+
+    protected void checkIndex(int index) {
+        assert !isFreed();
+        if (index < 0 || index >= length) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "index: %d (expected: range(0, %d))", index, length));
+        }
+    }
+
+    protected void checkIndex(int index, int fieldLength) {
+        assert !isFreed();
+        if (index < 0 || index > length - fieldLength) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, length));
         }
     }
 

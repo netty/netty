@@ -1,7 +1,9 @@
 /*
  * Copyright 2012 The Netty Project
  *
- * The Netty Project licenses this file tothe License at:
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -22,70 +24,66 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
+final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
-    PooledHeapByteBuf(int maxCapacity) {
+    PooledDirectByteBuf(int maxCapacity) {
         super(maxCapacity);
     }
 
     @Override
+    protected ByteBuffer newInternalNioBuffer(ByteBuffer memory) {
+        return memory.duplicate();
+    }
+
+    @Override
     public boolean isDirect() {
-        return false;
+        return true;
     }
 
     @Override
     public byte getByte(int index) {
         checkIndex(index);
-        return memory[idx(index)];
+        return memory.get(idx(index));
     }
 
     @Override
     public short getShort(int index) {
         checkIndex(index, 2);
-        index = idx(index);
-        return (short) (memory[index] << 8 | memory[index + 1] & 0xFF);
+        return memory.getShort(idx(index));
     }
 
     @Override
     public int getUnsignedMedium(int index) {
         checkIndex(index, 3);
         index = idx(index);
-        return (memory[index]     & 0xff) << 16 |
-               (memory[index + 1] & 0xff) <<  8 |
-                memory[index + 2] & 0xff;
+        return (memory.get(index) & 0xff) << 16 | (memory.get(index + 1) & 0xff) << 8 | memory.get(index + 2) & 0xff;
     }
 
     @Override
     public int getInt(int index) {
         checkIndex(index, 4);
-        index = idx(index);
-        return (memory[index]     & 0xff) << 24 |
-               (memory[index + 1] & 0xff) << 16 |
-               (memory[index + 2] & 0xff) <<  8 |
-                memory[index + 3] & 0xff;
+        return memory.getInt(idx(index));
     }
 
     @Override
     public long getLong(int index) {
         checkIndex(index, 8);
-        index = idx(index);
-        return ((long) memory[index]     & 0xff) << 56 |
-               ((long) memory[index + 1] & 0xff) << 48 |
-               ((long) memory[index + 2] & 0xff) << 40 |
-               ((long) memory[index + 3] & 0xff) << 32 |
-               ((long) memory[index + 4] & 0xff) << 24 |
-               ((long) memory[index + 5] & 0xff) << 16 |
-               ((long) memory[index + 6] & 0xff) <<  8 |
-                (long) memory[index + 7] & 0xff;
+        return memory.getLong(idx(index));
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
-        if (dst.hasArray()) {
+        if (dst instanceof PooledDirectByteBuf) {
+            PooledDirectByteBuf bbdst = (PooledDirectByteBuf) dst;
+            ByteBuffer data = bbdst.internalNioBuffer();
+            dstIndex = bbdst.idx(dstIndex);
+            data.clear().position(dstIndex).limit(dstIndex + length);
+            getBytes(index, data);
+        } else if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
-            dst.setBytes(dstIndex, memory, idx(index), length);
+            dst.setBytes(dstIndex, this, index, length);
         }
         return this;
     }
@@ -93,90 +91,103 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
-        System.arraycopy(memory, idx(index), dst, dstIndex, length);
+        ByteBuffer tmpBuf = internalNioBuffer();
+        index = idx(index);
+        tmpBuf.clear().position(index).limit(index + length);
+        tmpBuf.get(dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
         checkIndex(index);
-        dst.put(memory, idx(index), Math.min(capacity() - index, dst.remaining()));
+        int bytesToCopy = Math.min(capacity() - index, dst.remaining());
+        ByteBuffer tmpBuf = internalNioBuffer();
+        index = idx(index);
+        tmpBuf.clear().position(index).limit(index + bytesToCopy);
+        dst.put(tmpBuf);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex(index, length);
-        out.write(memory, idx(index), length);
+        if (length == 0) {
+            return this;
+        }
+
+        byte[] tmp = new byte[length];
+        ByteBuffer tmpBuf = internalNioBuffer();
+        tmpBuf.clear().position(idx(index));
+        tmpBuf.get(tmp);
+        out.write(tmp);
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         checkIndex(index, length);
+        if (length == 0) {
+            return 0;
+        }
+
+        ByteBuffer tmpBuf = internalNioBuffer();
         index = idx(index);
-        return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
+        tmpBuf.clear().position(index).limit(index + length);
+        return out.write(tmpBuf);
     }
 
     @Override
     public ByteBuf setByte(int index, int value) {
         checkIndex(index);
-        memory[idx(index)] = (byte) value;
+        memory.put(idx(index), (byte) value);
         return this;
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
         checkIndex(index, 2);
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 8);
-        memory[index + 1] = (byte) value;
+        memory.putShort(idx(index), (short) value);
         return this;
     }
 
     @Override
-    public ByteBuf setMedium(int index, int   value) {
+    public ByteBuf setMedium(int index, int value) {
         checkIndex(index, 3);
         index = idx(index);
-        memory[index]     = (byte) (value >>> 16);
-        memory[index + 1] = (byte) (value >>> 8);
-        memory[index + 2] = (byte) value;
+        memory.put(index, (byte) (value >>> 16));
+        memory.put(index + 1, (byte) (value >>> 8));
+        memory.put(index + 2, (byte) value);
         return this;
     }
 
     @Override
-    public ByteBuf setInt(int index, int   value) {
+    public ByteBuf setInt(int index, int value) {
         checkIndex(index, 4);
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 24);
-        memory[index + 1] = (byte) (value >>> 16);
-        memory[index + 2] = (byte) (value >>> 8);
-        memory[index + 3] = (byte) value;
+        memory.putInt(idx(index), value);
         return this;
     }
 
     @Override
-    public ByteBuf setLong(int index, long  value) {
+    public ByteBuf setLong(int index, long value) {
         checkIndex(index, 8);
-        index = idx(index);
-        memory[index]     = (byte) (value >>> 56);
-        memory[index + 1] = (byte) (value >>> 48);
-        memory[index + 2] = (byte) (value >>> 40);
-        memory[index + 3] = (byte) (value >>> 32);
-        memory[index + 4] = (byte) (value >>> 24);
-        memory[index + 5] = (byte) (value >>> 16);
-        memory[index + 6] = (byte) (value >>> 8);
-        memory[index + 7] = (byte) value;
+        memory.putLong(idx(index), value);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkIndex(index, length);
-        if (src.hasArray()) {
+        if (src instanceof PooledDirectByteBuf) {
+            PooledDirectByteBuf bbsrc = (PooledDirectByteBuf) src;
+            ByteBuffer data = bbsrc.internalNioBuffer();
+            srcIndex = bbsrc.idx(srcIndex);
+            data.clear().position(srcIndex).limit(srcIndex + length);
+            setBytes(index, data);
+        } else if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else {
-            src.getBytes(srcIndex, memory, idx(index), length);
+            src.getBytes(srcIndex, this, index, length);
         }
         return this;
     }
@@ -184,30 +195,49 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkIndex(index, length);
-        System.arraycopy(src, srcIndex, memory, idx(index), length);
+        ByteBuffer tmpBuf = internalNioBuffer();
+        index = idx(index);
+        tmpBuf.clear().position(index).limit(index + length);
+        tmpBuf.put(src, srcIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        int length = src.remaining();
-        checkIndex(index, length);
-        src.get(memory, idx(index), length);
+        checkIndex(index);
+        ByteBuffer tmpBuf = internalNioBuffer();
+        if (src == tmpBuf) {
+            src = src.duplicate();
+        }
+
+        index = idx(index);
+        tmpBuf.clear().position(index).limit(index + src.remaining());
+        tmpBuf.put(src);
         return this;
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
-        return in.read(memory, idx(index), length);
+        byte[] tmp = new byte[length];
+        int readBytes = in.read(tmp);
+        if (readBytes <= 0) {
+            return readBytes;
+        }
+        ByteBuffer tmpNioBuf = internalNioBuffer();
+        tmpNioBuf.clear().position(idx(index));
+        tmpNioBuf.put(tmp, 0, readBytes);
+        return readBytes;
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex(index, length);
+        ByteBuffer tmpNioBuf = internalNioBuffer();
         index = idx(index);
+        tmpNioBuf.clear().position(index).limit(index + length);
         try {
-            return in.read((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
+            return in.read(tmpNioBuf);
         } catch (ClosedChannelException e) {
             return -1;
         }
@@ -216,8 +246,8 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        ByteBuf copy = alloc().heapBuffer(length, maxCapacity());
-        copy.writeBytes(memory, idx(index), length);
+        ByteBuf copy = alloc().directBuffer(capacity(), maxCapacity());
+        copy.writeBytes(this, index, length);
         return copy();
     }
 
@@ -245,21 +275,16 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public boolean hasArray() {
-        return true;
+        return false;
     }
 
     @Override
     public byte[] array() {
-        return memory;
+        throw new UnsupportedOperationException("direct buffer");
     }
 
     @Override
     public int arrayOffset() {
-        return offset;
-    }
-
-    @Override
-    protected ByteBuffer newInternalNioBuffer(byte[] memory) {
-        return ByteBuffer.wrap(memory);
+        throw new UnsupportedOperationException("direct buffer");
     }
 }

@@ -18,6 +18,7 @@ package io.netty.buffer;
 
 import io.netty.util.internal.StringUtil;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -35,18 +36,26 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
+    public static final PooledByteBufAllocator DEFAULT = new PooledByteBufAllocator();
+
     private final Arena<byte[]>[] heapArenas;
-    private final ThreadLocal<Arena<byte[]>> threadLocalHeapArena = new ThreadLocal<Arena<byte[]>>() {
+    private final Arena<ByteBuffer>[] directArenas;
+
+    private final ThreadLocal<ThreadCache> threadCache = new ThreadLocal<ThreadCache>() {
         private final AtomicInteger index = new AtomicInteger();
         @Override
-        @SuppressWarnings("ClassEscapesDefinedScope")
-        protected Arena<byte[]> initialValue() {
-            return heapArenas[Math.abs(index.getAndIncrement() % heapArenas.length)];
+        protected ThreadCache initialValue() {
+            int idx = Math.abs(index.getAndIncrement() % heapArenas.length);
+            return new ThreadCache(heapArenas[idx], directArenas[idx]);
         }
     };
 
     public PooledByteBufAllocator() {
-        this(DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
+        this(false);
+    }
+
+    public PooledByteBufAllocator(boolean directByDefault) {
+        this(directByDefault, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
     }
 
     public PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
@@ -70,6 +79,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         heapArenas = new Arena[nHeapArena];
         for (int i = 0; i < heapArenas.length; i ++) {
             heapArenas[i] = new HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        //noinspection unchecked
+        directArenas = new Arena[nDirectArena];
+        for (int i = 0; i < directArenas.length; i ++) {
+            directArenas[i] = new DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
         }
     }
 
@@ -116,14 +131,16 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        Arena<byte[]> arena = threadLocalHeapArena.get();
+        Arena<byte[]> arena = threadCache.get().heapArena;
         // TODO: Create a composite buffer if initialCapacity is larger thank chunkSize.
         return arena.allocate(initialCapacity, maxCapacity);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        return newHeapBuffer(initialCapacity, maxCapacity);
+        Arena<ByteBuffer> arena = threadCache.get().directArena;
+        // TODO: Create a composite buffer if initialCapacity is larger thank chunkSize.
+        return arena.allocate(initialCapacity, maxCapacity);
     }
 
     @Override
@@ -423,12 +440,53 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         @Override
         protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
-            return new PooledHeapByteBuf(this, maxCapacity);
+            return new PooledHeapByteBuf(maxCapacity);
         }
 
         @Override
         protected void memoryCopy(byte[] src, int srcOffset, byte[] dst, int dstOffset, int length) {
+            if (length == 0) {
+                return;
+            }
+
             System.arraycopy(src, srcOffset, dst, dstOffset, length);
+        }
+    }
+
+    private static final class DirectArena extends Arena<ByteBuffer> {
+
+        DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            super(parent, pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        @Override
+        protected Chunk<ByteBuffer> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+            return new Chunk<ByteBuffer>(
+                    this, ByteBuffer.allocateDirect(chunkSize), pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        @Override
+        protected void destroyChunk(Chunk<ByteBuffer> chunk) {
+            UnpooledDirectByteBuf.freeDirect(chunk.memory);
+        }
+
+        @Override
+        protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
+            return new PooledDirectByteBuf(maxCapacity);
+        }
+
+        @Override
+        protected void memoryCopy(ByteBuffer src, int srcOffset, ByteBuffer dst, int dstOffset, int length) {
+            if (length == 0) {
+                return;
+            }
+
+            // We must duplicate the NIO buffers because they may be accessed by other Netty buffers.
+            src = src.duplicate();
+            dst = dst.duplicate();
+            src.position(srcOffset).limit(srcOffset + length);
+            dst.position(dstOffset);
+            dst.put(src);
         }
     }
 
@@ -438,7 +496,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private static final int ST_ALLOCATED = 2;
         private static final int ST_ALLOCATED_SUBPAGE = 3;
 
-        private final Arena<T> arena;
+        final Arena<T> arena;
         private final T memory;
         private final int[] memoryMap;
         private final Subpage<T>[] subpages;
@@ -851,97 +909,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        ByteBufAllocator alloc = new PooledByteBufAllocator(1, 1, 4096, 9);
-        ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+    static final class ThreadCache {
+        private final Arena<byte[]> heapArena;
+        private final Arena<ByteBuffer> directArena;
 
-        for (;;) {
-            System.err.print("POOLED: ");
-            test(alloc);
-            System.gc();
-            Thread.sleep(1000);
-            System.err.print("UNPOOLED: ");
-            test(unpooled);
-            System.gc();
-            Thread.sleep(1000);
-        }
-
-//        System.err.println(alloc);
-//
-//        ByteBuf a, b, c, d;
-//
-//        System.err.println("ALLOC A(4096)");
-//        a = alloc.heapBuffer(4096);
-//        System.err.println(alloc);
-//
-//        System.err.println("ALLOC B(4096)");
-//        b = alloc.heapBuffer(4096);
-//        System.err.println(alloc);
-//
-//        System.err.println("FREE  A(4096)");
-//        a.unsafe().free();
-//        System.err.println(alloc);
-//
-//        System.err.println("FREE  B(4096)");
-//        b.unsafe().free();
-//        System.err.println(alloc);
-//
-//        System.err.println("ALLOC A(256)");
-//        a = alloc.heapBuffer(256);
-//        System.err.println(alloc);
-//
-//        System.err.println("ALLOC B(256)");
-//        b = alloc.heapBuffer(256);
-//        System.err.println(alloc);
-//
-//        System.err.println("ALLOC C(2048)");
-//        c = alloc.heapBuffer(2048);
-//        System.err.println(alloc);
-//
-//        System.err.println("ALLOC D(2048)");
-//        d = alloc.heapBuffer(2048);
-//        System.err.println(alloc);
-//
-//        System.err.println("FREE  A(256)");
-//        a.unsafe().free();
-//        System.err.println(alloc);
-//
-//        System.err.println("FREE  B(256)");
-//        b.unsafe().free();
-//        System.err.println(alloc);
-//
-//        System.err.println("FREE  C(2048)");
-//        c.unsafe().free();
-//        System.err.println(alloc);
-//
-//        System.err.println("FREE  D(2048)");
-//        d.unsafe().free();
-//        System.err.println(alloc);
-
-    }
-
-    private static void test(ByteBufAllocator alloc) {
-        final int size = 256;
-        Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
-        for (int i = 0; i < 512; i ++) {
-            queue.add(alloc.heapBuffer(size));
-        }
-
-        long startTime = System.nanoTime();
-        test0(alloc, queue, size);
-        long endTime = System.nanoTime();
-        System.err.println(TimeUnit.NANOSECONDS.toMillis(endTime - startTime) + " ms");
-
-        for (ByteBuf b: queue) {
-            b.unsafe().free();
-        }
-        queue.clear();
-    }
-
-    private static void test0(ByteBufAllocator alloc, Deque<ByteBuf> queue, int size) {
-        for (int i = 0; i < 10000000; i ++) {
-            queue.add(alloc.heapBuffer(size));
-            queue.removeFirst().unsafe().free();
+        ThreadCache(Arena<byte[]> heapArena, Arena<ByteBuffer> directArena) {
+            this.heapArena = heapArena;
+            this.directArena = directArena;
         }
     }
 }
