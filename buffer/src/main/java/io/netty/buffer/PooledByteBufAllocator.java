@@ -908,7 +908,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
             int memoryMapIdx = (int) handle;
             int val = memoryMap[memoryMapIdx];
-            assert (val & 3) == ST_ALLOCATED_SUBPAGE
+            assert (val & 3) == ST_ALLOCATED_SUBPAGE;
 
             Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
             assert subpage.doNotDestroy;
