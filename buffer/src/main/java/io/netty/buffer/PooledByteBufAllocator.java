@@ -20,9 +20,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -131,16 +129,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        Arena<byte[]> arena = threadCache.get().heapArena;
-        // TODO: Create a composite buffer if initialCapacity is larger thank chunkSize.
-        return arena.allocate(initialCapacity, maxCapacity);
+        return threadCache.get().heapArena.allocate(initialCapacity, maxCapacity);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        Arena<ByteBuffer> arena = threadCache.get().directArena;
-        // TODO: Create a composite buffer if initialCapacity is larger thank chunkSize.
-        return arena.allocate(initialCapacity, maxCapacity);
+        return threadCache.get().directArena.allocate(initialCapacity, maxCapacity);
     }
 
     @Override
@@ -187,8 +181,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private final int pageShifts;
         private final int chunkSize;
 
-        // TODO: Split this into Q0 Q25 Q50 Q75
-        private final List<Chunk<T>> chunks = new ArrayList<Chunk<T>>();
+        private final ChunkList<T> chunks100;
+        private final ChunkList<T> chunks75to100;
+        private final ChunkList<T> chunks50to75;
+        private final ChunkList<T> chunks25to50;
+        private final ChunkList<T> chunks1to25;
+        private final ChunkList<T> chunks0;
+
+        // TODO: Destroy the old chunks in chunks0 periodically.
 
         private final Deque<Subpage<T>>[] tinySubpagePools;
         private final Deque<Subpage<T>>[] smallSubpagePools;
@@ -210,6 +210,18 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             for (int i = 0; i < smallSubpagePools.length; i ++) {
                 smallSubpagePools[i] = new ArrayDeque<Subpage<T>>();
             }
+
+            chunks100 = new ChunkList<T>(null, 100);
+            chunks75to100 = new ChunkList<T>(chunks100, 75);
+            chunks50to75 = new ChunkList<T>(chunks75to100, 50);
+            chunks25to50 = new ChunkList<T>(chunks50to75, 25);
+            chunks1to25 = new ChunkList<T>(chunks25to50, 1);
+            chunks0 = new ChunkList<T>(chunks1to25, 0);
+            chunks100.prevList = chunks75to100;
+            chunks75to100.prevList = chunks50to75;
+            chunks50to75.prevList = chunks25to50;
+            chunks25to50.prevList = chunks1to25;
+            chunks1to25.prevList = chunks0;
         }
 
 
@@ -257,25 +269,20 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 }
             }
 
-            final int nChunks = chunks.size();
-            //noinspection ForLoopReplaceableByForEach
-            for (int i = 0; i < nChunks; i ++) {
-                Chunk<T> c = chunks.get(i);
-                long handle = c.allocate(capacity);
-                if (handle < 0) {
-                    continue;
-                }
-
-                c.initBuf(buf, handle);
+            if (chunks50to75.allocate(buf, capacity) ||
+                chunks25to50.allocate(buf, capacity) ||
+                chunks1to25.allocate(buf, capacity) ||
+                chunks0.allocate(buf, capacity) ||
+                chunks75to100.allocate(buf,capacity)) {
                 return;
             }
 
             // Add a new chunk.
             Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-            chunks.add(c);
             long handle = c.allocate(capacity);
             assert handle >= 0;
             c.initBuf(buf, handle);
+            chunks1to25.add(c);
         }
 
         void free(PooledByteBuf<T> buf) {
@@ -283,11 +290,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         synchronized void free(Chunk<T> chunk, long handle) {
-            if (!chunk.free(handle)) {
-                // Chunk got empty.
-                // TODO: Free the chunk or leave it for later use.
-                //       Probably better free it only when it is not touched for a while.
-            }
+            chunk.parent.free(chunk, handle);
         }
 
         void addSubpage(Subpage<T> subpage) {
@@ -379,42 +382,166 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         protected abstract void memoryCopy(T src, int srcOffset, T dst, int dstOffset, int length);
         protected abstract void destroyChunk(Chunk<T> chunk);
 
-
-        public String toString() {
+        public synchronized String toString() {
             StringBuilder buf = new StringBuilder();
-            buf.append(chunks.size());
-            buf.append(" chunk(s)");
+            buf.append("Chunk(s) at 0%:");
             buf.append(StringUtil.NEWLINE);
-            if (!chunks.isEmpty()) {
-                for (Chunk<T> c: chunks) {
-                    buf.append(c);
-                }
-                buf.append(StringUtil.NEWLINE);
-            }
+            buf.append(chunks0);
+            buf.append(StringUtil.NEWLINE);
+            buf.append("Chunk(s) at 0~25%:");
+            buf.append(StringUtil.NEWLINE);
+            buf.append(chunks1to25);
+            buf.append(StringUtil.NEWLINE);
+            buf.append("Chunk(s) at 25~50%:");
+            buf.append(StringUtil.NEWLINE);
+            buf.append(chunks25to50);
+            buf.append(StringUtil.NEWLINE);
+            buf.append("Chunk(s) at 50~75%:");
+            buf.append(StringUtil.NEWLINE);
+            buf.append(chunks50to75);
+            buf.append(StringUtil.NEWLINE);
+            buf.append("Chunk(s) at 75~100%:");
+            buf.append(StringUtil.NEWLINE);
+            buf.append(chunks75to100);
+            buf.append(StringUtil.NEWLINE);
+            buf.append("Chunk(s) at 100%:");
+            buf.append(StringUtil.NEWLINE);
+            buf.append(chunks100);
+            buf.append(StringUtil.NEWLINE);
             buf.append("tiny subpages:");
-            buf.append(StringUtil.NEWLINE);
             for (int i = 1; i < tinySubpagePools.length; i ++) {
                 Deque<Subpage<T>> subpages = tinySubpagePools[i];
                 if (subpages.isEmpty()) {
                     continue;
                 }
 
+                buf.append(StringUtil.NEWLINE);
                 buf.append(i);
                 buf.append(": ");
                 buf.append(subpages);
-                buf.append(StringUtil.NEWLINE);
             }
-            buf.append("small subpages:");
             buf.append(StringUtil.NEWLINE);
+            buf.append("small subpages:");
             for (int i = 1; i < smallSubpagePools.length; i ++) {
                 Deque<Subpage<T>> subpages = smallSubpagePools[i];
                 if (subpages.isEmpty()) {
                     continue;
                 }
 
+                buf.append(StringUtil.NEWLINE);
                 buf.append(i);
                 buf.append(": ");
                 buf.append(subpages);
+            }
+            buf.append(StringUtil.NEWLINE);
+
+            return buf.toString();
+        }
+    }
+
+    private static final class ChunkList<T> {
+        private final ChunkList<T> nextList;
+        private ChunkList<T> prevList;
+
+        private final int minUsage;
+        private final int maxUsage;
+
+        private Chunk<T> head;
+
+        ChunkList(ChunkList<T> nextList, int minUsage) {
+            this.nextList = nextList;
+            this.minUsage = minUsage;
+            maxUsage = nextList != null ? nextList.minUsage : Integer.MAX_VALUE;
+        }
+
+        boolean isEmpty() {
+            return head == null;
+        }
+
+        boolean allocate(PooledByteBuf<T> buf, int capacity) {
+            if (head == null) {
+                return false;
+            }
+
+            for (Chunk<T> cur = head;;) {
+                long handle = cur.allocate(capacity);
+                if (handle < 0) {
+                    cur = cur.next;
+                    if (cur == null) {
+                        return false;
+                    }
+                } else {
+                    cur.initBuf(buf, handle);
+                    if (cur.usage() >= maxUsage) {
+                        remove(cur);
+                        nextList.add(cur);
+                    }
+                    return true;
+                }
+            }
+        }
+
+        void free(Chunk<T> chunk, long handle) {
+            //assert chunk.parent == this;
+            if (!chunk.free(handle)) {
+                // Chunk got empty.
+                chunk.timestamp = System.nanoTime();
+            }
+
+            int usage = chunk.usage();
+            if (usage < minUsage) {
+                remove(chunk);
+                prevList.add(chunk);
+                if (usage == 0) {
+                    chunk.timestamp = System.nanoTime();
+                }
+            }
+        }
+
+        void add(Chunk<T> chunk) {
+            if (chunk.usage() >= maxUsage) {
+                nextList.add(chunk);
+                return;
+            }
+
+            chunk.parent = this;
+            if (head == null) {
+                head = chunk;
+                chunk.prev = null;
+                chunk.next = null;
+            } else {
+                chunk.prev = null;
+                chunk.next = head;
+                head.prev = chunk;
+                head = chunk;
+            }
+        }
+
+        private void remove(Chunk<T> cur) {
+            if (cur == head) {
+                head = cur.next;
+                if (head != null) {
+                    head.prev = null;
+                }
+            } else {
+                cur.prev.next = cur.next;
+                cur.next.prev = cur.prev;
+            }
+        }
+
+        @Override
+        public String toString() {
+            if (head == null) {
+                return "none";
+            }
+
+            StringBuilder buf = new StringBuilder();
+            for (Chunk<T> cur = head;;) {
+                buf.append(cur);
+                cur = cur.next;
+                if (cur == null) {
+                    break;
+                }
                 buf.append(StringUtil.NEWLINE);
             }
 
@@ -497,24 +624,28 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private static final int ST_ALLOCATED_SUBPAGE = 3;
 
         final Arena<T> arena;
+
+        private ChunkList<T> parent;
+        private Chunk<T> prev;
+        private Chunk<T> next;
+
         private final T memory;
         private final int[] memoryMap;
         private final Subpage<T>[] subpages;
         private final int pageSize;
         private final int pageShifts;
-        private final int maxOrder;
         private final int chunkSize;
         private final int chunkSizeInPages;
         private final int maxSubpageAllocs;
 
-        int freeBytes;
+        private int freeBytes;
+        private long timestamp; // Arena updates and checks this timestamp to determine when to destroy this chunk.
 
         Chunk(Arena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             this.arena = arena;
             this.memory = memory;
             this.pageSize = pageSize;
             this.pageShifts = pageShifts;
-            this.maxOrder = maxOrder;
             this.chunkSize = chunkSize;
             freeBytes = chunkSize;
 
@@ -534,6 +665,18 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
             //noinspection unchecked
             subpages = new Subpage[maxSubpageAllocs];
+        }
+
+        private int usage() {
+            if (freeBytes == 0) {
+                return 100;
+            }
+
+            int freePercentage = freeBytes * 100 / chunkSize;
+            if (freePercentage == 0) {
+                return 99;
+            }
+            return 100 - freePercentage;
         }
 
         private long allocate(int capacity) {
@@ -742,58 +885,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         public String toString() {
             StringBuilder buf = new StringBuilder();
             buf.append("Chunk(");
+            buf.append(Integer.toHexString(System.identityHashCode(this)));
+            buf.append(": ");
+            buf.append(usage());
+            buf.append("%, ");
             buf.append(chunkSize - freeBytes);
             buf.append('/');
             buf.append(chunkSize);
-            buf.append(", pageSize: ");
-            buf.append(pageSize);
-            buf.append(", maxOrder: ");
-            buf.append(maxOrder);
-            buf.append(", memoryMap: ");
-            buf.append(StringUtil.NEWLINE);
-
-            int memoryMapIndex = 0;
-            for (int i = 0; i <= maxOrder; i ++) {
-                buf.append("Order ");
-                buf.append(i);
-                buf.append(':');
-
-                int runSize = chunkSize >>> i;
-                for (int j = 0; j < chunkSize; j += runSize) {
-                    int val = memoryMap[memoryMapIndex ++];
-                    buf.append(" (");
-                    switch (val & 3) {
-                    case ST_UNUSED:
-                        buf.append("U: ");
-                        break;
-                    case ST_BRANCH:
-                        buf.append("B: ");
-                        break;
-                    case ST_ALLOCATED:
-                        buf.append("A: ");
-                        break;
-                    case ST_ALLOCATED_SUBPAGE:
-                        buf.append("S: ");
-                        break;
-                    }
-                    buf.append(val >>> 17);
-                    buf.append(", ");
-                    buf.append(val >>> 2 & 0x7FFF);
-                    buf.append(')');
-                }
-
-                buf.append(StringUtil.NEWLINE);
-            }
-            buf.append("subpages:");
-            buf.append(StringUtil.NEWLINE);
-            for (Subpage<T> subpage: subpages) {
-                if (subpage == null || !subpage.doNotDestroy) {
-                    continue;
-                }
-                buf.append(subpage);
-                buf.append(' ');
-            }
-
+            buf.append(')');
             return buf.toString();
         }
     }
@@ -916,6 +1015,47 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         ThreadCache(Arena<byte[]> heapArena, Arena<ByteBuffer> directArena) {
             this.heapArena = heapArena;
             this.directArena = directArena;
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        ByteBufAllocator alloc = new PooledByteBufAllocator(1, 1, 4096, 9);
+        ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+
+        for (;;) {
+            System.err.print("POOLED: ");
+            test(alloc);
+            System.gc();
+            Thread.sleep(1000);
+            System.err.print("UNPOOLED: ");
+            test(unpooled);
+            System.gc();
+            Thread.sleep(1000);
+        }
+    }
+
+    private static void test(ByteBufAllocator alloc) {
+        final int size = 512;
+        Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
+        for (int i = 0; i < 512; i ++) {
+            queue.add(alloc.heapBuffer(size));
+        }
+
+        long startTime = System.nanoTime();
+        test0(alloc, queue, size);
+        long endTime = System.nanoTime();
+        System.err.println(TimeUnit.NANOSECONDS.toMillis(endTime - startTime) + " ms");
+
+        for (ByteBuf b: queue) {
+            b.unsafe().free();
+        }
+        queue.clear();
+    }
+
+    private static void test0(ByteBufAllocator alloc, Deque<ByteBuf> queue, int size) {
+        for (int i = 0; i < 10000000; i ++) {
+            queue.add(alloc.heapBuffer(size));
+            queue.removeFirst().unsafe().free();
         }
     }
 }
