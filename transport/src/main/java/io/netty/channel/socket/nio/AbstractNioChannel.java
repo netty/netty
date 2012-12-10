@@ -176,7 +176,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                     }
                                     ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
                                     if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
-                                        pipeline().fireExceptionCaught(connectTimeoutException);
                                         close(voidFuture());
                                     }
                                 }
@@ -185,7 +184,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
                     closeIfClosed();
                 }
             } else {
@@ -211,7 +209,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 }
             } catch (Throwable t) {
                 connectFuture.setFailure(t);
-                pipeline().fireExceptionCaught(t);
                 closeIfClosed();
             } finally {
                 connectTimeoutFuture.cancel(false);
