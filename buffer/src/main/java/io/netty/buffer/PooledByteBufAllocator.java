@@ -28,7 +28,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final int DEFAULT_NUM_HEAP_ARENA = Runtime.getRuntime().availableProcessors();
     private static final int DEFAULT_NUM_DIRECT_ARENA = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_PAGE_SIZE = 4096;
+    private static final int DEFAULT_PAGE_SIZE = 8192;
     private static final int DEFAULT_MAX_ORDER = 11;
 
     private static final int MIN_PAGE_SIZE = 4096;
@@ -455,10 +455,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             maxUsage = nextList != null ? nextList.minUsage : Integer.MAX_VALUE;
         }
 
-        boolean isEmpty() {
-            return head == null;
-        }
-
         boolean allocate(PooledByteBuf<T> buf, int capacity) {
             if (head == null) {
                 return false;
@@ -696,51 +692,43 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                     return -1;
                 }
 
-                if (capacity > runLength >>> 1) {
-                    // minCapacity is greater than the half of the current run.
-                    memoryMap[curIdx] = val & ~3 | ST_ALLOCATED;
-                    freeBytes -= runLength;
-                    return curIdx;
-                }
-
-                if (runLength == pageSize) {
-                    memoryMap[curIdx] = val & ~3 | ST_ALLOCATED_SUBPAGE;
-                    freeBytes -= runLength;
-
-                    int subpageIdx = subpageIdx(curIdx);
-                    Subpage<T> subpage = subpages[subpageIdx];
-                    if (subpage == null) {
-                        subpage = new Subpage<T>(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
-                        subpages[subpageIdx] = subpage;
-                    } else {
-                        subpage.init(capacity);
+                for (;;) {
+                    if (capacity == runLength) {
+                        // Found the run that fits.
+                        // Note that capacity has been normalized already, so we don't need to deal with
+                        // the values that are not power of 2.
+                        memoryMap[curIdx] = val & ~3 | ST_ALLOCATED;
+                        freeBytes -= runLength;
+                        return curIdx;
                     }
-                    arena.addSubpage(subpage);
-                    return subpage.allocate();
+
+                    if (runLength == pageSize) {
+                        memoryMap[curIdx] = val & ~3 | ST_ALLOCATED_SUBPAGE;
+                        freeBytes -= runLength;
+
+                        int subpageIdx = subpageIdx(curIdx);
+                        Subpage<T> subpage = subpages[subpageIdx];
+                        if (subpage == null) {
+                            subpage = new Subpage<T>(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
+                            subpages[subpageIdx] = subpage;
+                        } else {
+                            subpage.init(capacity);
+                        }
+                        arena.addSubpage(subpage);
+                        return subpage.allocate();
+                    }
+
+                    int leftLeafIdx = (curIdx << 1) + 1;
+                    int rightLeafIdx = leftLeafIdx + 1;
+
+                    memoryMap[curIdx] = val & ~3 | ST_BRANCH;
+                    //noinspection PointlessBitwiseExpression
+                    memoryMap[rightLeafIdx] = memoryMap[rightLeafIdx] & ~3 | ST_UNUSED;
+
+                    runLength >>>= 1;
+                    curIdx = leftLeafIdx;
+                    val = memoryMap[curIdx];
                 }
-
-                // minCapacity is equal to or less than the half of the current run.
-                int leftLeafIdx = (curIdx << 1) + 1;
-                int rightLeafIdx = leftLeafIdx + 1;
-
-                // Split into a small or large run depending on minCapacity.
-                memoryMap[curIdx] = val & ~3 | ST_BRANCH;
-                //noinspection PointlessBitwiseExpression
-                memoryMap[leftLeafIdx] = memoryMap[leftLeafIdx] & ~3 | ST_UNUSED;
-                //noinspection PointlessBitwiseExpression
-                memoryMap[rightLeafIdx] = memoryMap[rightLeafIdx] & ~3 | ST_UNUSED;
-
-                long res = allocate(capacity, leftLeafIdx);
-                if (res > 0) {
-                    return res;
-                }
-
-                res = allocate(capacity, rightLeafIdx);
-                if (res > 0) {
-                    return res;
-                }
-
-                return -1;
             }
             case ST_BRANCH: {
                 long res;
@@ -1023,7 +1011,21 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public static void main(String[] args) throws Exception {
-        ByteBufAllocator alloc = new PooledByteBufAllocator(1, 1, 4096, 9);
+        new Thread() {
+            @Override
+            public void run() {
+                for (;;) {
+//                    System.err.println(DEFAULT.toString());
+//                    System.err.println();
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+        }.start();
+        ByteBufAllocator alloc = DEFAULT;
         ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
 
         for (;;) {
@@ -1039,9 +1041,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test(ByteBufAllocator alloc) {
-        final int size = 512;
+        final int size = 4097;
         Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
-        for (int i = 0; i < 512; i ++) {
+        for (int i = 0; i < 256; i ++) {
             queue.add(alloc.heapBuffer(size));
         }
 
@@ -1057,7 +1059,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test0(ByteBufAllocator alloc, Deque<ByteBuf> queue, int size) {
-        for (int i = 0; i < 10000000; i ++) {
+        for (int i = 0; i < 1000000; i ++) {
             queue.add(alloc.heapBuffer(size));
             queue.removeFirst().unsafe().free();
         }
