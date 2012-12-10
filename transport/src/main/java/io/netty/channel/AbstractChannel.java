@@ -560,7 +560,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 future.setFailure(t);
-                pipeline.fireExceptionCaught(t);
                 closeFuture.setClosed();
             }
         }
@@ -595,7 +594,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
-                    pipeline.fireExceptionCaught(t);
                     closeIfClosed();
                 }
             } else {
@@ -776,7 +774,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 } catch (Throwable t) {
                     flushFutureNotifier.notifyFlushFutures(t);
-                    pipeline.fireExceptionCaught(t);
                     if (t instanceof IOException) {
                         close(voidFuture());
                     }
@@ -835,7 +832,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     flushFutureNotifier.notifyFlushFutures();
                 } else {
                     flushFutureNotifier.notifyFlushFutures(cause);
-                    pipeline.fireExceptionCaught(cause);
                     if (cause instanceof IOException) {
                         close(voidFuture());
                     }
@@ -852,7 +848,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             Exception e = new ClosedChannelException();
             future.setFailure(e);
-            pipeline.fireExceptionCaught(e);
             return false;
         }
 

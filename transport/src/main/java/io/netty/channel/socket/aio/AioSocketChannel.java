@@ -391,7 +391,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         protected void failed0(Throwable cause, AioSocketChannel channel) {
             channel.asyncWriteInProgress = false;
             channel.flushFutureNotifier.notifyFlushFutures(cause);
-            channel.pipeline().fireExceptionCaught(cause);
 
             // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
             // write timeout was hit. In that case we should close the channel as it may be unusable anyway.

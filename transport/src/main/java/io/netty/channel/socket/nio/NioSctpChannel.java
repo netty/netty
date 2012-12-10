@@ -296,7 +296,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 future.setSuccess();
             } catch (Throwable t) {
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
@@ -322,7 +321,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 future.setSuccess();
             } catch (Throwable t) {
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
