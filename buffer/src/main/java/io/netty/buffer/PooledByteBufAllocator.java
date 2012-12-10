@@ -45,15 +45,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
     };
 
-    protected PooledByteBufAllocator() {
+    public PooledByteBufAllocator() {
         this(DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
     }
 
-    protected PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
+    public PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
         this(false, nHeapArena, nDirectArena, pageSize, maxOrder);
     }
 
-    protected PooledByteBufAllocator(
+    public PooledByteBufAllocator(
             boolean directByDefault, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
         super(validateAndCalculateChunkSize(pageSize, maxOrder), directByDefault);
         if (nHeapArena <= 0) {
@@ -204,7 +204,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         synchronized void allocate(PooledByteBuf<T> buf, int minCapacity) {
             final int capacity = normalizeCapacity(minCapacity);
-
             if (capacity < pageSize) {
                 int tableIdx;
                 Deque<Subpage<T>>[] table;
@@ -225,6 +224,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 Deque<Subpage<T>> subpages = table[tableIdx];
                 while (!subpages.isEmpty()) {
                     Subpage<T> s = subpages.getFirst();
+                    if (!s.doNotDestroy || s.elemSize != capacity) {
+                        // The subpage has been destroyed or being used for different element size.
+                        subpages.removeFirst();
+                        continue;
+                    }
+
                     handle = s.allocate();
                     if (handle < 0) {
                         subpages.removeFirst();
@@ -284,6 +289,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 }
                 table = smallSubpagePools;
             }
+
             table[tableIdx].addFirst(subpage);
         }
 
@@ -481,6 +487,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             switch (val & 3) {
             case ST_UNUSED: {
                 int runLength = runLength(val);
+                if (capacity > runLength) {
+                    return -1;
+                }
+
                 if (capacity > runLength >>> 1) {
                     // minCapacity is greater than the half of the current run.
                     memoryMap[curIdx] = val & ~3 | ST_ALLOCATED;
@@ -574,27 +584,25 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             int bitmapIdx = (int) (handle >>> 32);
 
             int val = memoryMap[memoryMapIdx];
-            switch (val & 3) {
-            case ST_ALLOCATED:
-                assert bitmapIdx == 0;
-                break;
-            case ST_ALLOCATED_SUBPAGE:
+            int state = val & 3;
+            if (state == ST_ALLOCATED_SUBPAGE) {
                 Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
-                assert subpage != null && subpage.inUse;
+                assert subpage != null && subpage.doNotDestroy;
                 if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
-                    if (subpage.numAvail == 1) {
-                        arena.addSubpage(subpage);
-                    }
                     return true;
                 }
-                break;
-            default:
-                assert false;
+            } else {
+                assert state == ST_ALLOCATED : "state: " + state;
+                assert bitmapIdx == 0;
             }
 
             //noinspection PointlessBitwiseExpression
             memoryMap[memoryMapIdx] = val & ~3 | ST_UNUSED;
             freeBytes += runLength(val);
+            if (memoryMapIdx == 0) {
+                assert freeBytes == chunkSize;
+                return false;
+            }
 
             if ((memoryMap[siblingIdx(memoryMapIdx)] & 3) == ST_UNUSED) {
                 // Parent's state: ST_BRANCH -> ST_UNUSED
@@ -636,7 +644,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 break;
             case ST_ALLOCATED_SUBPAGE:
                 Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
-                assert subpage != null && subpage.inUse;
+                assert subpage != null && subpage.doNotDestroy;
                 buf.init(
                         this, handle, memory,
                         runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize);
@@ -721,7 +729,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             buf.append("subpages:");
             buf.append(StringUtil.NEWLINE);
             for (Subpage<T> subpage: subpages) {
-                if (subpage == null || !subpage.inUse) {
+                if (subpage == null || !subpage.doNotDestroy) {
                     continue;
                 }
                 buf.append(subpage);
@@ -740,7 +748,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         final int runLength;
         final long[] bitmap;
 
-        boolean inUse;
+        boolean doNotDestroy;
         int elemSize;
         int maxNumElems;
         int nextAvail;
@@ -757,7 +765,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         void init(int elemSize) {
-            inUse = true;
+            doNotDestroy = true;
             this.elemSize = elemSize;
             maxNumElems = numAvail = runLength / elemSize;
 
@@ -775,7 +783,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
          * Returns the bitmap index of the subpage allocation.
          */
         long allocate() {
-            if (numAvail == 0 || !inUse) {
+            if (numAvail == 0 || !doNotDestroy) {
                 return -1;
             }
 
@@ -820,22 +828,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             assert (bitmap[q] & 1L << r) != 0;
             bitmap[q] ^= 1L << r;
 
-            if (numAvail == 0) {
+            if (numAvail ++ == 0) {
                 nextAvail = bitmapIdx;
+                chunk.arena.addSubpage(this);
+                return true;
             }
-
-            numAvail ++;
 
             if (numAvail < maxNumElems) {
                 return true;
             } else {
-                inUse = false;
+                doNotDestroy = false;
                 return false;
             }
         }
 
         public String toString() {
-            if (!inUse) {
+            if (!doNotDestroy) {
                 return "(" + memoryMapIdx + ": not in use)";
             }
 

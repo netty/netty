@@ -43,6 +43,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     }
 
     void init(Chunk<T> chunk, long handle, T memory, int offset, int length) {
+        assert handle >= 0;
         this.chunk = chunk;
         this.handle = handle;
         this.memory = memory;

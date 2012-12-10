@@ -276,7 +276,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         assert !isFreed();
         if (index < 0 || index >= length) {
             throw new IndexOutOfBoundsException(String.format(
-                    "index: %d (expected: 0-%d)", index, length - 1));
+                    "index: %d (expected: range(0, %d))", index, length));
         }
     }
 
@@ -284,7 +284,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         assert !isFreed();
         if (index < 0 || index > length - fieldLength) {
             throw new IndexOutOfBoundsException(String.format(
-                    "index: %d (expected: 0-%d)", index, length - fieldLength));
+                    "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, length));
         }
     }
 }
