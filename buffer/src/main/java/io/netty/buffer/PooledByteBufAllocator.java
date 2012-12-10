@@ -280,11 +280,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             }
 
             synchronized (this) {
-                if (chunks50to100.allocateRun(buf, capacity) ||
-                    chunks25to75.allocateRun(buf, capacity) ||
-                    chunks1to50.allocateRun(buf, capacity) ||
-                    chunks0.allocateRun(buf, capacity) ||
-                    chunks75to100.allocateRun(buf, capacity)) {
+                if (chunks50to100.allocate(buf, capacity) ||
+                    chunks25to75.allocate(buf, capacity) ||
+                    chunks1to50.allocate(buf, capacity) ||
+                    chunks0.allocate(buf, capacity) ||
+                    chunks75to100.allocate(buf, capacity)) {
                     return;
                 }
 
@@ -292,7 +292,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
                 long handle = c.allocate(capacity);
                 assert handle > 0;
-                c.initBufWithRun(buf, handle);
+                c.initBuf(buf, handle);
                 chunks1to50.add(c);
             }
         }
@@ -467,7 +467,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             this.maxUsage = maxUsage;
         }
 
-        boolean allocateRun(PooledByteBuf<T> buf, int capacity) {
+        boolean allocate(PooledByteBuf<T> buf, int capacity) {
             if (head == null) {
                 return false;
             }
@@ -480,7 +480,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                         return false;
                     }
                 } else {
-                    cur.initBufWithRun(buf, handle);
+                    cur.initBuf(buf, handle);
                     if (cur.usage() >= maxUsage) {
                         remove(cur);
                         nextList.add(cur);
@@ -887,16 +887,24 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             return true;
         }
 
-        private void initBufWithRun(PooledByteBuf<T> buf, long handle) {
+        private void initBuf(PooledByteBuf<T> buf, long handle) {
             int memoryMapIdx = (int) handle;
-            int val = memoryMap[memoryMapIdx];
-            assert handle >>> 32 == 0 && (val & 3) == ST_ALLOCATED;
-            buf.init(this, handle, memory, runOffset(val), runLength(val));
+            int bitmapIdx = (int) (handle >>> 32);
+            if (bitmapIdx == 0) {
+                int val = memoryMap[memoryMapIdx];
+                assert (val & 3) == ST_ALLOCATED : String.valueOf(val & 3);
+                buf.init(this, handle, memory, runOffset(val), runLength(val));
+            } else {
+                initBufWithSubpage(buf, memoryMapIdx, bitmapIdx);
+            }
         }
 
         private void initBufWithSubpage(PooledByteBuf<T> buf, long handle) {
+            initBufWithSubpage(buf, handle, (int) (handle >>> 32));
+        }
+
+        private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx) {
             int memoryMapIdx = (int) handle;
-            int bitmapIdx = (int) (handle >>> 32);
             int val = memoryMap[memoryMapIdx];
 
             Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
