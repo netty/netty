@@ -129,12 +129,16 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        return threadCache.get().heapArena.allocate(initialCapacity, maxCapacity);
+        ByteBuf buf = threadCache.get().heapArena.allocate(initialCapacity, maxCapacity);
+        buf.writerIndex(initialCapacity);
+        return buf;
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        return threadCache.get().directArena.allocate(initialCapacity, maxCapacity);
+        ByteBuf buf = threadCache.get().directArena.allocate(initialCapacity, maxCapacity);
+        buf.writerIndex(initialCapacity);
+        return buf;
     }
 
     @Override
