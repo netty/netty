@@ -71,7 +71,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public ByteBuf heapBuffer(int initialCapacity) {
-        return buffer(initialCapacity, bufferMaxCapacity());
+        return heapBuffer(initialCapacity, bufferMaxCapacity());
     }
 
     @Override

@@ -28,8 +28,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static final int DEFAULT_NUM_HEAP_ARENA = Runtime.getRuntime().availableProcessors();
     private static final int DEFAULT_NUM_DIRECT_ARENA = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_PAGE_SIZE = 8192;
-    private static final int DEFAULT_MAX_ORDER = 11;
+    private static final int DEFAULT_PAGE_SIZE = 16384;
+    private static final int DEFAULT_MAX_ORDER = 10; // 16384 << 10 = 16 MiB per chunk
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -200,7 +200,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             this.maxOrder = maxOrder;
             this.pageShifts = pageShifts;
             this.chunkSize = chunkSize;
-            this.subpageOverflowMask = ~(pageSize - 1);
+            subpageOverflowMask = ~(pageSize - 1);
 
             //noinspection unchecked
             tinySubpagePools = new Deque[512 >>> 4];
@@ -233,12 +233,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             return buf;
         }
 
-        synchronized void allocate(PooledByteBuf<T> buf, int minCapacity) {
+        void allocate(PooledByteBuf<T> buf, int minCapacity) {
             final int capacity = normalizeCapacity(minCapacity);
             if ((capacity & subpageOverflowMask) == 0) { // capacity < pageSize
                 int tableIdx;
                 Deque<Subpage<T>>[] table;
-                if (capacity < 512) {
+                if ((capacity & 0xFFFFFE00) == 0) { // < 512
                     tableIdx = capacity >>> 4;
                     table = tinySubpagePools;
                 } else {
@@ -251,40 +251,47 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                     table = smallSubpagePools;
                 }
 
-                long handle;
-                Deque<Subpage<T>> subpages = table[tableIdx];
-                while (!subpages.isEmpty()) {
-                    Subpage<T> s = subpages.getFirst();
-                    if (!s.doNotDestroy || s.elemSize != capacity) {
-                        // The subpage has been destroyed or being used for different element size.
-                        subpages.removeFirst();
-                        continue;
-                    }
+                synchronized (this) {
+                    Deque<Subpage<T>> subpages = table[tableIdx];
+                    for (;;) {
+                        Subpage<T> s = subpages.peekFirst();
+                        if (s == null) {
+                            break;
+                        }
 
-                    handle = s.allocate();
-                    if (handle < 0) {
-                        subpages.removeFirst();
-                    } else {
-                        s.chunk.initBuf(buf, handle);
-                        return;
+                        if (!s.doNotDestroy || s.elemSize != capacity) {
+                            // The subpage has been destroyed or being used for different element size.
+                            subpages.removeFirst();
+                            continue;
+                        }
+
+                        long handle = s.allocate();
+                        if (handle < 0) {
+                            subpages.removeFirst();
+                        } else {
+                            s.chunk.initBufWithSubpage(buf, handle);
+                            return;
+                        }
                     }
                 }
             }
 
-            if (chunks50to75.allocate(buf, capacity) ||
-                chunks25to50.allocate(buf, capacity) ||
-                chunks1to25.allocate(buf, capacity) ||
-                chunks0.allocate(buf, capacity) ||
-                chunks75to100.allocate(buf,capacity)) {
-                return;
-            }
+            synchronized (this) {
+                if (chunks50to75.allocateRun(buf, capacity) ||
+                    chunks25to50.allocateRun(buf, capacity) ||
+                    chunks1to25.allocateRun(buf, capacity) ||
+                    chunks0.allocateRun(buf, capacity) ||
+                    chunks75to100.allocateRun(buf, capacity)) {
+                    return;
+                }
 
-            // Add a new chunk.
-            Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-            long handle = c.allocate(capacity);
-            assert handle > 0;
-            c.initBuf(buf, handle);
-            chunks1to25.add(c);
+                // Add a new chunk.
+                Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
+                long handle = c.allocate(capacity);
+                assert handle > 0;
+                c.initBufWithRun(buf, handle);
+                chunks1to25.add(c);
+            }
         }
 
         void free(PooledByteBuf<T> buf) {
@@ -457,7 +464,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             maxUsage = nextList != null ? nextList.minUsage : Integer.MAX_VALUE;
         }
 
-        boolean allocate(PooledByteBuf<T> buf, int capacity) {
+        boolean allocateRun(PooledByteBuf<T> buf, int capacity) {
             if (head == null) {
                 return false;
             }
@@ -470,7 +477,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                         return false;
                     }
                 } else {
-                    cur.initBuf(buf, handle);
+                    cur.initBufWithRun(buf, handle);
                     if (cur.usage() >= maxUsage) {
                         remove(cur);
                         nextList.add(cur);
@@ -652,7 +659,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             this.pageSize = pageSize;
             this.pageShifts = pageShifts;
             this.chunkSize = chunkSize;
-            this.subpageOverflowMask = ~(pageSize - 1);
+            subpageOverflowMask = ~(pageSize - 1);
             freeBytes = chunkSize;
 
             int chunkSizeInPages = chunkSize >>> pageShifts;
@@ -678,7 +685,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 return 100;
             }
 
-            int freePercentage = freeBytes * 100 / chunkSize;
+            int freePercentage = (int) (freeBytes * 100L / chunkSize);
             if (freePercentage == 0) {
                 return 99;
             }
@@ -872,26 +879,23 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             return true;
         }
 
-        private void initBuf(PooledByteBuf<T> buf, long handle) {
+        private void initBufWithRun(PooledByteBuf<T> buf, long handle) {
+            int memoryMapIdx = (int) handle;
+            int val = memoryMap[memoryMapIdx];
+            assert handle >>> 32 == 0 && (val & 3) == ST_ALLOCATED;
+            buf.init(this, handle, memory, runOffset(val), runLength(val));
+        }
+
+        private void initBufWithSubpage(PooledByteBuf<T> buf, long handle) {
             int memoryMapIdx = (int) handle;
             int bitmapIdx = (int) (handle >>> 32);
-
             int val = memoryMap[memoryMapIdx];
-            switch (val & 3) {
-            case ST_ALLOCATED:
-                assert bitmapIdx == 0;
-                buf.init(this, handle, memory, runOffset(val), runLength(val));
-                break;
-            case ST_ALLOCATED_SUBPAGE:
-                Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
-                assert subpage != null && subpage.doNotDestroy;
-                buf.init(
-                        this, handle, memory,
-                        runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize);
-                break;
-            default:
-                throw new Error(String.valueOf(val & 3));
-            }
+
+            Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
+            assert (val & 3) == ST_ALLOCATED_SUBPAGE && subpage != null && subpage.doNotDestroy;
+            buf.init(
+                    this, handle, memory,
+                    runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize);
         }
 
         private static int parentIdx(int memoryMapIdx) {
@@ -1081,7 +1085,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test(ByteBufAllocator alloc) {
-        final int size = 256;
+        final int size = 8193;
         Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
         for (int i = 0; i < 256; i ++) {
             queue.add(alloc.heapBuffer(size));
@@ -1099,7 +1103,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test0(ByteBufAllocator alloc, Deque<ByteBuf> queue, int size) {
-        for (int i = 0; i < 1000000; i ++) {
+        for (int i = 0; i < 10000000; i ++) {
             queue.add(alloc.heapBuffer(size));
             queue.removeFirst().unsafe().free();
         }
