@@ -904,11 +904,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx) {
+            assert bitmapIdx != 0;
+
             int memoryMapIdx = (int) handle;
             int val = memoryMap[memoryMapIdx];
+            assert (val & 3) == ST_ALLOCATED_SUBPAGE
 
             Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
-            assert (val & 3) == ST_ALLOCATED_SUBPAGE && subpage != null && subpage.doNotDestroy;
+            assert subpage.doNotDestroy;
+
             buf.init(
                     this, handle, memory,
                     runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize);
