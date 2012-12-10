@@ -457,7 +457,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int offset, int length) {
+    public ByteBuffer[] nioBuffers(int index, int length) {
         throw new UnsupportedOperationException();
     }
 

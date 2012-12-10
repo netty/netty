@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf.Unsafe;
 import io.netty.buffer.PooledByteBufAllocator.Arena;
 import io.netty.buffer.PooledByteBufAllocator.Chunk;
 
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -32,6 +33,8 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     protected T memory;
     protected int offset;
     protected int length;
+
+    private ByteBuffer tmpNioBuf;
     private Queue<Allocation<T>> suspendedDeallocations;
 
     protected PooledByteBuf(Arena<T> arena, int maxCapacity) {
@@ -39,12 +42,13 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
         this.arena = arena;
     }
 
-    protected void init(Chunk<T> chunk, long handle, T memory, int offset, int length) {
+    void init(Chunk<T> chunk, long handle, T memory, int offset, int length) {
         this.chunk = chunk;
         this.handle = handle;
         this.memory = memory;
         this.offset = offset;
         this.length = length;
+        tmpNioBuf = null;
     }
 
     @Override
@@ -84,6 +88,22 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     public Unsafe unsafe() {
         return this;
     }
+
+    @Override
+    public ByteBuffer internalNioBuffer() {
+        ByteBuffer tmpNioBuf = this.tmpNioBuf;
+        if (tmpNioBuf == null) {
+            this.tmpNioBuf = tmpNioBuf = newInternalNioBuffer(memory);
+        }
+        return tmpNioBuf;
+    }
+
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return new ByteBuffer[] { internalNioBuffer() };
+    }
+
+    protected abstract ByteBuffer newInternalNioBuffer(T memory);
 
     @Override
     public void discardSomeReadBytes() {

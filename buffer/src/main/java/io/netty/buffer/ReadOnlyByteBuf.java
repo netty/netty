@@ -223,8 +223,8 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int offset, int length) {
-        return buffer.nioBuffers(offset, length);
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return buffer.nioBuffers(index, length);
     }
 
     @Override
