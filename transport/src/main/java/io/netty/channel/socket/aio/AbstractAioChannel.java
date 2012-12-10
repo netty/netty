@@ -124,7 +124,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
                     closeIfClosed();
                 }
             } else {
@@ -154,7 +153,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
                 }
             } catch (Throwable t) {
                 connectFuture.setFailure(t);
-                pipeline().fireExceptionCaught(t);
                 closeIfClosed();
             } finally {
                 connectTimeoutFuture.cancel(false);

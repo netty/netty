@@ -178,7 +178,6 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } catch (Throwable cause) {
                 region.close();
                 future.setFailure(cause);
-                pipeline().fireExceptionCaught(cause);
             }
         }
 
