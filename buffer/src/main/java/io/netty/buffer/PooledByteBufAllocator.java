@@ -731,18 +731,26 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 }
             }
             case ST_BRANCH: {
-                long res;
-                int nextIdx = (curIdx << 1) + 1;
-
-                res = allocate(capacity, nextIdx);
-                if (res > 0) {
-                    return res;
+                int leftLeafIdx = (curIdx << 1) + 1;
+                switch (memoryMap[leftLeafIdx] & 3) {
+                case ST_UNUSED:
+                case ST_BRANCH:
+                case ST_ALLOCATED_SUBPAGE:
+                    long res = allocate(capacity, leftLeafIdx);
+                    if (res > 0) {
+                        return res;
+                    }
                 }
 
-                nextIdx ++;
-                res = allocate(capacity, nextIdx);
-                if (res > 0) {
-                    return res;
+                int rightLeafIdx = leftLeafIdx + 1;
+                switch (memoryMap[rightLeafIdx] & 3) {
+                case ST_UNUSED:
+                case ST_BRANCH:
+                case ST_ALLOCATED_SUBPAGE:
+                    long res = allocate(capacity, rightLeafIdx);
+                    if (res > 0) {
+                        return res;
+                    }
                 }
 
                 return -1;
@@ -1041,7 +1049,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static void test(ByteBufAllocator alloc) {
-        final int size = 4097;
+        final int size = 512;
         Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
         for (int i = 0; i < 256; i ++) {
             queue.add(alloc.heapBuffer(size));
