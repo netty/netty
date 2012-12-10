@@ -46,6 +46,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
         this.memory = memory;
         this.offset = offset;
         this.length = length;
+        setIndex(0, 0);
         tmpNioBuf = null;
     }
 

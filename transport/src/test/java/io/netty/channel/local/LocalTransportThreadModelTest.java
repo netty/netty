@@ -522,7 +522,6 @@ public class LocalTransportThreadModelTest {
 
             ByteBuf in = ctx.inboundByteBuffer();
             MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
-
             while (in.readableBytes() >= 4) {
                 int msg = in.readInt();
                 int expected = inCnt ++;

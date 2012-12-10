@@ -129,16 +129,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        ByteBuf buf = threadCache.get().heapArena.allocate(initialCapacity, maxCapacity);
-        buf.writerIndex(initialCapacity);
-        return buf;
+        return threadCache.get().heapArena.allocate(initialCapacity, maxCapacity);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        ByteBuf buf = threadCache.get().directArena.allocate(initialCapacity, maxCapacity);
-        buf.writerIndex(initialCapacity);
-        return buf;
+        return threadCache.get().directArena.allocate(initialCapacity, maxCapacity);
     }
 
     @Override
@@ -354,17 +350,16 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 return;
             }
 
+            int readerIndex = buf.readerIndex();
+            int writerIndex = buf.writerIndex();
+
             allocate(buf, newCapacity);
             if (newCapacity > oldCapacity) {
-                int readerIndex = buf.readerIndex();
-                int writerIndex = buf.writerIndex();
                 memoryCopy(
                         oldMemory, oldOffset + readerIndex,
                         buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
             } else if (newCapacity < oldCapacity) {
-                int readerIndex = buf.readerIndex();
                 if (readerIndex < newCapacity) {
-                    int writerIndex = buf.writerIndex();
                     if (writerIndex > newCapacity) {
                         buf.writerIndex(writerIndex = newCapacity);
                     }
@@ -372,9 +367,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                             oldMemory, oldOffset + readerIndex,
                             buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
                 } else {
-                    buf.setIndex(newCapacity, newCapacity);
+                    readerIndex = writerIndex = newCapacity;
                 }
             }
+
+            buf.setIndex(readerIndex, writerIndex);
 
             if (freeOldMemory) {
                 free(oldChunk, oldHandle);
@@ -528,8 +525,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                     head.prev = null;
                 }
             } else {
-                cur.prev.next = cur.next;
-                cur.next.prev = cur.prev;
+                Chunk<T> next = cur.next;
+                cur.prev.next = next;
+                if (next != null) {
+                    next.prev = cur.prev;
+                }
             }
         }
 
