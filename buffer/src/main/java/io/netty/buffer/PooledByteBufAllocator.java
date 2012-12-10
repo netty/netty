@@ -309,7 +309,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             int tableIdx;
             int elemSize = subpage.elemSize;
             Deque<Subpage<T>>[] table;
-            if (elemSize < 512) {
+            if ((elemSize & 0xFFFFFE00) == 0) { // < 512
                 tableIdx = elemSize >>> 4;
                 table = tinySubpagePools;
             } else {
@@ -352,15 +352,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 throw new IllegalArgumentException("newCapacity: " + newCapacity);
             }
 
+            int oldCapacity = buf.length;
+            if (oldCapacity == newCapacity) {
+                return;
+            }
+
             Chunk<T> oldChunk = buf.chunk;
             long oldHandle = buf.handle;
             T oldMemory = buf.memory;
             int oldOffset = buf.offset;
-            int oldCapacity = buf.length;
-
-            if (oldCapacity == newCapacity) {
-                return;
-            }
 
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
@@ -373,7 +373,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             } else if (newCapacity < oldCapacity) {
                 if (readerIndex < newCapacity) {
                     if (writerIndex > newCapacity) {
-                        buf.writerIndex(writerIndex = newCapacity);
+                        writerIndex = newCapacity;
                     }
                     memoryCopy(
                             oldMemory, oldOffset + readerIndex,
@@ -491,7 +491,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         void free(Chunk<T> chunk, long handle) {
-            //assert chunk.parent == this;
             if (!chunk.free(handle)) {
                 // Chunk got empty.
                 chunk.timestamp = System.nanoTime();
@@ -800,7 +799,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                     int subpageIdx = subpageIdx(curIdx);
                     Subpage<T> subpage = subpages[subpageIdx];
                     if (subpage == null) {
-                        subpage = new Subpage<T>(this, curIdx, runOffset(curIdx), runLength, pageSize, capacity);
+                        subpage = new Subpage<T>(this, curIdx, runOffset(val), pageSize, capacity);
                         subpages[subpageIdx] = subpage;
                     } else {
                         subpage.init(capacity);
@@ -841,6 +840,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             int val = memoryMap[memoryMapIdx];
             int state = val & 3;
             if (state == ST_ALLOCATED_SUBPAGE) {
+                assert bitmapIdx != 0;
                 Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
                 assert subpage != null && subpage.doNotDestroy;
                 if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
@@ -851,37 +851,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 assert bitmapIdx == 0;
             }
 
-            //noinspection PointlessBitwiseExpression
-            memoryMap[memoryMapIdx] = val & ~3 | ST_UNUSED;
             freeBytes += runLength(val);
-            if (memoryMapIdx == 1) {
-                assert freeBytes == chunkSize;
-                return false;
-            }
 
-            if ((memoryMap[siblingIdx(memoryMapIdx)] & 3) == ST_UNUSED) {
-                // Parent's state: ST_BRANCH -> ST_UNUSED
-                int parentIdx = parentIdx(memoryMapIdx);
+            for (;;) {
                 //noinspection PointlessBitwiseExpression
-                memoryMap[parentIdx] = memoryMap[parentIdx] & ~3 | ST_UNUSED;
-                // Climb up the tree.
-                if (parentIdx != 1) {
-                    for (;;) {
-                        if ((memoryMap[siblingIdx(parentIdx)] & 3) != ST_UNUSED) {
-                            break;
-                        }
-
-                        int grandParentIdx = parentIdx(parentIdx);
-                        //noinspection PointlessBitwiseExpression
-                        memoryMap[grandParentIdx] = memoryMap[grandParentIdx] & ~3 | ST_UNUSED;
-                        parentIdx = grandParentIdx;
-                        if (parentIdx == 1) {
-                            break;
-                        }
-                    }
-                } else {
+                memoryMap[memoryMapIdx] = val & ~3 | ST_UNUSED;
+                if (memoryMapIdx == 1) {
+                    assert freeBytes == chunkSize;
                     return false;
                 }
+
+                if ((memoryMap[siblingIdx(memoryMapIdx)] & 3) != ST_UNUSED) {
+                    break;
+                }
+
+                memoryMapIdx = parentIdx(memoryMapIdx);
+                val = memoryMap[memoryMapIdx];
             }
 
             return true;
@@ -895,7 +880,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 assert (val & 3) == ST_ALLOCATED : String.valueOf(val & 3);
                 buf.init(this, handle, memory, runOffset(val), runLength(val));
             } else {
-                initBufWithSubpage(buf, memoryMapIdx, bitmapIdx);
+                initBufWithSubpage(buf, handle, bitmapIdx);
             }
         }
 
@@ -963,7 +948,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         final Chunk<T> chunk;
         final int memoryMapIdx;
         final int runOffset;
-        final int runLength;
+        final int pageSize;
         final long[] bitmap;
 
         boolean doNotDestroy;
@@ -973,11 +958,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         int bitmapLength;
         int numAvail;
 
-        Subpage(Chunk<T> chunk, int memoryMapIdx, int runOffset, int runLength, int pageSize, int elemSize) {
+        Subpage(Chunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
             this.chunk = chunk;
             this.memoryMapIdx = memoryMapIdx;
             this.runOffset = runOffset;
-            this.runLength = runLength;
+            this.pageSize = pageSize;
             bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
             init(elemSize);
         }
@@ -985,8 +970,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         void init(int elemSize) {
             doNotDestroy = true;
             this.elemSize = elemSize;
-            maxNumElems = numAvail = runLength / elemSize;
-
+            maxNumElems = numAvail = pageSize / elemSize;
+            nextAvail = 0;
             bitmapLength = maxNumElems >>> 6;
             if ((maxNumElems & 63) != 0) {
                 bitmapLength ++;
@@ -1006,7 +991,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             }
 
             final int bitmapIdx = nextAvail;
-            bitmap[bitmapIdx >>> 6] ^= 1L << (bitmapIdx & 63);
+            int q = bitmapIdx >>> 6;
+            int r = bitmapIdx & 63;
+            assert (bitmap[q] >>> r & 1) == 0;
+            bitmap[q] |= 1L << r;
             numAvail --;
 
             if (numAvail == 0) {
@@ -1043,7 +1031,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         boolean free(int bitmapIdx) {
             int q = bitmapIdx >>> 6;
             int r = bitmapIdx & 63;
-            assert (bitmap[q] & 1L << r) != 0;
+            assert (bitmap[q] >>> r & 1) != 0;
             bitmap[q] ^= 1L << r;
 
             if (numAvail ++ == 0) {
@@ -1065,7 +1053,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 return "(" + memoryMapIdx + ": not in use)";
             }
 
-            return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems + ", offset: " + runOffset + ", length: " + runLength + ", elemSize: " + elemSize + ')';
+            return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems + ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
         }
     }
 
