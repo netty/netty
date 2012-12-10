@@ -436,8 +436,13 @@ public class LocalTransportThreadModelTest {
 
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, msg.intValue());
+                if (out.maxCapacity() - out.writerIndex() < 4) {
+                    // Next inbound buffer is full - attempt to flush some data.
+                    ctx.fireInboundBufferUpdated();
+                }
                 out.writeInt(msg);
             }
+
             ctx.fireInboundBufferUpdated();
         }
 
@@ -534,7 +539,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx,
+        public void flush(final ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
@@ -549,8 +554,15 @@ public class LocalTransportThreadModelTest {
 
                 int expected = outCnt ++;
                 Assert.assertEquals(expected, msg.intValue());
+
+                if (out.maxCapacity() - out.writerIndex() < 4) {
+                    // Next outbound buffer is full - attempt to flush some data.
+                    ctx.flush();
+                }
+
                 out.writeInt(msg);
             }
+
             ctx.flush(future);
         }
 
