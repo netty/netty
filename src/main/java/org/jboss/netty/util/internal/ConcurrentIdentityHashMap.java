@@ -23,6 +23,7 @@ package org.jboss.netty.util.internal;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Enumeration;
@@ -515,9 +516,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
                 }
             }
             table = newTable;
-            for (int i = 0; i < oldCapacity; ++i) {
-              oldTable[i] = null;
-            }
+            Arrays.fill(oldTable, null);
             return reduce;
         }
 
