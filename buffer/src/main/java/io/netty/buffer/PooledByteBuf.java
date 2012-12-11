@@ -58,6 +58,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     @Override
     public ByteBuf capacity(int newCapacity) {
         assert !isFreed();
+
         if (suspendedDeallocations == null) {
             chunk.arena.reallocate(this, newCapacity, true);
         } else {

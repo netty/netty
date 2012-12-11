@@ -21,6 +21,9 @@ import io.netty.util.internal.StringUtil;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -129,12 +132,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        return threadCache.get().heapArena.allocate(initialCapacity, maxCapacity);
+        ThreadCache cache = threadCache.get();
+        return cache.heapArena.allocate(cache, initialCapacity, maxCapacity);
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        return threadCache.get().directArena.allocate(initialCapacity, maxCapacity);
+        ThreadCache cache = threadCache.get();
+        return cache.directArena.allocate(cache, initialCapacity, maxCapacity);
     }
 
     @Override
@@ -172,7 +177,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return buf.toString();
     }
 
-    static abstract class Arena<T> {
+    abstract static class Arena<T> {
 
         final PooledByteBufAllocator parent;
 
@@ -229,14 +234,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             chunks1to50.prevList = chunks0;
         }
 
-
-        PooledByteBuf<T> allocate(int minCapacity, int maxCapacity) {
+        PooledByteBuf<T> allocate(ThreadCache cache, int minCapacity, int maxCapacity) {
             PooledByteBuf<T> buf = newByteBuf(maxCapacity);
-            allocate(buf, minCapacity);
+            allocate(cache, buf, minCapacity);
             return buf;
         }
 
-        void allocate(PooledByteBuf<T> buf, int minCapacity) {
+        void allocate(ThreadCache cache, PooledByteBuf<T> buf, int minCapacity) {
             final int capacity = normalizeCapacity(minCapacity);
             if ((capacity & subpageOverflowMask) == 0) { // capacity < pageSize
                 int tableIdx;
@@ -279,22 +283,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 }
             }
 
-            synchronized (this) {
-                if (chunks50to100.allocate(buf, capacity) ||
-                    chunks25to75.allocate(buf, capacity) ||
-                    chunks1to50.allocate(buf, capacity) ||
-                    chunks0.allocate(buf, capacity) ||
-                    chunks75to100.allocate(buf, capacity)) {
-                    return;
-                }
+            allocateNormal(buf, capacity);
+        }
 
-                // Add a new chunk.
-                Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-                long handle = c.allocate(capacity);
-                assert handle > 0;
-                c.initBuf(buf, handle);
-                chunks1to50.add(c);
+        private synchronized void allocateNormal(PooledByteBuf<T> buf, int capacity) {
+            if (chunks50to100.allocate(buf, capacity) || chunks25to75.allocate(buf, capacity) ||
+                chunks1to50.allocate(buf, capacity)   || chunks0.allocate(buf, capacity) ||
+                chunks75to100.allocate(buf, capacity)) {
+                return;
             }
+
+            // Add a new chunk.
+            Chunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
+            long handle = c.allocate(capacity);
+            assert handle > 0;
+            c.initBuf(buf, handle);
+            chunks1to50.add(c);
         }
 
         void free(PooledByteBuf<T> buf) {
@@ -365,7 +369,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
 
-            allocate(buf, newCapacity);
+            allocate(parent.threadCache.get(), buf, newCapacity);
             if (newCapacity > oldCapacity) {
                 memoryCopy(
                         oldMemory, oldOffset + readerIndex,
@@ -673,7 +677,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             maxSubpageAllocs = 1 << maxOrder;
 
             // Generate the memory map.
-            memoryMap = new int[(maxSubpageAllocs << 1)];
+            memoryMap = new int[maxSubpageAllocs << 1];
             int memoryMapIndex = 1;
             for (int i = 0; i <= maxOrder; i ++) {
                 int runSizeInPages = chunkSizeInPages >>> i;
@@ -995,29 +999,37 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             int r = bitmapIdx & 63;
             assert (bitmap[q] >>> r & 1) == 0;
             bitmap[q] |= 1L << r;
-            numAvail --;
 
-            if (numAvail == 0) {
+            if (-- numAvail == 0) {
                 nextAvail = -1;
-                return toHandle(bitmapIdx);
-            }
-
-            int i = bitmapIdx + 1;
-            for (; i < maxNumElems; i ++) {
-                if ((bitmap[i >>> 6] & 1L << (i & 63)) == 0) {
-                    nextAvail = i;
-                    return toHandle(bitmapIdx);
-                }
-            }
-
-            for (i = 0; i < bitmapIdx; i ++) {
-                if ((bitmap[i >>> 6] & 1L << (i & 63)) == 0) {
-                    nextAvail = i;
-                    return toHandle(bitmapIdx);
-                }
+            } else {
+                nextAvail = findNextAvailable();
             }
 
             return toHandle(bitmapIdx);
+        }
+
+        private int findNextAvailable() {
+            int newNextAvail = -1;
+            loop:
+            for (int i = 0; i < bitmapLength; i ++) {
+                long bits = bitmap[i];
+                if (~bits != 0) {
+                    for (int j = 0; j < 64; j ++) {
+                        if ((bits & 1) == 0) {
+                            newNextAvail = i << 6 | j;
+                            break loop;
+                        }
+                        bits >>>= 1;
+                    }
+                }
+            }
+
+            if (newNextAvail < maxNumElems) {
+                return newNextAvail;
+            } else {
+                return -1;
+            }
         }
 
         private long toHandle(int bitmapIdx) {
@@ -1053,7 +1065,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 return "(" + memoryMapIdx + ": not in use)";
             }
 
-            return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems + ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
+            return String.valueOf('(') + memoryMapIdx + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
+                   ", offset: " + runOffset + ", length: " + pageSize + ", elemSize: " + elemSize + ')';
         }
     }
 
@@ -1068,37 +1081,64 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public static void main(String[] args) throws Exception {
-        new Thread() {
-            @Override
-            public void run() {
-                for (;;) {
-//                    System.err.println(DEFAULT.toString());
-//                    System.err.println();
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            }
-        }.start();
-        ByteBufAllocator alloc = DEFAULT;
-        ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+        final int nThreads = 1;
+        final int size = DEFAULT_PAGE_SIZE / 2 + 1;
+
+        final ByteBufAllocator pooled = DEFAULT;
+        final ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+        final ExecutorService executor = Executors.newCachedThreadPool();
 
         for (;;) {
-            System.err.print("POOLED: ");
-            test(alloc);
+            test("POOLED", executor, nThreads, pooled, size);
             System.gc();
-            Thread.sleep(1000);
-            System.err.print("UNPOOLED: ");
-            test(unpooled);
+            Thread.sleep(2000);
+
+            test("UNPOOLED", executor, nThreads, unpooled, size);
             System.gc();
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         }
     }
 
-    private static void test(ByteBufAllocator alloc) {
-        final int size = DEFAULT_PAGE_SIZE / 2 + 1;
+    private static void test(
+            String name, ExecutorService executor, int nThreads, final ByteBufAllocator pooled, final int size) {
+
+        System.out.println(name + ": ");
+
+        final CountDownLatch l1 = new CountDownLatch(nThreads);
+        final CountDownLatch l2 = new CountDownLatch(1);
+        final CountDownLatch l3 = new CountDownLatch(nThreads);
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                l1.countDown();
+                try {
+                    l1.await();
+                    l2.await();
+                    test(pooled, size);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                l3.countDown();
+            }
+        };
+
+        for (int i = 0; i < nThreads; i ++) {
+            executor.execute(task);
+        }
+
+        try {
+            l1.await();
+            long startTime = System.nanoTime();
+            l2.countDown();
+            l3.await();
+            long endTime = System.nanoTime();
+            System.out.println((endTime - startTime) / 1000000 + " ms");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void test(ByteBufAllocator alloc, int size) {
         Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
         for (int i = 0; i < 2048 + 256; i ++) {
             queue.add(alloc.heapBuffer(size));
@@ -1107,7 +1147,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         long startTime = System.nanoTime();
         test0(alloc, queue, size);
         long endTime = System.nanoTime();
-        System.err.println(TimeUnit.NANOSECONDS.toMillis(endTime - startTime) + " ms");
+        System.out.println(TimeUnit.NANOSECONDS.toMillis(endTime - startTime) + " ms");
 
         for (ByteBuf b: queue) {
             b.unsafe().free();

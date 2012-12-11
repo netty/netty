@@ -16,7 +16,6 @@
 package io.netty.example.http.snoop;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -46,19 +45,6 @@ public class HttpSnoopServer {
              .localAddress(new InetSocketAddress(port));
 
             Channel ch = b.bind().sync().channel();
-            new Thread() {
-                @Override
-                public void run() {
-                    for (;;) {
-                        System.err.println(PooledByteBufAllocator.DEFAULT.toString());
-                        try {
-                            Thread.sleep(10000);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                }
-            }.start();
             ch.closeFuture().sync();
         } finally {
             b.shutdown();
