@@ -21,9 +21,6 @@ import io.netty.util.internal.StringUtil;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1077,88 +1074,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         ThreadCache(Arena<byte[]> heapArena, Arena<ByteBuffer> directArena) {
             this.heapArena = heapArena;
             this.directArena = directArena;
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        final int nThreads = 1;
-        final int size = DEFAULT_PAGE_SIZE / 2 + 1;
-
-        final ByteBufAllocator pooled = DEFAULT;
-        final ByteBufAllocator unpooled = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
-        final ExecutorService executor = Executors.newCachedThreadPool();
-
-        for (;;) {
-            test("POOLED", executor, nThreads, pooled, size);
-            System.gc();
-            Thread.sleep(2000);
-
-            test("UNPOOLED", executor, nThreads, unpooled, size);
-            System.gc();
-            Thread.sleep(2000);
-        }
-    }
-
-    private static void test(
-            String name, ExecutorService executor, int nThreads, final ByteBufAllocator pooled, final int size) {
-
-        System.out.println(name + ": ");
-
-        final CountDownLatch l1 = new CountDownLatch(nThreads);
-        final CountDownLatch l2 = new CountDownLatch(1);
-        final CountDownLatch l3 = new CountDownLatch(nThreads);
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                l1.countDown();
-                try {
-                    l1.await();
-                    l2.await();
-                    test(pooled, size);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                l3.countDown();
-            }
-        };
-
-        for (int i = 0; i < nThreads; i ++) {
-            executor.execute(task);
-        }
-
-        try {
-            l1.await();
-            long startTime = System.nanoTime();
-            l2.countDown();
-            l3.await();
-            long endTime = System.nanoTime();
-            System.out.println((endTime - startTime) / 1000000 + " ms");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void test(ByteBufAllocator alloc, int size) {
-        Deque<ByteBuf> queue = new ArrayDeque<ByteBuf>();
-        for (int i = 0; i < 2048 + 256; i ++) {
-            queue.add(alloc.heapBuffer(size));
-        }
-
-        long startTime = System.nanoTime();
-        test0(alloc, queue, size);
-        long endTime = System.nanoTime();
-        System.out.println(TimeUnit.NANOSECONDS.toMillis(endTime - startTime) + " ms");
-
-        for (ByteBuf b: queue) {
-            b.unsafe().free();
-        }
-        queue.clear();
-    }
-
-    private static void test0(ByteBufAllocator alloc, Deque<ByteBuf> queue, int size) {
-        for (int i = 0; i < 10000000; i ++) {
-            queue.add(alloc.heapBuffer(size));
-            queue.removeFirst().unsafe().free();
         }
     }
 }

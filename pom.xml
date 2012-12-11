@@ -187,6 +187,14 @@
         <version>${jboss.marshalling.version}</version>
         <scope>test</scope>
       </dependency>
+
+      <!-- Test dependencies for microbench -->
+      <dependency>
+        <groupId>com.google.caliper</groupId>
+        <artifactId>caliper</artifactId>
+        <version>0.5-rc1</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -222,7 +230,6 @@
       <version>1.6.6</version>
       <scope>test</scope>
     </dependency>
-    
   </dependencies>
 
   <build>
@@ -338,7 +345,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.12</version>
         <configuration>
-          <forkMode>once</forkMode>
+          <includes>
+             <include>**/*Test*.java</include>
+             <include>**/*Benchmark*.java</include>
+          </includes>
           <excludes>
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
@@ -347,7 +357,11 @@
           <argLine>
             -server 
             -dsa -da -ea:io.netty...
-            -XX:+AggressiveOpts -XX:+UseFastAccessorMethods
+            -XX:+AggressiveOpts
+            -XX:+TieredCompilation
+            -XX:+UseBiasedLocking
+            -XX:+UseFastAccessorMethods
+            -XX:+UseStringCache
             -XX:+OptimizeStringConcat
             -XX:+HeapDumpOnOutOfMemoryError
           </argLine>
@@ -425,9 +439,21 @@
           <version>2.2</version>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>build-helper-maven-plugin</artifactId>
+          <artifactId>maven-antrun-plugin</artifactId>
           <version>1.7</version>
+          <dependencies>
+            <dependency>
+              <groupId>ant-contrib</groupId>
+              <artifactId>ant-contrib</artifactId>
+              <version>1.0b3</version>
+              <exclusions>
+                <exclusion>
+                  <groupId>ant</groupId>
+                  <artifactId>ant</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
