@@ -33,6 +33,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.Timeout;
+import org.jboss.netty.util.Timer;
+import org.jboss.netty.util.TimerTask;
 import org.jboss.netty.util.internal.DetectionUtil;
 import org.jboss.netty.util.internal.NonReentrantLock;
 
@@ -50,6 +53,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -209,6 +213,10 @@ public class SslHandler extends FrameDecoder
 
     private int packetLength = Integer.MIN_VALUE;
 
+    private final Timer timer;
+    private final long handshakeTimeoutInMillis;
+    private Timeout handshakeTimeout;
+
     /**
      * Creates a new instance.
      *
@@ -314,6 +322,33 @@ public class SslHandler extends FrameDecoder
      *        that {@link SSLEngine#getDelegatedTask()} will return
      */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor) {
+        this(engine, bufferPool, startTls, delegatedTaskExecutor, null, 0);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param engine
+     *        the {@link SSLEngine} this handler will use
+     * @param bufferPool
+     *        the {@link SslBufferPool} where this handler will acquire
+     *        the buffers required by the {@link SSLEngine}
+     * @param startTls
+     *        {@code true} if the first write request shouldn't be encrypted
+     *        by the {@link SSLEngine}
+     * @param delegatedTaskExecutor
+     *        the {@link Executor} which will execute the delegated task
+     *        that {@link SSLEngine#getDelegatedTask()} will return
+     * @param timer
+     *        the {@link Timer} which will be used to process the timeout of the {@link #handshake()}.
+     *        Be aware that the given {@link Timer} will not get stopped automaticly, so it is up to you to cleanup
+     *        once you not need it anymore
+     * @param handshakeTimeoutInMillis
+     *        the time in milliseconds after whic the {@link #handshake()}  will be failed, and so the future notified
+     *
+     */
+    public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor,
+                      Timer timer, long handshakeTimeoutInMillis) {
         if (engine == null) {
             throw new NullPointerException("engine");
         }
@@ -323,10 +358,16 @@ public class SslHandler extends FrameDecoder
         if (delegatedTaskExecutor == null) {
             throw new NullPointerException("delegatedTaskExecutor");
         }
+        if (timer == null && handshakeTimeoutInMillis > 0) {
+            throw new IllegalArgumentException("No Timer was given but a handshakeTimeoutInMillis, need both or none");
+        }
+
         this.engine = engine;
         this.bufferPool = bufferPool;
         this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
+        this.timer = timer;
+        this.handshakeTimeoutInMillis = handshakeTimeoutInMillis;
     }
 
     /**
@@ -348,7 +389,7 @@ public class SslHandler extends FrameDecoder
         }
 
         ChannelHandlerContext ctx = this.ctx;
-        Channel channel = ctx.getChannel();
+        final Channel channel = ctx.getChannel();
         ChannelFuture handshakeFuture;
         Exception exception = null;
 
@@ -361,6 +402,20 @@ public class SslHandler extends FrameDecoder
                     engine.beginHandshake();
                     runDelegatedTasks();
                     handshakeFuture = this.handshakeFuture = future(channel);
+                    if (handshakeTimeoutInMillis > 0) {
+                        handshakeTimeout = timer.newTimeout(new TimerTask() {
+                            public void run(Timeout timeout) throws Exception {
+                                ChannelFuture future = SslHandler.this.handshakeFuture;
+                                if (future != null && future.isDone()) {
+                                    return;
+                                }
+
+                                setHandshakeFailure(channel, new SSLException("Handshake did not complete within " +
+                                                handshakeTimeoutInMillis + "ms"));
+                            }
+                        }, handshakeTimeoutInMillis, TimeUnit.MILLISECONDS);
+                    }
+
                 } catch (Exception e) {
                     handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
                     exception = e;
@@ -467,6 +522,15 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
+     * Return the timeout (in ms) after which the {@link ChannelFuture} of {@link #handshake()} will be failed, while
+     * a handshake is in progress
+     *
+     */
+    public long getHandshakeTimeout() {
+        return handshakeTimeoutInMillis;
+    }
+
+    /**
      * If set to {@code true}, the {@link Channel} will automatically get closed
      * one a {@link SSLException} was caught. This is most times what you want, as after this
      * its almost impossible to recover.
@@ -543,6 +607,10 @@ public class SslHandler extends FrameDecoder
         // been closed during handshake.
         synchronized (handshakeLock) {
             if (handshaking) {
+                if (handshakeTimeout != null) {
+                    // cancel the task as we will fail the handshake future now
+                    handshakeTimeout.cancel();
+                }
                 handshakeFuture.setFailure(new ClosedChannelException());
             }
         }
@@ -563,7 +631,6 @@ public class SslHandler extends FrameDecoder
             }
         }
     }
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
@@ -1262,6 +1329,9 @@ public class SslHandler extends FrameDecoder
             if (handshakeFuture == null) {
                 handshakeFuture = future(channel);
             }
+            if (handshakeTimeout != null) {
+                handshakeTimeout.cancel();
+            }
         }
 
         handshakeFuture.setSuccess();
@@ -1277,6 +1347,11 @@ public class SslHandler extends FrameDecoder
 
             if (handshakeFuture == null) {
                 handshakeFuture = future(channel);
+            }
+
+            // cancel the timeout now
+            if (handshakeTimeout != null) {
+                handshakeTimeout.cancel();
             }
 
             // Release all resources such as internal buffers that SSLEngine
