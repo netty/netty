@@ -26,6 +26,13 @@ import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
 public final class WebSocketClientHandshakerFactory {
 
     /**
+     * Private constructor so this static class cannot be instanced.
+     */
+    private WebSocketClientHandshakerFactory() {
+        return;
+    }
+
+    /**
      * Creates a new handshaker.
      *
      * @param webSocketURL
