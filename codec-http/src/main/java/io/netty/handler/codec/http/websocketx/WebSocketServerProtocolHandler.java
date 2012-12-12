@@ -29,15 +29,15 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket server.
- * 
+ *
  * It takes care of websocket handshaking as well as processing of control frames (Close, Ping, Pong). Text and Binary
  * data frames are passed to the next handler in the pipeline (implemented by you) for processing.
- * 
+ *
  * See <tt>io.netty.example.http.websocketx.html5.WebSocketServer</tt> for usage.
- * 
- * The implementation of this handler assumes that you just want to run  a websocket server and not process other types 
+ *
+ * The implementation of this handler assumes that you just want to run  a websocket server and not process other types
  * HTTP requests (like GET and POST). If you wish to support both HTTP requests and websockets in the one server, refer
- * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.  
+ * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  */
 public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandlerAdapter<WebSocketFrame> {
 
