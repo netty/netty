@@ -23,6 +23,7 @@ package org.jboss.netty.util.internal;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Enumeration;
@@ -355,7 +356,8 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
 
         boolean containsValue(Object value) {
             if (count != 0) { // read-volatile
-                for (HashEntry<K, V> e: table) {
+                HashEntry<K, V>[] tab = table;
+                for (HashEntry<K, V> e: tab) {
                     for (; e != null; e = e.next) {
                         V opaque = e.value();
                         V v;
@@ -515,9 +517,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
                 }
             }
             table = newTable;
-            for (int i = 0; i < oldCapacity; ++i) {
-              oldTable[i] = null;
-            }
+            Arrays.fill(oldTable, null);
             return reduce;
         }
 
