@@ -29,16 +29,12 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 /**
- * Handles the HTTP handshake (the HTTP Upgrade request)
+ * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
 public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(WebSocketServerProtocolHandshakeHandler.class);
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
