@@ -79,7 +79,7 @@ public class WebSocketClient {
             // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
             final WebSocketClientHandler handler =
                     new WebSocketClientHandler(
-                            new WebSocketClientHandshakerFactory().newHandshaker(
+                            WebSocketClientHandshakerFactory.newHandshaker(
                                     uri, WebSocketVersion.V13, null, false, customHeaders));
 
             b.group(new NioEventLoopGroup())
