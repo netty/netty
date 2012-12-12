@@ -23,7 +23,7 @@ import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
 /**
  * Instances the appropriate handshake class to use for clients
  */
-public class WebSocketClientHandshakerFactory {
+public final class WebSocketClientHandshakerFactory {
 
     /**
      * Creates a new handshaker.
@@ -40,7 +40,7 @@ public class WebSocketClientHandshakerFactory {
      * @param customHeaders
      *            Custom HTTP headers to send during the handshake
      */
-    public WebSocketClientHandshaker newHandshaker(
+    public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) {
         return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, 65536);
@@ -64,7 +64,7 @@ public class WebSocketClientHandshakerFactory {
      *            Maximum allowable frame payload length. Setting this value to your application's
      *            requirement may reduce denial of service attacks using long data frames.
      */
-    public WebSocketClientHandshaker newHandshaker(
+    public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders, int maxFramePayloadLength) {
         if (version == V13) {
