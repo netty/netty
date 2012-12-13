@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -347,8 +348,8 @@ public class SslHandler extends FrameDecoder
             throw new IllegalStateException("renegotiation disabled");
         }
 
-        ChannelHandlerContext ctx = this.ctx;
-        Channel channel = ctx.getChannel();
+        final ChannelHandlerContext ctx = this.ctx;
+        final Channel channel = ctx.getChannel();
         ChannelFuture handshakeFuture;
         Exception exception = null;
 
@@ -370,7 +371,20 @@ public class SslHandler extends FrameDecoder
 
         if (exception == null) { // Began handshake successfully.
             try {
-                wrapNonAppData(ctx, channel);
+                final ChannelFuture hsFuture = handshakeFuture;
+                wrapNonAppData(ctx, channel).addListener(new ChannelFutureListener() {
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            Throwable cause = future.getCause();
+                            hsFuture.setFailure(cause);
+
+                            fireExceptionCaught(ctx, cause);
+                            if (closeOnSSLException) {
+                                Channels.close(ctx, future(channel));
+                            }
+                        }
+                    }
+                });
             } catch (SSLException e) {
                 handshakeFuture.setFailure(e);
 
@@ -1104,6 +1118,7 @@ public class SslHandler extends FrameDecoder
                         needsHandshake = true;
                     }
                 }
+
                 if (needsHandshake) {
                     handshake();
                 }
