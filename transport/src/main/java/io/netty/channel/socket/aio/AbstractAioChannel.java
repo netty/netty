@@ -17,7 +17,6 @@ package io.netty.channel.socket.aio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 
@@ -30,8 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 abstract class AbstractAioChannel extends AbstractChannel {
 
-    protected final AioEventLoopGroup group;
-    private final AsynchronousChannel ch;
+    protected AsynchronousChannel ch;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -41,10 +39,9 @@ abstract class AbstractAioChannel extends AbstractChannel {
     protected ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
-    protected AbstractAioChannel(Channel parent, Integer id, AioEventLoopGroup group, AsynchronousChannel ch) {
+    protected AbstractAioChannel(Channel parent, Integer id, AsynchronousChannel ch) {
         super(parent, id);
         this.ch = ch;
-        this.group = group;
     }
 
     @Override
@@ -58,21 +55,22 @@ abstract class AbstractAioChannel extends AbstractChannel {
     }
 
     protected AsynchronousChannel javaChannel() {
+        if (ch == null) {
+            throw new IllegalStateException("Try to access Channel before eventLoop was registered");
+        }
         return ch;
     }
 
     @Override
     public boolean isOpen() {
+        if (ch == null) {
+            return true;
+        }
         return ch.isOpen();
     }
 
     @Override
     protected Runnable doRegister() throws Exception {
-        if (eventLoop().parent() != group) {
-            throw new ChannelException(
-                    getClass().getSimpleName() + " must be registered to the " +
-                    AioEventLoopGroup.class.getSimpleName() + " which was specified in the constructor.");
-        }
         return null;
     }
 
