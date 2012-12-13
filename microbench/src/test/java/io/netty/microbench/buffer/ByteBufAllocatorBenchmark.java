@@ -31,7 +31,7 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
     private static final ByteBufAllocator POOLED_ALLOCATOR_HEAP = PooledByteBufAllocator.DEFAULT;
     private static final ByteBufAllocator POOLED_ALLOCATOR_DIRECT = new PooledByteBufAllocator(true);
 
-    @Param({"0", "256", "1024", "4096", "16384"})
+    @Param({"0", "256", "1024", "4096", "16384", "65536"})
     private int size;
 
     @Param
