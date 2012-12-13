@@ -29,7 +29,6 @@ public final class WebSocketClientHandshakerFactory {
      * Private constructor so this static class cannot be instanced.
      */
     private WebSocketClientHandshakerFactory() {
-        return;
     }
 
     /**
