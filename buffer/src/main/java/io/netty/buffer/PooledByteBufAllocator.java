@@ -174,7 +174,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private final ChunkList<T> q075;
         private final ChunkList<T> q100;
 
-        // TODO: Test if addingd padding helps under contention (ThreadCache, Arena, ChunkList, Chunk, and Subpage)
+        // TODO: Test if adding padding helps under contention (ThreadCache, Arena, ChunkList, Chunk, and Subpage)
         //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
         protected Arena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
