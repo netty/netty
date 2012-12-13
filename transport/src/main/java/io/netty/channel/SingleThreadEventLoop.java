@@ -15,9 +15,19 @@
  */
 package io.netty.channel;
 
+import io.netty.monitor.CounterMonitor;
+import io.netty.monitor.EventRateMonitor;
+import io.netty.monitor.MonitorName;
+import io.netty.monitor.MonitorRegistries;
+
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
+    protected CounterMonitor channelCounter = MonitorRegistries.instance()
+            .unique().newCounterMonitor(new MonitorName(getClass(), "total-channels-registered"));
+    protected EventRateMonitor loopTimer = MonitorRegistries.instance().unique().newEventRateMonitor(
+            new MonitorName(getClass(), "loop-execution-time"), TimeUnit.MILLISECONDS);
 
     protected SingleThreadEventLoop(
             EventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
@@ -60,6 +70,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
                 }
             });
         }
+        channelCounter.inc();
         return future;
     }
 }

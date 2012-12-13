@@ -58,7 +58,8 @@ interchange format, which can be obtained at:
   * HOMEPAGE:
     * http://code.google.com/p/protobuf/
 
-This product optionally depends on 'SLF4J', a simple logging facade for Java,
+This product optionally depends on 'SLF4J', a simple logging facade for Java.
+The monitor registries implementation is based on the approach used by SLF4J,
 which can be obtained at:
 
   * LICENSE:
