@@ -21,7 +21,6 @@ import io.netty.util.internal.StringUtil;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
@@ -144,25 +143,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return directBuffer();
     }
 
-    @Override
-    public void shutdown() {
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return false;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        return false;
-    }
-
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        return false;
-    }
-
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(heapArenas.length);
@@ -187,14 +167,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private final Deque<Subpage<T>>[] tinySubpagePools;
         private final Deque<Subpage<T>>[] smallSubpagePools;
 
-        // TODO: Destroy the old chunks in chunks0 periodically.
-
-        private final ChunkList<T> chunks50to100;
-        private final ChunkList<T> chunks25to75;
-        private final ChunkList<T> chunks1to50;
-        private final ChunkList<T> chunks0;
-        private final ChunkList<T> chunks75to100;
-        private final ChunkList<T> chunks100;
+        private final ChunkList<T> q050;
+        private final ChunkList<T> q025;
+        private final ChunkList<T> q000;
+        private final ChunkList<T> qInit;
+        private final ChunkList<T> q075;
+        private final ChunkList<T> q100;
 
         // TODO: Test if addingd padding helps under contention (ThreadCache, Arena, ChunkList, Chunk, and Subpage)
         //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -218,17 +196,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 smallSubpagePools[i] = new ArrayDeque<Subpage<T>>();
             }
 
-            chunks100 = new ChunkList<T>(null, 100, Integer.MAX_VALUE);
-            chunks75to100 = new ChunkList<T>(chunks100, 75, 100);
-            chunks50to100 = new ChunkList<T>(chunks75to100, 50, 100);
-            chunks25to75 = new ChunkList<T>(chunks50to100, 25, 75);
-            chunks1to50 = new ChunkList<T>(chunks25to75, 1, 50);
-            chunks0 = new ChunkList<T>(chunks1to50, 0, 1);
-            chunks100.prevList = chunks75to100;
-            chunks75to100.prevList = chunks50to100;
-            chunks50to100.prevList = chunks25to75;
-            chunks25to75.prevList = chunks1to50;
-            chunks1to50.prevList = chunks0;
+            q100 = new ChunkList<T>(this, null, 100, Integer.MAX_VALUE);
+            q075 = new ChunkList<T>(this, q100, 75, 100);
+            q050 = new ChunkList<T>(this, q075, 50, 100);
+            q025 = new ChunkList<T>(this, q050, 25, 75);
+            q000 = new ChunkList<T>(this, q025, 1, 50);
+            qInit = new ChunkList<T>(this, q000, Integer.MIN_VALUE, 25);
+
+            q100.prevList = q075;
+            q075.prevList = q050;
+            q050.prevList = q025;
+            q025.prevList = q000;
+            q000.prevList = null;
+            qInit.prevList = qInit;
         }
 
         PooledByteBuf<T> allocate(ThreadCache cache, int minCapacity, int maxCapacity) {
@@ -284,9 +264,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         private synchronized void allocateNormal(PooledByteBuf<T> buf, int capacity) {
-            if (chunks50to100.allocate(buf, capacity) || chunks25to75.allocate(buf, capacity) ||
-                chunks1to50.allocate(buf, capacity)   || chunks0.allocate(buf, capacity) ||
-                chunks75to100.allocate(buf, capacity)) {
+            if (q050.allocate(buf, capacity) || q025.allocate(buf, capacity) ||
+                q000.allocate(buf, capacity) || qInit.allocate(buf, capacity) ||
+                q075.allocate(buf, capacity)) {
                 return;
             }
 
@@ -295,7 +275,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             long handle = c.allocate(capacity);
             assert handle > 0;
             c.initBuf(buf, handle);
-            chunks1to50.add(c);
+            qInit.add(c);
         }
 
         void free(PooledByteBuf<T> buf) {
@@ -398,29 +378,29 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         public synchronized String toString() {
             StringBuilder buf = new StringBuilder();
-            buf.append("Chunk(s) at 0%:");
+            buf.append("Chunk(s) at 0~25%:");
             buf.append(StringUtil.NEWLINE);
-            buf.append(chunks0);
+            buf.append(qInit);
             buf.append(StringUtil.NEWLINE);
             buf.append("Chunk(s) at 0~50%:");
             buf.append(StringUtil.NEWLINE);
-            buf.append(chunks1to50);
+            buf.append(q000);
             buf.append(StringUtil.NEWLINE);
             buf.append("Chunk(s) at 25~75%:");
             buf.append(StringUtil.NEWLINE);
-            buf.append(chunks25to75);
+            buf.append(q025);
             buf.append(StringUtil.NEWLINE);
             buf.append("Chunk(s) at 50~100%:");
             buf.append(StringUtil.NEWLINE);
-            buf.append(chunks50to100);
+            buf.append(q050);
             buf.append(StringUtil.NEWLINE);
             buf.append("Chunk(s) at 75~100%:");
             buf.append(StringUtil.NEWLINE);
-            buf.append(chunks75to100);
+            buf.append(q075);
             buf.append(StringUtil.NEWLINE);
             buf.append("Chunk(s) at 100%:");
             buf.append(StringUtil.NEWLINE);
-            buf.append(chunks100);
+            buf.append(q100);
             buf.append(StringUtil.NEWLINE);
             buf.append("tiny subpages:");
             for (int i = 1; i < tinySubpagePools.length; i ++) {
@@ -454,6 +434,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     private static final class ChunkList<T> {
+        private final Arena<T> arena;
         private final ChunkList<T> nextList;
         private ChunkList<T> prevList;
 
@@ -462,7 +443,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         private Chunk<T> head;
 
-        ChunkList(ChunkList<T> nextList, int minUsage, int maxUsage) {
+        ChunkList(Arena<T> arena, ChunkList<T> nextList, int minUsage, int maxUsage) {
+            this.arena = arena;
             this.nextList = nextList;
             this.minUsage = minUsage;
             this.maxUsage = maxUsage;
@@ -492,17 +474,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         void free(Chunk<T> chunk, long handle) {
-            if (!chunk.free(handle)) {
-                // Chunk got empty.
-                chunk.timestamp = System.nanoTime();
-            }
-
-            int usage = chunk.usage();
-            if (usage < minUsage) {
+            chunk.free(handle);
+            if (chunk.usage() < minUsage) {
                 remove(chunk);
-                prevList.add(chunk);
-                if (usage == 0) {
-                    chunk.timestamp = System.nanoTime();
+                if (prevList == null) {
+                    assert chunk.usage() == 0;
+                    arena.destroyChunk(chunk);
+                } else {
+                    prevList.add(chunk);
                 }
             }
         }
@@ -658,8 +637,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private ChunkList<T> parent;
         private Chunk<T> prev;
         private Chunk<T> next;
-
-        private long timestamp; // Arena updates and checks this timestamp to determine when to destroy this chunk.
 
         Chunk(Arena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             this.arena = arena;
@@ -830,11 +807,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             return -1;
         }
 
-        /**
-         * @return {@code true} if this chunk is in use.
-         *         {@code false} if this chunk is not used by its arena and thus it's OK to be deallocated.
-         */
-        private boolean free(long handle) {
+        private void free(long handle) {
             int memoryMapIdx = (int) handle;
             int bitmapIdx = (int) (handle >>> 32);
 
@@ -845,7 +818,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 Subpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
                 assert subpage != null && subpage.doNotDestroy;
                 if (subpage.free(bitmapIdx & 0x3FFFFFFF)) {
-                    return true;
+                    return;
                 }
             } else {
                 assert state == ST_ALLOCATED : "state: " + state;
@@ -859,7 +832,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 memoryMap[memoryMapIdx] = val & ~3 | ST_UNUSED;
                 if (memoryMapIdx == 1) {
                     assert freeBytes == chunkSize;
-                    return false;
+                    return;
                 }
 
                 if ((memoryMap[siblingIdx(memoryMapIdx)] & 3) != ST_UNUSED) {
@@ -869,8 +842,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                 memoryMapIdx = parentIdx(memoryMapIdx);
                 val = memoryMap[memoryMapIdx];
             }
-
-            return true;
         }
 
         private void initBuf(PooledByteBuf<T> buf, long handle) {

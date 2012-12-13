@@ -17,8 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.internal.DetectionUtil;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
  */
@@ -48,26 +46,5 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         return heapBuffer();
-    }
-
-    @Override
-    public void shutdown() {
-        throw new IllegalStateException(getClass().getName() + " cannot be shut down.");
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return false;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        return false;
-    }
-
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        Thread.sleep(unit.toMillis(timeout));
-        return false;
     }
 }
