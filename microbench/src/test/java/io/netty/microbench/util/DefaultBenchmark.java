@@ -16,6 +16,7 @@
 
 package io.netty.microbench.util;
 
+import com.google.caliper.CaliperRc;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import org.junit.Test;
@@ -25,6 +26,8 @@ import java.io.File;
 import static org.junit.Assert.*;
 
 public abstract class DefaultBenchmark extends SimpleBenchmark {
+
+    private static boolean warned;
 
     private final int trials;
     private final int warmupMillis;
@@ -72,27 +75,54 @@ public abstract class DefaultBenchmark extends SimpleBenchmark {
             fail("not a directory: " + reportDir.getAbsolutePath());
         }
 
-        deleteOldReports(reportDir);
+        boolean deleted = deleteOldReports(reportDir);
+
+        if (!warned) {
+            CaliperRc caliperrc = CaliperRc.INSTANCE;
+            if (caliperrc.getApiKey() == null || caliperrc.getPostUrl() == null) {
+                warned = true;
+                System.out.println();
+                System.out.println(" Cannot read the configuration properties from .caliperrc.");
+                System.out.println(" Please follow the instructions at:");
+                System.out.println();
+                System.out.println("   * http://code.google.com/p/caliper/wiki/OnlineResults");
+                System.out.println();
+                System.out.println(" to upload and browse the benchmark results.");
+            }
+        }
+
+        if (deleted || warned) {
+            // Insert a pretty newline.
+            System.out.println();
+        }
 
         new Runner().run(
                 "--trials", String.valueOf(trials),
                 "--warmupMillis", String.valueOf(warmupMillis),
                 "--runMillis", String.valueOf(runMillis),
-                "--captureVmLog",
                 "--saveResults", reportDir.getAbsolutePath(),
+                "--captureVmLog",
                 getClass().getName());
     }
 
-    private void deleteOldReports(File reportDir) {
+    private boolean deleteOldReports(File reportDir) {
         final String prefix = getClass().getName() + '.';
         final String suffix = ".json";
+
+        boolean deleted = false;
         for (File f: reportDir.listFiles()) {
             String name = f.getName();
             if (name.startsWith(prefix) && name.endsWith(suffix)) {
                 if (f.delete()) {
+                    if (!deleted) {
+                        deleted = true;
+                        System.out.println();
+                    }
                     System.out.println(" Deleted old report: " + name.substring(prefix.length(), name.length() - suffix.length()));
                 }
             }
         }
+
+        return deleted;
     }
 }
