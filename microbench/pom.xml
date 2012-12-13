@@ -53,45 +53,6 @@
           <skip>true</skip>
         </configuration>
       </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>upload-caliper-reports</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <failOnError>false</failOnError>
-              <target>
-                <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                <if>
-                  <available file="${user.home}/.caliperrc"/>
-                  <then>
-                    <java
-                      classname="com.google.caliper.Runner"
-                      classpathref="maven.test.classpath">
-                      <arg value="--uploadResults"/>
-                      <arg value="${project.build.directory}/caliper-reports"/>
-                    </java>
-                  </then>
-                  <else>
-                    <echo>
-No .caliperrc file found; not uploading the benchmark report.
-Please follow the instructions at:
-
- * http://code.google.com/p/caliper/wiki/OnlineResults
-
-to upload and browse the benchmark results.
-                    </echo>
-                  </else>
-                </if>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 </project>
