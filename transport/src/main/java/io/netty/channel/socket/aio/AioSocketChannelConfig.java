@@ -34,7 +34,7 @@ import static io.netty.channel.ChannelOption.*;
 final class AioSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    private final NetworkChannel channel;
+    volatile NetworkChannel channel;
     private volatile boolean allowHalfClosure;
     private volatile long readTimeoutInMillis;
     private volatile long writeTimeoutInMillis;
@@ -43,10 +43,6 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
      * Creates a new instance.
      */
     AioSocketChannelConfig(NetworkChannel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-
         this.channel = channel;
     }
 
@@ -128,6 +124,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getReceiveBufferSize() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.SO_RCVBUF);
         } catch (IOException e) {
@@ -137,6 +134,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getSendBufferSize() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.SO_SNDBUF);
         } catch (IOException e) {
@@ -146,6 +144,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getSoLinger() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.SO_LINGER);
         } catch (IOException e) {
@@ -155,6 +154,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getTrafficClass() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.IP_TOS);
         } catch (IOException e) {
@@ -164,6 +164,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isKeepAlive() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.SO_KEEPALIVE);
         } catch (IOException e) {
@@ -173,6 +174,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isReuseAddress() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
         } catch (IOException e) {
@@ -182,6 +184,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isTcpNoDelay() {
+        channelNull();
         try {
             return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
         } catch (IOException e) {
@@ -191,6 +194,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setKeepAlive(boolean keepAlive) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
         } catch (IOException e) {
@@ -206,6 +210,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {
@@ -215,6 +220,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReuseAddress(boolean reuseAddress) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
         } catch (IOException e) {
@@ -224,6 +230,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setSendBufferSize(int sendBufferSize) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
         } catch (IOException e) {
@@ -233,6 +240,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setSoLinger(int soLinger) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.SO_LINGER, soLinger);
         } catch (IOException e) {
@@ -242,6 +250,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
         } catch (IOException e) {
@@ -251,6 +260,7 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setTrafficClass(int trafficClass) {
+        channelNull();
         try {
             channel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
         } catch (IOException e) {
@@ -312,5 +322,11 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
     @Override
     public void setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
+    }
+
+    private void channelNull() {
+        if (channel == null) {
+            throw new IllegalStateException("Channel not set while try to change options on it");
+        }
     }
 }

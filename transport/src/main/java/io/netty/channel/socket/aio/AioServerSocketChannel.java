@@ -66,8 +66,9 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     public AioServerSocketChannel(AioEventLoopGroup parentGroup, AioEventLoopGroup childGroup) {
-        super(null, null, parentGroup, newSocket(parentGroup.group));
+        super(null, null, newSocket(parentGroup.group));
         this.childGroup = childGroup;
+
         config = new AioServerSocketChannelConfig(javaChannel());
     }
 
@@ -153,7 +154,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
-                    new AioSocketChannel(channel, null, channel.childGroup, ch));
+                    new AioSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
         }
 

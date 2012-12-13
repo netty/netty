@@ -60,7 +60,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private final AioSocketChannelConfig config;
+    private AioSocketChannelConfig config;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
@@ -78,20 +78,19 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     };
 
-    public AioSocketChannel(AioEventLoopGroup eventLoop) {
-        this(null, null, eventLoop, newSocket(eventLoop.group));
+    public AioSocketChannel() {
+        this(null, null, null);
     }
 
     AioSocketChannel(
-            AioServerSocketChannel parent, Integer id,
-            AioEventLoopGroup eventLoop, AsynchronousSocketChannel ch) {
-        super(parent, id, eventLoop, ch);
-        config = new AioSocketChannelConfig(ch);
+            AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
+        super(parent, id, ch);
+        config = new AioSocketChannelConfig(null);
     }
 
     @Override
     public boolean isActive() {
-        return javaChannel().isOpen() && remoteAddress0() != null;
+        return ch != null && javaChannel().isOpen() && remoteAddress0() != null;
     }
 
     @Override
@@ -176,6 +175,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     @Override
     protected Runnable doRegister() throws Exception {
         super.doRegister();
+        if (ch == null) {
+            ch = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
+            config.channel = javaChannel();
+        }
 
         if (remoteAddress() == null) {
             return null;
