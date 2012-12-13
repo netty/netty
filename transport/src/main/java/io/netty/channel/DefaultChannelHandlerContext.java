@@ -1252,7 +1252,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
                 if (out.writerIndex() > out.maxCapacity() - data.readableBytes()) {
                     // The target buffer is not going to be able to accept all data in the bridge.
-                    out.ensureWritableBytes(out.maxCapacity() - out.writerIndex());
+                    out.capacity(out.maxCapacity());
                     out.writeBytes(data, out.writableBytes());
                 } else {
                     exchangeBuf.remove();
