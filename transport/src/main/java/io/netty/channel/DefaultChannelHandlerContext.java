@@ -56,7 +56,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     final int flags;
     final AtomicBoolean readable = new AtomicBoolean(true);
 
-    EventExecutor executor; // not thread-safe but OK because it never changes once set.
+    // Will be set to null if no child executor should be used, otherwise it will be set to the
+    // child executor.
+    final EventExecutor executor;
 
     private MessageBuf<Object> inMsgBuf;
     private ByteBuf inByteBuf;
@@ -261,8 +263,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 pipeline.childExecutors.put(group, childExecutor);
             }
             executor = childExecutor;
-        } else if (channel.isRegistered()) {
-            executor = channel.eventLoop();
         } else {
             executor = null;
         }
@@ -442,7 +442,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public EventExecutor executor() {
         if (executor == null) {
-            return executor = channel.eventLoop();
+            return channel.eventLoop();
         } else {
             return executor;
         }
