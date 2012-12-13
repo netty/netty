@@ -276,7 +276,7 @@ public final class Unpooled {
             }
 
             if (!components.isEmpty()) {
-                return new DefaultCompositeByteBuf(ALLOC, maxNumComponents, components);
+                return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, components);
             }
         }
 
@@ -300,7 +300,7 @@ public final class Unpooled {
         default:
             for (ByteBuf b: buffers) {
                 if (b.readable()) {
-                    return new DefaultCompositeByteBuf(ALLOC, maxNumComponents, buffers);
+                    return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, buffers);
                 }
             }
         }
@@ -334,7 +334,7 @@ public final class Unpooled {
             }
 
             if (!components.isEmpty()) {
-                return new DefaultCompositeByteBuf(ALLOC, maxNumComponents, components);
+                return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, components);
             }
         }
 
@@ -352,7 +352,7 @@ public final class Unpooled {
      * Returns a new big-endian composite buffer with no components.
      */
     public static CompositeByteBuf compositeBuffer(int maxNumComponents) {
-        return new DefaultCompositeByteBuf(ALLOC, maxNumComponents);
+        return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents);
     }
 
     /**
