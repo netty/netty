@@ -140,7 +140,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     public ByteBuf ioBuffer() {
-        return directBuffer();
+        return directBuffer(0);
     }
 
     public String toString() {
@@ -189,7 +189,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             tinySubpagePools = new Deque[512 >>> 4];
             //noinspection unchecked
             smallSubpagePools = new Deque[pageShifts - 9];
-            for (int i = 1; i < tinySubpagePools.length; i ++) {
+            for (int i = 0; i < tinySubpagePools.length; i ++) {
                 tinySubpagePools[i] = new ArrayDeque<Subpage<T>>();
             }
             for (int i = 0; i < smallSubpagePools.length; i ++) {
@@ -307,8 +307,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         private int normalizeCapacity(int capacity) {
-            if (capacity <= 0 || capacity > chunkSize) {
-                throw new IllegalArgumentException("capacity: " + capacity + " (expected: 1-" + chunkSize + ')');
+            if (capacity < 0 || capacity > chunkSize) {
+                throw new IllegalArgumentException("capacity: " + capacity + " (expected: 0-" + chunkSize + ')');
             }
 
             if ((capacity & 0xFFFFFE00) != 0) { // >= 512
@@ -942,6 +942,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         void init(int elemSize) {
             doNotDestroy = true;
             this.elemSize = elemSize;
+            if (elemSize == 0) {
+                return;
+            }
+
             maxNumElems = numAvail = pageSize / elemSize;
             nextAvail = 0;
             bitmapLength = maxNumElems >>> 6;
@@ -958,6 +962,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
          * Returns the bitmap index of the subpage allocation.
          */
         long allocate() {
+            if (elemSize == 0) {
+                return toHandle(0);
+            }
+
             if (numAvail == 0 || !doNotDestroy) {
                 return -1;
             }
@@ -1009,6 +1017,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
          *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
          */
         boolean free(int bitmapIdx) {
+            if (elemSize == 0) {
+                return true;
+            }
+
             int q = bitmapIdx >>> 6;
             int r = bitmapIdx & 63;
             assert (bitmap[q] >>> r & 1) != 0;

@@ -42,9 +42,9 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
     @Override
     public ByteBuf ioBuffer() {
         if (DetectionUtil.canFreeDirectBuffer()) {
-            return directBuffer();
+            return directBuffer(0);
         }
 
-        return heapBuffer();
+        return heapBuffer(0);
     }
 }
