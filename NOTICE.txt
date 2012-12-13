@@ -50,6 +50,30 @@ zlib in pure Java, which can be obtained at:
   * HOMEPAGE:
     * http://www.jcraft.com/jzlib/
 
+This product contains a modified portion of 'Webbit', an event based  
+WebSocket and HTTP server, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.webbit.txt (BSD License)
+  * HOMEPAGE:
+    * https://github.com/joewalnes/webbit
+
+This product contains a modified portion of 'Caliper', Google's micro-
+benchmarking framework, which can be obtained at::
+
+  * LICENSE:
+    * license/LICENSE.caliper.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://code.google.com/p/caliper/
+
+This product optionally depends on 'Metrics', Yammer's JVM- and application-
+level metrics library, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.metrics.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://metrics.codahale.com/
+
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
@@ -57,6 +81,14 @@ interchange format, which can be obtained at:
     * license/LICENSE.protobuf.txt (New BSD License)
   * HOMEPAGE:
     * http://code.google.com/p/protobuf/
+
+This product optionally depends on 'JBoss Marshalling', an alternative Java
+serialization API, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
+  * HOMEPAGE:
+    * http://www.jboss.org/jbossmarshalling
 
 This product optionally depends on 'SLF4J', a simple logging facade for Java,
 which can be obtained at:
@@ -74,36 +106,27 @@ framework, which can be obtained at:
   * HOMEPAGE:
     * http://commons.apache.org/logging/
 
-This product optionally depends on 'Apache Log4J', a logging framework,
-which can be obtained at:
+This product optionally depends on 'Apache Log4J', a logging framework, which
+can be obtained at:
 
   * LICENSE:
     * license/LICENSE.log4j.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://logging.apache.org/log4j/
 
-This product optionally depends on 'JBoss Logging', a logging framework,
-which can be obtained at:
+This product optionally depends on 'JBoss Logging', a logging framework, which
+can be obtained at:
 
   * LICENSE:
     * license/LICENSE.jboss-logging.txt (GNU LGPL 2.1)
   * HOMEPAGE:
     * http://anonsvn.jboss.org/repos/common/common-logging-spi/
 
-This product optionally depends on 'Apache Felix', an open source OSGi
-framework implementation, which can be obtained at:
+This product optionally depends on 'OSGi Service Platform API', which can be
+obtained at:
 
   * LICENSE:
-    * license/LICENSE.felix.txt (Apache License 2.0)
+    * license/LICENSE.osgi.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://felix.apache.org/
+    * http://www.osgi.org/
 
-This product optionally depends on 'Webbit', a Java event based  
-WebSocket and HTTP server:
-
-  * LICENSE:
-    * license/LICENSE.webbit.txt (BSD License)
-  * HOMEPAGE:
-    * https://github.com/joewalnes/webbit
-
-    
