@@ -17,7 +17,6 @@
 package io.netty.buffer;
 
 import io.netty.buffer.ByteBuf.Unsafe;
-import io.netty.buffer.PooledByteBufAllocator.Chunk;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -26,8 +25,8 @@ import java.util.Queue;
 
 abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
 
-    Chunk<T> chunk;
-    long handle;
+    protected PoolChunk<T> chunk;
+    protected long handle;
     protected T memory;
     protected int offset;
     protected int length;
@@ -39,7 +38,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
         super(maxCapacity);
     }
 
-    void init(Chunk<T> chunk, long handle, T memory, int offset, int length) {
+    void init(PoolChunk<T> chunk, long handle, T memory, int offset, int length) {
         assert handle >= 0;
         this.chunk = chunk;
         this.handle = handle;
@@ -180,10 +179,10 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
     }
 
     private static final class Allocation<T> {
-        final Chunk<T> chunk;
+        final PoolChunk<T> chunk;
         final long handle;
 
-        Allocation(Chunk<T> chunk, long handle) {
+        Allocation(PoolChunk<T> chunk, long handle) {
             this.chunk = chunk;
             this.handle = handle;
         }
