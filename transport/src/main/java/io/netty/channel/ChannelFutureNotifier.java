@@ -16,22 +16,47 @@
 package io.netty.channel;
 
 /**
- * ChannelFutureListener implementation which takes another ChannelFuture and notifies it
- * once the operationComplete method was called.
+ * ChannelFutureListener implementation which takes other {@link ChannelFuture}(s) and notifies them on completion.
  */
 public final class ChannelFutureNotifier implements ChannelFutureListener {
-    private final ChannelFuture future;
 
-    public ChannelFutureNotifier(ChannelFuture future) {
-        this.future = future;
+    private final ChannelFuture[] futures;
+
+    public ChannelFutureNotifier(ChannelFuture... futures) {
+        if (futures == null) {
+            throw new NullPointerException("futures");
+        }
+        this.futures = futures.clone();
     }
 
     @Override
     public void operationComplete(ChannelFuture cf) throws Exception {
         if (cf.isSuccess()) {
-            future.setSuccess();
-        } else {
-            future.setFailure(cf.cause());
+            for (ChannelFuture f: futures) {
+                if (f == null) {
+                    break;
+                }
+                f.setSuccess();
+            }
+            return;
+        }
+
+        if (cf.isCancelled()) {
+            for (ChannelFuture f: futures) {
+                if (f == null) {
+                    break;
+                }
+                f.cancel();
+            }
+            return;
+        }
+
+        Throwable cause = cf.cause();
+        for (ChannelFuture f: futures) {
+            if (f == null) {
+                break;
+            }
+            f.setFailure(cause);
         }
     }
 }
