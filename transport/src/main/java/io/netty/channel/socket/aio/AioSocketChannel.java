@@ -26,7 +26,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -60,7 +59,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private AioSocketChannelConfig config;
+    private DefaultAioSocketChannelConfig config;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 
@@ -85,7 +84,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     AioSocketChannel(
             AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
         super(parent, id, ch);
-        config = new AioSocketChannelConfig(ch);
+        config = new DefaultAioSocketChannelConfig(ch);
     }
 
     @Override
@@ -523,7 +522,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public AioSocketChannelConfig config() {
         return config;
     }
 

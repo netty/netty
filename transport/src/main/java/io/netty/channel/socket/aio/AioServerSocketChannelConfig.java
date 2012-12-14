@@ -16,6 +16,8 @@
 package io.netty.channel.socket.aio;
 
 import static io.netty.channel.ChannelOption.*;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -94,8 +96,9 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public void setReuseAddress(boolean reuseAddress) {
+    public ServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        return this;
     }
 
     @Override
@@ -104,12 +107,13 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        return this;
     }
 
     @Override
-    public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+    public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         throw new UnsupportedOperationException();
     }
 
@@ -119,11 +123,12 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public void setBacklog(int backlog) {
+    public ServerSocketChannelConfig setBacklog(int backlog) {
         if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);
         }
         this.backlog = backlog;
+        return this;
     }
 
     private Object getOption(SocketOption option, Object defaultValue) {
@@ -177,5 +182,20 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         }
         // not needed anymore
         options = null;
+    }
+
+    @Override
+    public ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        return (ServerSocketChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+        return (ServerSocketChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+        return (ServerSocketChannelConfig) super.setAllocator(allocator);
     }
 }
