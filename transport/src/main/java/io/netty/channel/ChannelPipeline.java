@@ -346,7 +346,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * @throws NullPointerException
      *         if the specified handler is {@code null}
      */
-    void remove(ChannelHandler handler);
+    ChannelPipeline remove(ChannelHandler handler);
 
     /**
      * Removes the {@link ChannelHandler} with the specified name from this
@@ -410,7 +410,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      *         if the specified old handler, new name, or new handler is
      *         {@code null}
      */
-    void replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
+    ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
 
     /**
      * Replaces the {@link ChannelHandler} of the specified name with a new

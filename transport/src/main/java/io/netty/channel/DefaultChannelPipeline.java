@@ -341,8 +341,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void remove(ChannelHandler handler) {
+    public ChannelPipeline remove(ChannelHandler handler) {
         remove(getContextOrDie(handler));
+        return this;
     }
 
     @Override
@@ -478,8 +479,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
+    public ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
         replace(getContextOrDie(oldHandler), newName, newHandler);
+        return this;
     }
 
     @Override
