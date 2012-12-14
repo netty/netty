@@ -42,7 +42,19 @@ public class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
+    public ChannelFuture addListeners(final ChannelFutureListener... listeners) {
+        fail();
+        return this;
+    }
+
+    @Override
     public ChannelFuture removeListener(ChannelFutureListener listener) {
+        // NOOP
+        return this;
+    }
+
+    @Override
+    public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
         // NOOP
         return this;
     }
