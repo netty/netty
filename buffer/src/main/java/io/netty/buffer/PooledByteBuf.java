@@ -119,6 +119,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
 
     @Override
     public void suspendIntermediaryDeallocations() {
+        assert !isFreed();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<Allocation<T>>(2);
         }
