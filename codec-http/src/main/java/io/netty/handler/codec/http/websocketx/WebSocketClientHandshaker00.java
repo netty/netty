@@ -91,7 +91,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake(Channel channel, final ChannelFuture handshakeFuture) {
         // Make keys
         int spaces1 = WebSocketUtil.randomNumber(1, 12);
         int spaces2 = WebSocketUtil.randomNumber(1, 12);
@@ -173,9 +173,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         request.setHeader(Names.CONTENT_LENGTH, key3.length);
         request.setContent(Unpooled.copiedBuffer(key3));
 
-        final ChannelFuture handshakeFuture = channel.newFuture();
         ChannelFuture future = channel.write(request);
-
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {

@@ -29,6 +29,8 @@ import java.util.Set;
  */
 public abstract class WebSocketServerHandshaker {
 
+    private static final String[] EMPTY_ARRAY = new String[0];
+
     private final String webSocketUrl;
 
     private final String[] subprotocols;
@@ -64,7 +66,7 @@ public abstract class WebSocketServerHandshaker {
             }
             this.subprotocols = subprotocolArray;
         } else {
-            this.subprotocols = new String[0];
+            this.subprotocols = EMPTY_ARRAY;
         }
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
@@ -109,7 +111,24 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *            HTTP Request
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req);
+    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return handshake(channel, req, channel.newFuture());
+    }
+
+    /**
+     * Performs the opening handshake
+     *
+     * @param channel
+     *            Channel
+     * @param req
+     *            HTTP Request
+     * @param future
+     *            the {@link ChannelFuture} to be notified when the opening handshake is done
+     */
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future);
 
     /**
      * Performs the closing handshake
@@ -119,7 +138,24 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received
      */
-    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame);
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return close(channel, frame, channel.newFuture());
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param channel
+     *            Channel
+     * @param frame
+     *            Closing Frame that was received
+     * @param future
+     *            the {@link ChannelFuture} to be notified when the closing handshake is done
+     */
+    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future);
 
     /**
      * Selects the first matching supported sub protocol
