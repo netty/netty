@@ -46,6 +46,7 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
         setStatus(status);
     }
 
+    @Deprecated
     public int getStreamID() {
         return getStreamId();
     }
@@ -54,6 +55,7 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
         return streamId;
     }
 
+    @Deprecated
     public void setStreamID(int streamId) {
         setStreamId(streamId);
     }

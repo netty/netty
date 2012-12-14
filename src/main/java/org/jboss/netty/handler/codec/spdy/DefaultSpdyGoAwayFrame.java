@@ -55,6 +55,7 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         setStatus(status);
     }
 
+    @Deprecated
     public int getLastGoodStreamID() {
         return getLastGoodStreamId();
     }
@@ -63,6 +64,7 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         return lastGoodStreamId;
     }
 
+    @Deprecated
     public void setLastGoodStreamID(int lastGoodStreamId) {
         setLastGoodStreamId(lastGoodStreamId);
     }

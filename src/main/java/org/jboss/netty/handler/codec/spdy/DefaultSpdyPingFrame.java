@@ -33,6 +33,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
         setId(id);
     }
 
+    @Deprecated
     public int getID() {
         return getId();
     }
@@ -41,6 +42,7 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
         return id;
     }
 
+    @Deprecated
     public void setID(int id) {
         setId(id);
     }

@@ -46,6 +46,7 @@ public class FailedChannelFuture extends CompleteChannelFuture {
         return false;
     }
 
+    @Deprecated
     public ChannelFuture rethrowIfFailed() throws Exception {
         if (cause instanceof Exception) {
             throw (Exception) cause;

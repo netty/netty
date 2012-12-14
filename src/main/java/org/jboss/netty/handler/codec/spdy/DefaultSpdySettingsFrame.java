@@ -29,6 +29,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     private boolean clear;
     private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
 
+    @Deprecated
     public Set<Integer> getIDs() {
         return getIds();
     }
@@ -77,6 +78,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         }
     }
 
+    @Deprecated
     public boolean persistValue(int id) {
         return isPersistValue(id);
     }

@@ -38,6 +38,7 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
         setStreamId(streamId);
     }
 
+    @Deprecated
     public int getStreamID() {
         return getStreamId();
     }
@@ -46,6 +47,7 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
         return streamId;
     }
 
+    @Deprecated
     public void setStreamID(int streamId) {
         setStreamId(streamId);
     }
@@ -66,10 +68,12 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
         this.last = last;
     }
 
+    @Deprecated
     public boolean isCompressed() {
         return compressed;
     }
 
+    @Deprecated
     public void setCompressed(boolean compressed) {
         this.compressed = compressed;
     }

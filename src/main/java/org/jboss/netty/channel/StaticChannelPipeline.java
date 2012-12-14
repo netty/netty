@@ -284,7 +284,9 @@ public class StaticChannelPipeline implements ChannelPipeline {
         if (ctx == null) {
             return null;
         } else {
-            return (T) ctx.getHandler();
+            @SuppressWarnings("unchecked")
+            T handler = (T) ctx.getHandler();
+            return handler;
         }
     }
 

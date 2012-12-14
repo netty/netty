@@ -36,6 +36,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         setStreamId(streamId);
     }
 
+    @Deprecated
     public int getStreamID() {
         return getStreamId();
     }
@@ -44,6 +45,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         return streamId;
     }
 
+    @Deprecated
     public void setStreamID(int streamId) {
         setStreamId(streamId);
     }

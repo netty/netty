@@ -36,6 +36,7 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
         setDeltaWindowSize(deltaWindowSize);
     }
 
+    @Deprecated
     public int getStreamID() {
         return getStreamId();
     }
@@ -44,6 +45,7 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
         return streamId;
     }
 
+    @Deprecated
     public void setStreamID(int streamId) {
         setStreamId(streamId);
     }

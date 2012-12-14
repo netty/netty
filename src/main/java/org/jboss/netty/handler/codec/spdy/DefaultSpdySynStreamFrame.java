@@ -43,6 +43,7 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         setPriority(priority);
     }
 
+    @Deprecated
     public int getStreamID() {
         return getStreamId();
     }
@@ -51,6 +52,7 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         return streamId;
     }
 
+    @Deprecated
     public void setStreamID(int streamId) {
         setStreamId(streamId);
     }
@@ -63,6 +65,7 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         this.streamId = streamId;
     }
 
+    @Deprecated
     public int getAssociatedToStreamID() {
         return getAssociatedToStreamId();
     }
@@ -71,6 +74,7 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         return associatedToStreamId;
     }
 
+    @Deprecated
     public void setAssociatedToStreamID(int associatedToStreamId) {
         setAssociatedToStreamId(associatedToStreamId);
     }

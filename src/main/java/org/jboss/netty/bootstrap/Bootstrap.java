@@ -358,9 +358,9 @@ public class Bootstrap implements ExternalResourceReleasable {
 
         // Does not implement OrderedMap interface.  As a last resort, try to
         // create a new instance and test if the insertion order is maintained.
-        Map newMap;
+        Map<Object, Object> newMap;
         try {
-            newMap = (Map) mapType.newInstance();
+            newMap = (Map<Object, Object>) mapType.newInstance();
         } catch (Exception e) {
             // No default constructor - cannot proceed anymore.
             return false;

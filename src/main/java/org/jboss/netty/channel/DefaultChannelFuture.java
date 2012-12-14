@@ -170,6 +170,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Deprecated
     public ChannelFuture rethrowIfFailed() throws Exception {
         if (!isDone()) {
             return this;
