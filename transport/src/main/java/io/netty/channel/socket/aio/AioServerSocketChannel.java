@@ -87,6 +87,9 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected SocketAddress localAddress0() {
+        if (ch == null) {
+            return null;
+        }
         try {
             return javaChannel().getLocalAddress();
         } catch (IOException e) {

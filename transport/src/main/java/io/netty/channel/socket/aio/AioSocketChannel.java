@@ -156,6 +156,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected InetSocketAddress localAddress0() {
+        if (ch == null) {
+            return null;
+        }
         try {
             return (InetSocketAddress) javaChannel().getLocalAddress();
         } catch (IOException e) {
@@ -165,6 +168,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected InetSocketAddress remoteAddress0() {
+        if (ch == null) {
+            return null;
+        }
         try {
             return (InetSocketAddress) javaChannel().getRemoteAddress();
         } catch (IOException e) {

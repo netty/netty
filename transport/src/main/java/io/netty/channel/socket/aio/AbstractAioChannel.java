@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 abstract class AbstractAioChannel extends AbstractChannel {
 
-    protected AsynchronousChannel ch;
+    protected volatile AsynchronousChannel ch;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
