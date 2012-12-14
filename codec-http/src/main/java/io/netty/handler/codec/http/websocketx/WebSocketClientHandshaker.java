@@ -122,7 +122,22 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      */
-    public abstract ChannelFuture handshake(Channel channel);
+    public ChannelFuture handshake(Channel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return handshake(channel, channel.newFuture());
+    }
+
+    /**
+     * Begins the opening handshake
+     *
+     * @param channel
+     *            Channel
+     * @param future
+     *            the {@link ChannelFuture} to be notified when the opening handshake is sent
+     */
+    public abstract ChannelFuture handshake(Channel channel, ChannelFuture future);
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.

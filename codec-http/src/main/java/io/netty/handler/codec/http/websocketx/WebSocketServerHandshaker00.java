@@ -15,9 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -36,6 +33,12 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+import java.util.regex.Pattern;
+
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+
 /**
  * <p>
  * Performs server side opening and closing handshakes for web socket specification version <a
@@ -49,6 +52,9 @@ import io.netty.logging.InternalLoggerFactory;
 public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker00.class);
+
+    private static final Pattern BEGINNING_DIGIT = Pattern.compile("[^0-9]");
+    private static final Pattern BEGINNING_SPACE = Pattern.compile("[^ ]");
 
     /**
      * Constructor specifying the destination web socket location
@@ -112,7 +118,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
@@ -152,8 +158,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             // Calculate the answer of the challenge.
             String key1 = req.getHeader(SEC_WEBSOCKET_KEY1);
             String key2 = req.getHeader(SEC_WEBSOCKET_KEY2);
-            int a = (int) (Long.parseLong(key1.replaceAll("[^0-9]", "")) / key1.replaceAll("[^ ]", "").length());
-            int b = (int) (Long.parseLong(key2.replaceAll("[^0-9]", "")) / key2.replaceAll("[^ ]", "").length());
+            int a = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key1).replaceAll("")) /
+                           BEGINNING_SPACE.matcher(key1).replaceAll("").length());
+            int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
+                           BEGINNING_SPACE.matcher(key2).replaceAll("").length());
             long c = req.getContent().readLong();
             ByteBuf input = Unpooled.buffer(16);
             input.writeInt(a);
@@ -172,8 +180,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         }
 
         // Upgrade the connection and send the handshake response.
-        ChannelFuture future = channel.write(res);
-
+        channel.write(res, future);
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
@@ -200,7 +207,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
-        return channel.write(frame);
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future) {
+        return channel.write(frame, future);
     }
 }

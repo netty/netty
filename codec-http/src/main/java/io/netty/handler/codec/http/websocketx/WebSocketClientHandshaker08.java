@@ -97,7 +97,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake(Channel channel, final ChannelFuture handshakeFuture) {
         // Get path
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
@@ -151,9 +151,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             }
         }
 
-        final ChannelFuture handshakeFuture = channel.newFuture();
         ChannelFuture future = channel.write(request);
-
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {

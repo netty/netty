@@ -109,7 +109,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.id()));
@@ -144,7 +144,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             }
         }
 
-        ChannelFuture future = channel.write(res);
+        channel.write(res, future);
 
         // Upgrade the connection and send the handshake response.
         future.addListener(new ChannelFutureListener() {
@@ -173,10 +173,8 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
-        ChannelFuture f = channel.write(frame);
-        f.addListener(ChannelFutureListener.CLOSE);
-        return f;
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future) {
+        future.addListener(ChannelFutureListener.CLOSE);
+        return channel.write(frame, future);
     }
-
 }

@@ -254,12 +254,11 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
-        ChannelFuture future = newFuture();
-        doBindAddress(localAddress, future);
-        return future;
+        return bindAddress(localAddress, newFuture());
     }
 
-    void doBindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    @Override
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelFuture future) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.bindAddress(localAddress);
@@ -271,20 +270,20 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    doBindAddress(localAddress, future);
+                    bindAddress(localAddress, future);
                 }
             });
         }
+        return future;
     }
 
     @Override
     public ChannelFuture unbindAddress(InetAddress localAddress) {
-        ChannelFuture future = newFuture();
-        doUnbindAddress(localAddress, future);
-        return future;
+        return unbindAddress(localAddress, newFuture());
     }
 
-    void doUnbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    @Override
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelFuture future) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.unbindAddress(localAddress);
@@ -296,9 +295,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    doUnbindAddress(localAddress, future);
+                    unbindAddress(localAddress, future);
                 }
             });
         }
+        return future;
     }
 }
