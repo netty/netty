@@ -93,6 +93,10 @@ public class WebSocketServerHandshakerFactory {
                 // Version 8 of the wire protocol - version 10 of the draft hybi specification.
                 return new WebSocketServerHandshaker08(
                         webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength);
+            } else if (version.equals(WebSocketVersion.V07.toHttpHeaderValue())) {
+                // Version 8 of the wire protocol - version 07 of the draft hybi specification.
+                return new WebSocketServerHandshaker07(
+                        webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength);
             } else {
                 return null;
             }
