@@ -45,6 +45,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
@@ -64,6 +80,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -174,45 +191,78 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
     }
 
-    // Create a new selector and "transfer" all channels from the old
-    // selector to the new one
-    private Selector recreateSelector() {
-        final Selector newSelector = openSelector();
+    public void rebuildSelector() {
+        if (!inEventLoop()) {
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    rebuildSelector();
+                }
+            });
+            return;
+        }
+
         final Selector oldSelector = selector;
+        final Selector newSelector;
+
+        if (oldSelector == null) {
+            return;
+        }
+
+        try {
+            newSelector = Selector.open();
+        } catch (Exception e) {
+            logger.warn("Failed to create a new Selector.", e);
+            return;
+        }
 
         // Register all channels to the new Selector.
-        boolean success = false;
-        try {
-            for (SelectionKey key: oldSelector.keys()) {
-                key.channel().register(newSelector, key.interestOps(), key.attachment());
-            }
-            success = true;
-        } catch (Exception e) {
-            logger.warn("Failed to re-register a Channel to the new Selector.", e);
-        } finally {
-            if (!success) {
-                try {
-                    newSelector.close();
-                } catch (Exception e) {
-                    logger.warn("Failed to close the new Selector.", e);
+        int nChannels = 0;
+        for (;;) {
+            try {
+                for (SelectionKey key: oldSelector.keys()) {
+                    Object a = key.attachment();
+                    try {
+                        if (key.channel().keyFor(newSelector) != null) {
+                            continue;
+                        }
+
+                        int interestOps = key.interestOps();
+                        key.cancel();
+                        key.channel().register(newSelector, interestOps, a);
+                        nChannels ++;
+                    } catch (Exception e) {
+                        logger.warn("Failed to re-register a Channel to the new Selector.", e);
+                        if (a instanceof AbstractNioChannel) {
+                            AbstractNioChannel ch = (AbstractNioChannel) a;
+                            ch.unsafe().close(ch.unsafe().voidFuture());
+                        } else {
+                            @SuppressWarnings("unchecked")
+                            NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                            invokeChannelUnregistered(task, key, e);
+                        }
+                    }
                 }
+            } catch (ConcurrentModificationException e) {
+                // Probably due to concurrent modification of the key set.
+                continue;
+            }
+
+            break;
+        }
+
+        selector = newSelector;
+
+        try {
+            // time to close the old selector as everything else is registered to the new one
+            oldSelector.close();
+        } catch (Throwable t) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close the old Selector.", t);
             }
         }
 
-        if (!success) {
-            // Keep using the old Selector on failure.
-            return oldSelector;
-        }
-
-        // Registration to the new Selector is done. Close the old Selector to cancel all old keys.
-        try {
-            selector.close();
-        } catch (Exception e) {
-            logger.warn("Failed to close the old selector.", e);
-        }
-
-        logger.info("Selector migration complete.");
-        return selector = newSelector;
+        logger.info("Migrated " + nChannels + " channel(s) to the new Selector.");
     }
 
     @Override
@@ -245,7 +295,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             // The selector returned immediately for 10 times in a row,
                             // so recreate one selector as it seems like we hit the
                             // famous epoll(..) jdk bug.
-                            selector = recreateSelector();
+                            rebuildSelector();
+                            selector = this.selector;
                             selectReturnsImmediately = 0;
 
                             // try to select again
@@ -290,8 +341,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
 
                 cancelledKeys = 0;
+
                 runAllTasks();
+                selector = this.selector;
+
                 processSelectedKeys();
+                selector = this.selector;
 
                 if (isShutdown()) {
                     closeAll();
