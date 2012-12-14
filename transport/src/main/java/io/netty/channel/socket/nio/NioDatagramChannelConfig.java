@@ -15,7 +15,9 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
+import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.DetectionUtil;
 
@@ -28,7 +30,7 @@ import java.nio.channels.NetworkChannel;
 import java.util.Enumeration;
 
 /**
- * The default {@link NioSocketChannelConfig} implementation.
+ * The default {@link NioDatagramChannelConfig} implementation.
  */
 class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
@@ -109,8 +111,9 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     @Override
-    public void setTimeToLive(int ttl) {
+    public DatagramChannelConfig setTimeToLive(int ttl) {
         setOption0(IP_MULTICAST_TTL, ttl);
+        return this;
     }
 
     @Override
@@ -128,12 +131,13 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     @Override
-    public void setInterface(InetAddress interfaceAddress) {
+    public DatagramChannelConfig setInterface(InetAddress interfaceAddress) {
         try {
             setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -142,8 +146,9 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     @Override
-    public void setNetworkInterface(NetworkInterface networkInterface) {
+    public DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         setOption0(IP_MULTICAST_IF, networkInterface);
+        return this;
     }
 
     @Override
@@ -152,8 +157,9 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     @Override
-    public void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         setOption0(IP_MULTICAST_LOOP, loopbackModeDisabled);
+        return this;
     }
 
     private Object getOption0(Object option) {
@@ -179,4 +185,5 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             }
         }
     }
+
 }

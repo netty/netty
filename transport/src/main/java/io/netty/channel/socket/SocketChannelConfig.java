@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -61,7 +62,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#TCP_NODELAY} option.
      */
-    void setTcpNoDelay(boolean tcpNoDelay);
+    SocketChannelConfig setTcpNoDelay(boolean tcpNoDelay);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_LINGER} option.
@@ -71,7 +72,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#SO_LINGER} option.
      */
-    void setSoLinger(int soLinger);
+    SocketChannelConfig setSoLinger(int soLinger);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
@@ -81,7 +82,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
-    void setSendBufferSize(int sendBufferSize);
+    SocketChannelConfig setSendBufferSize(int sendBufferSize);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
@@ -91,7 +92,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
      */
-    void setReceiveBufferSize(int receiveBufferSize);
+    SocketChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_KEEPALIVE} option.
@@ -101,7 +102,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#SO_KEEPALIVE} option.
      */
-    void setKeepAlive(boolean keepAlive);
+    SocketChannelConfig setKeepAlive(boolean keepAlive);
 
     /**
      * Gets the {@link StandardSocketOptions#IP_TOS} option.
@@ -111,7 +112,7 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#IP_TOS} option.
      */
-    void setTrafficClass(int trafficClass);
+    SocketChannelConfig setTrafficClass(int trafficClass);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
@@ -121,13 +122,13 @@ public interface SocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
-    void setReuseAddress(boolean reuseAddress);
+    SocketChannelConfig setReuseAddress(boolean reuseAddress);
 
     /**
      * Sets the performance preferences as specified in
      * {@link Socket#setPerformancePreferences(int, int, int)}.
      */
-    void setPerformancePreferences(int connectionTime, int latency, int bandwidth);
+    SocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth);
 
     /**
      * Returns {@code true} if and only if the channel should not close itself when its remote
@@ -143,5 +144,14 @@ public interface SocketChannelConfig extends ChannelConfig {
      * is invoked with a {@link ChannelInputShutdownEvent} object. If {@code false}, the connection
      * is closed automatically.
      */
-    void setAllowHalfClosure(boolean allowHalfClosure);
+    SocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
+
+    @Override
+    SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    SocketChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    SocketChannelConfig setAllocator(ByteBufAllocator allocator);
 }

@@ -17,6 +17,7 @@ package io.netty.channel.socket;
 
 import com.sun.nio.sctp.SctpServerChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -93,12 +94,13 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    public void setSendBufferSize(int sendBufferSize) {
+    public SctpServerChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             serverChannel.setOption(SO_SNDBUF, sendBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -111,12 +113,13 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public SctpServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             serverChannel.setOption(SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -129,12 +132,13 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    public void setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
+    public SctpServerChannelConfig setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
         try {
             serverChannel.setOption(SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -143,10 +147,26 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    public void setBacklog(int backlog) {
+    public SctpServerChannelConfig setBacklog(int backlog) {
         if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);
         }
         this.backlog = backlog;
+        return this;
+    }
+
+    @Override
+    public SctpServerChannelConfig setWriteSpinCount(int writeSpinCount) {
+        return (SctpServerChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    }
+
+    @Override
+    public SctpServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        return (SctpServerChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public SctpServerChannelConfig setAllocator(ByteBufAllocator allocator) {
+        return (SctpServerChannelConfig) super.setAllocator(allocator);
     }
 }

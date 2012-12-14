@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 
 import static com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
@@ -54,7 +55,7 @@ public interface SctpChannelConfig extends ChannelConfig {
      * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SCTP_NODELAY}</a> option.
      */
-    void setSctpNoDelay(boolean sctpNoDelay);
+    SctpChannelConfig setSctpNoDelay(boolean sctpNoDelay);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -66,7 +67,7 @@ public interface SctpChannelConfig extends ChannelConfig {
      * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_SNDBUF}</a> option.
      */
-    void setSendBufferSize(int sendBufferSize);
+    SctpChannelConfig setSendBufferSize(int sendBufferSize);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -78,7 +79,7 @@ public interface SctpChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_RCVBUF}</a> option.
      */
-    void setReceiveBufferSize(int receiveBufferSize);
+    SctpChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -90,5 +91,14 @@ public interface SctpChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
-    void setInitMaxStreams(InitMaxStreams initMaxStreams);
+    SctpChannelConfig setInitMaxStreams(InitMaxStreams initMaxStreams);
+
+    @Override
+    SctpChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    SctpChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    SctpChannelConfig setAllocator(ByteBufAllocator allocator);
 }

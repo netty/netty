@@ -115,7 +115,7 @@ public interface ChannelConfig {
      * @param connectTimeoutMillis the connect timeout in milliseconds.
      *                             {@code 0} to disable.
      */
-    void setConnectTimeoutMillis(int connectTimeoutMillis);
+    ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
      * Returns the maximum loop count for a write operation until
@@ -136,8 +136,17 @@ public interface ChannelConfig {
      * @throws IllegalArgumentException
      *         if the specified value is {@code 0} or less than {@code 0}
      */
-    void setWriteSpinCount(int writeSpinCount);
+    ChannelConfig setWriteSpinCount(int writeSpinCount);
 
+    /**
+     * Returns {@link ByteBufAllocator} which is used for the channel
+     * to allocate buffers.
+     */
     ByteBufAllocator getAllocator();
-    ByteBufAllocator setAllocator(ByteBufAllocator bufferPool);
+
+    /**
+     * Set the {@link ByteBufAllocator} which is used for the channel
+     * to allocate buffers.
+     */
+    ChannelConfig setAllocator(ByteBufAllocator allocator);
 }

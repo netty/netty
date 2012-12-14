@@ -16,6 +16,8 @@
 package io.netty.channel.socket;
 
 import static io.netty.channel.ChannelOption.*;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -173,49 +175,54 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public void setKeepAlive(boolean keepAlive) {
+    public SocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
             socket.setKeepAlive(keepAlive);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
-    public void setPerformancePreferences(
+    public SocketChannelConfig setPerformancePreferences(
             int connectionTime, int latency, int bandwidth) {
         socket.setPerformancePreferences(connectionTime, latency, bandwidth);
+        return this;
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public SocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             socket.setReceiveBufferSize(receiveBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
-    public void setReuseAddress(boolean reuseAddress) {
+    public SocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             socket.setReuseAddress(reuseAddress);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
-    public void setSendBufferSize(int sendBufferSize) {
+    public SocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             socket.setSendBufferSize(sendBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
-    public void setSoLinger(int soLinger) {
+    public SocketChannelConfig setSoLinger(int soLinger) {
         try {
             if (soLinger < 0) {
                 socket.setSoLinger(false, 0);
@@ -225,24 +232,27 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
-    public void setTcpNoDelay(boolean tcpNoDelay) {
+    public SocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
             socket.setTcpNoDelay(tcpNoDelay);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
-    public void setTrafficClass(int trafficClass) {
+    public SocketChannelConfig setTrafficClass(int trafficClass) {
         try {
             socket.setTrafficClass(trafficClass);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -251,7 +261,23 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public void setAllowHalfClosure(boolean allowHalfClosure) {
+    public SocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
+        return this;
+    }
+
+    @Override
+    public SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        return (SocketChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public SocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+        return (SocketChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    }
+
+    @Override
+    public SocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+        return (SocketChannelConfig) super.setAllocator(allocator);
     }
 }
