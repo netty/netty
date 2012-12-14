@@ -143,7 +143,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         if (ch == null) {
             AsynchronousServerSocketChannel channel = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
             ch = channel;
-            config.channel = channel;
+            config.active(channel);
         }
         return task;
     }

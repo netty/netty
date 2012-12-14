@@ -287,7 +287,6 @@
             <!-- Used for NIO UDP multicast -->
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
 
             <!-- Used for NIO. 2 -->
@@ -297,6 +296,8 @@
             <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
             <ignore>java.nio.channels.NetworkChannel</ignore>
             <ignore>java.nio.channels.InterruptedByTimeoutException</ignore>
+            <ignore>java.net.StandardSocketOptions</ignore>
+            <ignore>java.net.SocketOption</ignore>
           </ignores>
         </configuration>
         <executions>

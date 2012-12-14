@@ -21,10 +21,13 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.io.IOException;
+import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.channels.NetworkChannel;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.ChannelOption.*;
 
@@ -34,16 +37,24 @@ import static io.netty.channel.ChannelOption.*;
 final class AioSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    volatile NetworkChannel channel;
+    private final AtomicReference<NetworkChannel> channel = new AtomicReference<NetworkChannel>();
     private volatile boolean allowHalfClosure;
     private volatile long readTimeoutInMillis;
     private volatile long writeTimeoutInMillis;
+    private Map<SocketOption<?>, Object> options = new ConcurrentHashMap<SocketOption<?>, Object>();
+    private static final int DEFAULT_RCV_BUF_SIZE = 32 * 1024;
+    private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
+    private static final int DEFAULT_SO_LINGER = -1;
+    private static final boolean DEFAULT_SO_KEEP_ALIVE = false;
+    private static final int DEFAULT_IP_TOS = 0;
+    private static final boolean DEFAULT_SO_REUSEADDR = false;
+    private static final boolean DEFAULT_TCP_NODELAY = false;
 
-    /**
-     * Creates a new instance.
-     */
+    AioSocketChannelConfig() {
+    }
+
     AioSocketChannelConfig(NetworkChannel channel) {
-        this.channel = channel;
+        this.channel.set(channel);
     }
 
     @Override
@@ -124,82 +135,42 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public int getReceiveBufferSize() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.SO_RCVBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Integer) getOption(StandardSocketOptions.SO_RCVBUF, DEFAULT_RCV_BUF_SIZE);
     }
 
     @Override
     public int getSendBufferSize() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.SO_SNDBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Integer) getOption(StandardSocketOptions.SO_SNDBUF, DEFAULT_SND_BUF_SIZE);
     }
 
     @Override
     public int getSoLinger() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.SO_LINGER);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Integer) getOption(StandardSocketOptions.SO_LINGER, DEFAULT_SO_LINGER);
     }
 
     @Override
     public int getTrafficClass() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.IP_TOS);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Integer) getOption(StandardSocketOptions.IP_TOS, DEFAULT_IP_TOS);
     }
 
     @Override
     public boolean isKeepAlive() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.SO_KEEPALIVE);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Boolean) getOption(StandardSocketOptions.SO_KEEPALIVE, DEFAULT_SO_KEEP_ALIVE);
     }
 
     @Override
     public boolean isReuseAddress() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Boolean) getOption(StandardSocketOptions.SO_REUSEADDR, DEFAULT_SO_REUSEADDR);
     }
 
     @Override
     public boolean isTcpNoDelay() {
-        channelNull();
-        try {
-            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Boolean) getOption(StandardSocketOptions.TCP_NODELAY, DEFAULT_TCP_NODELAY);
     }
 
     @Override
     public void setKeepAlive(boolean keepAlive) {
-        channelNull();
-        try {
-            channel.setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_KEEPALIVE, keepAlive);
     }
 
     @Override
@@ -210,59 +181,58 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
-        channelNull();
-        try {
-            channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
     }
 
     @Override
     public void setReuseAddress(boolean reuseAddress) {
-        channelNull();
-        try {
-            channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
     }
 
     @Override
     public void setSendBufferSize(int sendBufferSize) {
-        channelNull();
-        try {
-            channel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
     }
 
     @Override
     public void setSoLinger(int soLinger) {
-        channelNull();
-        try {
-            channel.setOption(StandardSocketOptions.SO_LINGER, soLinger);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_LINGER, soLinger);
     }
 
     @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
-        channelNull();
+        setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
+    }
+
+    @Override
+    public void setTrafficClass(int trafficClass) {
+        setOption(StandardSocketOptions.IP_TOS, trafficClass);
+    }
+
+    private Object getOption(SocketOption option, Object defaultValue) {
+        if (channel.get() == null) {
+            Object value = options.get(option);
+            if (value == null) {
+                return defaultValue;
+            } else {
+                return value;
+            }
+        }
+
         try {
-            channel.setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
+            return channel.get().getOption(option);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public void setTrafficClass(int trafficClass) {
-        channelNull();
+    private void setOption(SocketOption option, Object defaultValue) {
+        if (channel.get() == null) {
+            options.put(option, defaultValue);
+            return;
+        }
         try {
-            channel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
+            channel.get().setOption(option, defaultValue);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -324,9 +294,27 @@ final class AioSocketChannelConfig extends DefaultChannelConfig
         this.allowHalfClosure = allowHalfClosure;
     }
 
-    private void channelNull() {
+    void active(NetworkChannel channel) {
         if (channel == null) {
-            throw new IllegalStateException("Channel not set while try to change options on it");
+            throw new NullPointerException("channel");
         }
+        if (this.channel.compareAndSet(null, channel)) {
+            propagateOptions();
+        }
+    }
+
+    private void propagateOptions() {
+        for (SocketOption option: options.keySet()) {
+            Object value = options.remove(option);
+            if (value != null) {
+                try {
+                    channel.get().setOption(option, value);
+                } catch (IOException e) {
+                    throw new ChannelException(e);
+                }
+            }
+        }
+        // not needed anymore
+        options = null;
     }
 }
