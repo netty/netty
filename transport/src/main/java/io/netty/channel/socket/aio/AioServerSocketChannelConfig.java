@@ -33,11 +33,14 @@ import java.util.Map;
 final class AioServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final  AsynchronousServerSocketChannel channel;
+    volatile AsynchronousServerSocketChannel channel;
     private volatile int backlog = NetworkConstants.SOMAXCONN;
 
     AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
         this.channel = channel;
+    }
+
+    AioServerSocketChannelConfig() {
     }
 
     @Override

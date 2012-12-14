@@ -40,7 +40,6 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
-    private final AioEventLoopGroup childGroup;
     private final AioServerSocketChannelConfig config;
     private boolean closed;
     private final AtomicBoolean readSuspended = new AtomicBoolean();
@@ -61,15 +60,14 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
     }
 
-    public AioServerSocketChannel(AioEventLoopGroup group) {
-        this(group, group);
+    public AioServerSocketChannel() {
+        super(null, null, null);
+        config = new AioServerSocketChannelConfig();
     }
 
-    public AioServerSocketChannel(AioEventLoopGroup parentGroup, AioEventLoopGroup childGroup) {
-        super(null, null, newSocket(parentGroup.group));
-        this.childGroup = childGroup;
-
-        config = new AioServerSocketChannelConfig(javaChannel());
+    public AioServerSocketChannel(AsynchronousServerSocketChannel channel) {
+        super(null, null, channel);
+        config = new AioServerSocketChannelConfig(channel);
     }
 
     @Override
@@ -79,7 +77,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     public boolean isActive() {
-        return javaChannel().isOpen() && localAddress0() != null;
+        return ch != null && javaChannel().isOpen() && localAddress0() != null;
     }
 
     @Override
@@ -141,7 +139,13 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected Runnable doRegister() throws Exception {
-        return super.doRegister();
+        Runnable task = super.doRegister();
+        if (ch == null) {
+            AsynchronousServerSocketChannel channel = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
+            ch = channel;
+            config.channel = channel;
+        }
+        return task;
     }
 
     private static final class AcceptHandler

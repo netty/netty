@@ -85,7 +85,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     AioSocketChannel(
             AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
         super(parent, id, ch);
-        config = new AioSocketChannelConfig(null);
+        config = new AioSocketChannelConfig(ch);
     }
 
     @Override
