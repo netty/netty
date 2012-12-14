@@ -47,7 +47,27 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
+    public ChannelFuture addListeners(ChannelFutureListener... listeners) {
+        if (listeners == null) {
+            throw new NullPointerException("listeners");
+        }
+        for (ChannelFutureListener l: listeners) {
+            if (l == null) {
+                break;
+            }
+            DefaultChannelFuture.notifyListener(this, l);
+        }
+        return this;
+    }
+
+    @Override
     public ChannelFuture removeListener(ChannelFutureListener listener) {
+        // NOOP
+        return this;
+    }
+
+    @Override
+    public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
         // NOOP
         return this;
     }
