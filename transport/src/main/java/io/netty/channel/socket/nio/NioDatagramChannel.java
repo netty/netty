@@ -193,7 +193,7 @@ public final class NioDatagramChannel
         ByteBuf data = packet.data();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
-        if (data.hasNioBuffer()) {
+        if (data.nioBufferCount() == 1) {
             nioData = data.nioBuffer();
         } else {
             nioData = ByteBuffer.allocate(dataLen);

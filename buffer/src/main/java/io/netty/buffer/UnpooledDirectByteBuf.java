@@ -440,8 +440,8 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public boolean hasNioBuffer() {
-        return true;
+    public int nioBufferCount() {
+        return 1;
     }
 
     @Override
@@ -455,13 +455,8 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public boolean hasNioBuffers() {
-        return false;
-    }
-
-    @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
-        throw new UnsupportedOperationException();
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override

@@ -222,8 +222,8 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public boolean hasNioBuffer() {
-        return true;
+    public int nioBufferCount() {
+        return 1;
     }
 
     @Override
@@ -231,11 +231,6 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         checkIndex(index, length);
         index = idx(index);
         return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
-    }
-
-    @Override
-    public boolean hasNioBuffers() {
-        return true;
     }
 
     @Override

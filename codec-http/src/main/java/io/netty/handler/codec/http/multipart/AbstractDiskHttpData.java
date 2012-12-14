@@ -133,7 +133,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 throw new IOException("Out of size: " + (size + localsize) +
                         " > " + definedSize);
             }
-            ByteBuffer byteBuffer = buffer.hasNioBuffer() ? buffer.nioBuffer() : buffer.copy().nioBuffer();
+            ByteBuffer byteBuffer = buffer.nioBufferCount() == 1 ? buffer.nioBuffer() : buffer.copy().nioBuffer();
             int written = 0;
             if (file == null) {
                 file = tempFile();

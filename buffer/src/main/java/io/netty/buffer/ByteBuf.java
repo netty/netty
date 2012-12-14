@@ -13,22 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-/*
- * Copyright 2012 The Netty Project
- *
- * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
 package io.netty.buffer;
 
 import java.io.IOException;
@@ -1715,22 +1699,35 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     ByteBuf duplicate();
 
     /**
-     * Returns {@code true} if and only if {@link #nioBuffer()} method will not fail.
+     * Returns the maximum number of NIO {@link ByteBuffer}s that consist this buffer.  Note that {@link #nioBuffers()}
+     * or {@link #nioBuffers(int, int)} might return a less number of {@link ByteBuffer}s.
+     *
+     * @return {@code -1} if this buffer has no underlying {@link ByteBuffer}.
+     *         the number of the underlying {@link ByteBuffer}s if this buffer has at least one undelying
+     *         {@link ByteBuffer}.  Note that this method does not return {@code 0} to avoid confusion.
+     *
+     * @see #nioBuffer()
+     * @see #nioBuffer(int, int)
+     * @see #nioBuffers()
+     * @see #nioBuffers(int, int)
      */
-    boolean hasNioBuffer();
+    int nioBufferCount();
 
     /**
      * Exposes this buffer's readable bytes as an NIO {@link ByteBuffer}.  The returned buffer
      * shares the content with this buffer, while changing the position and limit of the returned
      * NIO buffer does not affect the indexes and marks of this buffer.  This method is identical
-     * to {@code buf.asByteBuffer(buf.readerIndex(), buf.readableBytes())}.  This method does not
+     * to {@code buf.nioBuffer(buf.readerIndex(), buf.readableBytes())}.  This method does not
      * modify {@code readerIndex} or {@code writerIndex} of this buffer.  Please note that the
      * returned NIO buffer will not see the changes of this buffer if this buffer is a dynamic
      * buffer and it adjusted its capacity.
      *
-     *
      * @throws UnsupportedOperationException
      *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
+     *
+     * @see #nioBufferCount()
+     * @see #nioBuffers()
+     * @see #nioBuffers(int, int)
      */
     ByteBuffer nioBuffer();
 
@@ -1744,13 +1741,12 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *
      * @throws UnsupportedOperationException
      *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
+     *
+     * @see #nioBufferCount()
+     * @see #nioBuffers()
+     * @see #nioBuffers(int, int)
      */
     ByteBuffer nioBuffer(int index, int length);
-
-    /**
-     * Returns {@code true} if and only if {@link #nioBuffers()} method will not fail.
-     */
-    boolean hasNioBuffers();
 
     /**
      * Exposes this buffer's readable bytes as an NIO {@link ByteBuffer}'s.  The returned buffer
@@ -1763,6 +1759,10 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      *
      * @throws UnsupportedOperationException
      *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
+     *
+     * @see #nioBufferCount()
+     * @see #nioBuffer()
+     * @see #nioBuffer(int, int)
      */
     ByteBuffer[] nioBuffers();
 
@@ -1774,9 +1774,12 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      * returned NIO buffer will not see the changes of this buffer if this buffer is a dynamic
      * buffer and it adjusted its capacity.
      *
-     *
      * @throws UnsupportedOperationException
      *         if this buffer cannot create a {@link ByteBuffer} that shares the content with itself
+     *
+     * @see #nioBufferCount()
+     * @see #nioBuffer()
+     * @see #nioBuffer(int, int)
      */
     ByteBuffer[] nioBuffers(int index, int length);
 
