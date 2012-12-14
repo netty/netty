@@ -177,7 +177,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         super.doRegister();
         if (ch == null) {
             ch = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
-            config.channel = javaChannel();
+            config.active(javaChannel());
         }
 
         if (remoteAddress() == null) {

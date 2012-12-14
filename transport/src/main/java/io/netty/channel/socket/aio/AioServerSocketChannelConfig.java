@@ -23,9 +23,12 @@ import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetworkConstants;
 
 import java.io.IOException;
+import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The Async {@link ServerSocketChannelConfig} implementation.
@@ -33,14 +36,18 @@ import java.util.Map;
 final class AioServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    volatile AsynchronousServerSocketChannel channel;
+    private final AtomicReference<AsynchronousServerSocketChannel> channel
+            = new AtomicReference<AsynchronousServerSocketChannel>();
     private volatile int backlog = NetworkConstants.SOMAXCONN;
-
-    AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
-        this.channel = channel;
-    }
+    private Map<SocketOption<?>, Object> options = new ConcurrentHashMap<SocketOption<?>, Object>();
+    private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
+    private static final boolean DEFAULT_SO_REUSEADDR = false;
 
     AioServerSocketChannelConfig() {
+    }
+
+    AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
+        this.channel.set(channel);
     }
 
     @Override
@@ -83,38 +90,22 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isReuseAddress() {
-        try {
-            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Boolean) getOption(StandardSocketOptions.SO_REUSEADDR, DEFAULT_SO_REUSEADDR);
     }
 
     @Override
     public void setReuseAddress(boolean reuseAddress) {
-        try {
-            channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
     }
 
     @Override
     public int getReceiveBufferSize() {
-        try {
-            return channel.getOption(StandardSocketOptions.SO_RCVBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Integer) getOption(StandardSocketOptions.SO_RCVBUF, DEFAULT_SND_BUF_SIZE);
     }
 
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
     }
 
     @Override
@@ -133,5 +124,58 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
             throw new IllegalArgumentException("backlog: " + backlog);
         }
         this.backlog = backlog;
+    }
+
+    private Object getOption(SocketOption option, Object defaultValue) {
+        if (channel.get() == null) {
+            Object value = options.get(option);
+            if (value == null) {
+                return defaultValue;
+            } else {
+                return value;
+            }
+        }
+
+        try {
+            return channel.get().getOption(option);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setOption(SocketOption option, Object defaultValue) {
+        if (channel.get() == null) {
+            options.put(option, defaultValue);
+            return;
+        }
+        try {
+            channel.get().setOption(option, defaultValue);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    void active(AsynchronousServerSocketChannel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (this.channel.compareAndSet(null, channel)) {
+            propagateOptions();
+        }
+    }
+
+    private void propagateOptions() {
+        for (SocketOption option: options.keySet()) {
+            Object value = options.remove(option);
+            if (value != null) {
+                try {
+                    channel.get().setOption(option, value);
+                } catch (IOException e) {
+                    throw new ChannelException(e);
+                }
+            }
+        }
+        // not needed anymore
+        options = null;
     }
 }
