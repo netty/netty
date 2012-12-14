@@ -49,7 +49,7 @@ public class ChannelBuffersTest {
         assertEquals(512, payload.readableBytes());
 
         assertEquals(12 + 512, buffer.readableBytes());
-        assertFalse(buffer.hasNioBuffer());
+        assertEquals(2, buffer.nioBufferCount());
     }
 
     @Test

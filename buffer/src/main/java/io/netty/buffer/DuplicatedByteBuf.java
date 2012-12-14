@@ -220,18 +220,13 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public boolean hasNioBuffer() {
-        return buffer.hasNioBuffer();
+    public int nioBufferCount() {
+        return buffer.nioBufferCount();
     }
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         return buffer.nioBuffer(index, length);
-    }
-
-    @Override
-    public boolean hasNioBuffers() {
-        return buffer.hasNioBuffers();
     }
 
     @Override

@@ -258,7 +258,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     buf.discardReadBytes();
 
                     asyncWriteInProgress = true;
-                    if (buf.hasNioBuffers()) {
+                    if (buf.nioBufferCount() == 1) {
+                        javaChannel().write(
+                                buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, this, WRITE_HANDLER);
+                    } else {
                         ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
                         if (buffers.length == 1) {
                             javaChannel().write(
@@ -268,9 +271,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                                     buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
                                     this, GATHERING_WRITE_HANDLER);
                         }
-                    } else {
-                        javaChannel().write(
-                                buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, this, WRITE_HANDLER);
                     }
 
                     if (asyncWriteInProgress) {
@@ -322,7 +322,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 expandReadBuffer(byteBuf);
 
                 asyncReadInProgress = true;
-                if (byteBuf.hasNioBuffers()) {
+                if (byteBuf.nioBufferCount() == 1) {
+                    // Get a ByteBuffer view on the ByteBuf
+                    ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
+                    javaChannel().read(
+                            buffer, config.getReadTimeout(), TimeUnit.MILLISECONDS, this, READ_HANDLER);
+                } else {
                     ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());
                     if (buffers.length == 1) {
                         javaChannel().read(
@@ -332,11 +337,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                                 buffers, 0, buffers.length, config.getReadTimeout(), TimeUnit.MILLISECONDS,
                                 this, SCATTERING_READ_HANDLER);
                     }
-                } else {
-                    // Get a ByteBuffer view on the ByteBuf
-                    ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
-                    javaChannel().read(
-                            buffer, config.getReadTimeout(), TimeUnit.MILLISECONDS, this, READ_HANDLER);
                 }
 
                 if (asyncReadInProgress) {

@@ -136,7 +136,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         ByteBuf data = packet.getPayloadBuffer();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
-        if (data.hasNioBuffer()) {
+        if (data.nioBufferCount() == 1) {
             nioData = data.nioBuffer();
         } else {
             nioData = ByteBuffer.allocate(dataLen);

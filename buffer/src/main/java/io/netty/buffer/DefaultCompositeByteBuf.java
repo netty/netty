@@ -1057,11 +1057,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public boolean hasNioBuffer() {
-        if (components.size() == 1) {
-            return components.get(0).buf.hasNioBuffer();
-        }
-        return false;
+    public int nioBufferCount() {
+        return components.size();
     }
 
     @Override
@@ -1088,11 +1085,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public boolean hasNioBuffers() {
-        return true;
-    }
-
-    @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         if (index + length > capacity()) {
             throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
@@ -1114,7 +1106,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             ByteBuf s = c.buf;
             int adjustment = c.offset;
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
-            buffers.add(toNioBuffer(s, index - adjustment, localLength));
+            buffers.add(s.nioBuffer(index - adjustment, localLength));
             index += localLength;
             length -= localLength;
             i ++;
@@ -1124,7 +1116,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private static ByteBuffer toNioBuffer(ByteBuf buf, int index, int length) {
-        if (buf.hasNioBuffer()) {
+        if (buf.nioBufferCount() == 1) {
             return buf.nioBuffer(index, length);
         } else {
             return buf.copy(index, length).nioBuffer(0, length);

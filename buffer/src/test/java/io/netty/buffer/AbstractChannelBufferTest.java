@@ -15,9 +15,11 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.*;
 import io.netty.util.CharsetUtil;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,10 +29,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import static io.netty.buffer.Unpooled.*;
+import static org.junit.Assert.*;
 
 /**
  * An abstract test class for channel buffers
@@ -1529,7 +1529,7 @@ public abstract class AbstractChannelBufferTest {
 
     @Test
     public void testNioBuffer1() {
-        Assume.assumeTrue(buffer.hasNioBuffer());
+        Assume.assumeTrue(buffer.nioBufferCount() == 1);
 
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
@@ -1541,7 +1541,7 @@ public abstract class AbstractChannelBufferTest {
 
     @Test
     public void testToByteBuffer2() {
-        Assume.assumeTrue(buffer.hasNioBuffer());
+        Assume.assumeTrue(buffer.nioBufferCount() == 1);
 
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
@@ -1555,7 +1555,7 @@ public abstract class AbstractChannelBufferTest {
 
     @Test
     public void testToByteBuffer3() {
-        Assume.assumeTrue(buffer.hasNioBuffer());
+        Assume.assumeTrue(buffer.nioBufferCount() == 1);
 
         assertEquals(buffer.order(), buffer.nioBuffer().order());
     }
