@@ -58,14 +58,13 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     @Test
-    @Ignore("TODO: fix this after OioSctp EventLoop done")
     public void testSimpleEchoWithBoundedBuffer() throws Throwable {
         Assume.assumeTrue(TestUtils.isSctpSupported());
         run();
     }
 
     public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 32);
+        testSimpleEcho0(sb, cb, 4096);
     }
 
     private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize) throws Throwable {
