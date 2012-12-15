@@ -29,10 +29,7 @@ import io.netty.channel.socket.nio.NioSctpChannel;
 import io.netty.channel.socket.nio.NioSctpServerChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.oio.OioDatagramChannel;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
-import io.netty.channel.socket.oio.OioServerSocketChannel;
-import io.netty.channel.socket.oio.OioSocketChannel;
+import io.netty.channel.socket.oio.*;
 import io.netty.testsuite.util.TestUtils;
 
 import java.util.ArrayList;
@@ -247,8 +244,6 @@ final class SocketTestPermutation {
                         channel(NioSctpServerChannel.class);
             }
         });
-        /*
-         * Comment out till #632 is fixes
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
@@ -257,7 +252,6 @@ final class SocketTestPermutation {
                         channel(OioSctpServerChannel.class);
             }
         });
-        */
 
         return list;
     }
@@ -274,15 +268,12 @@ final class SocketTestPermutation {
                 return new Bootstrap().group(new NioEventLoopGroup()).channel(NioSctpChannel.class);
             }
         });
-        /*
-         * Comment out till #632 is fixes
-         * list.add(new Factory<Bootstrap>() {
+        list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSctpChannel.class);
             }
         });
-        */
         return list;
     }
 
