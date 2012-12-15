@@ -53,27 +53,28 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        // Will use the first two bytes to detect a protocol.
-        if (in.readableBytes() < 2) {
+        // Will use the first five bytes to detect a protocol.
+        if (in.readableBytes() < 5) {
             return;
         }
 
-        final int magic1 = in.getUnsignedByte(in.readerIndex());
-        final int magic2 = in.getUnsignedByte(in.readerIndex() + 1);
-
-        if (isSsl(magic1)) {
+        if (isSsl(in)) {
             enableSsl(ctx);
-        } else if (isGzip(magic1, magic2)) {
-            enableGzip(ctx);
-        } else if (isHttp(magic1, magic2)) {
-            switchToHttp(ctx);
-        } else if (isFactorial(magic1)) {
-            switchToFactorial(ctx);
         } else {
-            // Unknown protocol; discard everything and close the connection.
-            in.clear();
-            ctx.close();
-            return;
+            final int magic1 = in.getUnsignedByte(in.readerIndex());
+            final int magic2 = in.getUnsignedByte(in.readerIndex() + 1);
+            if (isGzip(magic1, magic2)) {
+                enableGzip(ctx);
+            } else if (isHttp(magic1, magic2)) {
+                switchToHttp(ctx);
+            } else if (isFactorial(magic1)) {
+                switchToFactorial(ctx);
+            } else {
+                // Unknown protocol; discard everything and close the connection.
+                in.clear();
+                ctx.close();
+                return;
+            }
         }
 
         // Forward the current read buffer as is to the new handlers.
@@ -81,14 +82,9 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
         ctx.fireInboundBufferUpdated();
     }
 
-    private boolean isSsl(int magic1) {
+    private boolean isSsl(ByteBuf buf) {
         if (detectSsl) {
-            switch (magic1) {
-            case 20: case 21: case 22: case 23: case 255:
-                return true;
-            default:
-                return magic1 >= 128;
-            }
+            return SslHandler.isEncrypted(buf);
         }
         return false;
     }

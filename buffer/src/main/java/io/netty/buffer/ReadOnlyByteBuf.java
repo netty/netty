@@ -15,10 +15,13 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -28,25 +31,34 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link Unpooled#unmodifiableBuffer(ByteBuf)}
  * instead of calling the constructor explicitly.
  */
-public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
+public class ReadOnlyByteBuf extends AbstractByteBuf implements Unsafe {
 
     private final ByteBuf buffer;
 
     public ReadOnlyByteBuf(ByteBuf buffer) {
-        super(buffer.order(), buffer.maxCapacity());
-        this.buffer = buffer;
-        setIndex(buffer.readerIndex(), buffer.writerIndex());
-    }
+        super(buffer.maxCapacity());
 
-    private ReadOnlyByteBuf(ReadOnlyByteBuf buffer) {
-        super(buffer.buffer.order(), buffer.maxCapacity());
-        this.buffer = buffer.buffer;
+        if (buffer instanceof ReadOnlyByteBuf) {
+            buffer = ((ReadOnlyByteBuf) buffer).buffer;
+        }
+
+        this.buffer = buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return buffer.alloc();
+    }
+
+    @Override
+    public ByteOrder order() {
+        return buffer.order();
     }
 
     @Override
@@ -70,59 +82,57 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void discardReadBytes() {
+    public ByteBuf discardReadBytes() {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public ByteBuf setByte(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public ByteBuf setBytes(int index, ByteBuffer src) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public ByteBuf setShort(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public ByteBuf setMedium(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public ByteBuf setInt(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public ByteBuf setLong(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
+    public int setBytes(int index, InputStream in, int length) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) {
         throw new ReadOnlyBufferException();
     }
 
@@ -133,24 +143,28 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public ByteBuf getBytes(int index, ByteBuffer dst) {
         buffer.getBytes(index, dst);
+        return this;
     }
 
     @Override
@@ -194,8 +208,8 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public boolean hasNioBuffer() {
-        return buffer.hasNioBuffer();
+    public int nioBufferCount() {
+        return buffer.nioBufferCount();
     }
 
     @Override
@@ -204,13 +218,8 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public boolean hasNioBuffers() {
-        return buffer.hasNioBuffers();
-    }
-
-    @Override
-    public ByteBuffer[] nioBuffers(int offset, int length) {
-        return buffer.nioBuffers(offset, length);
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return buffer.nioBuffers(index, length);
     }
 
     @Override
@@ -219,12 +228,41 @@ public class ReadOnlyByteBuf extends AbstractByteBuf implements WrappedByteBuf {
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public ByteBuf capacity(int newCapacity) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
+    public ByteBuffer internalNioBuffer() {
+        return buffer.unsafe().internalNioBuffer();
+    }
+
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buffer.unsafe().internalNioBuffers();
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isFreed() {
+        return buffer.unsafe().isFreed();
+    }
+
+    @Override
+    public void free() { }
+
+    @Override
+    public void suspendIntermediaryDeallocations() { }
+
+    @Override
+    public void resumeIntermediaryDeallocations() { }
+
+    @Override
     public Unsafe unsafe() {
-        return buffer.unsafe();
+        return this;
     }
 }

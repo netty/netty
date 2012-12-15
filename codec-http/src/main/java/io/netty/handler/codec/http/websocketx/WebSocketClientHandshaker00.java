@@ -68,7 +68,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
             Map<String, String> customHeaders, int maxFramePayloadLength) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
-
     }
 
     /**
@@ -92,7 +91,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake(Channel channel, final ChannelFuture handshakeFuture) {
         // Make keys
         int spaces1 = WebSocketUtil.randomNumber(1, 12);
         int spaces2 = WebSocketUtil.randomNumber(1, 12);
@@ -133,8 +132,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Get path
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
-        if (wsURL.getQuery() != null && wsURL.getQuery().length() > 0) {
-            path = wsURL.getPath() + "?" + wsURL.getQuery();
+        if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
+            path = wsURL.getPath() + '?' + wsURL.getQuery();
+        }
+
+        if (path == null || path.isEmpty()) {
+            path = "/";
         }
 
         // Format request
@@ -148,37 +151,46 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ":" + wsPort;
+            originValue = originValue + ':' + wsPort;
         }
 
         request.addHeader(Names.ORIGIN, originValue);
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
         String expectedSubprotocol = getExpectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
-
         if (customHeaders != null) {
-            for (String header : customHeaders.keySet()) {
-                request.addHeader(header, customHeaders.get(header));
+            for (Map.Entry<String, String> e : customHeaders.entrySet()) {
+                request.addHeader(e.getKey(), e.getValue());
             }
         }
 
+        // Set Content-Length to workaround some known defect.
+        // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
+        request.setHeader(Names.CONTENT_LENGTH, key3.length);
         request.setContent(Unpooled.copiedBuffer(key3));
 
         ChannelFuture future = channel.write(request);
-
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
-                p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
+                p.addAfter(
+                        p.context(HttpRequestEncoder.class).name(),
+                        "ws-encoder", new WebSocket00FrameEncoder());
+
+                if (future.isSuccess()) {
+                    handshakeFuture.setSuccess();
+                } else {
+                    handshakeFuture.setFailure(future.cause());
+                }
             }
         });
 
-        return future;
+        return handshakeFuture;
     }
 
     /**
@@ -204,7 +216,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
+    public void finishHandshake(Channel channel, HttpResponse response) {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
         if (!response.getStatus().equals(status)) {
@@ -212,15 +224,15 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equalsIgnoreCase(Values.WEBSOCKET)) {
+        if (!Values.WEBSOCKET.equalsIgnoreCase(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
-                    + response.getHeader(Names.UPGRADE));
+                    + upgrade);
         }
 
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equalsIgnoreCase(Values.UPGRADE)) {
+        if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + response.getHeader(Names.CONNECTION));
+                    + connection);
         }
 
         byte[] challenge = response.getContent().array();
@@ -233,7 +245,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         setHandshakeComplete();
 
-        channel.pipeline().get(HttpResponseDecoder.class).replace(
+        ChannelPipeline p = channel.pipeline();
+        p.remove(HttpRequestEncoder.class);
+        p.get(HttpResponseDecoder.class).replace(
                 "ws-decoder", new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
     }
 
@@ -265,7 +279,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             int split = WebSocketUtil.randomNumber(1, key.length() - 1);
             String part1 = key.substring(0, split);
             String part2 = key.substring(split);
-            key = part1 + " " + part2;
+            key = part1 + ' ' + part2;
         }
 
         return key;

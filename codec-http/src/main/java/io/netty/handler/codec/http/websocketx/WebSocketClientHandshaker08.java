@@ -97,12 +97,16 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake(Channel channel, final ChannelFuture handshakeFuture) {
         // Get path
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
-        if (wsURL.getQuery() != null && wsURL.getQuery().length() > 0) {
-            path = wsURL.getPath() + "?" + wsURL.getQuery();
+        if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
+            path = wsURL.getPath() + '?' + wsURL.getQuery();
+        }
+
+        if (path == null || path.isEmpty()) {
+            path = "/";
         }
 
         // Get 16 bit nonce and base 64 encode it
@@ -130,34 +134,41 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ":" + wsPort;
+            originValue = originValue + ':' + wsPort;
         }
         request.addHeader(Names.SEC_WEBSOCKET_ORIGIN, originValue);
 
         String expectedSubprotocol = getExpectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.equals("")) {
+        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
 
         if (customHeaders != null) {
-            for (String header : customHeaders.keySet()) {
-                request.addHeader(header, customHeaders.get(header));
+            for (Map.Entry<String, String> e : customHeaders.entrySet()) {
+                request.addHeader(e.getKey(), e.getValue());
             }
         }
 
         ChannelFuture future = channel.write(request);
-
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
-                p.replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));
+                p.addAfter(
+                        p.context(HttpRequestEncoder.class).name(),
+                        "ws-encoder", new WebSocket08FrameEncoder(true));
+
+                if (future.isSuccess()) {
+                    handshakeFuture.setSuccess();
+                } else {
+                    handshakeFuture.setFailure(future.cause());
+                }
             }
         });
 
-        return future;
+        return handshakeFuture;
     }
 
     /**
@@ -188,13 +199,13 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equalsIgnoreCase(Values.WEBSOCKET)) {
+        if (!Values.WEBSOCKET.equalsIgnoreCase(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equalsIgnoreCase(Values.UPGRADE)) {
+        if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }
@@ -210,7 +221,9 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
         setHandshakeComplete();
 
-        channel.pipeline().get(HttpResponseDecoder.class).replace(
+        ChannelPipeline p = channel.pipeline();
+        p.remove(HttpRequestEncoder.class);
+        p.get(HttpResponseDecoder.class).replace(
                 "ws-decoder",
                 new WebSocket08FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
     }

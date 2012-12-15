@@ -15,6 +15,7 @@
  */
 package com.sun.nio.sctp;
 
+@SuppressWarnings("all")
 public class AbstractNotificationHandler<T> implements NotificationHandler<T> {
     static {
         UnsupportedOperatingSystemException.raise();

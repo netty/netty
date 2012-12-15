@@ -21,7 +21,7 @@ import java.net.SocketAddress;
 import java.util.Set;
 
 /**
- * A SCTP/IP {@link io.netty.channel.ServerChannel} which accepts incoming SCTP/IP connections.
+ * A SCTP/IP {@link ServerChannel} which accepts incoming SCTP/IP connections.
  *
  * The {@link SctpServerChannel} provides the additional operations, available in the
  * underlying JDK SCTP Server Channel like multi-homing etc.

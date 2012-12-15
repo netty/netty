@@ -29,6 +29,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -41,13 +43,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
+    final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
 
     final Runnable suspendReadTask = new Runnable() {
         @Override
         public void run() {
             selectionKey().interestOps(selectionKey().interestOps() & ~readInterestOp);
         }
-
     };
 
     final Runnable resumeReadTask = new Runnable() {
@@ -80,7 +82,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     logger.warn(
                             "Failed to close a partially initialized socket.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
@@ -111,6 +112,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return ch;
     }
 
+    @Override
+    public NioEventLoop eventLoop() {
+        return (NioEventLoop) super.eventLoop();
+    }
+
     protected SelectionKey selectionKey() {
         assert selectionKey != null;
         return selectionKey;
@@ -125,7 +131,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     public interface NioUnsafe extends Unsafe {
-        java.nio.channels.Channel ch();
+        SelectableChannel ch();
         void finishConnect();
         void read();
     }
@@ -133,7 +139,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
 
         @Override
-        public java.nio.channels.Channel ch() {
+        public SelectableChannel ch() {
             return javaChannel();
         }
 
@@ -170,7 +176,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                     }
                                     ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
                                     if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
-                                        pipeline().fireExceptionCaught(connectTimeoutException);
                                         close(voidFuture());
                                     }
                                 }
@@ -179,7 +184,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
                     closeIfClosed();
                 }
             } else {
@@ -205,7 +209,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 }
             } catch (Throwable t) {
                 connectFuture.setFailure(t);
-                pipeline().fireExceptionCaught(t);
                 closeIfClosed();
             } finally {
                 connectTimeoutFuture.cancel(false);

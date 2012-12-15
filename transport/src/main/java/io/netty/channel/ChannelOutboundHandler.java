@@ -19,4 +19,10 @@ import io.netty.buffer.ChannelBuf;
 
 public interface ChannelOutboundHandler extends ChannelOperationHandler {
     ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when this handler is not allowed to send any outbound message anymore and thus it's safe to
+     * deallocate its outbound buffer.
+     */
+    void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception;
 }

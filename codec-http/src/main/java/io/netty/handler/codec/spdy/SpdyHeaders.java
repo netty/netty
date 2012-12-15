@@ -94,7 +94,6 @@ public class SpdyHeaders {
         private Spdy2HttpNames() { }
     }
 
-
     /**
      * Returns the header value with the specified header name.  If there are
      * more than one header value for the specified header name, the first
@@ -169,28 +168,12 @@ public class SpdyHeaders {
     /**
      * Removes the HTTP method header.
      */
-    @Deprecated
-    public static void removeMethod(SpdyHeaderBlock block) {
-        removeMethod(2, block);
-    }
-
-    /**
-     * Removes the HTTP method header.
-     */
     public static void removeMethod(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             block.removeHeader(Spdy2HttpNames.METHOD);
         } else {
             block.removeHeader(HttpNames.METHOD);
         }
-    }
-
-    /**
-     * Returns the {@link HttpMethod} represented by the HTTP method header.
-     */
-    @Deprecated
-    public static HttpMethod getMethod(SpdyHeaderBlock block) {
-        return getMethod(2, block);
     }
 
     /**
@@ -211,28 +194,12 @@ public class SpdyHeaders {
     /**
      * Sets the HTTP method header.
      */
-    @Deprecated
-    public static void setMethod(SpdyHeaderBlock block, HttpMethod method) {
-        setMethod(2, block, method);
-    }
-
-    /**
-     * Sets the HTTP method header.
-     */
     public static void setMethod(int spdyVersion, SpdyHeaderBlock block, HttpMethod method) {
         if (spdyVersion < 3) {
             block.setHeader(Spdy2HttpNames.METHOD, method.getName());
         } else {
             block.setHeader(HttpNames.METHOD, method.getName());
         }
-    }
-
-    /**
-     * Removes the URL scheme header.
-     */
-    @Deprecated
-    public static void removeScheme(SpdyHeaderBlock block) {
-        removeMethod(2, block);
     }
 
     /**
@@ -249,28 +216,12 @@ public class SpdyHeaders {
     /**
      * Returns the value of the URL scheme header.
      */
-    @Deprecated
-    public static String getScheme(SpdyHeaderBlock block) {
-        return getScheme(2, block);
-    }
-
-    /**
-     * Returns the value of the URL scheme header.
-     */
     public static String getScheme(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             return block.getHeader(Spdy2HttpNames.SCHEME);
         } else {
             return block.getHeader(HttpNames.SCHEME);
         }
-    }
-
-    /**
-     * Sets the URL scheme header.
-     */
-    @Deprecated
-    public static void setScheme(SpdyHeaderBlock block, String scheme) {
-        setScheme(2, block, scheme);
     }
 
     /**
@@ -287,28 +238,12 @@ public class SpdyHeaders {
     /**
      * Removes the HTTP response status header.
      */
-    @Deprecated
-    public static void removeStatus(SpdyHeaderBlock block) {
-        removeMethod(2, block);
-    }
-
-    /**
-     * Removes the HTTP response status header.
-     */
     public static void removeStatus(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             block.removeHeader(Spdy2HttpNames.STATUS);
         } else {
             block.removeHeader(HttpNames.STATUS);
         }
-    }
-
-    /**
-     * Returns the {@link HttpResponseStatus} represented by the HTTP response status header.
-     */
-    @Deprecated
-    public static HttpResponseStatus getStatus(SpdyHeaderBlock block) {
-        return getStatus(2, block);
     }
 
     /**
@@ -343,28 +278,12 @@ public class SpdyHeaders {
     /**
      * Sets the HTTP response status header.
      */
-    @Deprecated
-    public static void setStatus(SpdyHeaderBlock block, HttpResponseStatus status) {
-        setStatus(2, block, status);
-    }
-
-    /**
-     * Sets the HTTP response status header.
-     */
     public static void setStatus(int spdyVersion, SpdyHeaderBlock block, HttpResponseStatus status) {
         if (spdyVersion < 3) {
             block.setHeader(Spdy2HttpNames.STATUS, status.toString());
         } else {
             block.setHeader(HttpNames.STATUS, status.toString());
         }
-    }
-
-    /**
-     * Removes the URL path header.
-     */
-    @Deprecated
-    public static void removeUrl(SpdyHeaderBlock block) {
-        removeUrl(2, block);
     }
 
     /**
@@ -381,28 +300,12 @@ public class SpdyHeaders {
     /**
      * Returns the value of the URL path header.
      */
-    @Deprecated
-    public static String getUrl(SpdyHeaderBlock block) {
-        return getUrl(2, block);
-    }
-
-    /**
-     * Returns the value of the URL path header.
-     */
     public static String getUrl(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             return block.getHeader(Spdy2HttpNames.URL);
         } else {
             return block.getHeader(HttpNames.PATH);
         }
-    }
-
-    /**
-     * Sets the URL path header.
-     */
-    @Deprecated
-    public static void setUrl(SpdyHeaderBlock block, String path) {
-        setUrl(2, block, path);
     }
 
     /**
@@ -419,28 +322,12 @@ public class SpdyHeaders {
     /**
      * Removes the HTTP version header.
      */
-    @Deprecated
-    public static void removeVersion(SpdyHeaderBlock block) {
-        removeVersion(2, block);
-    }
-
-    /**
-     * Removes the HTTP version header.
-     */
     public static void removeVersion(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
             block.removeHeader(Spdy2HttpNames.VERSION);
         } else {
             block.removeHeader(HttpNames.VERSION);
         }
-    }
-
-    /**
-     * Returns the {@link HttpVersion} represented by the HTTP version header.
-     */
-    @Deprecated
-    public static HttpVersion getVersion(SpdyHeaderBlock block) {
-        return getVersion(2, block);
     }
 
     /**
@@ -461,14 +348,6 @@ public class SpdyHeaders {
     /**
      * Sets the HTTP version header.
      */
-    @Deprecated
-    public static void setVersion(SpdyHeaderBlock block, HttpVersion httpVersion) {
-        setVersion(2, block, httpVersion);
-    }
-
-    /**
-     * Sets the HTTP version header.
-     */
     public static void setVersion(int spdyVersion, SpdyHeaderBlock block, HttpVersion httpVersion) {
         if (spdyVersion < 3) {
             block.setHeader(Spdy2HttpNames.VERSION, httpVersion.getText());
@@ -476,7 +355,6 @@ public class SpdyHeaders {
             block.setHeader(HttpNames.VERSION, httpVersion.getText());
         }
     }
-
 
     private static final int BUCKET_SIZE = 17;
 
@@ -527,8 +405,8 @@ public class SpdyHeaders {
         return hash % BUCKET_SIZE;
     }
 
-    private final Entry[] entries = new Entry[BUCKET_SIZE];
-    private final Entry head = new Entry(-1, null, null);
+    private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
+    private final HeaderEntry head = new HeaderEntry(-1, null, null);
 
     SpdyHeaders() {
         head.before = head.after = head;
@@ -546,9 +424,9 @@ public class SpdyHeaders {
 
     private void addHeader0(int h, int i, final String name, final String value) {
         // Update the hash table.
-        Entry e = entries[i];
-        Entry newEntry;
-        entries[i] = newEntry = new Entry(h, name, value);
+        HeaderEntry e = entries[i];
+        HeaderEntry newEntry;
+        entries[i] = newEntry = new HeaderEntry(h, name, value);
         newEntry.next = e;
 
         // Update the linked list.
@@ -566,7 +444,7 @@ public class SpdyHeaders {
     }
 
     private void removeHeader0(int h, int i, String name) {
-        Entry e = entries[i];
+        HeaderEntry e = entries[i];
         if (e == null) {
             return;
         }
@@ -574,7 +452,7 @@ public class SpdyHeaders {
         for (;;) {
             if (e.hash == h && eq(name, e.key)) {
                 e.remove();
-                Entry next = e.next;
+                HeaderEntry next = e.next;
                 if (next != null) {
                     entries[i] = next;
                     e = next;
@@ -588,7 +466,7 @@ public class SpdyHeaders {
         }
 
         for (;;) {
-            Entry next = e.next;
+            HeaderEntry next = e.next;
             if (next == null) {
                 break;
             }
@@ -648,7 +526,7 @@ public class SpdyHeaders {
 
         int h = hash(name);
         int i = index(h);
-        Entry e = entries[i];
+        HeaderEntry e = entries[i];
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
                 return e.value;
@@ -668,7 +546,7 @@ public class SpdyHeaders {
 
         int h = hash(name);
         int i = index(h);
-        Entry e = entries[i];
+        HeaderEntry e = entries[i];
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
                 values.addFirst(e.value);
@@ -682,7 +560,7 @@ public class SpdyHeaders {
         List<Map.Entry<String, String>> all =
             new LinkedList<Map.Entry<String, String>>();
 
-        Entry e = head.after;
+        HeaderEntry e = head.after;
         while (e != head) {
             all.add(e);
             e = e.after;
@@ -697,7 +575,7 @@ public class SpdyHeaders {
     Set<String> getHeaderNames() {
         Set<String> names = new TreeSet<String>();
 
-        Entry e = head.after;
+        HeaderEntry e = head.after;
         while (e != head) {
             names.add(e.key);
             e = e.after;
@@ -712,14 +590,14 @@ public class SpdyHeaders {
         return value.toString();
     }
 
-    private static final class Entry implements Map.Entry<String, String> {
+    private static final class HeaderEntry implements Map.Entry<String, String> {
         final int hash;
         final String key;
         String value;
-        Entry next;
-        Entry before, after;
+        HeaderEntry next;
+        HeaderEntry before, after;
 
-        Entry(int hash, String key, String value) {
+        HeaderEntry(int hash, String key, String value) {
             this.hash = hash;
             this.key = key;
             this.value = value;
@@ -730,7 +608,7 @@ public class SpdyHeaders {
             after.before = before;
         }
 
-        void addBefore(Entry e) {
+        void addBefore(HeaderEntry e) {
             after  = e;
             before = e.before;
             before.after = this;
@@ -760,7 +638,7 @@ public class SpdyHeaders {
 
         @Override
         public String toString() {
-            return key + "=" + value;
+            return key + '=' + value;
         }
     }
 }

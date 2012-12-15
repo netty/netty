@@ -24,7 +24,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 public class LengthFieldBasedFrameDecoderTest {
@@ -37,14 +36,14 @@ public class LengthFieldBasedFrameDecoderTest {
             assertFalse(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
             try {
                 assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0 })));
-                Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
+                fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 1, 'A' }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
-            Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+            assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
 
@@ -56,14 +55,14 @@ public class LengthFieldBasedFrameDecoderTest {
         for (int i = 0; i < 2; i ++) {
             try {
                 assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
-                Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
+                fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
-            Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+            assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
 }

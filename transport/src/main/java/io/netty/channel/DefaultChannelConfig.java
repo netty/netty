@@ -15,26 +15,31 @@
  */
 package io.netty.channel;
 
-import static io.netty.channel.ChannelOption.*;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static io.netty.channel.ChannelOption.*;
+
 /**
  * The default {@link SocketChannelConfig} implementation.
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
+    private static final ByteBufAllocator DEFAULT_ALLOCATOR = PooledByteBufAllocator.DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -74,8 +79,12 @@ public class DefaultChannelConfig implements ChannelConfig {
 
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
-        } else if (option == WRITE_SPIN_COUNT) {
+        }
+        if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
+        }
+        if (option == ALLOCATOR) {
+            return (T) getAllocator();
         }
 
         return null;
@@ -89,6 +98,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setConnectTimeoutMillis((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
+        } else if (option == ALLOCATOR) {
+            setAllocator((ByteBufAllocator) value);
         } else {
             return false;
         }
@@ -109,12 +120,13 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+    public ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
         if (connectTimeoutMillis < 0) {
             throw new IllegalArgumentException(String.format(
                     "connectTimeoutMillis: %d (expected: >= 0)", connectTimeoutMillis));
         }
         this.connectTimeoutMillis = connectTimeoutMillis;
+        return this;
     }
 
     @Override
@@ -123,11 +135,26 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public void setWriteSpinCount(int writeSpinCount) {
+    public ChannelConfig setWriteSpinCount(int writeSpinCount) {
         if (writeSpinCount <= 0) {
             throw new IllegalArgumentException(
                     "writeSpinCount must be a positive integer.");
         }
         this.writeSpinCount = writeSpinCount;
+        return this;
+    }
+
+    @Override
+    public ByteBufAllocator getAllocator() {
+        return allocator;
+    }
+
+    @Override
+    public ChannelConfig setAllocator(ByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+        this.allocator = allocator;
+        return this;
     }
 }

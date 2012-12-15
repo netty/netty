@@ -168,7 +168,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
             int counter = 0;
             for (int i = data.readerIndex(); i < data.writerIndex(); i ++) {
                 byte byteData = data.getByte(i);
-                out.writeByte(byteData ^ mask[+counter++ % 4]);
+                out.writeByte(byteData ^ mask[counter++ % 4]);
             }
         } else {
             out.writeBytes(data, data.readerIndex(), data.readableBytes());

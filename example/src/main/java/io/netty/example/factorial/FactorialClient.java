@@ -54,7 +54,6 @@ public class FactorialClient {
             // Print out the answer.
             System.err.format(
                     "Factorial of %,d is: %,d", count, handler.getFactorial());
-
         } finally {
             b.shutdown();
         }

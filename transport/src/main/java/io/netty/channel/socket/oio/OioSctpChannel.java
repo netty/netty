@@ -42,6 +42,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class OioSctpChannel extends AbstractOioMessageChannel
@@ -160,7 +161,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         }
 
         return readMessages;
-
     }
 
     @Override
@@ -180,14 +180,13 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 int dataLen = data.readableBytes();
                 ByteBuffer nioData;
 
-                if (data.hasNioBuffer()) {
+                if (data.nioBufferCount() != -1) {
                     nioData = data.nioBuffer();
                 } else {
                     nioData = ByteBuffer.allocate(dataLen);
                     data.getBytes(data.readerIndex(), nioData);
                     nioData.flip();
                 }
-
 
                 final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
                 mi.payloadProtocolID(packet.getProtocolIdentifier());
@@ -216,8 +215,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : ch.getAllLocalAddresses()) {
-                return address;
+            Iterator<SocketAddress> i = ch.getAllLocalAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
             }
         } catch (IOException e) {
             // ignore
@@ -242,8 +242,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress remoteAddress0() {
         try {
-            for (SocketAddress address : ch.getRemoteAddresses()) {
-                return address;
+            Iterator<SocketAddress> i = ch.getRemoteAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
             }
         } catch (IOException e) {
             // ignore
@@ -325,53 +326,51 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
-        ChannelFuture future = newFuture();
-        doBindAddress(localAddress, future);
-        return future;
+        return bindAddress(localAddress, newFuture());
     }
 
-    void doBindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    @Override
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelFuture future) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.bindAddress(localAddress);
                 future.setSuccess();
             } catch (Throwable t) {
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    doBindAddress(localAddress, future);
+                    bindAddress(localAddress, future);
                 }
             });
         }
+        return future;
     }
 
     @Override
     public ChannelFuture unbindAddress(InetAddress localAddress) {
-        ChannelFuture future = newFuture();
-        doUnbindAddress(localAddress, future);
-        return future;
+        return unbindAddress(localAddress, newFuture());
     }
 
-    void doUnbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    @Override
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelFuture future) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.unbindAddress(localAddress);
                 future.setSuccess();
             } catch (Throwable t) {
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    doUnbindAddress(localAddress, future);
+                    unbindAddress(localAddress, future);
                 }
             });
         }
+        return future;
     }
 }

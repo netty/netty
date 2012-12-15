@@ -18,6 +18,7 @@ package io.netty.logging;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
+import org.apache.commons.logging.Log;
 import org.junit.Test;
 
 public class CommonsLoggerTest {
@@ -25,8 +26,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testIsTraceEnabled() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         expect(mock.isTraceEnabled()).andReturn(true);
         replay(mock);
@@ -38,8 +39,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testIsDebugEnabled() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
@@ -51,8 +52,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testIsInfoEnabled() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         expect(mock.isInfoEnabled()).andReturn(true);
         replay(mock);
@@ -64,8 +65,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testIsWarnEnabled() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         expect(mock.isWarnEnabled()).andReturn(true);
         replay(mock);
@@ -77,8 +78,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testIsErrorEnabled() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         expect(mock.isErrorEnabled()).andReturn(true);
         replay(mock);
@@ -90,8 +91,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testTrace() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.trace("a");
         replay(mock);
@@ -103,8 +104,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testTraceWithException() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.trace("a", e);
         replay(mock);
@@ -116,8 +117,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testDebug() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.debug("a");
         replay(mock);
@@ -129,8 +130,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testDebugWithException() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.debug("a", e);
         replay(mock);
@@ -142,8 +143,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testInfo() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.info("a");
         replay(mock);
@@ -155,8 +156,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testInfoWithException() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.info("a", e);
         replay(mock);
@@ -168,8 +169,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testWarn() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.warn("a");
         replay(mock);
@@ -181,8 +182,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testWarnWithException() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.warn("a", e);
         replay(mock);
@@ -194,8 +195,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testError() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.error("a");
         replay(mock);
@@ -207,8 +208,8 @@ public class CommonsLoggerTest {
 
     @Test
     public void testErrorWithException() {
-        org.apache.commons.logging.Log mock =
-            createStrictMock(org.apache.commons.logging.Log.class);
+        Log mock =
+            createStrictMock(Log.class);
 
         mock.error("a", e);
         replay(mock);

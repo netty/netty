@@ -106,7 +106,7 @@ import java.nio.channels.SelectionKey;
  *
  * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
-public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFutureFactory, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
      * Returns the unique integer ID of this channel.
@@ -130,12 +130,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
      * Returns the configuration of this channel.
      */
     ChannelConfig config();
-
-    /**
-     * Returns the {@link ChannelPipeline} which handles {@link ChannelEvent}s
-     * associated with this channel.
-     */
-    ChannelPipeline pipeline();
 
     boolean isOpen();
     boolean isRegistered();
@@ -205,13 +199,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
 
         /**
          * Return the {@link SocketAddress} to which is bound local or
-         * <code>null</code> if none.
+         * {@code null} if none.
          */
         SocketAddress localAddress();
 
         /**
          * Return the {@link SocketAddress} to which is bound remote or
-         * <code>null</code> if none is bound yet.
+         * {@code null} if none is bound yet.
          */
         SocketAddress remoteAddress();
 
@@ -230,7 +224,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
         /**
          * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
          * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
-         * pass <code>null</code> to it.
+         * pass {@code null} to it.
          *
          * The {@link ChannelFuture} will get notified once the connect operation was complete.
          */
@@ -282,5 +276,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelFu
          * has no effect.
          */
         void resumeRead();
+
+        void sendFile(FileRegion region, ChannelFuture future);
     }
 }

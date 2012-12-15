@@ -61,15 +61,6 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     /**
-     * Creates a new instance with the default {@code version (2)},
-     * {@code maxChunkSize (8192)}, and {@code maxHeaderSize (16384)}.
-     */
-    @Deprecated
-    public SpdyFrameDecoder() {
-        this(2);
-    }
-
-    /**
      * Creates a new instance with the specified {@code version} and the default
      * {@code maxChunkSize (8192)} and {@code maxHeaderSize (16384)}.
      */
@@ -536,8 +527,13 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
             return true;
         }
         // Perhaps last call to decode filled output buffer
-        headerBlockDecompressor.decode(decompressed);
-        return decompressed.readableBytes() >= bytes;
+        int numBytes;
+        boolean done;
+        do {
+            numBytes = headerBlockDecompressor.decode(decompressed);
+            done = decompressed.readableBytes() >= bytes;
+        } while (!done && numBytes > 0);
+        return done;
     }
 
     private int readLengthField() {

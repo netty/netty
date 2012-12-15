@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import static java.util.concurrent.TimeUnit.*;
 import io.netty.channel.ChannelFlushFutureNotifier.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -27,6 +26,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static java.util.concurrent.TimeUnit.*;
 
 /**
  * The default {@link ChannelFuture} implementation.  It is recommended to
@@ -143,6 +144,21 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
+    public ChannelFuture addListeners(ChannelFutureListener... listeners) {
+        if (listeners == null) {
+            throw new NullPointerException("listeners");
+        }
+
+        for (ChannelFutureListener l: listeners) {
+            if (l == null) {
+                break;
+            }
+            addListener(l);
+        }
+        return this;
+    }
+
+    @Override
     public ChannelFuture removeListener(ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -166,6 +182,21 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
             }
         }
 
+        return this;
+    }
+
+    @Override
+    public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
+        if (listeners == null) {
+            throw new NullPointerException("listeners");
+        }
+
+        for (ChannelFutureListener l: listeners) {
+            if (l == null) {
+                break;
+            }
+            removeListener(l);
+        }
         return this;
     }
 
@@ -310,9 +341,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
 
         try {
             synchronized (this) {
-                if (done) {
-                    return done;
-                } else if (waitTime <= 0) {
+                if (done || waitTime <= 0) {
                     return done;
                 }
 
@@ -481,7 +510,6 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
             public void run() {
                 notifyListener(f, l);
             }
-
         });
     }
 
@@ -492,7 +520,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + ".", t);
+                        ChannelFutureListener.class.getSimpleName() + '.', t);
             }
         }
     }
@@ -534,7 +562,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "An exception was thrown by " +
-                        ChannelFutureProgressListener.class.getSimpleName() + ".", t);
+                        ChannelFutureProgressListener.class.getSimpleName() + '.', t);
             }
         }
     }

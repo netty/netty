@@ -32,6 +32,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.AttributeKey;
 import io.netty.util.NetworkConstants;
 
 import java.net.InetSocketAddress;
@@ -57,8 +58,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     };
 
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private EventLoopGroup childGroup;
-    private ChannelHandler handler;
     private ChannelHandler childHandler;
 
     /**
@@ -95,14 +96,15 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             throw new NullPointerException("channelClass");
         }
         if (!ServerChannel.class.isAssignableFrom(channelClass)) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(
+                    "channelClass must be subtype of " + ServerChannel.class.getSimpleName() + '.');
         }
         return super.channel(channelClass);
     }
 
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they get created
-     * (after the acceptor accepted the {@link Channel}). Use a value of <code>null</code> to remove a previous set
+     * (after the acceptor accepted the {@link Channel}). Use a value of {@code null} to remove a previous set
      * {@link ChannelOption}.
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
@@ -113,6 +115,18 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             childOptions.remove(childOption);
         } else {
             childOptions.put(childOption, value);
+        }
+        return this;
+    }
+
+    public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
+        if (childKey == null) {
+            throw new NullPointerException("childKey");
+        }
+        if (value == null) {
+            childAttrs.remove(childKey);
+        } else {
+            childAttrs.put(childKey, value);
         }
         return this;
     }
@@ -152,9 +166,15 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             return future;
         }
 
+        for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
+            @SuppressWarnings("unchecked")
+            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+            channel.attr(key).set(e.getValue());
+        }
+
         ChannelPipeline p = future.channel().pipeline();
-        if (handler != null) {
-            p.addLast(handler);
+        if (handler() != null) {
+            p.addLast(handler());
         }
         p.addLast(acceptor);
 
@@ -197,7 +217,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
     }
 
-
     private class Acceptor
             extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
 
@@ -228,6 +247,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
                     }
                 }
 
+                for (Entry<AttributeKey<?>, Object> e: childAttrs.entrySet()) {
+                    child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+                }
+
                 try {
                     childGroup.register(child);
                 } catch (Throwable t) {
@@ -237,4 +260,40 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             }
         }
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(super.toString());
+        buf.setLength(buf.length() - 1);
+        buf.append(", ");
+        if (childGroup != null) {
+            buf.append("childGroup: ");
+            buf.append(childGroup.getClass().getSimpleName());
+            buf.append(", ");
+        }
+        if (childOptions != null && !childOptions.isEmpty()) {
+            buf.append("childOptions: ");
+            buf.append(childOptions);
+            buf.append(", ");
+        }
+        if (childAttrs != null && !childAttrs.isEmpty()) {
+            buf.append("childAttrs: ");
+            buf.append(childAttrs);
+            buf.append(", ");
+        }
+        if (childHandler != null) {
+            buf.append("childHandler: ");
+            buf.append(childHandler);
+            buf.append(", ");
+        }
+        if (buf.charAt(buf.length() - 1) == '(') {
+            buf.append(')');
+        } else {
+            buf.setCharAt(buf.length() - 2, ')');
+            buf.setLength(buf.length() - 1);
+        }
+
+        return buf.toString();
+    }
 }
+

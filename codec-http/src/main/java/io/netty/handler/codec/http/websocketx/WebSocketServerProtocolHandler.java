@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -26,9 +25,19 @@ import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
 
+import static io.netty.handler.codec.http.HttpVersion.*;
+
 /**
- * Handles WebSocket control frames (Close, Ping, Pong) and data frames (Text and Binary) are passed
- * to the next handler in the pipeline.
+ * This handler does all the heavy lifting for you to run a websocket server.
+ *
+ * It takes care of websocket handshaking as well as processing of control frames (Close, Ping, Pong). Text and Binary
+ * data frames are passed to the next handler in the pipeline (implemented by you) for processing.
+ *
+ * See <tt>io.netty.example.http.websocketx.html5.WebSocketServer</tt> for usage.
+ *
+ * The implementation of this handler assumes that you just want to run  a websocket server and not process other types
+ * HTTP requests (like GET and POST). If you wish to support both HTTP requests and websockets in the one server, refer
+ * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  */
 public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandlerAdapter<WebSocketFrame> {
 
@@ -66,10 +75,11 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     @Override
     public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
-            WebSocketServerHandshaker handshaker = WebSocketServerProtocolHandler.getHandshaker(ctx);
+            WebSocketServerHandshaker handshaker = getHandshaker(ctx);
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
-        } else if (frame instanceof PingWebSocketFrame) {
+        }
+        if (frame instanceof PingWebSocketFrame) {
             ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
             return;
         }

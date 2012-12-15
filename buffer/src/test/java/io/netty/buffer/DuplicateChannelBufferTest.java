@@ -15,9 +15,9 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests duplicated channel buffers

@@ -25,18 +25,18 @@ import io.netty.channel.socket.aio.AioServerSocketChannel;
 import io.netty.channel.socket.aio.AioSocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSctpServerChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.nio.NioSctpChannel;
+import io.netty.channel.socket.nio.NioSctpServerChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
-import io.netty.channel.socket.oio.OioSctpServerChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
-import io.netty.channel.socket.oio.OioSctpChannel;
+import io.netty.testsuite.util.TestUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -96,6 +96,11 @@ final class SocketTestPermutation {
                     @Override
                     public Channel newChannel() {
                        return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                    }
+
+                    @Override
+                    public String toString() {
+                        return NioDatagramChannel.class.getSimpleName() + ".class";
                     }
                 });
             }
@@ -188,13 +193,7 @@ final class SocketTestPermutation {
             public ServerBootstrap newInstance() {
                 final AioEventLoopGroup parentGroup = new AioEventLoopGroup();
                 final AioEventLoopGroup childGroup = new AioEventLoopGroup();
-                return new ServerBootstrap().group(parentGroup, childGroup).channelFactory(new ChannelFactory() {
-
-                    @Override
-                    public Channel newChannel() {
-                        return new AioServerSocketChannel(parentGroup, childGroup);
-                    }
-                });
+                return new ServerBootstrap().group(parentGroup, childGroup).channel(AioServerSocketChannel.class);
             }
         });
         list.add(new Factory<ServerBootstrap>() {
@@ -221,12 +220,7 @@ final class SocketTestPermutation {
             @Override
             public Bootstrap newInstance() {
                 final AioEventLoopGroup loop = new AioEventLoopGroup();
-                return new Bootstrap().group(loop).channelFactory(new ChannelFactory() {
-                    @Override
-                    public Channel newChannel() {
-                        return new AioSocketChannel(loop);
-                    }
-                });
+                return new Bootstrap().group(loop).channel(AioSocketChannel.class);
             }
         });
         list.add(new Factory<Bootstrap>() {
@@ -239,8 +233,11 @@ final class SocketTestPermutation {
     }
 
     static List<Factory<ServerBootstrap>> sctpServerChannel() {
-        List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
+        if (!TestUtils.isSctpSupported()) {
+            return Collections.emptyList();
+        }
 
+        List<Factory<ServerBootstrap>> list = new ArrayList<Factory<ServerBootstrap>>();
         // Make the list of ServerBootstrap factories.
         list.add(new Factory<ServerBootstrap>() {
             @Override
@@ -250,6 +247,8 @@ final class SocketTestPermutation {
                         channel(NioSctpServerChannel.class);
             }
         });
+        /*
+         * Comment out till #632 is fixes
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
@@ -258,11 +257,16 @@ final class SocketTestPermutation {
                         channel(OioSctpServerChannel.class);
             }
         });
+        */
 
         return list;
     }
 
     static List<Factory<Bootstrap>> sctpClientChannel() {
+        if (!TestUtils.isSctpSupported()) {
+            return Collections.emptyList();
+        }
+
         List<Factory<Bootstrap>> list = new ArrayList<Factory<Bootstrap>>();
         list.add(new Factory<Bootstrap>() {
             @Override
@@ -270,12 +274,15 @@ final class SocketTestPermutation {
                 return new Bootstrap().group(new NioEventLoopGroup()).channel(NioSctpChannel.class);
             }
         });
-        list.add(new Factory<Bootstrap>() {
+        /*
+         * Comment out till #632 is fixes
+         * list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSctpChannel.class);
             }
         });
+        */
         return list;
     }
 

@@ -17,6 +17,7 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -32,26 +33,24 @@ import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.DefaultEventExecutorGroup;
 import io.netty.channel.EventExecutorGroup;
 import io.netty.channel.EventLoopGroup;
-
-import java.util.HashSet;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.HashSet;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 public class LocalTransportThreadModelTest {
 
     private static ServerBootstrap sb;
-    private static LocalAddress ADDR;
+    private static LocalAddress localAddr;
 
     @BeforeClass
     public static void init() {
@@ -72,7 +71,7 @@ public class LocalTransportThreadModelTest {
               }
           });
 
-        ADDR = (LocalAddress) sb.bind().syncUninterruptibly().channel().localAddress();
+        localAddr = (LocalAddress) sb.bind().syncUninterruptibly().channel().localAddress();
     }
 
     @AfterClass
@@ -80,7 +79,7 @@ public class LocalTransportThreadModelTest {
         sb.shutdown();
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testStagedExecutionMultiple() throws Throwable {
         for (int i = 0; i < 10; i ++) {
             testStagedExecution();
@@ -104,7 +103,7 @@ public class LocalTransportThreadModelTest {
         // h3 will be always invoked by EventExecutor 'e2'.
         ch.pipeline().addLast(e2, h3);
 
-        l.register(ch).sync().channel().connect(ADDR).sync();
+        l.register(ch).sync().channel().connect(localAddr).sync();
 
         // Fire inbound events from all possible starting points.
         ch.pipeline().fireInboundBufferUpdated();
@@ -196,10 +195,10 @@ public class LocalTransportThreadModelTest {
             throw e;
         } finally {
             l.shutdown();
-            l.awaitTermination(5, TimeUnit.SECONDS);
             e1.shutdown();
-            e1.awaitTermination(5, TimeUnit.SECONDS);
             e2.shutdown();
+            l.awaitTermination(5, TimeUnit.SECONDS);
+            e1.awaitTermination(5, TimeUnit.SECONDS);
             e2.awaitTermination(5, TimeUnit.SECONDS);
         }
     }
@@ -232,7 +231,7 @@ public class LocalTransportThreadModelTest {
                          .addLast(e4, h5)
                          .addLast(e5, h6);
 
-            l.register(ch).sync().channel().connect(ADDR).sync();
+            l.register(ch).sync().channel().connect(localAddr).sync();
 
             final int ROUNDS = 1024;
             final int ELEMS_PER_ROUNDS = 8192;
@@ -318,7 +317,6 @@ public class LocalTransportThreadModelTest {
             }
 
             ch.close().sync();
-            h6.latch.await(); // Wait until channelInactive() is triggered.
 
         } finally {
             l.shutdown();
@@ -351,6 +349,16 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+            // Nothing to free
+        }
+
+        @Override
         public void inboundBufferUpdated(
                 ChannelHandlerContext ctx) throws Exception {
             ctx.inboundMessageBuffer().clear();
@@ -369,7 +377,7 @@ public class LocalTransportThreadModelTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
-            System.err.print("[" + Thread.currentThread().getName() + "] ");
+            System.err.print('[' + Thread.currentThread().getName() + "] ");
             cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
         }
@@ -394,7 +402,17 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.buffer();
+            return ctx.alloc().buffer();
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+            buf.unsafe().free();
         }
 
         @Override
@@ -418,8 +436,13 @@ public class LocalTransportThreadModelTest {
 
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, msg.intValue());
+                if (out.maxCapacity() - out.writerIndex() < 4) {
+                    // Next inbound buffer is full - attempt to flush some data.
+                    ctx.fireInboundBufferUpdated();
+                }
                 out.writeInt(msg);
             }
+
             ctx.fireInboundBufferUpdated();
         }
 
@@ -473,13 +496,23 @@ public class LocalTransportThreadModelTest {
         @Override
         public ByteBuf newInboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.buffer();
+            return ctx.alloc().buffer();
         }
 
         @Override
         public MessageBuf<Integer> newOutboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            buf.unsafe().free();
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+            // Nothing to free
         }
 
         @Override
@@ -494,7 +527,6 @@ public class LocalTransportThreadModelTest {
 
             ByteBuf in = ctx.inboundByteBuffer();
             MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
-
             while (in.readableBytes() >= 4) {
                 int msg = in.readInt();
                 int expected = inCnt ++;
@@ -506,7 +538,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx,
+        public void flush(final ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
@@ -521,8 +553,15 @@ public class LocalTransportThreadModelTest {
 
                 int expected = outCnt ++;
                 Assert.assertEquals(expected, msg.intValue());
+
+                if (out.maxCapacity() - out.writerIndex() < 4) {
+                    // Next outbound buffer is full - attempt to flush some data.
+                    ctx.flush();
+                }
+
                 out.writeInt(msg);
             }
+
             ctx.flush(future);
         }
 
@@ -558,6 +597,16 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+            // Nothing to free
+        }
+
+        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             Thread t = this.t;
             if (t == null) {
@@ -604,7 +653,7 @@ public class LocalTransportThreadModelTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             exception.compareAndSet(null, cause);
-            System.err.print("[" + Thread.currentThread().getName() + "] ");
+            System.err.print('[' + Thread.currentThread().getName() + "] ");
             cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
         }
@@ -621,7 +670,6 @@ public class LocalTransportThreadModelTest {
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
-        final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -631,6 +679,16 @@ public class LocalTransportThreadModelTest {
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+            // Nothing to free
         }
 
         @Override
@@ -671,11 +729,6 @@ public class LocalTransportThreadModelTest {
                 out.add(msg);
             }
             ctx.flush(future);
-        }
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            latch.countDown();
         }
 
         @Override

@@ -24,6 +24,7 @@ import org.osgi.util.tracker.ServiceTracker;
  * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
  * {@link LogService} logger.
  */
+@SuppressWarnings("all")
 public class OsgiLoggerFactory extends InternalLoggerFactory {
 
     private final ServiceTracker logServiceTracker;
@@ -56,8 +57,7 @@ public class OsgiLoggerFactory extends InternalLoggerFactory {
                     }
 
                     @Override
-                    public void removedService(ServiceReference reference,
-                            Object service) {
+                    public void removedService(ServiceReference reference, Object service) {
                         logService = null;
                     }
         };

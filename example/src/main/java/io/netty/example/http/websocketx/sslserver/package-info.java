@@ -20,11 +20,11 @@
  * <dl>
  *   <dt>Step 1. Generate Your Key
  *   <dd>
- *     <code>keytool -genkey -keystore mySrvKeystore -keyalg RSA</code>.
+ *     {@code keytool -genkey -keystore mySrvKeystore -keyalg RSA}.
  *     Make sure that you set the key password to be the same the key file password.
  *   <dt>Step 2. Specify your key store file and password as system properties
  *   <dd>
- *     <code>-Dkeystore.file.path=&lt;path to mySrvKeystore&gt; -Dkeystore.file.password=&lt;password&gt;</code>
+ *     {@code -Dkeystore.file.path=<path to mySrvKeystore> -Dkeystore.file.password=<password>}
  *   <dt>Step 3. Run WebSocketSslServer as a Java application
  *   <dd>
  *     Once started, you can test the web server against your browser by navigating to https://localhost:8081/

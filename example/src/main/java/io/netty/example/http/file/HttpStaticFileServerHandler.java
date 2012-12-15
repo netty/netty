@@ -15,11 +15,6 @@
  */
 package io.netty.example.http.file;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -33,6 +28,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 
+import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
@@ -44,8 +40,13 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.regex.Pattern;
 
-import javax.activation.MimetypesFileTypeMap;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -58,13 +59,13 @@ import javax.activation.MimetypesFileTypeMap;
  * Web browser caching works with HTTP headers as illustrated by the following
  * sample:
  * <ol>
- * <li>Request #1 returns the content of <code>/file1.txt</code>.</li>
- * <li>Contents of <code>/file1.txt</code> is cached by the browser.</li>
- * <li>Request #2 for <code>/file1.txt</code> does return the contents of the
+ * <li>Request #1 returns the content of {@code /file1.txt}.</li>
+ * <li>Contents of {@code /file1.txt} is cached by the browser.</li>
+ * <li>Request #2 for {@code /file1.txt} does return the contents of the
  *     file again. Rather, a 304 Not Modified is returned. This tells the
  *     browser to use the contents stored in its cache.</li>
  * <li>The server knows the file has not been modified because the
- *     <code>If-Modified-Since</code> date is the same as the file's last
+ *     {@code If-Modified-Since} date is the same as the file's last
  *     modified date.</li>
  * </ol>
  *
@@ -141,8 +142,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
 
         // Cache Validation
-        String ifModifiedSince = request.getHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
-        if (ifModifiedSince != null && !ifModifiedSince.equals("")) {
+        String ifModifiedSince = request.getHeader(IF_MODIFIED_SINCE);
+        if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
 
@@ -194,6 +195,8 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
     }
 
+    private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
+
     private static String sanitizeUri(String uri) {
         // Decode the path.
         try {
@@ -215,10 +218,10 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Simplistic dumb security check.
         // You will have to do something serious in the production environment.
-        if (uri.contains(File.separator + ".") ||
-            uri.contains("." + File.separator) ||
+        if (uri.contains(File.separator + '.') ||
+            uri.contains('.' + File.separator) ||
             uri.startsWith(".") || uri.endsWith(".") ||
-            uri.matches(".*[<>&\"].*")) {
+            INSECURE_URI.matcher(uri).matches()) {
             return null;
         }
 
@@ -226,8 +229,10 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         return System.getProperty("user.dir") + File.separator + uri;
     }
 
+    private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
+
     private static void sendListing(ChannelHandlerContext ctx, File dir) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
 
         StringBuilder buf = new StringBuilder();
@@ -252,7 +257,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             }
 
             String name = f.getName();
-            if (!name.matches("[A-Za-z0-9][-_A-Za-z0-9\\.]*")) {
+            if (!ALLOWED_FILE_NAME.matcher(name).matches()) {
                 continue;
             }
 
@@ -297,7 +302,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      *            Context
      */
     private static void sendNotModified(ChannelHandlerContext ctx) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, NOT_MODIFIED);
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
@@ -315,7 +320,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
         Calendar time = new GregorianCalendar();
-        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+        response.setHeader(DATE, dateFormatter.format(time.getTime()));
     }
 
     /**
@@ -332,14 +337,14 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Date header
         Calendar time = new GregorianCalendar();
-        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+        response.setHeader(DATE, dateFormatter.format(time.getTime()));
 
         // Add cache headers
         time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
-        response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
-        response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
+        response.setHeader(EXPIRES, dateFormatter.format(time.getTime()));
+        response.setHeader(CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
         response.setHeader(
-                HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
+                LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
     }
 
     /**
@@ -352,7 +357,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      */
     private static void setContentTypeHeader(HttpResponse response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
-        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+        response.setHeader(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }
 
 }

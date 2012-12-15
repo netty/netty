@@ -18,9 +18,8 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.Notification;
 
 public final class SctpNotificationEvent {
-    private Notification notification;
-    private Object attachment;
-
+    private final Notification notification;
+    private final Object attachment;
 
     public SctpNotificationEvent(Notification notification, Object attachment) {
         this.notification = notification;
@@ -36,7 +35,7 @@ public final class SctpNotificationEvent {
 
     /**
      * Return the attachment of this {@link SctpNotificationEvent}, or
-     * <code>null</code> if no attachment was provided
+     * {@code null} if no attachment was provided
      */
     public Object attachment() {
         return attachment;

@@ -19,7 +19,7 @@ package io.netty.handler.codec;
  * An {@link Exception} which is thrown when the received frame data could not be decoded by
  * an inbound handler.
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
 public class CorruptedFrameException extends DecoderException {
 

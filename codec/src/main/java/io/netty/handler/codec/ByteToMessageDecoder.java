@@ -16,8 +16,8 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -35,7 +35,7 @@ public abstract class ByteToMessageDecoder<O>
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.buffer();
+        return ctx.alloc().buffer();
     }
 
     @Override
@@ -51,7 +51,7 @@ public abstract class ByteToMessageDecoder<O>
         }
 
         try {
-            if (CodecUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
+            if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
                 ctx.fireInboundBufferUpdated();
             }
         } catch (Throwable t) {
@@ -79,14 +79,13 @@ public abstract class ByteToMessageDecoder<O>
                     } else {
                         continue;
                     }
-                } else {
-                    if (oldInputLength == in.readableBytes()) {
-                        throw new IllegalStateException(
-                                "decode() did not read anything but decoded a message.");
-                    }
+                }
+                if (oldInputLength == in.readableBytes()) {
+                    throw new IllegalStateException(
+                            "decode() did not read anything but decoded a message.");
                 }
 
-                if (CodecUtil.unfoldAndAdd(ctx, o, true)) {
+                if (ChannelHandlerUtil.unfoldAndAdd(ctx, o, true)) {
                     decoded = true;
                 } else {
                     break;
@@ -131,7 +130,7 @@ public abstract class ByteToMessageDecoder<O>
         ByteBuf in = ctx.inboundByteBuffer();
         try {
             if (in.readable()) {
-                ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());
+                ctx.nextInboundByteBuffer().writeBytes(in);
                 ctx.fireInboundBufferUpdated();
             }
         } finally {

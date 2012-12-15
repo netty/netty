@@ -29,26 +29,20 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     private boolean clear;
     private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultSpdySettingsFrame() {
-    }
-
     @Override
     public Set<Integer> getIds() {
         return settingsMap.keySet();
     }
 
     @Override
-    public boolean isSet(int ID) {
-        Integer key = new Integer(ID);
+    public boolean isSet(int id) {
+        Integer key = Integer.valueOf(id);
         return settingsMap.containsKey(key);
     }
 
     @Override
-    public int getValue(int ID) {
-        Integer key = new Integer(ID);
+    public int getValue(int id) {
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).getValue();
         } else {
@@ -57,16 +51,16 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     @Override
-    public void setValue(int ID, int value) {
-        setValue(ID, value, false, false);
+    public void setValue(int id, int value) {
+        setValue(id, value, false, false);
     }
 
     @Override
-    public void setValue(int ID, int value, boolean persistValue, boolean persisted) {
-        if (ID <= 0 || ID > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
-            throw new IllegalArgumentException("Setting ID is not valid: " + ID);
+    public void setValue(int id, int value, boolean persistValue, boolean persisted) {
+        if (id <= 0 || id > SpdyCodecUtil.SPDY_SETTINGS_MAX_ID) {
+            throw new IllegalArgumentException("Setting ID is not valid: " + id);
         }
-        Integer key = new Integer(ID);
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             Setting setting = settingsMap.get(key);
             setting.setValue(value);
@@ -78,16 +72,16 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     @Override
-    public void removeValue(int ID) {
-        Integer key = new Integer(ID);
+    public void removeValue(int id) {
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             settingsMap.remove(key);
         }
     }
 
     @Override
-    public boolean isPersistValue(int ID) {
-        Integer key = new Integer(ID);
+    public boolean isPersistValue(int id) {
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).isPersist();
         } else {
@@ -96,16 +90,16 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     @Override
-    public void setPersistValue(int ID, boolean persistValue) {
-        Integer key = new Integer(ID);
+    public void setPersistValue(int id, boolean persistValue) {
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             settingsMap.get(key).setPersist(persistValue);
         }
     }
 
     @Override
-    public boolean isPersisted(int ID) {
-        Integer key = new Integer(ID);
+    public boolean isPersisted(int id) {
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             return settingsMap.get(key).isPersisted();
         } else {
@@ -114,8 +108,8 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
     }
 
     @Override
-    public void setPersisted(int ID, boolean persisted) {
-        Integer key = new Integer(ID);
+    public void setPersisted(int id, boolean persisted) {
+        Integer key = Integer.valueOf(id);
         if (settingsMap.containsKey(key)) {
             settingsMap.get(key).setPersisted(persisted);
         }
@@ -140,7 +134,7 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
             Setting setting = e.getValue();
             buf.append("--> ");
             buf.append(e.getKey().toString());
-            buf.append(":");
+            buf.append(':');
             buf.append(setting.getValue());
             buf.append(" (persist value: ");
             buf.append(setting.isPersist());

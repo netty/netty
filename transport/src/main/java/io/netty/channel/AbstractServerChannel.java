@@ -49,7 +49,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public MessageBuf<Object> outboundMessageBuffer() {
+    public <T> MessageBuf<T> outboundMessageBuffer() {
         throw new NoSuchBufferException(String.format(
                 "%s does not have an outbound buffer.", ServerChannel.class.getSimpleName()));
     }
@@ -63,7 +63,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     public SocketAddress remoteAddress() {
         return null;
     }
-
 
     @Override
     protected SocketAddress remoteAddress0() {

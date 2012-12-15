@@ -18,10 +18,18 @@ package io.netty.handler.codec.http.websocketx;
 import java.net.URI;
 import java.util.Map;
 
+import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
+
 /**
  * Instances the appropriate handshake class to use for clients
  */
-public class WebSocketClientHandshakerFactory {
+public final class WebSocketClientHandshakerFactory {
+
+    /**
+     * Private constructor so this static class cannot be instanced.
+     */
+    private WebSocketClientHandshakerFactory() {
+    }
 
     /**
      * Creates a new handshaker.
@@ -38,7 +46,7 @@ public class WebSocketClientHandshakerFactory {
      * @param customHeaders
      *            Custom HTTP headers to send during the handshake
      */
-    public WebSocketClientHandshaker newHandshaker(
+    public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) {
         return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, 65536);
@@ -62,20 +70,20 @@ public class WebSocketClientHandshakerFactory {
      *            Maximum allowable frame payload length. Setting this value to your application's
      *            requirement may reduce denial of service attacks using long data frames.
      */
-    public WebSocketClientHandshaker newHandshaker(
+    public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders, int maxFramePayloadLength) {
-        if (version == WebSocketVersion.V13) {
+        if (version == V13) {
             return new WebSocketClientHandshaker13(
-                    webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
+                    webSocketURL, V13, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
         }
-        if (version == WebSocketVersion.V08) {
+        if (version == V08) {
             return new WebSocketClientHandshaker08(
-                    webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
+                    webSocketURL, V08, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
         }
-        if (version == WebSocketVersion.V00) {
+        if (version == V00) {
             return new WebSocketClientHandshaker00(
-                    webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
+                    webSocketURL, V00, subprotocol, customHeaders, maxFramePayloadLength);
         }
 
         throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");

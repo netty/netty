@@ -15,7 +15,9 @@
  */
 package io.netty.channel;
 
-import static org.junit.Assert.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
@@ -27,9 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
 
@@ -68,27 +68,21 @@ public class SingleThreadEventLoopTest {
             @Override
             public void run() {
                 latch.countDown();
-                try {
-                    Thread.sleep(Integer.MAX_VALUE);
-                } catch (InterruptedException ignored) {
-                    interrupted.set(true);
-                }
             }
         });
 
         // Wait for the event loop thread to start.
         latch.await();
 
-        // Request the event loop thread to stop - it will call wakeup(false) to interrupt the thread.
+        // Request the event loop thread to stop.
         loop.shutdown();
+
+        assertTrue(loop.isShutdown());
 
         // Wait until the event loop is terminated.
         while (!loop.isTerminated()) {
             loop.awaitTermination(1, TimeUnit.DAYS);
         }
-
-        // Make sure loop.shutdown() above triggered wakeup().
-        assertTrue(interrupted.get());
     }
 
     @Test
@@ -271,7 +265,7 @@ public class SingleThreadEventLoopTest {
                     // Waken up by interruptThread()
                 }
 
-                if (isShutdown() && peekTask() == null) {
+                if (isShutdown() && confirmShutdown()) {
                     break;
                 }
             }
@@ -280,13 +274,6 @@ public class SingleThreadEventLoopTest {
         @Override
         protected void cleanup() {
             cleanedUp.incrementAndGet();
-        }
-
-        @Override
-        protected void wakeup(boolean inEventLoop) {
-            if (!inEventLoop && isShutdown()) {
-                interruptThread();
-            }
         }
 
         @Override

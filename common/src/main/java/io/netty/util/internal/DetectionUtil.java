@@ -15,13 +15,19 @@
  */
 package io.netty.util.internal;
 
+import sun.misc.Cleaner;
+
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 
 /**
@@ -36,11 +42,13 @@ public final class DetectionUtil {
 
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
+    private static final boolean CAN_FREE_DIRECT_BUFFER;
     private static final boolean IS_WINDOWS;
     private static final boolean IS_ROOT;
 
     static {
-        String os = SystemPropertyUtil.get("os.name").toLowerCase();
+        Pattern PERMISSION_DENIED = Pattern.compile(".*permission.*denied.*");
+        String os = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.UK);
         // windows
         IS_WINDOWS = os.contains("win");
 
@@ -62,7 +70,7 @@ public final class DetectionUtil {
                         message = "";
                     }
                     message = message.toLowerCase();
-                    if (message.matches(".*permission.*denied.*")) {
+                    if (PERMISSION_DENIED.matcher(message).matches()) {
                         break;
                     }
                 } finally {
@@ -78,10 +86,25 @@ public final class DetectionUtil {
         }
 
         IS_ROOT = root;
+
+        boolean canFreeDirectBuffer = false;
+
+        try {
+            ByteBuffer direct = ByteBuffer.allocateDirect(1);
+            Field cleanerField = direct.getClass().getDeclaredField("cleaner");
+            cleanerField.setAccessible(true);
+            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
+            cleaner.clean();
+            canFreeDirectBuffer = true;
+        } catch (Throwable t) {
+            // Ignore.
+        }
+
+        CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer;
     }
 
     /**
-     * Return <code>true</code> if the JVM is running on Windows
+     * Return {@code true} if the JVM is running on Windows
      */
     public static boolean isWindows() {
         return IS_WINDOWS;
@@ -103,6 +126,10 @@ public final class DetectionUtil {
         return JAVA_VERSION;
     }
 
+    public static boolean canFreeDirectBuffer() {
+        return CAN_FREE_DIRECT_BUFFER;
+    }
+
     private static boolean hasUnsafe(ClassLoader loader) {
         boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         if (noUnsafe) {
@@ -110,7 +137,7 @@ public final class DetectionUtil {
         }
 
         // Legacy properties
-        boolean tryUnsafe = false;
+        boolean tryUnsafe;
         if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
             tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
         } else {

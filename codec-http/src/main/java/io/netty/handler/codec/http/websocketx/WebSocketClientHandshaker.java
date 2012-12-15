@@ -56,8 +56,8 @@ public abstract class WebSocketClientHandshaker {
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      */
-    public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders, int maxFramePayloadLength) {
+    protected WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
+                                        Map<String, String> customHeaders, int maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
         expectedSubprotocol = subprotocol;
@@ -122,7 +122,22 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      */
-    public abstract ChannelFuture handshake(Channel channel);
+    public ChannelFuture handshake(Channel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return handshake(channel, channel.newFuture());
+    }
+
+    /**
+     * Begins the opening handshake
+     *
+     * @param channel
+     *            Channel
+     * @param future
+     *            the {@link ChannelFuture} to be notified when the opening handshake is sent
+     */
+    public abstract ChannelFuture handshake(Channel channel, ChannelFuture future);
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.

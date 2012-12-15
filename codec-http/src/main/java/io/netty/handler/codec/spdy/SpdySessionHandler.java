@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -38,6 +39,7 @@ public class SpdySessionHandler
     private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");
 
     static {
+        @SuppressWarnings("ZeroLengthArrayAllocation")
         StackTraceElement[] emptyTrace = new StackTraceElement[0];
         PROTOCOL_EXCEPTION.setStackTrace(emptyTrace);
         STREAM_CLOSED.setStackTrace(emptyTrace);
@@ -92,6 +94,16 @@ public class SpdySessionHandler
     @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
     }
 
     @Override
@@ -415,7 +427,6 @@ public class SpdySessionHandler
         super.exceptionCaught(ctx, cause);
     }
 
-
     @Override
     public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         sendGoAwayFrame(ctx);
@@ -529,7 +540,6 @@ public class SpdySessionHandler
 
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         return;
-
                     } else {
                         // Stream is stalled -- enqueue Data frame and return
                         spdySession.putPendingWrite(streamID, spdyDataFrame);
@@ -695,8 +705,8 @@ public class SpdySessionHandler
      * Helper functions
      */
 
-    private boolean isRemoteInitiatedID(int ID) {
-        boolean serverID = SpdyCodecUtil.isServerId(ID);
+    private boolean isRemoteInitiatedID(int id) {
+        boolean serverID = SpdyCodecUtil.isServerId(id);
         return server && !serverID || !server && serverID;
     }
 
@@ -824,7 +834,6 @@ public class SpdySessionHandler
                     }
 
                     ctx.nextOutboundMessageBuffer().add(spdyDataFrame);
-
                 } else {
                     // We can send a partial frame
                     spdySession.updateSendWindowSize(streamID, -1 * newWindowSize);

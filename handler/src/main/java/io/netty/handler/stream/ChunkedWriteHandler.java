@@ -15,6 +15,7 @@
  */
 package io.netty.handler.stream;
 
+import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -93,6 +94,11 @@ public class ChunkedWriteHandler
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         return queue;
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        // Nothing to free
     }
 
     private boolean isWritable() {
@@ -309,7 +315,7 @@ public class ChunkedWriteHandler
      * Read the next {@link ChunkedInput} and transfer it the the outbound buffer.
      * @param ctx           the {@link ChannelHandlerContext} this handler is bound to
      * @param chunks        the {@link ChunkedInput} to read from
-     * @return read         <code>true</code> if something could be transfered to the outbound buffer
+     * @return read         {@code true} if something could be transfered to the outbound buffer
      * @throws Exception    if something goes wrong
      */
     @SuppressWarnings("unchecked")

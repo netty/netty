@@ -78,7 +78,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;
-        } else  if (msg instanceof HttpMessage) {
+        }
+        if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
             cleanup();
@@ -168,7 +169,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
     protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
-
 
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {

@@ -68,7 +68,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     logger.warn(
                             "Failed to close a partially initialized socket.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
@@ -110,10 +109,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput() {
-        final ChannelFuture future = newFuture();
+        return shutdownOutput(newFuture());
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput(final ChannelFuture future) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
-            shutdownOutput(future);
+            try {
+                javaChannel().socket().shutdownOutput();
+                future.setSuccess();
+            } catch (Throwable t) {
+                future.setFailure(t);
+            }
         } else {
             loop.execute(new Runnable() {
                 @Override
@@ -123,15 +131,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             });
         }
         return future;
-    }
-
-    private void shutdownOutput(ChannelFuture future) {
-        try {
-            javaChannel().socket().shutdownOutput();
-            future.setSuccess();
-        } catch (Throwable t) {
-            future.setFailure(t);
-        }
     }
 
     @Override

@@ -15,10 +15,13 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.ByteBuf.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -28,13 +31,12 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf {
+public class DuplicatedByteBuf extends AbstractByteBuf implements Unsafe {
 
-    private final Unsafe unsafe = new DuplicatedUnsafe();
-    final ByteBuf buffer;
+    private final ByteBuf buffer;
 
     public DuplicatedByteBuf(ByteBuf buffer) {
-        super(buffer.order(), buffer.maxCapacity());
+        super(buffer.maxCapacity());
 
         if (buffer instanceof DuplicatedByteBuf) {
             this.buffer = ((DuplicatedByteBuf) buffer).buffer;
@@ -43,13 +45,21 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
         }
 
         setIndex(buffer.readerIndex(), buffer.writerIndex());
-
-        buffer.unsafe().acquire();
     }
 
     @Override
     public ByteBuf unwrap() {
         return buffer;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return buffer.alloc();
+    }
+
+    @Override
+    public ByteOrder order() {
+        return buffer.order();
     }
 
     @Override
@@ -63,8 +73,9 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public void capacity(int newCapacity) {
+    public ByteBuf capacity(int newCapacity) {
         buffer.capacity(newCapacity);
+        return this;
     }
 
     @Override
@@ -108,11 +119,6 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public ByteBuf duplicate() {
-        return new DuplicatedByteBuf(this);
-    }
-
-    @Override
     public ByteBuf copy(int index, int length) {
         return buffer.copy(index, length);
     }
@@ -123,64 +129,76 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public void getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, ByteBuffer dst) {
+    public ByteBuf getBytes(int index, ByteBuffer dst) {
         buffer.getBytes(index, dst);
+        return this;
     }
 
     @Override
-    public void setByte(int index, int value) {
+    public ByteBuf setByte(int index, int value) {
         buffer.setByte(index, value);
+        return this;
     }
 
     @Override
-    public void setShort(int index, int value) {
+    public ByteBuf setShort(int index, int value) {
         buffer.setShort(index, value);
+        return this;
     }
 
     @Override
-    public void setMedium(int index, int value) {
+    public ByteBuf setMedium(int index, int value) {
         buffer.setMedium(index, value);
+        return this;
     }
 
     @Override
-    public void setInt(int index, int value) {
+    public ByteBuf setInt(int index, int value) {
         buffer.setInt(index, value);
+        return this;
     }
 
     @Override
-    public void setLong(int index, long value) {
+    public ByteBuf setLong(int index, long value) {
         buffer.setLong(index, value);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, byte[] src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuf src, int srcIndex, int length) {
+    public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
+        return this;
     }
 
     @Override
-    public void setBytes(int index, ByteBuffer src) {
+    public ByteBuf setBytes(int index, ByteBuffer src) {
         buffer.setBytes(index, src);
+        return this;
     }
 
     @Override
-    public void getBytes(int index, OutputStream out, int length)
+    public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);
+        return this;
     }
 
     @Override
@@ -202,8 +220,8 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public boolean hasNioBuffer() {
-        return buffer.hasNioBuffer();
+    public int nioBufferCount() {
+        return buffer.nioBufferCount();
     }
 
     @Override
@@ -212,50 +230,42 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
     }
 
     @Override
-    public boolean hasNioBuffers() {
-        return buffer.hasNioBuffers();
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return buffer.nioBuffers(index, length);
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int offset, int length) {
-        return buffer.nioBuffers(offset, length);
+    public ByteBuffer internalNioBuffer() {
+        return buffer.unsafe().internalNioBuffer();
     }
+
+    @Override
+    public ByteBuffer[] internalNioBuffers() {
+        return buffer.unsafe().internalNioBuffers();
+    }
+
+    @Override
+    public void discardSomeReadBytes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isFreed() {
+        return buffer.unsafe().isFreed();
+    }
+
+    @Override
+    public void free() { }
+
+    @Override
+    public void suspendIntermediaryDeallocations() { }
+
+    @Override
+    public void resumeIntermediaryDeallocations() { }
 
     @Override
     public Unsafe unsafe() {
-        return unsafe;
-    }
-
-    private final class DuplicatedUnsafe implements Unsafe {
-
-        @Override
-        public ByteBuffer nioBuffer() {
-            return buffer.unsafe().nioBuffer();
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers() {
-            return buffer.unsafe().nioBuffers();
-        }
-
-        @Override
-        public ByteBuf newBuffer(int initialCapacity) {
-            return buffer.unsafe().newBuffer(initialCapacity);
-        }
-
-        @Override
-        public void discardSomeReadBytes() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void acquire() {
-            buffer.unsafe().acquire();
-        }
-
-        @Override
-        public void release() {
-            buffer.unsafe().release();
-        }
+        return this;
     }
 }
+

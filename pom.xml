@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.Alpha6-SNAPSHOT</version>
+  <version>4.0.0.Beta1-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -69,6 +69,7 @@
 
   <properties>
     <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
+    <yammer.metrics.version>2.1.4</yammer.metrics.version>
   </properties>
  
   <modules>
@@ -76,8 +77,10 @@
     <module>buffer</module>
     <module>codec</module>
     <module>codec-http</module>
+    <module>codec-socks</module>
     <module>transport</module>
     <module>handler</module>
+    <module>metrics-yammer</module>
     <module>example</module>
     <module>testsuite</module>
     <module>all</module>
@@ -99,12 +102,6 @@
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.4.1</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.rxtx</groupId>
-        <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
       </dependency>
 
       <dependency>
@@ -163,6 +160,14 @@
         </exclusions>
         <optional>true</optional>
       </dependency>
+      
+      <!-- Metrics providers -->
+      <dependency>
+        <groupId>com.yammer.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>${yammer.metrics.version}</version>
+      </dependency>
+      
       <!-- Test dependencies for jboss marshalling encoder/decoder -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
@@ -174,6 +179,14 @@
         <groupId>org.jboss.marshalling</groupId>
         <artifactId>jboss-marshalling-river</artifactId>
         <version>${jboss.marshalling.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependencies for microbench -->
+      <dependency>
+        <groupId>com.google.caliper</groupId>
+        <artifactId>caliper</artifactId>
+        <version>0.5-rc1</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
@@ -211,7 +224,6 @@
       <version>1.6.6</version>
       <scope>test</scope>
     </dependency>
-    
   </dependencies>
 
   <build>
@@ -268,13 +280,13 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
+            <ignore>sun.net.util.IPAddressUtil</ignore>
 
             <ignore>java.util.zip.Deflater</ignore>
 
             <!-- Used for NIO UDP multicast -->
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
 
             <!-- Used for NIO. 2 -->
@@ -284,6 +296,8 @@
             <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
             <ignore>java.nio.channels.NetworkChannel</ignore>
             <ignore>java.nio.channels.InterruptedByTimeoutException</ignore>
+            <ignore>java.net.StandardSocketOptions</ignore>
+            <ignore>java.net.SocketOption</ignore>
           </ignores>
         </configuration>
         <executions>
@@ -318,7 +332,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>10</version>
+            <version>13</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -326,12 +340,26 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.12</version>
         <configuration>
-          <forkMode>once</forkMode>
+          <includes>
+             <include>**/*Test*.java</include>
+             <include>**/*Benchmark*.java</include>
+          </includes>
           <excludes>
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
+          <argLine>
+            -server 
+            -dsa -da -ea:io.netty...
+            -XX:+AggressiveOpts
+            -XX:+TieredCompilation
+            -XX:+UseBiasedLocking
+            -XX:+UseFastAccessorMethods
+            -XX:+UseStringCache
+            -XX:+OptimizeStringConcat
+            -XX:+HeapDumpOnOutOfMemoryError
+          </argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -376,6 +404,7 @@
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
+       
     </plugins>
 
     <pluginManagement>
@@ -405,10 +434,32 @@
           <version>2.2</version>
         </plugin>
         <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>1.7</version>
+          <dependencies>
+            <dependency>
+              <groupId>ant-contrib</groupId>
+              <artifactId>ant-contrib</artifactId>
+              <version>1.0b3</version>
+              <exclusions>
+                <exclusion>
+                  <groupId>ant</groupId>
+                  <artifactId>ant</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.7</version>
-        </plugin>
+        </plugin>               
+        <plugin>
+          <groupId>org.apache.felix</groupId>
+          <artifactId>maven-bundle-plugin</artifactId>
+          <version>2.3.7</version>
+        </plugin>             
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
              See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
@@ -472,4 +523,3 @@
     </pluginManagement>
   </build>
 </project>
-

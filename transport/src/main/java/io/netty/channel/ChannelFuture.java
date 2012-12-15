@@ -251,6 +251,14 @@ public interface ChannelFuture extends Future<Void> {
     ChannelFuture addListener(ChannelFutureListener listener);
 
     /**
+     * Adds the specified listeners to this future.  The
+     * specified listeners are notified when this future is
+     * {@linkplain #isDone() done}.  If this future is already
+     * completed, the specified listeners are notified immediately.
+     */
+    ChannelFuture addListeners(ChannelFutureListener... listeners);
+
+    /**
      * Removes the specified listener from this future.
      * The specified listener is no longer notified when this
      * future is {@linkplain #isDone() done}.  If the specified
@@ -258,6 +266,15 @@ public interface ChannelFuture extends Future<Void> {
      * does nothing and returns silently.
      */
     ChannelFuture removeListener(ChannelFutureListener listener);
+
+    /**
+     * Removes the specified listeners from this future.
+     * The specified listeners are no longer notified when this
+     * future is {@linkplain #isDone() done}.  If the specified
+     * listeners are not associated with this future, this method
+     * does nothing and returns silently.
+     */
+    ChannelFuture removeListeners(ChannelFutureListener... listeners);
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future

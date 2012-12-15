@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -27,6 +28,8 @@ import java.util.Set;
  * Base class for server side web socket opening and closing handshakes
  */
 public abstract class WebSocketServerHandshaker {
+
+    private static final String[] EMPTY_ARRAY = new String[0];
 
     private final String webSocketUrl;
 
@@ -57,13 +60,13 @@ public abstract class WebSocketServerHandshaker {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
-            String[] subprotocolArray = subprotocols.split(",");
+            String[] subprotocolArray = StringUtil.split(subprotocols, ',');
             for (int i = 0; i < subprotocolArray.length; i++) {
                 subprotocolArray[i] = subprotocolArray[i].trim();
             }
             this.subprotocols = subprotocolArray;
         } else {
-            this.subprotocols = new String[0];
+            this.subprotocols = EMPTY_ARRAY;
         }
         this.maxFramePayloadLength = maxFramePayloadLength;
     }
@@ -108,7 +111,24 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *            HTTP Request
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req);
+    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return handshake(channel, req, channel.newFuture());
+    }
+
+    /**
+     * Performs the opening handshake
+     *
+     * @param channel
+     *            Channel
+     * @param req
+     *            HTTP Request
+     * @param future
+     *            the {@link ChannelFuture} to be notified when the opening handshake is done
+     */
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future);
 
     /**
      * Performs the closing handshake
@@ -118,7 +138,24 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received
      */
-    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame);
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return close(channel, frame, channel.newFuture());
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param channel
+     *            Channel
+     * @param frame
+     *            Closing Frame that was received
+     * @param future
+     *            the {@link ChannelFuture} to be notified when the closing handshake is done
+     */
+    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future);
 
     /**
      * Selects the first matching supported sub protocol
@@ -132,7 +169,7 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        String[] requestedSubprotocolArray = StringUtil.split(requestedSubprotocols, ',');
         for (String p: requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 

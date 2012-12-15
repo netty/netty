@@ -16,6 +16,7 @@
 package io.netty.logging;
 
 
+import org.jboss.logging.Logger;
 
 /**
  * Logger factory which creates a
@@ -26,8 +27,8 @@ public class JBossLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        final org.jboss.logging.Logger logger =
-            org.jboss.logging.Logger.getLogger(name);
+        final Logger logger =
+            Logger.getLogger(name);
         return new JBossLogger(logger);
     }
 }

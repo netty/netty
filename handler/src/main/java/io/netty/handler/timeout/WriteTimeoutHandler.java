@@ -117,7 +117,6 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
                         }
                     }
                 }
-
             }, timeoutMillis, TimeUnit.MILLISECONDS);
 
             // Cancel the scheduled timeout if the flush future is complete.

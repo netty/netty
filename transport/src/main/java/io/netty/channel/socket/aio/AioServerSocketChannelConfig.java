@@ -16,6 +16,8 @@
 package io.netty.channel.socket.aio;
 
 import static io.netty.channel.ChannelOption.*;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -23,9 +25,12 @@ import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetworkConstants;
 
 import java.io.IOException;
+import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The Async {@link ServerSocketChannelConfig} implementation.
@@ -33,11 +38,18 @@ import java.util.Map;
 final class AioServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final  AsynchronousServerSocketChannel channel;
+    private final AtomicReference<AsynchronousServerSocketChannel> channel
+            = new AtomicReference<AsynchronousServerSocketChannel>();
     private volatile int backlog = NetworkConstants.SOMAXCONN;
+    private Map<SocketOption<?>, Object> options = new ConcurrentHashMap<SocketOption<?>, Object>();
+    private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
+    private static final boolean DEFAULT_SO_REUSEADDR = false;
+
+    AioServerSocketChannelConfig() {
+    }
 
     AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
-        this.channel = channel;
+        this.channel.set(channel);
     }
 
     @Override
@@ -80,42 +92,28 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public boolean isReuseAddress() {
-        try {
-            return channel.getOption(StandardSocketOptions.SO_REUSEADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Boolean) getOption(StandardSocketOptions.SO_REUSEADDR, DEFAULT_SO_REUSEADDR);
     }
 
     @Override
-    public void setReuseAddress(boolean reuseAddress) {
-        try {
-            channel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+    public ServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
+        return this;
     }
 
     @Override
     public int getReceiveBufferSize() {
-        try {
-            return channel.getOption(StandardSocketOptions.SO_RCVBUF);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return (Integer) getOption(StandardSocketOptions.SO_RCVBUF, DEFAULT_SND_BUF_SIZE);
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
-        try {
-            channel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+    public ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+        return this;
     }
 
     @Override
-    public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+    public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         throw new UnsupportedOperationException();
     }
 
@@ -125,10 +123,79 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public void setBacklog(int backlog) {
+    public ServerSocketChannelConfig setBacklog(int backlog) {
         if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);
         }
         this.backlog = backlog;
+        return this;
+    }
+
+    private Object getOption(SocketOption option, Object defaultValue) {
+        if (channel.get() == null) {
+            Object value = options.get(option);
+            if (value == null) {
+                return defaultValue;
+            } else {
+                return value;
+            }
+        }
+
+        try {
+            return channel.get().getOption(option);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    private void setOption(SocketOption option, Object defaultValue) {
+        if (channel.get() == null) {
+            options.put(option, defaultValue);
+            return;
+        }
+        try {
+            channel.get().setOption(option, defaultValue);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    void active(AsynchronousServerSocketChannel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (this.channel.compareAndSet(null, channel)) {
+            propagateOptions();
+        }
+    }
+
+    private void propagateOptions() {
+        for (SocketOption option: options.keySet()) {
+            Object value = options.remove(option);
+            if (value != null) {
+                try {
+                    channel.get().setOption(option, value);
+                } catch (IOException e) {
+                    throw new ChannelException(e);
+                }
+            }
+        }
+        // not needed anymore
+        options = null;
+    }
+
+    @Override
+    public ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        return (ServerSocketChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+        return (ServerSocketChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+        return (ServerSocketChannelConfig) super.setAllocator(allocator);
     }
 }

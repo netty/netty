@@ -47,7 +47,7 @@ public class QuoteOfTheMomentServerHandler extends ChannelInboundMessageHandlerA
     public void messageReceived(
             ChannelHandlerContext ctx, DatagramPacket msg)
             throws Exception {
-        if (msg.data().toString(CharsetUtil.UTF_8).equals("QOTM?")) {
+        if ("QOTM?".equals(msg.data().toString(CharsetUtil.UTF_8))) {
             ctx.write(new DatagramPacket(
                     Unpooled.copiedBuffer("QOTM: " + nextQuote(), CharsetUtil.UTF_8),
                     msg.remoteAddress()));

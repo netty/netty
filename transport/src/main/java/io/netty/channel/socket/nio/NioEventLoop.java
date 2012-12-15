@@ -18,6 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelTaskScheduler;
+import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
@@ -25,13 +26,13 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -44,7 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-final class NioEventLoop extends SingleThreadEventLoop {
+public final class NioEventLoop extends SingleThreadEventLoop {
 
     /**
      * Internal Netty logger.
@@ -97,39 +98,123 @@ final class NioEventLoop extends SingleThreadEventLoop {
         return new ConcurrentLinkedQueue<Runnable>();
     }
 
-    // Create a new selector and "transfer" all channels from the old
-    // selector to the new one
-    private Selector recreateSelector() {
-        Selector newSelector = openSelector();
-        Selector selector = this.selector;
-        this.selector = newSelector;
-
-        // loop over all the keys that are registered with the old Selector
-        // and register them with the new one
-        for (SelectionKey key: selector.keys()) {
-            SelectableChannel ch = key.channel();
-            int ops = key.interestOps();
-            Object att = key.attachment();
-            // cancel the old key
-            cancel(key);
-
-            try {
-                // register the channel with the new selector now
-                ch.register(newSelector, ops, att);
-            } catch (ClosedChannelException e) {
-                // close channel
-                AbstractNioChannel channel = (AbstractNioChannel) att;
-                channel.unsafe().close(channel.unsafe().voidFuture());
-            }
+    /**
+     * Registers an arbitrary {@link SelectableChannel}, not necessarily created by Netty, to the {@link Selector}
+     * of this event loop.  Once the specified {@link SelectableChannel} is registered, the specified {@code task} will
+     * be executed by this event loop when the {@link SelectableChannel} is ready.
+     */
+    public void register(final SelectableChannel ch, final int interestOps, final NioTask<?> task) {
+        if (ch == null) {
+            throw new NullPointerException("ch");
         }
+        if (interestOps == 0) {
+            throw new IllegalArgumentException("interestOps must be non-zero.");
+        }
+        if ((interestOps & ~ch.validOps()) != 0) {
+            throw new IllegalArgumentException(
+                    "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ')');
+        }
+        if (task == null) {
+            throw new NullPointerException("task");
+        }
+
+        if (isShutdown()) {
+            throw new IllegalStateException("event loop shut down");
+        }
+
+        try {
+            ch.register(selector, interestOps, task);
+        } catch (Exception e) {
+            throw new EventLoopException("failed to register a channel", e);
+        }
+    }
+
+    void executeWhenWritable(AbstractNioChannel channel, NioTask<SelectableChannel> task) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+
+        if (isShutdown()) {
+            throw new IllegalStateException("event loop shut down");
+        }
+
+        SelectionKey key = channel.selectionKey();
+        channel.writableTasks.offer(task);
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+    }
+
+    public void rebuildSelector() {
+        if (!inEventLoop()) {
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    rebuildSelector();
+                }
+            });
+            return;
+        }
+
+        final Selector oldSelector = selector;
+        final Selector newSelector;
+
+        if (oldSelector == null) {
+            return;
+        }
+
+        try {
+            newSelector = Selector.open();
+        } catch (Exception e) {
+            logger.warn("Failed to create a new Selector.", e);
+            return;
+        }
+
+        // Register all channels to the new Selector.
+        int nChannels = 0;
+        for (;;) {
+            try {
+                for (SelectionKey key: oldSelector.keys()) {
+                    Object a = key.attachment();
+                    try {
+                        if (key.channel().keyFor(newSelector) != null) {
+                            continue;
+                        }
+
+                        int interestOps = key.interestOps();
+                        key.cancel();
+                        key.channel().register(newSelector, interestOps, a);
+                        nChannels ++;
+                    } catch (Exception e) {
+                        logger.warn("Failed to re-register a Channel to the new Selector.", e);
+                        if (a instanceof AbstractNioChannel) {
+                            AbstractNioChannel ch = (AbstractNioChannel) a;
+                            ch.unsafe().close(ch.unsafe().voidFuture());
+                        } else {
+                            @SuppressWarnings("unchecked")
+                            NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                            invokeChannelUnregistered(task, key, e);
+                        }
+                    }
+                }
+            } catch (ConcurrentModificationException e) {
+                // Probably due to concurrent modification of the key set.
+                continue;
+            }
+
+            break;
+        }
+
+        selector = newSelector;
+
         try {
             // time to close the old selector as everything else is registered to the new one
-            selector.close();
+            oldSelector.close();
         } catch (Throwable t) {
-            logger.warn("Failed to close a selector.", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close the old Selector.", t);
+            }
         }
-        logger.warn("Recreated Selector because of possible jdk epoll(..) bug");
-        return newSelector;
+
+        logger.info("Migrated " + nChannels + " channel(s) to the new Selector.");
     }
 
     @Override
@@ -162,7 +247,8 @@ final class NioEventLoop extends SingleThreadEventLoop {
                             // The selector returned immediately for 10 times in a row,
                             // so recreate one selector as it seems like we hit the
                             // famous epoll(..) jdk bug.
-                            selector = recreateSelector();
+                            rebuildSelector();
+                            selector = this.selector;
                             selectReturnsImmediately = 0;
 
                             // try to select again
@@ -207,12 +293,16 @@ final class NioEventLoop extends SingleThreadEventLoop {
                 }
 
                 cancelledKeys = 0;
+
                 runAllTasks();
+                selector = this.selector;
+
                 processSelectedKeys();
+                selector = this.selector;
 
                 if (isShutdown()) {
                     closeAll();
-                    if (peekTask() == null) {
+                    if (confirmShutdown()) {
                         break;
                     }
                 }
@@ -236,8 +326,7 @@ final class NioEventLoop extends SingleThreadEventLoop {
         try {
             selector.close();
         } catch (IOException e) {
-            logger.warn(
-                    "Failed to close a selector.", e);
+            logger.warn("Failed to close a selector.", e);
         }
     }
 
@@ -266,25 +355,13 @@ final class NioEventLoop extends SingleThreadEventLoop {
         try {
             for (i = selectedKeys.iterator(); i.hasNext();) {
                 final SelectionKey k = i.next();
-                final AbstractNioChannel ch = (AbstractNioChannel) k.attachment();
-                final NioUnsafe unsafe = ch.unsafe();
-                try {
-                    int readyOps = k.readyOps();
-                    if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                        unsafe.read();
-                        if (!ch.isOpen()) {
-                            // Connection already closed - no need to handle write.
-                            continue;
-                        }
-                    }
-                    if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                        unsafe.flushNow();
-                    }
-                    if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
-                        unsafe.finishConnect();
-                    }
-                } catch (CancelledKeyException ignored) {
-                    unsafe.close(unsafe.voidFuture());
+                final Object a = k.attachment();
+                if (a instanceof AbstractNioChannel) {
+                    processSelectedKey(k, (AbstractNioChannel) a);
+                } else {
+                    @SuppressWarnings("unchecked")
+                    NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                    processSelectedKey(k, task);
                 }
 
                 if (cleanedCancelledKeys) {
@@ -304,16 +381,109 @@ final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    private static void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
+        final NioUnsafe unsafe = ch.unsafe();
+        int readyOps = -1;
+        try {
+            readyOps = k.readyOps();
+            if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                unsafe.read();
+                if (!ch.isOpen()) {
+                    // Connection already closed - no need to handle write.
+                    return;
+                }
+            }
+            if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+                processWritable(k, ch);
+            }
+            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                unsafe.finishConnect();
+            }
+        } catch (CancelledKeyException e) {
+            if (readyOps != 1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
+                unregisterWritableTasks(ch);
+            }
+            unsafe.close(unsafe.voidFuture());
+        }
+    }
+
+    private static void processWritable(SelectionKey k, AbstractNioChannel ch) {
+        if (ch.writableTasks.isEmpty()) {
+            ch.unsafe().flushNow();
+        } else {
+            NioTask<SelectableChannel> task;
+            for (;;) {
+                task = ch.writableTasks.poll();
+                if (task == null) { break; }
+                processSelectedKey(ch.selectionKey(), task);
+            }
+            k.interestOps(k.interestOps() | SelectionKey.OP_WRITE);
+        }
+    }
+
+    private static void unregisterWritableTasks(AbstractNioChannel ch) {
+        NioTask<SelectableChannel> task;
+        for (;;) {
+            task = ch.writableTasks.poll();
+            if (task == null) {
+                break;
+            } else {
+                invokeChannelUnregistered(task, ch.selectionKey(), null);
+            }
+        }
+    }
+
+    private static void processSelectedKey(SelectionKey k, NioTask<SelectableChannel> task) {
+        int state = 0;
+        try {
+            task.channelReady(k.channel(), k);
+            state = 1;
+        } catch (Exception e) {
+            k.cancel();
+            invokeChannelUnregistered(task, k, e);
+            state = 2;
+        } finally {
+            switch (state) {
+            case 0:
+                k.cancel();
+                invokeChannelUnregistered(task, k, null);
+                break;
+            case 1:
+                if (!k.isValid()) { // Cancelled by channelReady()
+                    invokeChannelUnregistered(task, k, null);
+                }
+                break;
+            }
+        }
+    }
+
     private void closeAll() {
         SelectorUtil.cleanupKeys(selector);
         Set<SelectionKey> keys = selector.keys();
-        Collection<Channel> channels = new ArrayList<Channel>(keys.size());
+        Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
         for (SelectionKey k: keys) {
-            channels.add((Channel) k.attachment());
+            Object a = k.attachment();
+            if (a instanceof AbstractNioChannel) {
+                channels.add((AbstractNioChannel) a);
+            } else {
+                k.cancel();
+                @SuppressWarnings("unchecked")
+                NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                invokeChannelUnregistered(task, k, null);
+            }
         }
 
-        for (Channel ch: channels) {
+        for (AbstractNioChannel ch: channels) {
+            unregisterWritableTasks(ch);
             ch.unsafe().close(ch.unsafe().voidFuture());
+        }
+    }
+
+    private static void invokeChannelUnregistered(NioTask<SelectableChannel> task, SelectionKey k, Throwable cause) {
+        try {
+            task.channelUnregistered(k.channel(), cause);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception while running NioTask.channelUnregistered()", e);
         }
     }
 

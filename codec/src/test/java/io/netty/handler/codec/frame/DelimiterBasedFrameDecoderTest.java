@@ -25,7 +25,6 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 public class DelimiterBasedFrameDecoderTest {
@@ -39,14 +38,14 @@ public class DelimiterBasedFrameDecoderTest {
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 }));
             try {
                 assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0 })));
-                Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
+                fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A', 0 }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
-            Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+            assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
 
@@ -58,14 +57,14 @@ public class DelimiterBasedFrameDecoderTest {
         for (int i = 0; i < 2; i ++) {
             try {
                 assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 })));
-                Assert.fail(DecoderException.class.getSimpleName() + " must be raised.");
+                fail(DecoderException.class.getSimpleName() + " must be raised.");
             } catch (TooLongFrameException e) {
                 // Expected
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 'A', 0 }));
             ByteBuf buf = (ByteBuf) ch.readInbound();
-            Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+            assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
 }

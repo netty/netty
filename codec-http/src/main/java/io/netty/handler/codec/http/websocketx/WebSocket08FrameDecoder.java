@@ -290,9 +290,11 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
             // fragmented
             if (frameOpcode == OPCODE_PING) {
                 return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_PONG) {
+            }
+            if (frameOpcode == OPCODE_PONG) {
                 return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_CLOSE) {
+            }
+            if (frameOpcode == OPCODE_CLOSE) {
                 checkCloseFrameBody(ctx, framePayload);
                 receivedClosingHandshake = true;
                 return new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
@@ -366,7 +368,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, String reason) throws CorruptedFrameException {
+    private void protocolViolation(ChannelHandlerContext ctx, String reason) {
         checkpoint(State.CORRUPT);
         if (ctx.channel().isActive()) {
             ctx.flush().addListener(ChannelFutureListener.CLOSE);
@@ -374,7 +376,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         throw new CorruptedFrameException(reason);
     }
 
-    private static int toFrameLength(long l) throws TooLongFrameException {
+    private static int toFrameLength(long l) {
         if (l > Integer.MAX_VALUE) {
             throw new TooLongFrameException("Length:" + l);
         } else {
@@ -382,15 +384,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
-    private void checkUTF8String(ChannelHandlerContext ctx, byte[] bytes) throws CorruptedFrameException {
+    private void checkUTF8String(ChannelHandlerContext ctx, byte[] bytes) {
         try {
-            // StringBuilder sb = new StringBuilder("UTF8 " + bytes.length +
-            // " bytes: ");
-            // for (byte b : bytes) {
-            // sb.append(Integer.toHexString(b)).append(" ");
-            // }
-            // logger.debug(sb.toString());
-
             if (fragmentedFramesText == null) {
                 fragmentedFramesText = new UTF8Output(bytes);
             } else {
@@ -401,8 +396,9 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
         }
     }
 
+    /** */
     protected void checkCloseFrameBody(
-            ChannelHandlerContext ctx, ByteBuf buffer) throws CorruptedFrameException {
+            ChannelHandlerContext ctx, ByteBuf buffer) {
         if (buffer == null || buffer.capacity() == 0) {
             return;
         }

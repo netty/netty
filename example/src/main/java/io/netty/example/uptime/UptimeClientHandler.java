@@ -77,7 +77,7 @@ public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public void channelUnregistered(final ChannelHandlerContext ctx)
             throws Exception {
-        println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
+        println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
 
         final EventLoop loop = ctx.channel().eventLoop();
         loop.schedule(new Runnable() {

@@ -15,16 +15,17 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 
 import static com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 
 /**
- * A {@link io.netty.channel.ChannelConfig} for a {@link SctpServerChannelConfig}.
+ * A {@link ChannelConfig} for a {@link SctpServerChannelConfig}.
  * <p/>
  * <h3>Available options</h3>
  * <p/>
- * In addition to the options provided by {@link io.netty.channel.ChannelConfig},
+ * In addition to the options provided by {@link ChannelConfig},
  * {@link SctpServerChannelConfig} allows the following options in the
  * option map:
  * <p/>
@@ -39,7 +40,7 @@ import static com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@code "sctpInitMaxStreams"}</td>
- * <td>{@link #setInitMaxStreams(com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams)} (int)}}</td>
+ * <td>{@link #setInitMaxStreams(InitMaxStreams)} (int)}}</td>
  * </tr>
  * </table>
  */
@@ -53,8 +54,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
     /**
      * Sets the backlog value to specify when the channel binds to a local address.
      */
-    void setBacklog(int backlog);
-
+    SctpServerChannelConfig setBacklog(int backlog);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -66,7 +66,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_SNDBUF}</a> option.
      */
-    void setSendBufferSize(int sendBufferSize);
+    SctpServerChannelConfig setSendBufferSize(int sendBufferSize);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -78,8 +78,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_RCVBUF}</a> option.
      */
-    void setReceiveBufferSize(int receiveBufferSize);
-
+    SctpServerChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -91,5 +90,14 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
-    void setInitMaxStreams(InitMaxStreams initMaxStreams);
+    SctpServerChannelConfig setInitMaxStreams(InitMaxStreams initMaxStreams);
+
+    @Override
+    SctpServerChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    SctpServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    SctpServerChannelConfig setAllocator(ByteBufAllocator allocator);
 }

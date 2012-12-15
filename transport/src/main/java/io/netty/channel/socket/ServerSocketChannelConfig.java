@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 
 import java.net.ServerSocket;
@@ -53,7 +54,7 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
      * Sets the backlog value to specify when the channel binds to a local
      * address.
      */
-    void setBacklog(int backlog);
+    ServerSocketChannelConfig setBacklog(int backlog);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_REUSEADDR} option.
@@ -63,7 +64,7 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
     /**
      * Sets the {@link StandardSocketOptions#SO_REUSEADDR} option.
      */
-    void setReuseAddress(boolean reuseAddress);
+    ServerSocketChannelConfig setReuseAddress(boolean reuseAddress);
 
     /**
      * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
@@ -73,11 +74,20 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
     /**
      * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
      */
-    void setReceiveBufferSize(int receiveBufferSize);
+    ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
     /**
      * Sets the performance preferences as specified in
      * {@link ServerSocket#setPerformancePreferences(int, int, int)}.
      */
-    void setPerformancePreferences(int connectionTime, int latency, int bandwidth);
+    ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth);
+
+    @Override
+    ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 }

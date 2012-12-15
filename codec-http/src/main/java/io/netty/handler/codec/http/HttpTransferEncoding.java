@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Represents how an HTTP request or an HTTP response is represented as an {@link HttpMessage}
  * and zero or more {@link HttpChunk}s.
@@ -50,13 +52,13 @@ public enum HttpTransferEncoding {
     STREAMED(false),
     /**
      * A self-contained HTTP message which is not followed by any {@link HttpChunk}s.
-     * A user can set the content of the message via {@link HttpMessage#setContent(io.netty.buffer.ByteBuf)}.
+     * A user can set the content of the message via {@link HttpMessage#setContent(ByteBuf)}.
      */
     SINGLE(true);
 
     private final boolean single;
 
-    private HttpTransferEncoding(boolean single) {
+    HttpTransferEncoding(boolean single) {
         this.single = single;
     }
 

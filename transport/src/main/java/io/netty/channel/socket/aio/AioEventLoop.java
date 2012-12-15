@@ -15,15 +15,55 @@
  */
 package io.netty.channel.socket.aio;
 
-import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelTaskScheduler;
+import io.netty.channel.SingleThreadEventLoop;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 
 final class AioEventLoop extends SingleThreadEventLoop {
 
+    private final Set<Channel> channels = Collections.newSetFromMap(new IdentityHashMap<Channel, Boolean>());
+
+    private final ChannelFutureListener registrationListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (!future.isSuccess()) {
+                return;
+            }
+
+            Channel ch = future.channel();
+            channels.add(ch);
+            ch.closeFuture().addListener(deregistrationListener);
+        }
+    };
+
+    private final ChannelFutureListener deregistrationListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            channels.remove(future.channel());
+        }
+    };
+
     AioEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
+    }
+
+    @Override
+    public ChannelFuture register(Channel channel) {
+        return super.register(channel).addListener(registrationListener);
+    }
+
+    @Override
+    public ChannelFuture register(Channel channel, ChannelFuture future) {
+        return super.register(channel, future).addListener(registrationListener);
     }
 
     @Override
@@ -38,19 +78,22 @@ final class AioEventLoop extends SingleThreadEventLoop {
             }
 
             if (isShutdown()) {
-                task = pollTask();
-                if (task == null) {
+                closeAll();
+                if (confirmShutdown()) {
                     break;
                 }
-                task.run();
             }
         }
     }
 
-    @Override
-    protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && isShutdown()) {
-            interruptThread();
+    private void closeAll() {
+        Collection<Channel> channels = new ArrayList<Channel>(this.channels.size());
+        for (Channel ch: this.channels) {
+            channels.add(ch);
+        }
+
+        for (Channel ch: channels) {
+            ch.unsafe().close(ch.unsafe().voidFuture());
         }
     }
 }

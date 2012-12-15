@@ -33,6 +33,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class OioSctpServerChannel extends AbstractOioMessageChannel
@@ -114,8 +115,9 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : sch.getAllLocalAddresses()) {
-                return address;
+            Iterator<SocketAddress> i = sch.getAllLocalAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
             }
         } catch (IOException e) {
             // ignore

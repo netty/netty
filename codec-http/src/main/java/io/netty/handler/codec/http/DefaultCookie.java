@@ -48,7 +48,7 @@ public class DefaultCookie implements Cookie {
             throw new NullPointerException("name");
         }
         name = name.trim();
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
 
@@ -343,7 +343,7 @@ public class DefaultCookie implements Cookie {
             return null;
         }
         value = value.trim();
-        if (value.length() == 0) {
+        if (value.isEmpty()) {
             return null;
         }
         for (int i = 0; i < value.length(); i ++) {

@@ -163,13 +163,12 @@ public class QueryStringDecoder {
             hasPath = false;
         }
         // Also take care of cut of things like "http://localhost"
-        String newUri = rawPath + "?" + uri.getRawQuery();
+        String newUri = rawPath + '?' + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
         this.uri = newUri.replace(';', '&');
         this.charset = charset;
         this.maxParams = maxParams;
-
     }
 
     /**
@@ -295,7 +294,7 @@ public class QueryStringDecoder {
      * {@code 0xC3 0xA9}) is encoded as {@code %C3%A9} or {@code %c3%a9}.
      * <p>
      * This is essentially equivalent to calling
-     *   <code>{@link URLDecoder#decode(String, String) URLDecoder.decode}(s, charset.name())</code>
+     *   {@link URLDecoder#decode(String, String) URLDecoder.decode(s, charset.name())}
      * except that it's over 2x faster and generates less garbage for the GC.
      * Actually this function doesn't allocate any memory if there's nothing
      * to decode, the argument itself is returned.
@@ -346,7 +345,8 @@ public class QueryStringDecoder {
                     if (c == '%') {
                         buf[pos++] = '%';  // "%%" -> "%"
                         break;
-                    } else if (i == size - 1) {
+                    }
+                    if (i == size - 1) {
                         throw new IllegalArgumentException("partial escape"
                                 + " sequence at end of string: " + s);
                     }

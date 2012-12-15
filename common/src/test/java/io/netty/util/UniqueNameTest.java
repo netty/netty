@@ -66,7 +66,7 @@ public class UniqueNameTest {
         registerName("Abcedrian");
 
         assertTrue(names.get("Abcedrian"));
-        assertTrue(names.get("Hellyes") == null);
+        assertNull(names.get("Hellyes"));
     }
 
     @Test

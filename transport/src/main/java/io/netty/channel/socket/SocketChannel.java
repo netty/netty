@@ -22,8 +22,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
- * A TCP/IP socket {@link Channel} which was either accepted by
- * {@link ServerSocketChannel} or created by {@link ClientSocketChannelFactory}.
+ * A TCP/IP socket {@link Channel}.
+ *
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.socket.SocketChannelConfig
  */
@@ -51,4 +51,9 @@ public interface SocketChannel extends Channel {
      * @see Socket#shutdownOutput()
      */
     ChannelFuture shutdownOutput();
+
+    /**
+     * @see Socket#shutdownOutput()
+     */
+    ChannelFuture shutdownOutput(ChannelFuture future);
 }

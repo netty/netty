@@ -254,7 +254,7 @@ final class SpdyCodecUtil {
         try {
             SPDY2_DICT_ = SPDY2_DICT_S.getBytes(CharsetUtil.US_ASCII);
             // dictionary is null terminated
-            SPDY2_DICT_[SPDY2_DICT_.length - 1] = (byte) 0;
+            SPDY2_DICT_[SPDY2_DICT_.length - 1] = 0;
         } catch (Exception e) {
             SPDY2_DICT_ = new byte[1];
         }
@@ -262,10 +262,8 @@ final class SpdyCodecUtil {
         SPDY2_DICT = SPDY2_DICT_;
     }
 
-
     private SpdyCodecUtil() {
     }
-
 
     /**
      * Reads a big-endian unsigned short integer from the buffer.
@@ -307,9 +305,9 @@ final class SpdyCodecUtil {
     /**
      * Returns {@code true} if ID is for a server initiated stream or ping.
      */
-    static boolean isServerId(int ID) {
+    static boolean isServerId(int id) {
         // Server initiated streams and pings have even IDs
-        return ID % 2 == 0;
+        return id % 2 == 0;
     }
 
     /**
@@ -319,7 +317,7 @@ final class SpdyCodecUtil {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             throw new IllegalArgumentException(
                     "name cannot be length zero");
         }
@@ -349,7 +347,7 @@ final class SpdyCodecUtil {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        if (value.length() == 0) {
+        if (value.isEmpty()) {
             throw new IllegalArgumentException(
                     "value cannot be length zero");
         }

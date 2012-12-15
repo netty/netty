@@ -70,7 +70,6 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
         sendNumbers();
     }
 
-
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, final BigInteger msg) {
@@ -112,11 +111,11 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
 
         ChannelFuture f = ctx.flush();
         if (!finished) {
-            f.addListener(SEND_NUMBERS);
+            f.addListener(numberSender);
         }
     }
 
-    private final ChannelFutureListener SEND_NUMBERS = new ChannelFutureListener() {
+    private final ChannelFutureListener numberSender = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {

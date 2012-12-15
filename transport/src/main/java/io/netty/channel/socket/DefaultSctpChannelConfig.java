@@ -16,6 +16,8 @@
 package io.netty.channel.socket;
 
 import com.sun.nio.sctp.SctpChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -23,7 +25,6 @@ import io.netty.channel.DefaultChannelConfig;
 import java.io.IOException;
 import java.util.Map;
 
-import com.sun.nio.sctp.SctpStandardSocketOptions;
 import static io.netty.channel.ChannelOption.*;
 
 /**
@@ -31,7 +32,7 @@ import static io.netty.channel.ChannelOption.*;
  */
 public class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
 
-    private SctpChannel channel;
+    private final SctpChannel channel;
 
     public DefaultSctpChannelConfig(SctpChannel channel) {
         if (channel == null) {
@@ -46,7 +47,6 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, SCTP_NODELAY, SCTP_INIT_MAXSTREAMS);
     }
-
 
     @SuppressWarnings("unchecked")
     @Override
@@ -82,7 +82,6 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
         return true;
     }
 
-
     @Override
     public boolean isSctpNoDelay() {
         try {
@@ -93,12 +92,13 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
-    public void setSctpNoDelay(boolean sctpNoDelay) {
+    public SctpChannelConfig setSctpNoDelay(boolean sctpNoDelay) {
         try {
             channel.setOption(SctpStandardSocketOptions.SCTP_NODELAY, sctpNoDelay);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -111,12 +111,13 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
-    public void setSendBufferSize(int sendBufferSize) {
+    public SctpChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             channel.setOption(SctpStandardSocketOptions.SO_SNDBUF, sendBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -129,12 +130,13 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public SctpChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             channel.setOption(SctpStandardSocketOptions.SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -147,11 +149,27 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
-    public void setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
+    public SctpChannelConfig setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
         try {
             channel.setOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
+    }
+
+    @Override
+    public SctpChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        return (SctpChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public SctpChannelConfig setWriteSpinCount(int writeSpinCount) {
+        return (SctpChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    }
+
+    @Override
+    public SctpChannelConfig setAllocator(ByteBufAllocator allocator) {
+        return (SctpChannelConfig) super.setAllocator(allocator);
     }
 }

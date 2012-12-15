@@ -16,18 +16,19 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.AttributeKey;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelException;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
@@ -39,6 +40,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     private ChannelFactory factory;
     private SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private ChannelHandler handler;
 
     /**
@@ -122,7 +124,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
 
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
-     * created. Use a value of <code>null</code> to remove a previous set {@link ChannelOption}.
+     * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     @SuppressWarnings("unchecked")
     public <T> B option(ChannelOption<T> option, T value) {
@@ -135,6 +137,25 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             options.put(option, value);
         }
         return (B) this;
+    }
+
+    /**
+     * Allow to specify an initial attribute of the newly created {@link Channel}.  If the {@code value} is
+     * {@code null}, the attribute of the specified {@code key} is removed.
+     */
+    public <T> B attr(AttributeKey<T> key, T value) {
+        if (key == null) {
+            throw new NullPointerException("key");
+        }
+        if (value == null) {
+            attrs.remove(key);
+        } else {
+            attrs.put(key, value);
+        }
+
+        @SuppressWarnings("unchecked")
+        B b = (B) this;
+        return b;
     }
 
     /**
@@ -224,7 +245,54 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return options;
     }
 
-    private final class BootstrapChannelFactory implements ChannelFactory {
+    protected final Map<AttributeKey<?>, Object> attrs() {
+        return attrs;
+    }
+
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append('(');
+        if (group != null) {
+            buf.append("group: ");
+            buf.append(group.getClass().getSimpleName());
+            buf.append(", ");
+        }
+        if (factory != null) {
+            buf.append("factory: ");
+            buf.append(factory);
+            buf.append(", ");
+        }
+        if (localAddress != null) {
+            buf.append("localAddress: ");
+            buf.append(localAddress);
+            buf.append(", ");
+        }
+        if (options != null && !options.isEmpty()) {
+            buf.append("options: ");
+            buf.append(options);
+            buf.append(", ");
+        }
+        if (attrs != null && !attrs.isEmpty()) {
+            buf.append("attrs: ");
+            buf.append(attrs);
+            buf.append(", ");
+        }
+        if (handler != null) {
+            buf.append("handler: ");
+            buf.append(handler);
+            buf.append(", ");
+        }
+        if (buf.charAt(buf.length() - 1) == '(') {
+            buf.append(')');
+        } else {
+            buf.setCharAt(buf.length() - 2, ')');
+            buf.setLength(buf.length() - 1);
+        }
+        return buf.toString();
+    }
+
+    private static final class BootstrapChannelFactory implements ChannelFactory {
         private final Class<? extends Channel> clazz;
 
         BootstrapChannelFactory(Class<? extends Channel> clazz) {
@@ -240,6 +308,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             }
         }
 
+        public String toString() {
+            return clazz.getSimpleName() + ".class";
+        }
     }
 
     /**

@@ -15,6 +15,9 @@
  */
 package io.netty.channel;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,11 +69,21 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         return children[Math.abs(childIndex.getAndIncrement() % children.length)];
     }
 
+    protected Set<EventExecutor> children() {
+        Set<EventExecutor> children = Collections.newSetFromMap(new LinkedHashMap<EventExecutor, Boolean>());
+        Collections.addAll(children, this.children);
+        return children;
+    }
+
     protected abstract EventExecutor newChild(
             ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception;
 
     @Override
     public void shutdown() {
+        if (isShutdown()) {
+            return;
+        }
+
         scheduler.shutdown();
         for (EventExecutor l: children) {
             l.shutdown();
@@ -136,7 +149,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
         DefaultThreadFactory() {
             String typeName = MultithreadEventExecutorGroup.this.getClass().getSimpleName();
-            typeName = "" + Character.toLowerCase(typeName.charAt(0)) + typeName.substring(1);
+            typeName = Character.toLowerCase(typeName.charAt(0)) + typeName.substring(1);
             prefix = typeName + '-' + poolId.incrementAndGet() + '-';
         }
 

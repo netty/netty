@@ -41,6 +41,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.socket.SctpChannel {
@@ -83,7 +84,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                     logger.warn(
                             "Failed to close a partially initialized sctp channel.", e2);
                 }
-
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
@@ -151,8 +151,9 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected SocketAddress localAddress0() {
         try {
-            for (SocketAddress address : javaChannel().getAllLocalAddresses()) {
-                return address;
+            Iterator<SocketAddress> i = javaChannel().getAllLocalAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
             }
         } catch (IOException e) {
             // ignore
@@ -163,8 +164,9 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected SocketAddress remoteAddress0() {
         try {
-            for (SocketAddress address : javaChannel().getRemoteAddresses()) {
-                return address;
+            Iterator<SocketAddress> i = javaChannel().getRemoteAddresses().iterator();
+            if (i.hasNext()) {
+                return i.next();
             }
         } catch (IOException e) {
             // ignore
@@ -239,14 +241,13 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         ByteBuf data = packet.getPayloadBuffer();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
-        if (data.hasNioBuffer()) {
+        if (data.nioBufferCount() == 1) {
             nioData = data.nioBuffer();
         } else {
             nioData = ByteBuffer.allocate(dataLen);
             data.getBytes(data.readerIndex(), nioData);
             nioData.flip();
         }
-
 
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
         mi.payloadProtocolID(packet.getProtocolIdentifier());
@@ -283,54 +284,51 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
-        ChannelFuture future = newFuture();
-        doBindAddress(localAddress, future);
-        return future;
+        return bindAddress(localAddress, newFuture());
     }
 
-    void doBindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    @Override
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelFuture future) {
         if (eventLoop().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
                 future.setSuccess();
             } catch (Throwable t) {
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    doBindAddress(localAddress, future);
+                    bindAddress(localAddress, future);
                 }
             });
         }
+        return future;
     }
 
     @Override
     public ChannelFuture unbindAddress(InetAddress localAddress) {
-        ChannelFuture future = newFuture();
-        doUnbindAddress(localAddress, future);
-        return future;
+        return unbindAddress(localAddress, newFuture());
     }
 
-    void doUnbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    @Override
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelFuture future) {
         if (eventLoop().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
                 future.setSuccess();
             } catch (Throwable t) {
                 future.setFailure(t);
-                pipeline().fireExceptionCaught(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    doUnbindAddress(localAddress, future);
+                    unbindAddress(localAddress, future);
                 }
             });
         }
+        return future;
     }
-
 }

@@ -17,7 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ChannelBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
@@ -32,6 +32,10 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DetectionUtil;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -43,11 +47,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.Status;
-import javax.net.ssl.SSLException;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -68,7 +67,7 @@ import javax.net.ssl.SSLException;
  * If {@link #isIssueHandshake()} is {@code false}
  * (default) you will need to take care of calling {@link #handshake()} by your own. In most
  * situations were {@link SslHandler} is used in 'client mode' you want to issue a handshake once
- * the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code>
+ * the connection was established. if {@link #setIssueHandshake(boolean)} is set to {@code true}
  * you don't need to worry about this as the {@link SslHandler} will take care of it.
  * <p>
  *
@@ -277,6 +276,10 @@ public class SslHandler
         return engine;
     }
 
+    /**
+     * Starts the SSL / TLS handshake and returns a {@link ChannelFuture} that will
+     * get notified once the handshake completes.
+     */
     public ChannelFuture handshake() {
         return handshake(ctx.newFuture());
     }
@@ -300,9 +303,10 @@ public class SslHandler
                     }
 
                     SSLException e = new SSLException("handshake timed out");
-                    future.setFailure(e);
-                    ctx.fireExceptionCaught(e);
-                    ctx.close();
+                    if (future.setFailure(e)) {
+                        ctx.fireExceptionCaught(e);
+                        ctx.close();
+                    }
                 }
             }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -320,9 +324,10 @@ public class SslHandler
                     handshakeFutures.add(future);
                     flush(ctx, ctx.newFuture());
                 } catch (Exception e) {
-                    future.setFailure(e);
-                    ctx.fireExceptionCaught(e);
-                    ctx.close();
+                    if (future.setFailure(e)) {
+                        ctx.fireExceptionCaught(e);
+                        ctx.close();
+                    }
                 }
             }
         });
@@ -338,6 +343,10 @@ public class SslHandler
         return close(ctx.newFuture());
     }
 
+    /**
+     * See {@link #close()}
+
+     */
     public ChannelFuture close(final ChannelFuture future) {
         final ChannelHandlerContext ctx = this.ctx;
         ctx.executor().execute(new Runnable() {
@@ -365,12 +374,22 @@ public class SslHandler
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.buffer();
+        return ctx.alloc().buffer();
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.buffer();
+        return ctx.alloc().buffer();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        buf.unsafe().free();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        buf.unsafe().free();
     }
 
     @Override
@@ -571,7 +590,6 @@ public class SslHandler
                 ctx.close();
             }
             return;
-
         }
         super.exceptionCaught(ctx, cause);
     }
@@ -595,7 +613,6 @@ public class SslHandler
                 return true;
             }
 
-
             // Inspect the StackTraceElements to see if it was a connection reset / broken pipe or not
             StackTraceElement[] elements = t.getStackTrace();
             for (StackTraceElement element: elements) {
@@ -608,7 +625,7 @@ public class SslHandler
                 }
 
                 // check if the method name is read if not skip it
-                if (!methodname.equals("read")) {
+                if (!"read".equals(methodname)) {
                     continue;
                 }
 
@@ -637,24 +654,51 @@ public class SslHandler
                 } catch (ClassNotFoundException e) {
                     // This should not happen just ignore
                 }
-
             }
         }
 
         return false;
     }
 
-    @Override
-    public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
-        final ByteBuf in = ctx.inboundByteBuffer();
+    /**
+     * Returns {@code true} if the given {@link ByteBuf} is encrypted. Be aware that this method
+     * will not increase the readerIndex of the given {@link ByteBuf}.
+     *
+     * @param   buffer
+     *                  The {@link ByteBuf} to read from. Be aware that it must have at least 5 bytes to read,
+     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     * @return encrypted
+     *                  {@code true} if the {@link ByteBuf} is encrypted, {@code false} otherwise.
+     * @throws IllegalArgumentException
+     *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
+     */
+    public static boolean isEncrypted(ByteBuf buffer) {
+        return getEncryptedPacketLength(buffer) != -1;
+    }
 
-        if (in.readableBytes() < 5) {
-            return;
+    /**
+     * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
+     * the readerIndex of the given {@link ByteBuf}.
+     *
+     * @param   buffer
+     *                  The {@link ByteBuf} to read from. Be aware that it must have at least 5 bytes to read,
+     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     * @return length
+     *                  The length of the encrypted packet that is included in the buffer. This will
+     *                  return {@code -1} if the given {@link ByteBuf} is not encrypted at all.
+     * @throws IllegalArgumentException
+     *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
+     */
+    private static int getEncryptedPacketLength(ByteBuf buffer) {
+        if (buffer.readableBytes() < 5) {
+            throw new IllegalArgumentException("buffer must have at least 5 readable bytes");
         }
+
+        int packetLength = 0;
 
         // SSLv3 or TLS - Check ContentType
         boolean tls;
-        switch (in.getUnsignedByte(in.readerIndex())) {
+        switch (buffer.getUnsignedByte(buffer.readerIndex())) {
         case 20:  // change_cipher_spec
         case 21:  // alert
         case 22:  // handshake
@@ -666,13 +710,12 @@ public class SslHandler
             tls = false;
         }
 
-        int packetLength = -1;
         if (tls) {
             // SSLv3 or TLS - Check ProtocolVersion
-            int majorVersion = in.getUnsignedByte(in.readerIndex() + 1);
+            int majorVersion = buffer.getUnsignedByte(buffer.readerIndex() + 1);
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = (getShort(in, in.readerIndex() + 3) & 0xFFFF) + 5;
+                packetLength = (getShort(buffer, buffer.readerIndex() + 3) & 0xFFFF) + 5;
                 if (packetLength <= 5) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -686,16 +729,16 @@ public class SslHandler
         if (!tls) {
             // SSLv2 or bad data - Check the version
             boolean sslv2 = true;
-            int headerLength = (in.getUnsignedByte(
-                    in.readerIndex()) & 0x80) != 0 ? 2 : 3;
-            int majorVersion = in.getUnsignedByte(
-                    in.readerIndex() + headerLength + 1);
+            int headerLength = (buffer.getUnsignedByte(
+                    buffer.readerIndex()) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = buffer.getUnsignedByte(
+                    buffer.readerIndex() + headerLength + 1);
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 if (headerLength == 2) {
-                    packetLength = (getShort(in, in.readerIndex()) & 0x7FFF) + 2;
+                    packetLength = (getShort(buffer, buffer.readerIndex()) & 0x7FFF) + 2;
                 } else {
-                    packetLength = (getShort(in, in.readerIndex()) & 0x3FFF) + 3;
+                    packetLength = (getShort(buffer, buffer.readerIndex()) & 0x3FFF) + 3;
                 }
                 if (packetLength <= headerLength) {
                     sslv2 = false;
@@ -705,14 +748,30 @@ public class SslHandler
             }
 
             if (!sslv2) {
-                // Bad data - discard the buffer and raise an exception.
-                NotSslRecordException e = new NotSslRecordException(
-                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
-                in.skipBytes(in.readableBytes());
-                ctx.fireExceptionCaught(e);
-                setHandshakeFailure(e);
-                return;
+                return -1;
             }
+        }
+        return packetLength;
+    }
+
+    @Override
+    public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
+        final ByteBuf in = ctx.inboundByteBuffer();
+
+        if (in.readableBytes() < 5) {
+            return;
+        }
+
+        int packetLength = getEncryptedPacketLength(in);
+
+        if (packetLength == -1) {
+            // Bad data - discard the buffer and raise an exception.
+            NotSslRecordException e = new NotSslRecordException(
+                    "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+            in.skipBytes(in.readableBytes());
+            ctx.fireExceptionCaught(e);
+            setHandshakeFailure(e);
+            return;
         }
 
         assert packetLength > 0;
@@ -748,6 +807,7 @@ public class SslHandler
                     break;
                 case FINISHED:
                     setHandshakeSuccess();
+                    wrapLater = true;
                     continue;
                 case NOT_HANDSHAKING:
                     break;
@@ -811,6 +871,9 @@ public class SslHandler
         }
     }
 
+    /**
+     * Notify all the handshake futures about the successfully handshake
+     */
     private void setHandshakeSuccess() {
         for (;;) {
             ChannelFuture f = handshakeFutures.poll();
@@ -821,6 +884,9 @@ public class SslHandler
         }
     }
 
+    /**
+     * Notify all the handshake futures about the failure during the handshake.
+     */
     private void setHandshakeFailure(Throwable cause) {
         // Release all resources such as internal buffers that SSLEngine
         // is managing.
@@ -899,18 +965,12 @@ public class SslHandler
                     if (!future.isSuccess()) {
                         ctx.pipeline().fireExceptionCaught(future.cause());
                         ctx.close();
-                    } else {
-                        // Send the event upstream after the handshake was completed without an error.
-                        //
-                        // See https://github.com/netty/netty/issues/358
-                       ctx.fireChannelActive();
                     }
-
                 }
             });
-        } else {
-            ctx.fireChannelActive();
         }
+
+        ctx.fireChannelActive();
     }
 
     private void safeClose(
@@ -928,7 +988,7 @@ public class SslHandler
                 @Override
                 public void run() {
                     logger.warn(
-                            ctx.channel() + " last lssssswrite attempt timed out." +
+                            ctx.channel() + " last write attempt timed out." +
                                             " Force-closing the connection.");
                     ctx.close(closeFuture);
                 }
@@ -936,7 +996,6 @@ public class SslHandler
         } else {
             timeoutFuture = null;
         }
-
 
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {

@@ -15,9 +15,7 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +24,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-import org.junit.Test;
+import static io.netty.buffer.Unpooled.*;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 /**
  * Tests read-only channel buffers
@@ -40,26 +40,26 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(Unpooled.unmodifiableBuffer(Unpooled.buffer(1)) instanceof ReadOnlyByteBuf);
+        assertTrue(unmodifiableBuffer(buffer(1)) instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void testUnwrap() {
-        ByteBuf buf = Unpooled.buffer(1);
-        assertSame(buf, ((WrappedByteBuf) Unpooled.unmodifiableBuffer(buf)).unwrap());
+        ByteBuf buf = buffer(1);
+        assertSame(buf, Unpooled.unmodifiableBuffer(buf).unwrap());
     }
 
     @Test
     public void shouldHaveSameByteOrder() {
-        ByteBuf buf = Unpooled.buffer(1);
-        assertSame(Unpooled.BIG_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        ByteBuf buf = buffer(1);
+        assertSame(BIG_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
         buf = buf.order(LITTLE_ENDIAN);
-        assertSame(Unpooled.LITTLE_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
+        assertSame(LITTLE_ENDIAN, Unpooled.unmodifiableBuffer(buf).order());
     }
 
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
-        ByteBuf buf = Unpooled.unmodifiableBuffer(Unpooled.buffer(1));
+        ByteBuf buf = unmodifiableBuffer(buffer(1));
         assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
@@ -68,7 +68,7 @@ public class ReadOnlyChannelBufferTest {
 
     @Test
     public void shouldReturnWritableCopy() {
-        ByteBuf buf = Unpooled.unmodifiableBuffer(Unpooled.buffer(1));
+        ByteBuf buf = unmodifiableBuffer(buffer(1));
         assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
     }
 
@@ -82,10 +82,10 @@ public class ReadOnlyChannelBufferTest {
         expect(buf.capacity()).andReturn(0).anyTimes();
 
         expect(buf.getBytes(1, (GatheringByteChannel) null, 2)).andReturn(3);
-        buf.getBytes(4, (OutputStream) null, 5);
-        buf.getBytes(6, (byte[]) null, 7, 8);
-        buf.getBytes(9, (ByteBuf) null, 10, 11);
-        buf.getBytes(12, (ByteBuffer) null);
+        expect(buf.getBytes(4, (OutputStream) null, 5)).andReturn(buf);
+        expect(buf.getBytes(6, (byte[]) null, 7, 8)).andReturn(buf);
+        expect(buf.getBytes(9, (ByteBuf) null, 10, 11)).andReturn(buf);
+        expect(buf.getBytes(12, (ByteBuffer) null)).andReturn(buf);
         expect(buf.getByte(13)).andReturn(Byte.valueOf((byte) 14));
         expect(buf.getShort(15)).andReturn(Short.valueOf((short) 16));
         expect(buf.getUnsignedMedium(17)).andReturn(18);

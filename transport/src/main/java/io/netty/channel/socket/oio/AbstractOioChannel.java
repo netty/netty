@@ -71,7 +71,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
                     }
                 } catch (Throwable t) {
                     future.setFailure(t);
-                    pipeline().fireExceptionCaught(t);
                     closeIfClosed();
                 }
             } else {

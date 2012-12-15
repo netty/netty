@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Alpha6-SNAPSHOT</version>
+    <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport</artifactId>
@@ -38,16 +38,21 @@
 
   <build>
     <plugins>
+    
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
           <excludes>
-            <!-- Exclude the com.sun.nio stuff as this is included in the jdk if its supported by the running os -->
-            <exclude>**/com/**</exclude>
+            <!-- dont want to include com.sun in here -->
+            <exclude>com/**</exclude>
           </excludes>
         </configuration>
       </plugin>
+      
     </plugins>
+  
   </build>
+  
 </project>
 

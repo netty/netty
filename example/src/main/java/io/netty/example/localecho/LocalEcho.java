@@ -77,7 +77,6 @@ public class LocalEcho {
                               new LoggingHandler(LogLevel.INFO),
                               new LocalEchoClientHandler());
                   }
-
               });
 
             // Start the server.
@@ -90,7 +89,7 @@ public class LocalEcho {
             System.out.println("Enter text (quit to end)");
             ChannelFuture lastWriteFuture = null;
             BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-            for (; ;) {
+            for (;;) {
                 String line = in.readLine();
                 if (line == null || "quit".equalsIgnoreCase(line)) {
                     break;

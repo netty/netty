@@ -15,22 +15,22 @@
  */
 package io.netty.testsuite.util;
 
-import com.sun.nio.sctp.SctpChannel;
 import io.netty.util.NetworkConstants;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.channels.Channel;
 import java.util.*;
 
-public class TestUtils {
+public final class TestUtils {
 
     private static final int START_PORT = 32768;
     private static final int END_PORT = 65536;
     private static final int NUM_CANDIDATES = END_PORT - START_PORT;
 
     private static final List<Integer> PORTS = new ArrayList<Integer>();
-    private static Iterator<Integer> PORTS_ITERATOR;
+    private static Iterator<Integer> portIterator;
 
     static {
         for (int i = START_PORT; i < END_PORT; i ++) {
@@ -40,10 +40,10 @@ public class TestUtils {
     }
 
     private static int nextCandidatePort() {
-        if (PORTS_ITERATOR == null || !PORTS_ITERATOR.hasNext()) {
-            PORTS_ITERATOR = PORTS.iterator();
+        if (portIterator == null || !portIterator.hasNext()) {
+            portIterator = PORTS.iterator();
         }
-        return PORTS_ITERATOR.next();
+        return portIterator.next();
     }
 
     /**
@@ -77,24 +77,32 @@ public class TestUtils {
     }
 
     /**
-     * Return <code>true</code> if SCTP is supported by the running os.
+     * Return {@code true} if SCTP is supported by the running os.
      *
      */
     public static boolean isSctpSupported() {
         String os = System.getProperty("os.name").toLowerCase(Locale.UK);
-        if (os.equals("unix") || os.equals("linux") || os.equals("sun") || os.equals("solaris")) {
+        if ("unix".equals(os) || "linux".equals(os) || "sun".equals(os) || "solaris".equals(os)) {
             try {
-                SctpChannel.open();
-            } catch (IOException e) {
-                // ignore
+                // Try to open a SCTP Channel, by using reflection to make it compile also on
+                // operation systems that not support SCTP like OSX and Windows
+                Class<?> sctpChannelClass = Class.forName("com.sun.nio.sctp.SctpChannel");
+                Channel channel = (Channel) sctpChannelClass.getMethod("open").invoke(null);
+                try {
+                    channel.close();
+                } catch (IOException e) {
+                    // ignore
+                }
             } catch (UnsupportedOperationException e) {
                 // This exception may get thrown if the OS does not have
                 // the shared libs installed.
                 System.out.print("Not supported: " + e.getMessage());
                 return false;
-
+            } catch (Throwable t) {
+                if (!(t instanceof IOException)) {
+                    return false;
+                }
             }
-
             return true;
         }
         return false;

@@ -194,22 +194,22 @@ final class Deflate {
     int good_match;
     // Stop searching when current match exceeds this
     int nice_match;
-    short[] dyn_ltree; // literal and length tree
-    short[] dyn_dtree; // distance tree
-    short[] bl_tree; // Huffman tree for bit lengths
-    Tree l_desc = new Tree(); // desc for literal tree
-    Tree d_desc = new Tree(); // desc for distance tree
-    Tree bl_desc = new Tree(); // desc for bit length tree
+    final short[] dyn_ltree; // literal and length tree
+    final short[] dyn_dtree; // distance tree
+    final short[] bl_tree; // Huffman tree for bit lengths
+    final Tree l_desc = new Tree(); // desc for literal tree
+    final Tree d_desc = new Tree(); // desc for distance tree
+    final Tree bl_desc = new Tree(); // desc for bit length tree
     // number of codes at each bit length for an optimal tree
-    short[] bl_count = new short[JZlib.MAX_BITS + 1];
+    final short[] bl_count = new short[JZlib.MAX_BITS + 1];
     // heap used to build the Huffman trees
-    int[] heap = new int[2 * JZlib.L_CODES + 1];
+    final int[] heap = new int[2 * JZlib.L_CODES + 1];
     int heap_len; // number of elements in the heap
     int heap_max; // element of largest frequency
     // The sons of heap[n] are heap[2*n] and heap[2*n+1]. heap[0] is not used.
     // The same heap array is used to build all trees.
     // Depth of each subtree used as tie breaker for trees of equal frequency
-    byte[] depth = new byte[2 * JZlib.L_CODES + 1];
+    final byte[] depth = new byte[2 * JZlib.L_CODES + 1];
     int l_buf; // index for literals or lengths */
     // Size of match buffer for literals/lengths.  There are 4 reasons for
     // limiting lit_bufsize to 64K:
@@ -256,10 +256,10 @@ final class Deflate {
         window_size = 2 * w_size;
 
         // Set the default configuration parameters:
-        max_lazy_match = Deflate.config_table[level].max_lazy;
-        good_match = Deflate.config_table[level].good_length;
-        nice_match = Deflate.config_table[level].nice_length;
-        max_chain_length = Deflate.config_table[level].max_chain;
+        max_lazy_match = config_table[level].max_lazy;
+        good_match = config_table[level].good_length;
+        nice_match = config_table[level].nice_length;
+        max_chain_length = config_table[level].max_chain;
 
         strstart = 0;
         block_start = 0;
@@ -348,7 +348,7 @@ final class Deflate {
         int n; // iterates over all tree elements
         int prevlen = -1; // last emitted length
         int curlen; // length of current code
-        int nextlen = tree[0 * 2 + 1]; // length of next code
+        int nextlen = tree[1]; // length of next code
         int count = 0; // repeat count of the current code
         int max_count = 7; // max repeat count
         int min_count = 4; // min repeat count
@@ -364,7 +364,8 @@ final class Deflate {
             nextlen = tree[(n + 1) * 2 + 1];
             if (++ count < max_count && curlen == nextlen) {
                 continue;
-            } else if (count < min_count) {
+            }
+            if (count < min_count) {
                 bl_tree[curlen * 2] += count;
             } else if (curlen != 0) {
                 if (curlen != prevlen) {
@@ -443,7 +444,7 @@ final class Deflate {
         int n; // iterates over all tree elements
         int prevlen = -1; // last emitted length
         int curlen; // length of current code
-        int nextlen = tree[0 * 2 + 1]; // length of next code
+        int nextlen = tree[1]; // length of next code
         int count = 0; // repeat count of the current code
         int max_count = 7; // max repeat count
         int min_count = 4; // min repeat count
@@ -458,7 +459,8 @@ final class Deflate {
             nextlen = tree[(n + 1) * 2 + 1];
             if (++ count < max_count && curlen == nextlen) {
                 continue;
-            } else if (count < min_count) {
+            }
+            if (count < min_count) {
                 do {
                     send_code(curlen, bl_tree);
                 } while (-- count != 0);
@@ -794,6 +796,7 @@ final class Deflate {
             int stored_len, // length of input block
             boolean eof // true if this is the last block for a file
     ) {
+        //noinspection PointlessArithmeticExpression
         send_bits((STORED_BLOCK << 1) + (eof? 1 : 0), 3); // send block type
         copy_block(buf, stored_len, true); // with header
     }

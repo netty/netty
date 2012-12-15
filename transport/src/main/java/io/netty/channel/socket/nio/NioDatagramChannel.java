@@ -193,7 +193,7 @@ public final class NioDatagramChannel
         ByteBuf data = packet.data();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
-        if (data.hasNioBuffer()) {
+        if (data.nioBufferCount() == 1) {
             nioData = data.nioBuffer();
         } else {
             nioData = ByteBuffer.allocate(dataLen);
@@ -271,9 +271,7 @@ public final class NioDatagramChannel
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress source, ChannelFuture future) {
-        if (DetectionUtil.javaVersion() < 7) {
-            throw new UnsupportedOperationException();
-        } else {
+        if (DetectionUtil.javaVersion() >= 7) {
             if (multicastAddress == null) {
                 throw new NullPointerException("multicastAddress");
             }
@@ -303,6 +301,8 @@ public final class NioDatagramChannel
             } catch (Throwable e) {
                 future.setFailure(e);
             }
+        } else {
+            throw new UnsupportedOperationException();
         }
         return future;
     }

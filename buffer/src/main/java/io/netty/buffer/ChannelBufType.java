@@ -15,7 +15,17 @@
  */
 package io.netty.buffer;
 
+/**
+ * The type of the ChannelBuf
+ */
 public enum ChannelBufType {
+    /**
+     * Operates one bytes.
+     */
     BYTE,
+
+    /**
+     * Operates on messages, which can be of any kind.
+     */
     MESSAGE
 }

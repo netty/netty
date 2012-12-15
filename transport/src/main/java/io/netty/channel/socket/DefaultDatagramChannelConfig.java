@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket;
 
-import static io.netty.channel.ChannelOption.*;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -30,6 +30,8 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Map;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
@@ -139,7 +141,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setBroadcast(boolean broadcast) {
+    public DatagramChannelConfig setBroadcast(boolean broadcast) {
         try {
             // See: https://github.com/netty/netty/issues/576
             if (broadcast &&
@@ -151,13 +153,14 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
                         "A non-root user can't receive a broadcast packet if the socket " +
                         "is not bound to a wildcard address; setting the SO_BROADCAST flag " +
                         "anyway as requested on the socket which is bound to " +
-                        socket.getLocalSocketAddress() + ".");
+                        socket.getLocalSocketAddress() + '.');
             }
 
             socket.setBroadcast(broadcast);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -174,7 +177,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setInterface(InetAddress interfaceAddress) {
+    public DatagramChannelConfig setInterface(InetAddress interfaceAddress) {
         if (socket instanceof MulticastSocket) {
             try {
                 ((MulticastSocket) socket).setInterface(interfaceAddress);
@@ -184,6 +187,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         } else {
             throw new UnsupportedOperationException();
         }
+        return this;
     }
 
     @Override
@@ -200,7 +204,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         if (socket instanceof MulticastSocket) {
             try {
                 ((MulticastSocket) socket).setLoopbackMode(loopbackModeDisabled);
@@ -210,6 +214,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         } else {
             throw new UnsupportedOperationException();
         }
+        return this;
     }
 
     @Override
@@ -226,7 +231,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setNetworkInterface(NetworkInterface networkInterface) {
+    public DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         if (socket instanceof MulticastSocket) {
             try {
                 ((MulticastSocket) socket).setNetworkInterface(networkInterface);
@@ -236,6 +241,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         } else {
             throw new UnsupportedOperationException();
         }
+        return this;
     }
 
     @Override
@@ -248,12 +254,13 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setReuseAddress(boolean reuseAddress) {
+    public DatagramChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             socket.setReuseAddress(reuseAddress);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -266,12 +273,13 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public DatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             socket.setReceiveBufferSize(receiveBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -284,12 +292,13 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setSendBufferSize(int sendBufferSize) {
+    public DatagramChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             socket.setSendBufferSize(sendBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -298,12 +307,13 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setReceivePacketSize(int receivePacketSize) {
+    public DatagramChannelConfig setReceivePacketSize(int receivePacketSize) {
         if (receivePacketSize <= 0) {
             throw new IllegalArgumentException(
                     String.format("receivePacketSize: %d (expected: > 0)", receivePacketSize));
         }
         this.receivePacketSize = receivePacketSize;
+        return this;
     }
 
     @Override
@@ -320,7 +330,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setTimeToLive(int ttl) {
+    public DatagramChannelConfig setTimeToLive(int ttl) {
         if (socket instanceof MulticastSocket) {
             try {
                 ((MulticastSocket) socket).setTimeToLive(ttl);
@@ -330,6 +340,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         } else {
             throw new UnsupportedOperationException();
         }
+        return this;
     }
 
     @Override
@@ -342,11 +353,27 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    public void setTrafficClass(int trafficClass) {
+    public DatagramChannelConfig setTrafficClass(int trafficClass) {
         try {
             socket.setTrafficClass(trafficClass);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+        return this;
+    }
+
+    @Override
+    public DatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
+        return (DatagramChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    }
+
+    @Override
+    public DatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        return (DatagramChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public DatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
+        return (DatagramChannelConfig) super.setAllocator(allocator);
     }
 }

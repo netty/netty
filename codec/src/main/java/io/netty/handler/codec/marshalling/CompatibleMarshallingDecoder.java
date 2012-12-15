@@ -20,11 +20,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-
-import java.io.ObjectStreamConstants;
-
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
+
+import java.io.ObjectStreamConstants;
 
 /**
  * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ByteBuf}.
@@ -34,6 +33,7 @@ import org.jboss.marshalling.Unmarshaller;
 public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void> {
     protected final UnmarshallerProvider provider;
     protected final int maxObjectSize;
+    private boolean discardingTooLongFrame;
 
     /**
      * Create a new instance of {@link CompatibleMarshallingDecoder}.
@@ -55,6 +55,12 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void>
 
     @Override
     public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        if (discardingTooLongFrame) {
+            buffer.skipBytes(actualReadableBytes());
+            checkpoint();
+            return null;
+        }
+
         Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
         ByteInput input = new ChannelBufferByteInput(buffer);
         if (maxObjectSize != Integer.MAX_VALUE) {
@@ -66,7 +72,8 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void>
             unmarshaller.finish();
             return obj;
         } catch (LimitingByteInput.TooBigObjectException e) {
-            throw new TooLongFrameException("Object to big to unmarshal");
+            discardingTooLongFrame = true;
+            throw new TooLongFrameException();
         } finally {
             // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
             // readable. This helps to be sure that we do not leak resource

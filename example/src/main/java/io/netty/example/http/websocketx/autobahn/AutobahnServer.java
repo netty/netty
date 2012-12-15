@@ -43,7 +43,6 @@ public class AutobahnServer {
             ChannelFuture f = b.bind().sync();
             System.out.println("Web Socket Server started at port " + port);
             f.channel().closeFuture().sync();
-
         } finally {
             b.shutdown();
         }

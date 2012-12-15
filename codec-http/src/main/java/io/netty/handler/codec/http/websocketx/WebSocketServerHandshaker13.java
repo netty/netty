@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -32,6 +30,9 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * <p>
@@ -107,7 +108,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 13 server handshake", channel.id()));
@@ -143,8 +144,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             }
         }
 
-
-        ChannelFuture future = channel.write(res);
+        channel.write(res, future);
 
         // Upgrade the connection and send the handshake response.
         future.addListener(new ChannelFutureListener() {
@@ -155,7 +155,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                     p.remove(HttpChunkAggregator.class);
                 }
 
-                p.replace(HttpRequestDecoder.class, "wsdecoder",
+                p.get(HttpRequestDecoder.class).replace("wsdecoder",
                         new WebSocket13FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
                 p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
             }
@@ -173,10 +173,8 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
-        ChannelFuture f = channel.write(frame);
-        f.addListener(ChannelFutureListener.CLOSE);
-        return f;
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future) {
+        future.addListener(ChannelFutureListener.CLOSE);
+        return channel.write(frame, future);
     }
-
 }

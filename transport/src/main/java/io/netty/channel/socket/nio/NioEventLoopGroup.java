@@ -15,10 +15,11 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.ChannelTaskScheduler;
 
+import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.ThreadFactory;
 
@@ -39,6 +40,16 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     public NioEventLoopGroup(
             int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
         super(nThreads, threadFactory, selectorProvider);
+    }
+
+    /**
+     * Replaces the current {@link Selector}s of the child event loops with newly created {@link Selector}s to work
+     * around the  infamous epoll 100% CPU bug.
+     */
+    public void rebuildSelectors() {
+        for (EventExecutor e: children()) {
+            ((NioEventLoop) e).rebuildSelector();
+        }
     }
 
     @Override

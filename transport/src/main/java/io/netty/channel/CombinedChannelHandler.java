@@ -53,7 +53,6 @@ public class CombinedChannelHandler
                     ChannelStateHandler.class.getSimpleName() + " to get combined.");
         }
 
-
         if (in != null) {
             throw new IllegalStateException("init() cannot be called more than once.");
         }
@@ -69,9 +68,19 @@ public class CombinedChannelHandler
     }
 
     @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        in.freeInboundBuffer(ctx, buf);
+    }
+
+    @Override
     public ChannelBuf newOutboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        out.freeOutboundBuffer(ctx, buf);
     }
 
     @Override

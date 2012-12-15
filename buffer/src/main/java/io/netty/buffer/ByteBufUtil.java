@@ -33,8 +33,8 @@ public final class ByteBufUtil {
     static {
         final char[] DIGITS = "0123456789abcdef".toCharArray();
         for (int i = 0; i < 256; i ++) {
-            HEXDUMP_TABLE[(i << 1) + 0] = DIGITS[i >>> 4 & 0x0F];
-            HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i >>> 0 & 0x0F];
+            HEXDUMP_TABLE[ i << 1     ] = DIGITS[i >>> 4 & 0x0F];
+            HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
         }
     }
 
@@ -172,7 +172,8 @@ public final class ByteBufUtil {
                 long vb = bufferB.getUnsignedInt(bIndex);
                 if (va > vb) {
                     return 1;
-                } else if (va < vb) {
+                }
+                if (va < vb) {
                     return -1;
                 }
                 aIndex += 4;
@@ -184,7 +185,8 @@ public final class ByteBufUtil {
                 long vb = swapInt(bufferB.getInt(bIndex)) & 0xFFFFFFFFL;
                 if (va > vb) {
                     return 1;
-                } else if (va < vb) {
+                }
+                if (va < vb) {
                     return -1;
                 }
                 aIndex += 4;
@@ -197,7 +199,8 @@ public final class ByteBufUtil {
             short vb = bufferB.getUnsignedByte(bIndex);
             if (va > vb) {
                 return 1;
-            } else if (va < vb) {
+            }
+            if (va < vb) {
                 return -1;
             }
             aIndex ++;
