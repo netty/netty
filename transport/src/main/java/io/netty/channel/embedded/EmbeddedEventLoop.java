@@ -20,14 +20,37 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-class EmbeddedEventLoop extends AbstractExecutorService implements EventLoop {
+final class EmbeddedEventLoop extends AbstractExecutorService implements EventLoop {
+
+    private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
+
+    @Override
+    public void execute(Runnable command) {
+        if (command == null) {
+            throw new NullPointerException("command");
+        }
+        tasks.add(command);
+    }
+
+    void runTasks() {
+        for (;;) {
+            Runnable task = tasks.poll();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
+        }
+    }
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay,
@@ -78,11 +101,6 @@ class EmbeddedEventLoop extends AbstractExecutorService implements EventLoop {
             throws InterruptedException {
         Thread.sleep(unit.toMillis(timeout));
         return false;
-    }
-
-    @Override
-    public void execute(Runnable command) {
-        command.run();
     }
 
     @Override

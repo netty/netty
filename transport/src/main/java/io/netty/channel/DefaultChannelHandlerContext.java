@@ -946,7 +946,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
+            if (executor.inEventLoop() && prev != null) {
                 next.fireChannelUnregisteredTask.run();
             } else {
                 executor.execute(next.fireChannelUnregisteredTask);
@@ -972,7 +972,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
+            if (executor.inEventLoop() && prev != null) {
                 next.fireChannelInactiveTask.run();
             } else {
                 executor.execute(next.fireChannelInactiveTask);
@@ -986,25 +986,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("cause");
         }
 
-        DefaultChannelHandlerContext next = this.next;
+        final DefaultChannelHandlerContext next = this.next;
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
-                try {
-                    next.handler().exceptionCaught(next, cause);
-                } catch (Throwable t) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(
-                                "An exception was thrown by a user handler's " +
-                                "exceptionCaught() method while handling the following exception:", cause);
-                    }
-                }
+            if (executor.inEventLoop() && prev != null) {
+                fireExceptionCaught0(next, cause);
             } else {
                 try {
                     executor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            fireExceptionCaught(cause);
+                            fireExceptionCaught0(next, cause);
                         }
                     });
                 } catch (Throwable t) {
@@ -1019,6 +1011,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     "An exceptionCaught() event was fired, and it reached at the end of the " +
                             "pipeline.  It usually means the last inbound handler in the pipeline did not " +
                             "handle the exception.", cause);
+        }
+    }
+
+    private static void fireExceptionCaught0(DefaultChannelHandlerContext next, Throwable cause) {
+        try {
+            next.handler().exceptionCaught(next, cause);
+        } catch (Throwable t) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by a user handler's " +
+                        "exceptionCaught() method while handling the following exception:", cause);
+            }
         }
     }
 
@@ -1154,7 +1158,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     void callFreeInboundBuffer() {
         EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
+        if (executor.inEventLoop() && prev != null) {
             freeInboundBufferTask.run();
         } else {
             executor.execute(freeInboundBufferTask);

@@ -35,11 +35,13 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 
 public abstract class AbstractEmbeddedChannel extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEmbeddedChannel.class);
 
+    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelConfig config = new DefaultChannelConfig();
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
@@ -81,7 +83,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         }
 
         p.addLast(new LastInboundMessageHandler(), new LastInboundByteHandler());
-        new EmbeddedEventLoop().register(this);
+        loop.register(this);
     }
 
     @Override
@@ -118,6 +120,24 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         return lastInboundMessageBuffer.poll();
     }
 
+    public void runPendingTasks() {
+        try {
+            loop.runTasks();
+        } catch (Exception e) {
+            recordException(e);
+        }
+    }
+
+    private void recordException(Throwable cause) {
+        if (lastException == null) {
+            lastException = cause;
+        } else {
+            logger.warn(
+                    "More than one exception was raised. " +
+                            "Will report only the first one and log others.", cause);
+        }
+    }
+
     public void checkException() {
         Throwable t = lastException;
         if (t == null) {
@@ -134,6 +154,13 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         }
 
         throw new ChannelException(t);
+    }
+
+    protected void ensureOpen() {
+        if (!isOpen()) {
+            recordException(new ClosedChannelException());
+            checkException();
+        }
     }
 
     @Override
@@ -212,6 +239,11 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+            // Do NOT free the buffer.
+        }
+
+        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             // Do nothing.
         }
@@ -219,13 +251,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
                 throws Exception {
-            if (lastException == null) {
-                lastException = cause;
-            } else {
-                logger.warn(
-                        "More than one exception was raised. " +
-                        "Will report only the first one and log others.", cause);
-            }
+            recordException(cause);
         }
     }
 
@@ -233,6 +259,11 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         @Override
         public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundByteBuffer;
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+            // Do NOT free the buffer.
         }
 
         @Override

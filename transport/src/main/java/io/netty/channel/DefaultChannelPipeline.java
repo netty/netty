@@ -1025,9 +1025,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object message) {
-        if (message instanceof FileRegion) {
-            return sendFile((FileRegion) message);
-        }
         return write(message, channel.newFuture());
     }
 
@@ -1194,7 +1191,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, final FileRegion region,
                            final ChannelFuture future) {
+        if (region == null) {
+            throw new NullPointerException("region");
+        }
         validateFuture(future);
+
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
@@ -1302,25 +1303,36 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         if (executor.inEventLoop()) {
-            if (msgBuf) {
-                ctx.outboundMessageBuffer().add(message);
-            } else {
-                ByteBuf buf = (ByteBuf) message;
-                ctx.outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
-            }
-            flush0(ctx, future);
+            write0(ctx, message, future, msgBuf);
             return future;
         }
 
+        final boolean msgBuf0 = msgBuf;
         final DefaultChannelHandlerContext ctx0 = ctx;
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                write(ctx0, message, future);
+                write0(ctx0, message, future, msgBuf0);
             }
         });
 
         return future;
+    }
+
+    private void write0(DefaultChannelHandlerContext ctx, Object message, ChannelFuture future, boolean msgBuf) {
+        if (msgBuf) {
+            MessageBuf<Object> outMsgBuf = ctx.outboundMessageBuffer();
+            if (!outMsgBuf.isFreed()) {
+                outMsgBuf.add(message);
+            }
+        } else {
+            ByteBuf outByteBuf = ctx.outboundByteBuffer();
+            if (!outByteBuf.isFreed()) {
+                ByteBuf buf = (ByteBuf) message;
+                outByteBuf.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+            }
+        }
+        flush0(ctx, future);
     }
 
     private void validateFuture(ChannelFuture future) {
