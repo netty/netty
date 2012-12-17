@@ -41,6 +41,7 @@ public class CipherCodec extends ByteToByteCodec {
             process(encrypt, in, heapOut);
             out.writeBytes(heapOut);
             heapOut.discardReadBytes();
+            heapOut.capacity(0);
         }
     }
 
@@ -49,7 +50,7 @@ public class CipherCodec extends ByteToByteCodec {
         process(decrypt, in, out);
     }
 
-    private void process(Cipher cipher, ByteBuf in, ByteBuf out) throws Exception {
+    private static void process(Cipher cipher, ByteBuf in, ByteBuf out) throws Exception {
         int readable = in.readableBytes();
         out.ensureWritableBytes(cipher.getOutputSize(readable));
 
