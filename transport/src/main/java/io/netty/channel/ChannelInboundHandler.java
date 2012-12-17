@@ -22,7 +22,7 @@ import io.netty.buffer.Buf;
  */
 public interface ChannelInboundHandler extends ChannelStateHandler {
     /**
-     * Return the {@link io.netty.buffer.Buf} which will be used for inbound data for the given {@link ChannelHandlerContext}.
+     * Return the {@link Buf} which will be used for inbound data for the given {@link ChannelHandlerContext}.
      */
     Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
 
