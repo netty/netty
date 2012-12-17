@@ -153,7 +153,6 @@ public interface ChannelOutboundInvoker {
      */
     ChannelFuture write(Object message, ChannelFuture future);
 
-
     /**
      * Send a {@link FileRegion} via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
