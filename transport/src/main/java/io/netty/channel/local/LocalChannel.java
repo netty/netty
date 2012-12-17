@@ -15,7 +15,7 @@
  */
 package io.netty.channel.local;
 
-import io.netty.buffer.ChannelBufType;
+import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -41,7 +41,7 @@ import java.util.Collections;
  */
 public class LocalChannel extends AbstractChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
     private final ChannelConfig config = new DefaultChannelConfig();
     private final Runnable shutdownHook = new Runnable() {

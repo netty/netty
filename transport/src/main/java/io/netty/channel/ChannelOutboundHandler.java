@@ -15,14 +15,14 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.Buf;
 
 public interface ChannelOutboundHandler extends ChannelOperationHandler {
-    ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
+    Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Invoked when this handler is not allowed to send any outbound message anymore and thus it's safe to
      * deallocate its outbound buffer.
      */
-    void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception;
+    void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception;
 }

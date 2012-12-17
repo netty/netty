@@ -15,15 +15,15 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
 
 public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
 
     public EmbeddedByteChannel(ChannelHandler... handlers) {
         super(Unpooled.buffer(), handlers);

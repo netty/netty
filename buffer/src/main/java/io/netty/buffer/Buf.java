@@ -15,11 +15,11 @@
  */
 package io.netty.buffer;
 
-public interface ChannelBuf {
+public interface Buf {
     /**
-     * The ChannelBufType which will be handled by the ChannelBuf implementation
+     * The BufType which will be handled by the Buf implementation
      */
-    ChannelBufType type();
+    BufType type();
 
     /**
      * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.

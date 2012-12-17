@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -67,12 +67,12 @@ public abstract class ByteToByteCodec
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         decoder.freeInboundBuffer(ctx, buf);
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         encoder.freeOutboundBuffer(ctx, buf);
     }
 

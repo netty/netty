@@ -16,9 +16,9 @@
 package io.netty.buffer;
 
 /**
- * The type of the ChannelBuf
+ * The type of the Buf
  */
-public enum ChannelBufType {
+public enum BufType {
     /**
      * Operates one bytes.
      */

@@ -32,8 +32,8 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     }
 
     @Override
-    public ChannelBufType type() {
-        return ChannelBufType.MESSAGE;
+    public BufType type() {
+        return BufType.MESSAGE;
     }
 
     @Override

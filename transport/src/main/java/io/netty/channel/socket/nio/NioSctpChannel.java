@@ -19,8 +19,8 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -45,7 +45,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.socket.SctpChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSctpChannel.class);
 

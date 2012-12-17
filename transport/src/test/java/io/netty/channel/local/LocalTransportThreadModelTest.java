@@ -16,8 +16,8 @@
 package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -349,12 +349,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
             // Nothing to free
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
             // Nothing to free
         }
 
@@ -406,12 +406,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
             // Nothing to free
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
             buf.free();
         }
 
@@ -506,12 +506,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
             buf.free();
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
             // Nothing to free
         }
 
@@ -597,12 +597,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
             // Nothing to free
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
             // Nothing to free
         }
 
@@ -682,12 +682,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
             // Nothing to free
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
             // Nothing to free
         }
 

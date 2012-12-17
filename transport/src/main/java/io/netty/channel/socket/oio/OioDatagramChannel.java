@@ -15,8 +15,8 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
@@ -44,7 +44,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
 
     private static final byte[] EMPTY_DATA = new byte[0];
 

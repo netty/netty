@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.Buf;
 
 import java.net.SocketAddress;
 
@@ -62,24 +62,24 @@ public class CombinedChannelHandler
     }
 
     @Override
-    public ChannelBuf newInboundBuffer(
+    public Buf newInboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return in.newInboundBuffer(ctx);
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         in.freeInboundBuffer(ctx, buf);
     }
 
     @Override
-    public ChannelBuf newOutboundBuffer(
+    public Buf newOutboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         out.freeOutboundBuffer(ctx, buf);
     }
 

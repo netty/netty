@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.aio;
 
-import io.netty.buffer.ChannelBufType;
+import io.netty.buffer.BufType;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
     private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
     private static final InternalLogger logger =

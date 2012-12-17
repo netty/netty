@@ -68,8 +68,8 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public ChannelBufType type() {
-        return ChannelBufType.MESSAGE;
+    public BufType type() {
+        return BufType.MESSAGE;
     }
 
     @Override

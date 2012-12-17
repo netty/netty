@@ -15,9 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
@@ -268,7 +268,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         if (type.contains(ChannelHandlerType.INBOUND)) {
-            ChannelBuf buf;
+            Buf buf;
             try {
                 buf = ((ChannelInboundHandler) handler).newInboundBuffer(this);
             } catch (Exception e) {
@@ -343,7 +343,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void initOutboundBuffer() {
-        ChannelBuf buf;
+        Buf buf;
         try {
             buf = ((ChannelOutboundHandler) handler).newOutboundBuffer(this);
         } catch (Exception e) {

@@ -15,8 +15,8 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
@@ -49,7 +49,7 @@ import java.util.Map;
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
 
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
