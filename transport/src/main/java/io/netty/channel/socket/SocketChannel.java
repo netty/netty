@@ -54,6 +54,8 @@ public interface SocketChannel extends Channel {
 
     /**
      * @see Socket#shutdownOutput()
+     *
+     * Will notify and return the given {@link ChannelFuture}
      */
     ChannelFuture shutdownOutput(ChannelFuture future);
 }

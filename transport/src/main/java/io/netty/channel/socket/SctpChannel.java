@@ -85,6 +85,8 @@ public interface SctpChannel extends Channel {
     /**
      * Bind a address to the already bound channel to enable multi-homing.
      * The Channel bust be bound and yet to be connected.
+     *
+     * The given {@link ChannelFuture} will be notified and also returned.
      */
     ChannelFuture bindAddress(InetAddress localAddress, ChannelFuture future);
 
@@ -97,6 +99,8 @@ public interface SctpChannel extends Channel {
     /**
      *  Unbind the address from channel's multi-homing address list.
      *  The address should be added already in multi-homing address list.
+     *
+     * The given {@link ChannelFuture} will be notified and also returned.
      */
     ChannelFuture unbindAddress(InetAddress localAddress, ChannelFuture future);
 }
