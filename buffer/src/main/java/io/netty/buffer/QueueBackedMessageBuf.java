@@ -38,96 +38,115 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
 
     @Override
     public boolean add(T e) {
+        ensureValid();
         return queue.add(e);
     }
 
     @Override
     public boolean offer(T e) {
+        ensureValid();
         return queue.offer(e);
     }
 
     @Override
     public T remove() {
+        ensureValid();
         return queue.remove();
     }
 
     @Override
     public T poll() {
+        ensureValid();
         return queue.poll();
     }
 
     @Override
     public T element() {
+        ensureValid();
         return queue.element();
     }
 
     @Override
     public T peek() {
+        ensureValid();
         return queue.peek();
     }
 
     @Override
     public int size() {
+        ensureValid();
         return queue.size();
     }
 
     @Override
     public boolean isEmpty() {
+        ensureValid();
         return queue.isEmpty();
     }
 
     @Override
     public boolean contains(Object o) {
+        ensureValid();
         return queue.contains(o);
     }
 
     @Override
     public Iterator<T> iterator() {
+        ensureValid();
         return queue.iterator();
     }
 
     @Override
     public Object[] toArray() {
+        ensureValid();
         return queue.toArray();
     }
 
     @Override
     public <E> E[] toArray(E[] a) {
+        ensureValid();
         return queue.toArray(a);
     }
 
     @Override
     public boolean remove(Object o) {
+        ensureValid();
         return queue.remove(o);
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
+        ensureValid();
         return queue.containsAll(c);
     }
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
+        ensureValid();
         return queue.addAll(c);
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
+        ensureValid();
         return queue.removeAll(c);
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
+        ensureValid();
         return queue.retainAll(c);
     }
 
     @Override
     public void clear() {
+        ensureValid();
         queue.clear();
     }
 
     @Override
     public int drainTo(Collection<? super T> c) {
+        ensureValid();
         int cnt = 0;
         for (;;) {
             T o = poll();
@@ -142,6 +161,7 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
 
     @Override
     public int drainTo(Collection<? super T> c, int maxElements) {
+        ensureValid();
         int cnt = 0;
         while (cnt < maxElements) {
             T o = poll();
@@ -162,10 +182,17 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     @Override
     public void free() {
         freed = true;
+        queue.clear();
     }
 
     @Override
     public String toString() {
         return queue.toString();
+    }
+
+    private void ensureValid() {
+        if (freed) {
+            throw new IllegalBufferAccessException();
+        }
     }
 }
