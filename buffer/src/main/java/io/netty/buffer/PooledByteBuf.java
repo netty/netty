@@ -36,7 +36,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         super(maxCapacity);
     }
 
-    void init(PoolChunk<T> chunk, long handle, T memory, int offset, int length) {
+    final void init(PoolChunk<T> chunk, long handle, T memory, int offset, int length) {
         assert handle >= 0;
         assert memory != null;
 
@@ -50,14 +50,13 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public int capacity() {
+    public final int capacity() {
         return length;
     }
 
     @Override
-    public ByteBuf capacity(int newCapacity) {
-        assert !isFreed();
-
+    public final ByteBuf capacity(int newCapacity) {
+        checkUnfreed();
         if (suspendedDeallocations == null) {
             chunk.arena.reallocate(this, newCapacity, true);
         } else {
@@ -69,21 +68,21 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBufAllocator alloc() {
+    public final ByteBufAllocator alloc() {
         return chunk.arena.parent;
     }
 
     @Override
-    public ByteOrder order() {
+    public final ByteOrder order() {
         return ByteOrder.BIG_ENDIAN;
     }
 
     @Override
-    public ByteBuf unwrap() {
+    public final ByteBuf unwrap() {
         return null;
     }
 
-    protected ByteBuffer internalNioBuffer() {
+    protected final ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = newInternalNioBuffer(memory);
@@ -94,8 +93,8 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     protected abstract ByteBuffer newInternalNioBuffer(T memory);
 
     @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        assert !isFreed();
+    public final ByteBuf suspendIntermediaryDeallocations() {
+        checkUnfreed();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<Allocation<T>>(2);
         }
@@ -103,7 +102,8 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
+    public final ByteBuf resumeIntermediaryDeallocations() {
+        checkUnfreed();
         if (suspendedDeallocations == null) {
             return this;
         }
@@ -122,39 +122,23 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public boolean isFreed() {
-        return handle < 0;
+    public final boolean isFreed() {
+        return memory == null;
     }
 
     @Override
-    public void free() {
+    public final void free() {
         if (handle >= 0) {
+            resumeIntermediaryDeallocations();
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            resumeIntermediaryDeallocations();
             chunk.arena.free(chunk, handle);
         }
     }
 
-    protected int idx(int index) {
+    protected final int idx(int index) {
         return offset + index;
-    }
-
-    protected void checkIndex(int index) {
-        assert !isFreed();
-        if (index < 0 || index >= length) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "index: %d (expected: range(0, %d))", index, length));
-        }
-    }
-
-    protected void checkIndex(int index, int fieldLength) {
-        assert !isFreed();
-        if (index < 0 || index > length - fieldLength) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, length));
-        }
     }
 
     private static final class Allocation<T> {

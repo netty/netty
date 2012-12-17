@@ -155,6 +155,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf discardReadBytes() {
+        checkUnfreed();
         if (readerIndex == 0) {
             return this;
         }
@@ -173,6 +174,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf discardSomeReadBytes() {
+        checkUnfreed();
         if (readerIndex == 0) {
             return this;
         }
@@ -926,15 +928,38 @@ public abstract class AbstractByteBuf implements ByteBuf {
                ')';
     }
 
+    protected final void checkIndex(int index) {
+        checkUnfreed();
+        if (index < 0 || index >= capacity()) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "index: %d (expected: range(0, %d))", index, capacity()));
+        }
+    }
+
+    protected final void checkIndex(int index, int fieldLength) {
+        checkUnfreed();
+        if (index < 0 || index > capacity() - fieldLength) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
+        }
+    }
+
     /**
      * Throws an {@link IndexOutOfBoundsException} if the current
      * {@linkplain #readableBytes() readable bytes} of this buffer is less
      * than the specified value.
      */
-    protected void checkReadableBytes(int minimumReadableBytes) {
+    protected final void checkReadableBytes(int minimumReadableBytes) {
+        checkUnfreed();
         if (readableBytes() < minimumReadableBytes) {
             throw new IndexOutOfBoundsException("Not enough readable bytes - Need "
                     + minimumReadableBytes + ", maximum is " + readableBytes());
+        }
+    }
+
+    protected final void checkUnfreed() {
+        if (isFreed()) {
+            throw new IllegalBufferAccessException();
         }
     }
 }

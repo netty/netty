@@ -283,27 +283,6 @@ public class SlicedByteBuf extends AbstractByteBuf {
         return buffer.nioBuffers(index, length);
     }
 
-    private void checkIndex(int index) {
-        if (index < 0 || index >= capacity()) {
-            throw new IndexOutOfBoundsException("Invalid index: " + index
-                    + ", maximum is " + capacity());
-        }
-    }
-
-    private void checkIndex(int startIndex, int length) {
-        if (length < 0) {
-            throw new IllegalArgumentException(
-                    "length is negative: " + length);
-        }
-        if (startIndex < 0) {
-            throw new IndexOutOfBoundsException("startIndex cannot be negative");
-        }
-        if (startIndex + length > capacity()) {
-            throw new IndexOutOfBoundsException("Index too big - Bytes needed: "
-                    + (startIndex + length) + ", maximum is " + capacity());
-        }
-    }
-
     @Override
     public boolean isFreed() {
         return buffer.isFreed();
