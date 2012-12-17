@@ -98,12 +98,12 @@ public class SpdySessionHandler
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        // Nothing to free
+        buf.free();
     }
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        // Nothing to free
+        buf.free();
     }
 
     @Override
