@@ -54,7 +54,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import static org.jboss.netty.channel.Channels.*;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -870,76 +869,76 @@ public class SslHandler extends FrameDecoder
                                         channel.getRemoteAddress()));
                         offered = true;
                     } else {
-                        SSLEngineResult result = null;
-                        try {
-                            synchronized (handshakeLock) {
+                        synchronized (handshakeLock) {
+                            SSLEngineResult result = null;
+                            try {
                                 result = engine.wrap(outAppBuf, outNetBuf);
-                            }
-                        } finally {
-                            if (!outAppBuf.hasRemaining()) {
-                                pendingUnencryptedWrites.remove();
-                            }
-                        }
-
-                        if (result.bytesProduced() > 0) {
-                            outNetBuf.flip();
-                            int remaining = outNetBuf.remaining();
-                            msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(remaining);
-
-                            // Transfer the bytes to the new ChannelBuffer using some safe method that will also
-                            // work with "non" heap buffers
-                            //
-                            // See https://github.com/netty/netty/issues/329
-                            msg.writeBytes(outNetBuf);
-                            outNetBuf.clear();
-
-                            ChannelFuture future;
-                            if (pendingWrite.outAppBuf.hasRemaining()) {
-                                // pendingWrite's future shouldn't be notified if
-                                // only partial data is written.
-                                future = succeededFuture(channel);
-                            } else {
-                                future = pendingWrite.future;
+                            } finally {
+                                if (!outAppBuf.hasRemaining()) {
+                                    pendingUnencryptedWrites.remove();
+                                }
                             }
 
-                            MessageEvent encryptedWrite = new DownstreamMessageEvent(
-                                    channel, future, msg, channel.getRemoteAddress());
-                            offerEncryptedWriteRequest(encryptedWrite);
-                            offered = true;
-                        } else if (result.getStatus() == Status.CLOSED) {
-                            // SSLEngine has been closed already.
-                            // Any further write attempts should be denied.
-                            success = false;
-                            break;
-                        } else {
-                            final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                            handleRenegotiation(handshakeStatus);
-                            switch (handshakeStatus) {
-                            case NEED_WRAP:
-                                if (outAppBuf.hasRemaining()) {
-                                    break;
+                            if (result.bytesProduced() > 0) {
+                                outNetBuf.flip();
+                                int remaining = outNetBuf.remaining();
+                                msg = ctx.getChannel().getConfig().getBufferFactory().getBuffer(remaining);
+
+                                // Transfer the bytes to the new ChannelBuffer using some safe method that will also
+                                // work with "non" heap buffers
+                                //
+                                // See https://github.com/netty/netty/issues/329
+                                msg.writeBytes(outNetBuf);
+                                outNetBuf.clear();
+
+                                ChannelFuture future;
+                                if (pendingWrite.outAppBuf.hasRemaining()) {
+                                    // pendingWrite's future shouldn't be notified if
+                                    // only partial data is written.
+                                    future = succeededFuture(channel);
                                 } else {
-                                    break loop;
+                                    future = pendingWrite.future;
                                 }
-                            case NEED_UNWRAP:
-                                needsUnwrap = true;
-                                break loop;
-                            case NEED_TASK:
-                                runDelegatedTasks();
+
+                                MessageEvent encryptedWrite = new DownstreamMessageEvent(
+                                        channel, future, msg, channel.getRemoteAddress());
+                                offerEncryptedWriteRequest(encryptedWrite);
+                                offered = true;
+                            } else if (result.getStatus() == Status.CLOSED) {
+                                // SSLEngine has been closed already.
+                                // Any further write attempts should be denied.
+                                success = false;
                                 break;
-                            case FINISHED:
-                            case NOT_HANDSHAKING:
-                                if (handshakeStatus == HandshakeStatus.FINISHED) {
-                                    setHandshakeSuccess(channel);
+                            } else {
+                                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                                handleRenegotiation(handshakeStatus);
+                                switch (handshakeStatus) {
+                                case NEED_WRAP:
+                                    if (outAppBuf.hasRemaining()) {
+                                        break;
+                                    } else {
+                                        break loop;
+                                    }
+                                case NEED_UNWRAP:
+                                    needsUnwrap = true;
+                                    break loop;
+                                case NEED_TASK:
+                                    runDelegatedTasks();
+                                    break;
+                                case FINISHED:
+                                case NOT_HANDSHAKING:
+                                    if (handshakeStatus == HandshakeStatus.FINISHED) {
+                                        setHandshakeSuccess(channel);
+                                    }
+                                    if (result.getStatus() == Status.CLOSED) {
+                                        success = false;
+                                    }
+                                    break loop;
+                                default:
+                                    throw new IllegalStateException(
+                                            "Unknown handshake status: " +
+                                            handshakeStatus);
                                 }
-                                if (result.getStatus() == Status.CLOSED) {
-                                    success = false;
-                                }
-                                break loop;
-                            default:
-                                throw new IllegalStateException(
-                                        "Unknown handshake status: " +
-                                        handshakeStatus);
                             }
                         }
                     }
@@ -1125,56 +1124,55 @@ public class SslHandler extends FrameDecoder
 
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
-                }
 
-                // notify about the CLOSED state of the SSLEngine. See #137
-                if (result.getStatus() == Status.CLOSED) {
-                    sslEngineCloseFuture.setClosed();
-                }
-
-                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                handleRenegotiation(handshakeStatus);
-                switch (handshakeStatus) {
-                case NEED_UNWRAP:
-                    if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
-                        break;
-                    } else {
-                        break loop;
+                    // notify about the CLOSED state of the SSLEngine. See #137
+                    if (result.getStatus() == Status.CLOSED) {
+                        sslEngineCloseFuture.setClosed();
                     }
-                case NEED_WRAP:
-                    wrapNonAppData(ctx, channel);
-                    break;
-                case NEED_TASK:
-                    runDelegatedTasks();
-                    break;
-                case FINISHED:
-                    setHandshakeSuccess(channel);
-                    needsWrap = true;
-                    break loop;
-                case NOT_HANDSHAKING:
-                    needsWrap = true;
-                    break loop;
-                default:
-                    throw new IllegalStateException(
-                            "Unknown handshake status: " + handshakeStatus);
+
+                    final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                    handleRenegotiation(handshakeStatus);
+                    switch (handshakeStatus) {
+                    case NEED_UNWRAP:
+                        if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
+                            break;
+                        } else {
+                            break loop;
+                        }
+                    case NEED_WRAP:
+                        wrapNonAppData(ctx, channel);
+                        break;
+                    case NEED_TASK:
+                        runDelegatedTasks();
+                        break;
+                    case FINISHED:
+                        setHandshakeSuccess(channel);
+                        needsWrap = true;
+                        break loop;
+                    case NOT_HANDSHAKING:
+                        needsWrap = true;
+                        break loop;
+                    default:
+                        throw new IllegalStateException(
+                                "Unknown handshake status: " + handshakeStatus);
+                    }
+                }
+
+                if (needsWrap) {
+                    // wrap() acquires pendingUnencryptedWrites first and then
+                    // handshakeLock.  If handshakeLock is already hold by the
+                    // current thread, calling wrap() will lead to a dead lock
+                    // i.e. pendingUnencryptedWrites -> handshakeLock vs.
+                    //      handshakeLock -> pendingUnencryptedLock -> handshakeLock
+                    //
+                    // There is also a same issue between pendingEncryptedWrites
+                    // and pendingUnencryptedWrites.
+                    if (!Thread.holdsLock(handshakeLock) &&
+                        !pendingEncryptedWritesLock.isHeldByCurrentThread()) {
+                        wrap(ctx, channel);
+                    }
                 }
             }
-
-            if (needsWrap) {
-                // wrap() acquires pendingUnencryptedWrites first and then
-                // handshakeLock.  If handshakeLock is already hold by the
-                // current thread, calling wrap() will lead to a dead lock
-                // i.e. pendingUnencryptedWrites -> handshakeLock vs.
-                //      handshakeLock -> pendingUnencryptedLock -> handshakeLock
-                //
-                // There is also a same issue between pendingEncryptedWrites
-                // and pendingUnencryptedWrites.
-                if (!Thread.holdsLock(handshakeLock) &&
-                    !pendingEncryptedWritesLock.isHeldByCurrentThread()) {
-                    wrap(ctx, channel);
-                }
-            }
-
             outAppBuf.flip();
 
             if (outAppBuf.hasRemaining()) {
