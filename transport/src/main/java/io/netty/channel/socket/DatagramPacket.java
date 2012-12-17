@@ -19,6 +19,9 @@ import io.netty.buffer.ByteBuf;
 
 import java.net.InetSocketAddress;
 
+/**
+ * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
+ */
 public class DatagramPacket {
 
     private final ByteBuf data;
@@ -36,10 +39,17 @@ public class DatagramPacket {
         this.remoteAddress = remoteAddress;
     }
 
+    /**
+     * Return the data which is container. May return an empty {@link ByteBuf}
+     */
     public ByteBuf data() {
         return data;
     }
 
+    /**
+     * The {@link InetSocketAddress} which this {@link DatagramPacket} will send to or was received from.
+     * If {@code null} is used the default address will be used which the {@link DatagramChannel} was connected to.
+     */
     public InetSocketAddress remoteAddress() {
         return remoteAddress;
     }

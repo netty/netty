@@ -164,7 +164,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      *         {@code null} if this channel is not connected.
      *         If this channel is not connected but it can receive messages
      *         from arbitrary remote addresses (e.g. {@link DatagramChannel},
-     *         use {@link MessageEvent#getRemoteAddress()} to determine
+     *         use {@link io.netty.channel.socket.DatagramPacket#remoteAddress()} to determine
      *         the origination of the received message as this method will
      *         return {@code null}.
      */
@@ -277,6 +277,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          */
         void resumeRead();
 
+        /**
+         * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelFuture} once it completes
+         * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
+         * automaticly closed via {@link io.netty.channel.FileRegion#close()}.
+         */
         void sendFile(FileRegion region, ChannelFuture future);
     }
 }
