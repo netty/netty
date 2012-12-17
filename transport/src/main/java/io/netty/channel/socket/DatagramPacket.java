@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public class DatagramPacket {
+public final class DatagramPacket {
 
     private final ByteBuf data;
     private final InetSocketAddress remoteAddress;
