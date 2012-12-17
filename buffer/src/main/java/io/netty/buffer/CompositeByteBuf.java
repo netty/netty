@@ -82,6 +82,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     CompositeByteBuf discardReadBytes();
 
     @Override
+    CompositeByteBuf discardSomeReadBytes();
+
+    @Override
     CompositeByteBuf ensureWritableBytes(int minWritableBytes);
 
     @Override
@@ -225,4 +228,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     @Override
     CompositeByteBuf writeZero(int length);
 
+    @Override
+    CompositeByteBuf suspendIntermediaryDeallocations();
+
+    @Override
+    CompositeByteBuf resumeIntermediaryDeallocations();
 }

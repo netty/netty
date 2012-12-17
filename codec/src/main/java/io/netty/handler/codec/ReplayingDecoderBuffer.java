@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBuf.Unsafe;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
@@ -32,7 +31,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-final class ReplayingDecoderBuffer implements ByteBuf, Unsafe {
+final class ReplayingDecoderBuffer implements ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
@@ -844,23 +843,13 @@ final class ReplayingDecoderBuffer implements ByteBuf, Unsafe {
     }
 
     @Override
-    public ByteBuffer internalNioBuffer() {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public void discardSomeReadBytes() {
+    public ByteBuf discardSomeReadBytes() {
         throw new UnreplayableOperationException();
     }
 
     @Override
     public boolean isFreed() {
-        return buffer.unsafe().isFreed();
+        return buffer.isFreed();
     }
 
     @Override
@@ -869,22 +858,17 @@ final class ReplayingDecoderBuffer implements ByteBuf, Unsafe {
     }
 
     @Override
-    public void suspendIntermediaryDeallocations() {
+    public ByteBuf suspendIntermediaryDeallocations() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void resumeIntermediaryDeallocations() {
+    public ByteBuf resumeIntermediaryDeallocations() {
         throw new UnreplayableOperationException();
     }
 
     @Override
     public ByteBuf unwrap() {
         throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
     }
 }

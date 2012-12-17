@@ -13,17 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
 
-import io.netty.buffer.ChannelBuf;
+package io.netty.buffer;
 
-public abstract class ChannelOutboundHandlerAdapter
-        extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler {
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        buf.free();
+/**
+ * A {@link RuntimeException} raised by a {@link ByteBuf} where a user requested an operation on a freed
+ * {@link ByteBuf}.
+ */
+public class IllegalMemoryAccessException extends RuntimeException {
+
+    private static final long serialVersionUID = -6734326916218551327L;
+
+    public IllegalMemoryAccessException() { }
+
+    public IllegalMemoryAccessException(String message) {
+        super(message);
     }
 
-    @Override
-    public abstract void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    public IllegalMemoryAccessException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public IllegalMemoryAccessException(Throwable cause) {
+        super(cause);
+    }
 }

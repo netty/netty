@@ -15,8 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf.Unsafe;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,7 +30,7 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractByteBuf implements Unsafe {
+public class SlicedByteBuf extends AbstractByteBuf {
 
     private final ByteBuf buffer;
     private final int adjustment;
@@ -307,36 +305,22 @@ public class SlicedByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public ByteBuffer internalNioBuffer() {
-        return buffer.nioBuffer(adjustment, length);
-    }
-
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        return buffer.nioBuffers(adjustment, length);
-    }
-
-    @Override
-    public void discardSomeReadBytes() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean isFreed() {
-        return buffer.unsafe().isFreed();
+        return buffer.isFreed();
     }
 
     @Override
-    public void free() { }
+    public void free() {
+        throw new UnsupportedOperationException("derived");
+    }
 
     @Override
-    public void suspendIntermediaryDeallocations() { }
+    public ByteBuf suspendIntermediaryDeallocations() {
+        throw new UnsupportedOperationException("derived");
+    }
 
     @Override
-    public void resumeIntermediaryDeallocations() { }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
+    public ByteBuf resumeIntermediaryDeallocations() {
+        throw new UnsupportedOperationException("derived");
     }
 }

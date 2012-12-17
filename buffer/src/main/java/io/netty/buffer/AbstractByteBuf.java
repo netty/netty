@@ -171,6 +171,27 @@ public abstract class AbstractByteBuf implements ByteBuf {
         return this;
     }
 
+    @Override
+    public ByteBuf discardSomeReadBytes() {
+        if (readerIndex == 0) {
+            return this;
+        }
+
+        if (readerIndex == writerIndex) {
+            adjustMarkers(readerIndex);
+            writerIndex = readerIndex = 0;
+            return this;
+        }
+
+        if (readerIndex >= capacity() >>> 1) {
+            setBytes(0, this, readerIndex, writerIndex - readerIndex);
+            writerIndex -= readerIndex;
+            adjustMarkers(readerIndex);
+            readerIndex = 0;
+        }
+        return this;
+    }
+
     protected void adjustMarkers(int decrement) {
         markedReaderIndex = Math.max(markedReaderIndex - decrement, 0);
         markedWriterIndex = Math.max(markedWriterIndex - decrement, 0);

@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf.Unsafe;
 import sun.misc.Cleaner;
 
 import java.io.IOException;
@@ -36,7 +35,7 @@ import java.util.Queue;
  * constructor explicitly.
  */
 @SuppressWarnings("restriction")
-final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
+final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     private static final Field CLEANER_FIELD;
 
@@ -477,31 +476,12 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
         return new UnpooledDirectByteBuf(alloc(), dst, maxCapacity());
     }
 
-    @Override
-    public ByteBuffer internalNioBuffer() {
+    private ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
         }
         return tmpNioBuf;
-    }
-
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void discardSomeReadBytes() {
-        final int readerIndex = readerIndex();
-        if (readerIndex == writerIndex()) {
-            discardReadBytes();
-            return;
-        }
-
-        if (readerIndex > 0 && readerIndex >= capacity >>> 1) {
-            discardReadBytes();
-        }
     }
 
     @Override
@@ -525,16 +505,17 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public void suspendIntermediaryDeallocations() {
+    public ByteBuf suspendIntermediaryDeallocations() {
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<ByteBuffer>(2);
         }
+        return this;
     }
 
     @Override
-    public void resumeIntermediaryDeallocations() {
+    public ByteBuf resumeIntermediaryDeallocations() {
         if (suspendedDeallocations == null) {
-            return;
+            return this;
         }
 
         Queue<ByteBuffer> suspendedDeallocations = this.suspendedDeallocations;
@@ -543,15 +524,11 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf implements Unsafe {
         for (ByteBuffer buf: suspendedDeallocations) {
             freeDirect(buf);
         }
+        return this;
     }
 
     @Override
     public ByteBuf unwrap() {
         return null;
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
     }
 }

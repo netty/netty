@@ -91,7 +91,7 @@ public abstract class ByteToMessageDecoder<O>
                     break;
                 }
             } catch (Throwable t) {
-                in.unsafe().discardSomeReadBytes();
+                in.discardSomeReadBytes();
 
                 if (decoded) {
                     decoded = false;
@@ -106,7 +106,7 @@ public abstract class ByteToMessageDecoder<O>
             }
         }
 
-        in.unsafe().discardSomeReadBytes();
+        in.discardSomeReadBytes();
 
         if (decoded) {
             ctx.fireInboundBufferUpdated();

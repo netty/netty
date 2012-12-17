@@ -16,14 +16,12 @@
 
 package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf.Unsafe;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
+abstract class PooledByteBuf<T> extends AbstractByteBuf {
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -85,13 +83,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
         return null;
     }
 
-    @Override
-    public Unsafe unsafe() {
-        return this;
-    }
-
-    @Override
-    public ByteBuffer internalNioBuffer() {
+    protected ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = newInternalNioBuffer(memory);
@@ -99,50 +91,34 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf implements Unsafe {
         return tmpNioBuf;
     }
 
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        return new ByteBuffer[] { internalNioBuffer() };
-    }
-
     protected abstract ByteBuffer newInternalNioBuffer(T memory);
 
     @Override
-    public void discardSomeReadBytes() {
-        final int readerIndex = readerIndex();
-        if (readerIndex == writerIndex()) {
-            discardReadBytes();
-            return;
-        }
-
-        if (readerIndex > 0 && readerIndex >= capacity() >>> 1) {
-            discardReadBytes();
-        }
-    }
-
-    @Override
-    public void suspendIntermediaryDeallocations() {
+    public ByteBuf suspendIntermediaryDeallocations() {
         assert !isFreed();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<Allocation<T>>(2);
         }
+        return this;
     }
 
     @Override
-    public void resumeIntermediaryDeallocations() {
+    public ByteBuf resumeIntermediaryDeallocations() {
         if (suspendedDeallocations == null) {
-            return;
+            return this;
         }
 
         Queue<Allocation<T>> suspendedDeallocations = this.suspendedDeallocations;
         this.suspendedDeallocations = null;
 
         if (suspendedDeallocations.isEmpty()) {
-            return;
+            return this;
         }
 
         for (Allocation<T> a: suspendedDeallocations) {
             chunk.arena.free(a.chunk, a.handle);
         }
+        return this;
     }
 
     @Override

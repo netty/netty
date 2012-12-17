@@ -412,7 +412,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
-            buf.unsafe().free();
+            buf.free();
         }
 
         @Override
@@ -464,7 +464,7 @@ public class LocalTransportThreadModelTest {
                     out.add(msg);
                 }
             }
-            in.unsafe().discardSomeReadBytes();
+            in.discardSomeReadBytes();
             if (swallow) {
                 future.setSuccess();
             } else {
@@ -507,7 +507,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-            buf.unsafe().free();
+            buf.free();
         }
 
         @Override

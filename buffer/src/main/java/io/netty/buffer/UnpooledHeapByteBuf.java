@@ -15,8 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf.Unsafe;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,7 +27,7 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * Big endian Java heap buffer implementation.
  */
-final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
+final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     private final ByteBufAllocator alloc;
     private byte[] array;
@@ -345,31 +343,12 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
         return new UnpooledHeapByteBuf(alloc(), copiedArray, maxCapacity());
     }
 
-    @Override
-    public ByteBuffer internalNioBuffer() {
+    private ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = ByteBuffer.wrap(array);
         }
         return tmpNioBuf;
-    }
-
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void discardSomeReadBytes() {
-        final int readerIndex = readerIndex();
-        if (readerIndex == writerIndex()) {
-            discardReadBytes();
-            return;
-        }
-
-        if (readerIndex > 0 && readerIndex >= capacity() >>> 1) {
-            discardReadBytes();
-        }
     }
 
     @Override
@@ -383,18 +362,17 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf implements Unsafe {
     }
 
     @Override
-    public void suspendIntermediaryDeallocations() { }
+    public ByteBuf suspendIntermediaryDeallocations() {
+        return this;
+    }
 
     @Override
-    public void resumeIntermediaryDeallocations() { }
+    public ByteBuf resumeIntermediaryDeallocations() {
+        return this;
+    }
 
     @Override
     public ByteBuf unwrap() {
         return null;
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
     }
 }
