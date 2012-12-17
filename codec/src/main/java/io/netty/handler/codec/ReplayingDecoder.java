@@ -458,7 +458,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
     private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
         final int oldReaderIndex = in.readerIndex();
-        in.unsafe().discardSomeReadBytes();
+        in.discardSomeReadBytes();
         final int newReaderIndex = in.readerIndex();
         checkpoint -= oldReaderIndex - newReaderIndex;
         ctx.fireInboundBufferUpdated();

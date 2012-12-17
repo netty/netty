@@ -1472,7 +1472,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
-            buf.unsafe().free();
+            buf.free();
         }
 
         @Override

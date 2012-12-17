@@ -1237,8 +1237,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 data = ctx.alloc().buffer(dataLen, dataLen);
             }
 
-            byteBuf.readBytes(data, dataLen);
-            byteBuf.unsafe().discardSomeReadBytes();
+            byteBuf.readBytes(data, dataLen).discardSomeReadBytes();
 
             exchangeBuf.add(data);
         }
@@ -1259,7 +1258,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     try {
                         out.writeBytes(data);
                     } finally {
-                        data.unsafe().free();
+                        data.free();
                     }
                 }
             }

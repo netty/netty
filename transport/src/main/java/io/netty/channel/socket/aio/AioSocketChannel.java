@@ -254,7 +254,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             if (buf.readable()) {
                 for (;;) {
-                    if (buf.unsafe().isFreed()) {
+                    if (buf.isFreed()) {
                         break;
                     }
                     // Ensure the readerIndex of the buffer is 0 before beginning an async write.
@@ -280,7 +280,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
                     if (asyncWriteInProgress) {
                         // JDK decided to write data (or notify handler) later.
-                        buf.unsafe().suspendIntermediaryDeallocations();
+                        buf.suspendIntermediaryDeallocations();
                         break;
                     }
 
@@ -316,7 +316,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             for (;;) {
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
-                if (byteBuf.unsafe().isFreed()) {
+                if (byteBuf.isFreed()) {
                     break;
                 }
 
@@ -363,7 +363,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.asyncWriteInProgress = false;
 
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-            buf.unsafe().resumeIntermediaryDeallocations();
+            buf.resumeIntermediaryDeallocations();
 
             int writtenBytes = result.intValue();
             if (writtenBytes > 0) {

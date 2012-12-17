@@ -458,6 +458,14 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     ByteBuf discardReadBytes();
 
     /**
+     * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
+     * some, all, or none of read bytes depending on its internal implementation to reduce
+     * overall memory bandwidth consumption at the cost of potentially additional memory
+     * consumption.
+     */
+    ByteBuf discardSomeReadBytes();
+
+    /**
      * Makes sure the number of {@linkplain #writableBytes() the writable bytes}
      * is equal to or greater than the specified value.  If there is enough
      * writable bytes in this buffer, this method returns with no side effect.
@@ -1828,6 +1836,23 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
     String toString(int index, int length, Charset charset);
 
     /**
+     * Suspends the intermediary deallocation of the internal memory block of this buffer until asked via
+     * {@link #resumeIntermediaryDeallocations()}. An intermediary deallocation is usually made when the capacity of
+     * a buffer changes.
+     *
+     * @throws UnsupportedOperationException if this buffer is derived
+     */
+    ByteBuf suspendIntermediaryDeallocations();
+
+    /**
+     * Resumes the intermediary deallocation of the internal memory block of this buffer, suspended by
+     * {@link #suspendIntermediaryDeallocations()}.
+     *
+     * @throws UnsupportedOperationException if this buffer is derived
+     */
+    ByteBuf resumeIntermediaryDeallocations();
+
+    /**
      * Returns a hash code which was calculated from the content of this
      * buffer.  If there's a byte array which is
      * {@linkplain #equals(Object) equal to} this array, both arrays should
@@ -1868,50 +1893,4 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
      */
     @Override
     String toString();
-
-    /**
-     * Provides access to potentially unsafe operations of this buffer.
-     */
-    @Override
-    Unsafe unsafe();
-
-    /**
-     * Provides the potentially unsafe operations of {@link ByteBuf}.
-     */
-    interface Unsafe extends ChannelBuf.Unsafe {
-        /**
-         * Returns the internal NIO buffer that is reused for I/O.
-         *
-         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer
-         */
-        ByteBuffer internalNioBuffer();
-
-        /**
-         * Returns the internal NIO buffer array that is reused for I/O.
-         *
-         * @throws UnsupportedOperationException if the buffer has no internal NIO buffer array
-         */
-        ByteBuffer[] internalNioBuffers();
-
-        /**
-         * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
-         * some, all, or none of read bytes depending on its internal implementation to reduce
-         * overall memory bandwidth consumption at the cost of potentially additional memory
-         * consumption.
-         */
-        void discardSomeReadBytes();
-
-        /**
-         * Suspends the intermediary deallocation of the internal memory block of this buffer until asked via
-         * {@link #resumeIntermediaryDeallocations()}. An intermediary deallocation is usually made when the capacity of
-         * a buffer changes.
-         */
-        void suspendIntermediaryDeallocations();
-
-        /**
-         * Resumes the intermediary deallocation of the internal memory block of this buffer, suspended by
-         * {@link #suspendIntermediaryDeallocations()}.
-         */
-        void resumeIntermediaryDeallocations();
-    }
 }

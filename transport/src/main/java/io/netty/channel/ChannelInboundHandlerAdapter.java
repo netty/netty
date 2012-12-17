@@ -23,7 +23,7 @@ public abstract class ChannelInboundHandlerAdapter
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        buf.unsafe().free();
+        buf.free();
     }
 
     /**

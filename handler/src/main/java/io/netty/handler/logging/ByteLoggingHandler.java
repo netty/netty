@@ -118,12 +118,12 @@ public class ByteLoggingHandler
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        buf.unsafe().free();
+        buf.free();
     }
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        buf.unsafe().free();
+        buf.free();
     }
 
     @Override

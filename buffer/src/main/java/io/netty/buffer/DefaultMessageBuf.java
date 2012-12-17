@@ -15,12 +15,10 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.ChannelBuf.Unsafe;
-
 import java.util.ArrayDeque;
 import java.util.Collection;
 
-final class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T>, Unsafe {
+final class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T> {
 
     private static final long serialVersionUID = 1229808623624907552L;
 
@@ -63,11 +61,6 @@ final class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T>,
             cnt ++;
         }
         return cnt;
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
     }
 
     @Override

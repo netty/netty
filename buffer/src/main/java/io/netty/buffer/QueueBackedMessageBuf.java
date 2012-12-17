@@ -15,13 +15,11 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.ChannelBuf.Unsafe;
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 
-final class QueueBackedMessageBuf<T> implements MessageBuf<T>, Unsafe {
+final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
 
     private final Queue<T> queue;
     private boolean freed;
@@ -154,11 +152,6 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T>, Unsafe {
             cnt ++;
         }
         return cnt;
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
     }
 
     @Override

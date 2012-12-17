@@ -384,12 +384,12 @@ public class SslHandler
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        buf.unsafe().free();
+        buf.free();
     }
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
-        buf.unsafe().free();
+        buf.free();
     }
 
     @Override
@@ -409,7 +409,7 @@ public class SslHandler
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        out.unsafe().discardSomeReadBytes();
+        out.discardSomeReadBytes();
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -481,7 +481,7 @@ public class SslHandler
             setHandshakeFailure(e);
             throw e;
         } finally {
-            in.unsafe().discardSomeReadBytes();
+            in.discardSomeReadBytes();
             flush0(ctx, bytesConsumed);
         }
     }

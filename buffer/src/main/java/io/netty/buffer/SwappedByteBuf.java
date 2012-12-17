@@ -183,6 +183,12 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuf discardSomeReadBytes() {
+        buf.discardSomeReadBytes();
+        return this;
+    }
+
+    @Override
     public ByteBuf ensureWritableBytes(int writableBytes) {
         buf.ensureWritableBytes(writableBytes);
         return this;
@@ -769,6 +775,28 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuf suspendIntermediaryDeallocations() {
+        buf.suspendIntermediaryDeallocations();
+        return this;
+    }
+
+    @Override
+    public ByteBuf resumeIntermediaryDeallocations() {
+        buf.resumeIntermediaryDeallocations();
+        return this;
+    }
+
+    @Override
+    public boolean isFreed() {
+        return buf.isFreed();
+    }
+
+    @Override
+    public void free() {
+        buf.free();
+    }
+
+    @Override
     public int hashCode() {
         return buf.hashCode();
     }
@@ -792,10 +820,5 @@ public final class SwappedByteBuf implements ByteBuf {
     @Override
     public String toString() {
         return "Swapped(" + buf.toString() + ')';
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return buf.unsafe();
     }
 }

@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.ByteBuf.Unsafe;
 import io.netty.util.internal.DetectionUtil;
 
 import java.io.IOException;
@@ -40,7 +39,7 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf, Unsafe {
+public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
@@ -1292,7 +1291,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             }
 
             if (suspendedDeallocations == null) {
-                buf.unsafe().free(); // We should not get a NPE here. If so, it must be a bug.
+                buf.free(); // We should not get a NPE here. If so, it must be a bug.
             } else {
                 suspendedDeallocations.add(buf);
             }
@@ -1525,26 +1524,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public ByteBuffer internalNioBuffer() {
-        if (components.size() == 1) {
-            return components.get(0).buf.unsafe().internalNioBuffer();
-        }
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ByteBuffer[] internalNioBuffers() {
-        ByteBuffer[] nioBuffers = new ByteBuffer[components.size()];
-        int index = 0;
-        for (Component component : components) {
-            nioBuffers[index++] = component.buf.unsafe().internalNioBuffer();
-        }
-        return nioBuffers;
-    }
-
-    @Override
-    public void discardSomeReadBytes() {
-        discardReadComponents();
+    public CompositeByteBuf discardSomeReadBytes() {
+        return discardReadComponents();
     }
 
     @Override
@@ -1566,33 +1547,30 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public void suspendIntermediaryDeallocations() {
+    public CompositeByteBuf suspendIntermediaryDeallocations() {
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<ByteBuf>(2);
         }
+        return this;
     }
 
     @Override
-    public void resumeIntermediaryDeallocations() {
+    public CompositeByteBuf resumeIntermediaryDeallocations() {
         if (suspendedDeallocations == null) {
-            return;
+            return this;
         }
 
         Queue<ByteBuf> suspendedDeallocations = this.suspendedDeallocations;
         this.suspendedDeallocations = null;
 
         for (ByteBuf buf: suspendedDeallocations) {
-            buf.unsafe().free();
+            buf.free();
         }
+        return this;
     }
 
     @Override
     public ByteBuf unwrap() {
         return null;
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return this;
     }
 }
