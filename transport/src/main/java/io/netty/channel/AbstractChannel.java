@@ -430,7 +430,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private final Runnable flushLaterTask = new FlushLater();
+        private final Runnable flushLaterTask = new Runnable() {
+            @Override
+            public void run() {
+                flushNowPending = false;
+                flush(voidFuture());
+            }
+        };
 
         @Override
         public final void sendFile(final FileRegion region, final ChannelFuture future) {
@@ -856,14 +862,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             close(voidFuture());
-        }
-    }
-
-    private class FlushLater implements Runnable {
-        @Override
-        public void run() {
-            flushNowPending = false;
-            unsafe().flush(voidFuture);
         }
     }
 

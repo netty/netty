@@ -48,20 +48,25 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
     }
 
     public boolean writeInbound(Object msg) {
+        ensureOpen();
         inboundBuffer().add(msg);
         pipeline().fireInboundBufferUpdated();
+        runPendingTasks();
         checkException();
         return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty();
     }
 
     public boolean writeOutbound(Object msg) {
+        ensureOpen();
         write(msg);
+        runPendingTasks();
         checkException();
         return !lastOutboundBuffer().isEmpty();
     }
 
     public boolean finish() {
         close();
+        runPendingTasks();
         checkException();
         return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
                !lastOutboundBuffer().isEmpty();

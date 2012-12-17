@@ -109,14 +109,25 @@ public class SpdySessionHandler
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         MessageBuf<Object> in = ctx.inboundMessageBuffer();
+        boolean handled = false;
         for (;;) {
             Object msg = in.poll();
             if (msg == null) {
                 break;
             }
 
+            if (msg instanceof SpdySynStreamFrame) {
+                // Let the next handlers handle the buffered messages before SYN_STREAM message updates the
+                // lastGoodStreamId.
+                if (handled) {
+                    ctx.fireInboundBufferUpdated();
+                }
+            }
+
             handleInboundMessage(ctx, msg);
+            handled = true;
         }
+
         ctx.fireInboundBufferUpdated();
     }
 

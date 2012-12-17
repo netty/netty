@@ -316,7 +316,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             for (;;) {
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
-                if (byteBuf.isFreed()) {
+                if (inputShutdown) {
                     break;
                 }
 
@@ -455,13 +455,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                if (!(t instanceof ClosedChannelException)) {
-                    pipeline.fireExceptionCaught(t);
-
-                    if (t instanceof IOException) {
-                        channel.unsafe().close(channel.unsafe().voidFuture());
-                    }
-                }
+                pipeline.fireExceptionCaught(t);
             } finally {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
@@ -488,6 +482,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         protected void failed0(Throwable t, AioSocketChannel channel) {
             channel.asyncReadInProgress = false;
             if (t instanceof ClosedChannelException) {
+                channel.inputShutdown = true;
                 return;
             }
 
