@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ChannelBufType;
+import io.netty.buffer.BufType;
 
 import java.net.SocketAddress;
 
@@ -24,10 +24,10 @@ import java.net.SocketAddress;
  */
 public final class ChannelMetadata {
 
-    private final ChannelBufType bufferType;
+    private final BufType bufferType;
     private final boolean hasDisconnect;
 
-    public ChannelMetadata(ChannelBufType bufferType, boolean hasDisconnect) {
+    public ChannelMetadata(BufType bufferType, boolean hasDisconnect) {
         if (bufferType == null) {
             throw new NullPointerException("bufferType");
         }
@@ -36,7 +36,7 @@ public final class ChannelMetadata {
         this.hasDisconnect = hasDisconnect;
     }
 
-    public ChannelBufType bufferType() {
+    public BufType bufferType() {
         return bufferType;
     }
 

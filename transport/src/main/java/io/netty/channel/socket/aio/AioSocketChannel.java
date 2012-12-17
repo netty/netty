@@ -15,8 +15,8 @@
  */
 package io.netty.channel.socket.aio;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBufType;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
 
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler<Integer>();

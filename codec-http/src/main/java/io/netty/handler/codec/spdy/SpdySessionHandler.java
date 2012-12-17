@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -97,12 +97,12 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         // Nothing to free
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         // Nothing to free
     }
 

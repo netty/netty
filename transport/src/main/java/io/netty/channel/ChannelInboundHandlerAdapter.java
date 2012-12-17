@@ -16,13 +16,13 @@
 package io.netty.channel;
 
 
-import io.netty.buffer.ChannelBuf;
+import io.netty.buffer.Buf;
 
 public abstract class ChannelInboundHandlerAdapter
         extends ChannelStateHandlerAdapter implements ChannelInboundHandler {
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         buf.free();
     }
 

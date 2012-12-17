@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
-import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.Signal;
@@ -74,8 +74,8 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public ChannelBufType type() {
-        return ChannelBufType.BYTE;
+    public BufType type() {
+        return BufType.BYTE;
     }
 
     @Override

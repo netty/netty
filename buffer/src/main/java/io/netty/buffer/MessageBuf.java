@@ -19,11 +19,11 @@ import java.util.Collection;
 import java.util.Queue;
 
 /**
- * ChannelBuf which operates on messages
+ * Buf which operates on messages
  *
  * @param <T>
  */
-public interface MessageBuf<T> extends ChannelBuf, Queue<T> {
+public interface MessageBuf<T> extends Buf, Queue<T> {
     int drainTo(Collection<? super T> c);
     int drainTo(Collection<? super T> c, int maxElements);
 }

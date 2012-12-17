@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.logging.InternalLogger;
@@ -1459,7 +1459,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private final class HeadHandler implements ChannelOutboundHandler {
         @Override
-        public ChannelBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             switch (channel.metadata().bufferType()) {
             case BYTE:
                 return ctx.alloc().ioBuffer();
@@ -1471,7 +1471,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, ChannelBuf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
             buf.free();
         }
 

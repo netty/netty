@@ -15,8 +15,8 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ChannelBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
@@ -207,7 +207,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundMessageHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public ChannelBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundMessageBuffer;
         }
 
@@ -231,7 +231,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundByteHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public ChannelBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundByteBuffer;
         }
 

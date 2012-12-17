@@ -15,7 +15,7 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.buffer.ChannelBufType;
+import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
@@ -23,7 +23,7 @@ import io.netty.channel.ChannelMetadata;
 
 public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(ChannelBufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
     public EmbeddedMessageChannel(ChannelHandler... handlers) {
         super(Unpooled.messageBuffer(), handlers);

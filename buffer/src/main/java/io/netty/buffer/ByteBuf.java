@@ -228,7 +228,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * {@link ByteBufOutputStream}.
  * @apiviz.landmark
  */
-public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
+public interface ByteBuf extends Buf, Comparable<ByteBuf> {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
