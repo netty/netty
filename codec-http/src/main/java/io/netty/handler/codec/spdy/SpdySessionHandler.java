@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 
-import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -440,8 +439,7 @@ public class SpdySessionHandler
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        sendGoAwayFrame(ctx);
-        super.close(ctx, future);
+        sendGoAwayFrame(ctx, future);
     }
 
     @Override
@@ -878,20 +876,22 @@ public class SpdySessionHandler
         }
     }
 
-    private void sendGoAwayFrame(ChannelHandlerContext ctx) {
+    private void sendGoAwayFrame(ChannelHandlerContext ctx, ChannelFuture future) {
         // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
+            ctx.close(future);
             return;
         }
 
         sendGoAwayFrame(ctx, SpdySessionStatus.OK);
         ChannelFuture f = ctx.flush();
         if (spdySession.noActiveStreams()) {
-            f.addListener(new ClosingChannelFutureListener(ctx));
+            f.addListener(new ClosingChannelFutureListener(ctx, future));
         } else {
             closeSessionFuture = ctx.newFuture();
-            closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx));
+            closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx, future));
         }
+        // FIXME: Close the connection forcibly after timeout.
     }
 
     private synchronized void sendGoAwayFrame(
@@ -905,16 +905,17 @@ public class SpdySessionHandler
 
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
+        private final ChannelFuture future;
 
-        ClosingChannelFutureListener(ChannelHandlerContext ctx) {
+        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelFuture future) {
             this.ctx = ctx;
+            this.future = future;
         }
 
         @Override
         public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
-            if (!(sentGoAwayFuture.cause() instanceof ClosedChannelException)) {
-                ctx.close();
-            }
+            System.err.println("ASDF");
+            ctx.close(future);
         }
     }
 }

@@ -113,7 +113,7 @@ public class SpdySessionHandlerTest {
         SpdyPingFrame remotePingFrame = new DefaultSpdyPingFrame(remoteStreamID);
 
         SpdySynStreamFrame spdySynStreamFrame =
-            new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0);
+                new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0);
         spdySynStreamFrame.setHeader("Compression", "test");
 
         SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(localStreamID);
@@ -233,25 +233,23 @@ public class SpdySessionHandlerTest {
         sessionHandler.writeInbound(remotePingFrame);
         assertNull(sessionHandler.readOutbound());
 
-        // Note that we cannot use writeInbound() here because sending closeMessage will close the channel
-        // immediately, and then we cannot test if SYN_STREAM and DATA frames are ignored after a GOAWAY frame is sent.
-        //// 1. Sending this message will make EchoHandler send a GOAWAY frame and close the session.
-        sessionHandler.inboundBuffer().add(closeMessage);
-        //// 2. Sending SYN_STREAM after sending closeMessage should fail with REFUSED_STREAM.
-        spdySynStreamFrame.setStreamId(localStreamID + 2);
-        sessionHandler.inboundBuffer().add(spdySynStreamFrame);
-        //// 3. Sending DATA after sending closeMessage should do nothing.
-        spdyDataFrame.setStreamId(localStreamID + 2);
-        sessionHandler.inboundBuffer().add(spdyDataFrame);
-
-        // At this point, we added three SPDY messages to the inbound buffer. Start testing.
-        sessionHandler.pipeline().fireInboundBufferUpdated();
-        //// 1. Check if session handler sends a GOAWAY frame when closing
+        // Check if session handler sends a GOAWAY frame when closing
+        sessionHandler.writeInbound(closeMessage);
         assertGoAway(sessionHandler.readOutbound(), localStreamID);
-        //// 2. Check if session handler returns REFUSED_STREAM if it receives SYN_STREAM frames
-        ////    after sending a GOAWAY frame
-        assertRstStream(sessionHandler.readOutbound(), localStreamID + 2, SpdyStreamStatus.REFUSED_STREAM);
-        //// 3. Check if session handler ignores Data frames after sending a GOAWAY frame
+        assertNull(sessionHandler.readOutbound());
+        localStreamID += 2;
+
+        // Check if session handler returns REFUSED_STREAM if it receives
+        // SYN_STREAM frames after sending a GOAWAY frame
+        spdySynStreamFrame.setStreamId(localStreamID);
+        sessionHandler.writeInbound(spdySynStreamFrame);
+        assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.REFUSED_STREAM);
+        assertNull(sessionHandler.readOutbound());
+
+        // Check if session handler ignores Data frames after sending
+        // a GOAWAY frame
+        spdyDataFrame.setStreamId(localStreamID);
+        sessionHandler.writeInbound(spdyDataFrame);
         assertNull(sessionHandler.readOutbound());
 
         sessionHandler.finish();
@@ -289,7 +287,7 @@ public class SpdySessionHandlerTest {
             // Initiate 4 new streams
             int streamID = server ? 2 : 1;
             SpdySynStreamFrame spdySynStreamFrame =
-                new DefaultSpdySynStreamFrame(streamID, 0, (byte) 0);
+                    new DefaultSpdySynStreamFrame(streamID, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
             ctx.write(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
@@ -308,8 +306,8 @@ public class SpdySessionHandlerTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof SpdyDataFrame ||
-                msg instanceof SpdyPingFrame ||
-                msg instanceof SpdyHeadersFrame) {
+                    msg instanceof SpdyPingFrame ||
+                    msg instanceof SpdyHeadersFrame) {
 
                 ctx.write(msg);
                 return;

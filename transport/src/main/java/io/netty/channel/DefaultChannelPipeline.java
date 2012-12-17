@@ -23,6 +23,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -1238,6 +1239,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void flush0(final DefaultChannelHandlerContext ctx, ChannelFuture future) {
+        if (!channel.isRegistered() && !channel.isActive()) {
+            future.setFailure(new ClosedChannelException());
+            return;
+        }
+
         try {
             ctx.flushBridge();
             ((ChannelOperationHandler) ctx.handler()).flush(ctx, future);
@@ -1320,17 +1326,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void write0(DefaultChannelHandlerContext ctx, Object message, ChannelFuture future, boolean msgBuf) {
+        if (!channel.isRegistered() && !channel.isActive()) {
+            future.setFailure(new ClosedChannelException());
+            return;
+        }
+
         if (msgBuf) {
-            MessageBuf<Object> outMsgBuf = ctx.outboundMessageBuffer();
-            if (!outMsgBuf.isFreed()) {
-                outMsgBuf.add(message);
-            }
+            ctx.outboundMessageBuffer().add(message);
         } else {
-            ByteBuf outByteBuf = ctx.outboundByteBuffer();
-            if (!outByteBuf.isFreed()) {
-                ByteBuf buf = (ByteBuf) message;
-                outByteBuf.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
-            }
+            ByteBuf buf = (ByteBuf) message;
+            ctx.outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
         }
         flush0(ctx, future);
     }
