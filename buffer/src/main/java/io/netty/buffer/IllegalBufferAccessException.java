@@ -17,24 +17,24 @@
 package io.netty.buffer;
 
 /**
- * A {@link RuntimeException} raised by a {@link ByteBuf} where a user requested an operation on a freed
- * {@link ByteBuf}.
+ * An {@link IllegalStateException} raised when a user attempts to access a {@link Buf} which was freed by
+ * {@link Buf#free()} already.
  */
-public class IllegalMemoryAccessException extends RuntimeException {
+public class IllegalBufferAccessException extends IllegalStateException {
 
     private static final long serialVersionUID = -6734326916218551327L;
 
-    public IllegalMemoryAccessException() { }
+    public IllegalBufferAccessException() { }
 
-    public IllegalMemoryAccessException(String message) {
+    public IllegalBufferAccessException(String message) {
         super(message);
     }
 
-    public IllegalMemoryAccessException(String message, Throwable cause) {
+    public IllegalBufferAccessException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public IllegalMemoryAccessException(Throwable cause) {
+    public IllegalBufferAccessException(Throwable cause) {
         super(cause);
     }
 }
