@@ -226,6 +226,8 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
      *
+     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     *                 methods
      * @param name     the name of the handler to insert first
      * @param handler  the handler to insert first
      *
@@ -252,6 +254,8 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
      *
+     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     *                 methods
      * @param name     the name of the handler to append
      * @param handler  the handler to append
      *
@@ -283,6 +287,8 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * Inserts a {@link ChannelHandler} before an existing handler of this
      * pipeline.
      *
+     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     *                  methods
      * @param baseName  the name of the existing handler
      * @param name      the name of the handler to insert before
      * @param handler   the handler to insert before
@@ -317,6 +323,8 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * Inserts a {@link ChannelHandler} after an existing handler of this
      * pipeline.
      *
+     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     *                  methods
      * @param baseName  the name of the existing handler
      * @param name      the name of the handler to insert after
      * @param handler   the handler to insert after
@@ -330,12 +338,40 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      */
     ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
+    /**
+     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     *
+     * @param handlers  the handlers to insert first
+     *
+     */
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
+    /**
+     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     *
+     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
+     *                  methods.
+     * @param handlers  the handlers to insert first
+     *
+     */
     ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
 
+    /**
+     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     *
+     * @param handlers  the handlers to insert last
+     *
+     */
     ChannelPipeline addLast(ChannelHandler... handlers);
 
+    /**
+     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     *
+     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
+     *                  methods.
+     * @param handlers  the handlers to insert last
+     *
+     */
     ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
