@@ -28,6 +28,9 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * {@link SingleThreadEventLoop} implementations which will handle AIO {@link Channel}s.
+ */
 final class AioEventLoop extends SingleThreadEventLoop {
 
     private final Set<Channel> channels = Collections.newSetFromMap(new IdentityHashMap<Channel, Boolean>());

@@ -19,6 +19,9 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * {@link AioChannelFinder} implementation which use reflection for find the right {@link AbstractAioChannel}.
+ */
 final class ReflectiveAioChannelFinder implements AioChannelFinder {
     private static volatile Map<Class<?>, Field> fieldCache = new HashMap<Class<?>, Field>();
 

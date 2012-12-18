@@ -19,6 +19,7 @@ import io.netty.buffer.BufType;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -32,6 +33,11 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses NIO2.
+ *
+ * NIO2 is only supported on Java 7+.
+ */
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
@@ -60,11 +66,21 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
     }
 
+    /**
+     * Create a new instance which has not yet attached an {@link AsynchronousServerSocketChannel}. The
+     * {@link AsynchronousServerSocketChannel} will be attached after it was this instance was registered to an
+     * {@link EventLoop}.
+     */
     public AioServerSocketChannel() {
         super(null, null, null);
         config = new AioServerSocketChannelConfig();
     }
 
+    /**
+     * Create a new instance from the given {@link AsynchronousServerSocketChannel}.
+     *
+     * @param channel    the {@link AsynchronousServerSocketChannel} which is used by this instance
+     */
     public AioServerSocketChannel(AsynchronousServerSocketChannel channel) {
         super(null, null, channel);
         config = new AioServerSocketChannelConfig(channel);
@@ -146,7 +162,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         if (ch == null) {
             AsynchronousServerSocketChannel channel = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
             ch = channel;
-            config.active(channel);
+            config.assign(channel);
         }
         return task;
     }

@@ -24,7 +24,7 @@ import java.util.concurrent.ThreadFactory;
 public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
 
     /**
-     * @see #MultithreadEventLoopGroup(int, java.util.concurrent.ThreadFactory, Object...)
+     * @see {@link MultithreadEventExecutorGroup##MultithreadEventLoopGroup(int,ThreadFactory, Object...)}
      */
     protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory,
             Object... args) {

@@ -16,5 +16,14 @@
 package io.netty.channel.socket.aio;
 
 interface AioChannelFinder {
+
+    /**
+     * Try to find the {@link AbstractAioChannel} for the given {@link Runnable}.
+     *
+     * @param   command         the {@link Runnable} for which the {@link AbstractAioChannel} should be found.
+     * @return  channel         the {@link AbstractAioChannel} which belongs to the {@link Runnable} or {@code null} if
+     *                          it could not found.
+     * @throws  Exception       will get thrown if an error accours.
+     */
     AbstractAioChannel findChannel(Runnable command) throws Exception;
 }
