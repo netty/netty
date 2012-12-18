@@ -309,16 +309,16 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public AioSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (AioSocketChannelConfig) setConnectTimeoutMillis(connectTimeoutMillis);
+        return (AioSocketChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
     }
 
     @Override
     public AioSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (AioSocketChannelConfig) setWriteSpinCount(writeSpinCount);
+        return (AioSocketChannelConfig) super.setWriteSpinCount(writeSpinCount);
     }
 
     @Override
     public AioSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (AioSocketChannelConfig) setAllocator(allocator);
+        return (AioSocketChannelConfig) super.setAllocator(allocator);
     }
 }
