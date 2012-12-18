@@ -75,7 +75,7 @@ public interface FileRegion {
     long transferTo(WritableByteChannel target, long position) throws IOException;
 
     /**
-     * Close the {@link FileRegion}.
+     * Close the {@link FileRegion}. After calling this method accessing the {@link FileRegion} may fail.
      */
     void close();
 }

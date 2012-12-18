@@ -22,7 +22,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
- * recommended to use {@link Channels#failedFuture(Channel, Throwable)}
+ * recommended to use {@link Channel#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
 public class FailedChannelFuture extends CompleteChannelFuture {

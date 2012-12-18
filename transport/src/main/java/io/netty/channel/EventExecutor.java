@@ -34,8 +34,6 @@ public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorServ
 
     /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
-     * or {@code null} if it has no parent
-
      */
     EventExecutorGroup parent();
 

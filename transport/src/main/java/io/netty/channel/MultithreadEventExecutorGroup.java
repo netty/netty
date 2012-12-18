@@ -22,15 +22,29 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
+ * the same time.
+ */
 public abstract class MultithreadEventExecutorGroup implements EventExecutorGroup {
 
-    private static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    public static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
 
     final ChannelTaskScheduler scheduler;
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
+    /**
+     * Create a new intance
+     *
+     * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
+     *                          of {@link #DEFAULT_POOL_SIZE}
+     * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
+     * @param args              arguments which will passed to each
+     *                          {@link #newChild(java.util.concurrent.ThreadFactory, ChannelTaskScheduler, Object...)}
+     *                          call.
+     */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
         if (nThreads < 0) {
             throw new IllegalArgumentException(String.format(
@@ -75,6 +89,11 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         return children;
     }
 
+    /**
+     * Create a new EventExecutor which will later then accessable via the {@link #next()}  method. This method will be
+     * called for each thread that will serve this {@link MultithreadEventExecutorGroup}.
+     *
+     */
     protected abstract EventExecutor newChild(
             ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception;
 
