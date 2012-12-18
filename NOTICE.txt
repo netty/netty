@@ -130,3 +130,10 @@ obtained at:
   * HOMEPAGE:
     * http://www.osgi.org/
 
+This product optionally depends on 'Snappy', a compression library produced
+by Google Inc, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.snappy.txt (New BSD License)
+  * HOMEPAGE:
+    * http://code.google.com/p/snappy/
