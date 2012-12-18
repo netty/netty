@@ -33,7 +33,7 @@ abstract class AbstractOioChannel extends AbstractChannel {
     protected volatile boolean readSuspended;
 
     /**
-     * @see AbstractChannel#AbstractChannel(io.netty.channel.Channel, Integer)
+     * @see AbstractChannel#AbstractChannel(Channel, Integer)
      */
     protected AbstractOioChannel(Channel parent, Integer id) {
         super(parent, id);
@@ -122,7 +122,7 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     /**
-     * Connect to the remote peer using the given localAddress if one is specified or null otherwise.
+     * Connect to the remote peer using the given localAddress if one is specified or {@code null} otherwise.
      */
     protected abstract void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;

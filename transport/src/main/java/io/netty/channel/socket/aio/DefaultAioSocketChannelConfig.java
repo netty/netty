@@ -49,9 +49,18 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     private static final boolean DEFAULT_SO_REUSEADDR = false;
     private static final boolean DEFAULT_TCP_NODELAY = false;
 
+    /**
+     * Creates a new instance with no {@link NetworkChannel} assigned to it.
+     *
+     * You should call {@link #assign(NetworkChannel)} to assign a {@link NetworkChannel} to it and
+     * have the configuration set on it.
+     */
     DefaultAioSocketChannelConfig() {
     }
 
+    /**
+     * Creates a new instance with the given {@link NetworkChannel} assigned to it.
+     */
     DefaultAioSocketChannelConfig(NetworkChannel channel) {
         this.channel.set(channel);
     }
@@ -215,6 +224,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private Object getOption(SocketOption option, Object defaultValue) {
         if (channel.get() == null) {
             Object value = options.get(option);
@@ -232,6 +242,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void setOption(SocketOption option, Object defaultValue) {
         if (channel.get() == null) {
             options.put(option, defaultValue);
@@ -283,7 +294,10 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
-    void active(NetworkChannel channel) {
+    /**
+     * Assing the given {@link NetworkChannel} to this instance
+     */
+    void assign(NetworkChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -292,6 +306,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void propagateOptions() {
         for (SocketOption option: options.keySet()) {
             Object value = options.remove(option);

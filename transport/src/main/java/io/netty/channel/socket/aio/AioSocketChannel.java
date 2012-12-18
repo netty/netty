@@ -41,6 +41,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
+/**
+ * {@link io.netty.channel.socket.SocketChannel} implementation which uses NIO2.
+ *
+ * NIO2 is only supported on Java 7+.
+ */
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
@@ -77,10 +82,27 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     };
 
+    /**
+     * Create a new instance which has not yet attached an {@link AsynchronousSocketChannel}. The
+     * {@link AsynchronousSocketChannel} will be attached after it was this instance was registered to an
+     * {@link EventLoop}.
+     */
     public AioSocketChannel() {
         this(null, null, null);
     }
 
+    /**
+     * Create a new instance from the given {@link AsynchronousSocketChannel}.
+     *
+     * @param parent
+     *        the parent of this channel. {@code null} if there's no parent.
+     * @param id
+     *        the unique non-negative integer ID of this channel.
+     *        Specify {@code null} to auto-generate a unique negative integer
+     *        ID.
+     * @param ch
+     *        the {@link AsynchronousSocketChannel} which is used by this instance
+     */
     AioSocketChannel(
             AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
         super(parent, id, ch);
@@ -182,7 +204,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         super.doRegister();
         if (ch == null) {
             ch = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
-            config.active(javaChannel());
+            config.assign(javaChannel());
         }
 
         if (remoteAddress() == null) {

@@ -36,7 +36,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     private final AtomicInteger childIndex = new AtomicInteger();
 
     /**
-     * Create a new intance
+     * Create a new instance.
      *
      * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
      *                          of {@link #DEFAULT_POOL_SIZE}

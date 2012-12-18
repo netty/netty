@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.aio;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
@@ -32,6 +33,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * {@link AioEventLoopGroup} implementation which will handle AIO {@link Channel} implementations.
+ *
+ */
 public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(AioEventLoopGroup.class);
     private static final AioChannelFinder CHANNEL_FINDER;
@@ -56,14 +61,30 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     private final AioExecutorService groupExecutor = new AioExecutorService();
     final AsynchronousChannelGroup group;
 
+    /**
+     * Create a new instance which use the default number of threads of {@link #DEFAULT_POOL_SIZE}.
+     */
     public AioEventLoopGroup() {
         this(0);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
+     *                          of {@link #DEFAULT_POOL_SIZE}
+     */
     public AioEventLoopGroup(int nThreads) {
         this(nThreads, null);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
+     *                          of {@link #DEFAULT_POOL_SIZE}
+     * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
+     */
     public AioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
         try {

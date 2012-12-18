@@ -45,9 +45,18 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
     private static final boolean DEFAULT_SO_REUSEADDR = false;
 
+    /**
+     * Creates a new instance with no {@link AsynchronousServerSocketChannel} assigned to it.
+     *
+     * You should call {@link #assign(AsynchronousServerSocketChannel)} to assign a
+     * {@link AsynchronousServerSocketChannel} to it and have the configuration set on it.
+     */
     AioServerSocketChannelConfig() {
     }
 
+    /**
+     * Creates a new instance with the given {@link AsynchronousServerSocketChannel} assigned to it.
+     */
     AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
         this.channel.set(channel);
     }
@@ -131,6 +140,7 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private Object getOption(SocketOption option, Object defaultValue) {
         if (channel.get() == null) {
             Object value = options.get(option);
@@ -148,6 +158,7 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void setOption(SocketOption option, Object defaultValue) {
         if (channel.get() == null) {
             options.put(option, defaultValue);
@@ -160,7 +171,10 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
-    void active(AsynchronousServerSocketChannel channel) {
+    /**
+     * Assing the given {@link AsynchronousServerSocketChannel} to this instance
+     */
+    void assign(AsynchronousServerSocketChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -169,6 +183,7 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void propagateOptions() {
         for (SocketOption option: options.keySet()) {
             Object value = options.remove(option);

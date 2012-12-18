@@ -21,6 +21,9 @@ import java.util.Map;
 
 import sun.misc.Unsafe;
 
+/**
+ * {@link AioChannelFinder} implementation which will use {@link Unsafe}.
+ */
 @SuppressWarnings("restriction")
 final class UnsafeAioChannelFinder implements AioChannelFinder {
     private static final Unsafe UNSAFE = getUnsafe();
