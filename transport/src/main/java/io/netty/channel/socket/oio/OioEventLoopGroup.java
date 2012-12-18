@@ -32,8 +32,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * {@link EventLoopGroup} which is used to handle OIO {@link Channel}'s. Each {@link Channel} will be handled by its
+ * own {@link EventLoop} to not block others.
+ */
 public class OioEventLoopGroup implements EventLoopGroup {
 
+    private static final StackTraceElement[] STACK_ELEMENTS = new StackTraceElement[0];
     private final int maxChannels;
     final ChannelTaskScheduler scheduler;
     final ThreadFactory threadFactory;
@@ -42,14 +47,37 @@ public class OioEventLoopGroup implements EventLoopGroup {
     final Queue<OioEventLoop> idleChildren = new ConcurrentLinkedQueue<OioEventLoop>();
     private final ChannelException tooManyChannels;
 
+    /**
+     * Create a new {@link OioEventLoopGroup} with no limit in place.
+     */
     public OioEventLoopGroup() {
         this(0);
     }
 
+    /**
+     * Create a new {@link OioEventLoopGroup}.
+     *
+     * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
+     *                          a new {@link Channel} and the maximum is exceed it will throw an
+     *                          {@link ChannelException} on the {@link #register(Channel)} and
+     *                          {@link #register(Channel, ChannelFuture)} method.
+     *                          Use {@code 0} to use no limit
+     */
     public OioEventLoopGroup(int maxChannels) {
         this(maxChannels, Executors.defaultThreadFactory());
     }
 
+    /**
+     * Create a new {@link OioEventLoopGroup}.
+     *
+     * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
+     *                          a new {@link Channel} and the maximum is exceed it will throw an
+     *                          {@link ChannelException} on the {@link #register(Channel)} and
+     *                          {@link #register(Channel, ChannelFuture)} method.
+     *                          Use {@code 0} to use no limit
+     * @param threadFactory     the {@link ThreadFactory} used to create new {@link Thread} instances that handle the
+     *                          registered {@link Channel}s
+     */
     public OioEventLoopGroup(int maxChannels, ThreadFactory threadFactory) {
         if (maxChannels < 0) {
             throw new IllegalArgumentException(String.format(
@@ -65,7 +93,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
         scheduler = new ChannelTaskScheduler(threadFactory);
 
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
-        tooManyChannels.setStackTrace(new StackTraceElement[0]);
+        tooManyChannels.setStackTrace(STACK_ELEMENTS);
     }
 
     @Override

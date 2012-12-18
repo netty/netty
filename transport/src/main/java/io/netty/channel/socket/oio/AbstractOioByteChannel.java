@@ -23,10 +23,16 @@ import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 
+/**
+ * Abstract base class for OIO which reads and writes bytes from/to a Socket
+ */
 abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     private volatile boolean inputShutdown;
 
+    /**
+     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel, Integer)
+     */
     protected AbstractOioByteChannel(Channel parent, Integer id) {
         super(parent, id);
     }
@@ -36,7 +42,7 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected OioByteUnsafe newUnsafe() {
+    protected AbstractOioUnsafe newUnsafe() {
         return new OioByteUnsafe();
     }
 
@@ -132,7 +138,26 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
         buf.clear();
     }
 
+    /**
+     * Return the number of bytes ready to read from the underlying Socket.
+     */
     protected abstract int available();
+
+    /**
+     * Read bytes from the underlying Socket.
+     *
+     * @param buf           the {@link ByteBuf} into which the read bytes will be written
+     * @return amount       the number of bytes read. This may return a negative amount if the underlying
+     *                      Socket was closed
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
+
+    /**
+     * Write the data which is hold by the {@link ByteBuf} to the underlying Socket.
+     *
+     * @param buf           the {@link ByteBuf} which holds the data to transfer
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract void doWriteBytes(ByteBuf buf) throws Exception;
 }

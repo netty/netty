@@ -23,12 +23,18 @@ import io.netty.channel.EventLoop;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+/**
+ * Abstract base class for {@link Channel} implementations that use Old-Blocking-IO
+ */
 abstract class AbstractOioChannel extends AbstractChannel {
 
     static final int SO_TIMEOUT = 1000;
 
     protected volatile boolean readSuspended;
 
+    /**
+     * @see AbstractChannel#AbstractChannel(io.netty.channel.Channel, Integer)
+     */
     protected AbstractOioChannel(Channel parent, Integer id) {
         super(parent, id);
     }
@@ -115,6 +121,9 @@ abstract class AbstractOioChannel extends AbstractChannel {
         return false;
     }
 
+    /**
+     * Connect to the remote peer using the given localAddress if one is specified or null otherwise.
+     */
     protected abstract void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
 }

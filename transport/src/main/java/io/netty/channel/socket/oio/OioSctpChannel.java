@@ -43,6 +43,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+/**
+ * {@link io.netty.channel.socket.SctpChannel} implementation which use blocking mode and allows to read / write
+ * {@link SctpMessage}s to the underlying {@link SctpChannel}.
+ *
+ * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
+ * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
+ */
 public class OioSctpChannel extends AbstractOioMessageChannel
         implements io.netty.channel.socket.SctpChannel {
 
@@ -63,14 +70,30 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         }
     }
 
+    /**
+     * Create a new instance with an new {@link SctpChannel}.
+     */
     public OioSctpChannel() {
         this(openChannel());
     }
 
+    /**
+     * Create a new instance from the given {@link SctpChannel}.
+     *
+     * @param ch    the {@link SctpChannel} which is used by this instance
+     */
     public OioSctpChannel(SctpChannel ch) {
         this(null, null, ch);
     }
 
+    /**
+     * Create a new instance from the given {@link SctpChannel}.
+     *
+     * @param parent    the parent {@link Channel} which was used to create this instance. This can be null if the
+     *                  {@link} has no parent as it was created by your self.
+     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
+     * @param ch        the {@link SctpChannel} which is used by this instance
+     */
     public OioSctpChannel(Channel parent, Integer id, SctpChannel ch) {
         super(parent, id);
         this.ch = ch;
