@@ -39,6 +39,10 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Locale;
 
+/**
+ * {@link DatagramChannel} implementation which use Old-Blocking-IO. It can be used to read and write
+ * {@link DatagramPacket}s via UDP.
+ */
 public class OioDatagramChannel extends AbstractOioMessageChannel
                                 implements DatagramChannel {
 
@@ -60,14 +64,28 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
     }
 
+    /**
+     * Create a new instance with an new {@link MulticastSocket}.
+     */
     public OioDatagramChannel() {
         this(newSocket());
     }
 
+    /**
+     * Create a new instance from the given {@link MulticastSocket}.
+     *
+     * @param socket    the {@link MulticastSocket} which is used by this instance
+     */
     public OioDatagramChannel(MulticastSocket socket) {
         this(null, socket);
     }
 
+    /**
+     * Create a new instance from the given {@link MulticastSocket}.
+     *
+     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
+     * @param socket    the {@link MulticastSocket} which is used by this instance
+     */
     public OioDatagramChannel(Integer id, MulticastSocket socket) {
         super(null, id);
 

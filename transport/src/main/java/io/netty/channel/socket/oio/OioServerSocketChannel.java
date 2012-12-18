@@ -34,6 +34,11 @@ import java.net.SocketTimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * {@link ServerSocketChannel} which accepts new connections and create the {@link OioSocketChannel}'s for them.
+ *
+ * This implementation use Old-Blocking-IO.
+ */
 public class OioServerSocketChannel extends AbstractOioMessageChannel
                                     implements ServerSocketChannel {
 
@@ -54,14 +59,28 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     final Lock shutdownLock = new ReentrantLock();
     private final ServerSocketChannelConfig config;
 
+    /**
+     * Create a new instance with an new {@link Socket}
+     */
     public OioServerSocketChannel() {
         this(newServerSocket());
     }
 
+    /**
+     * Create a new instance from the given {@link ServerSocket}
+     *
+     * @param socket    the {@link ServerSocket} which is used by this instance
+     */
     public OioServerSocketChannel(ServerSocket socket) {
         this(null, socket);
     }
 
+    /**
+     * Create a new instance from the given {@link ServerSocket}
+     *
+     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
+     * @param socket    the {@link ServerSocket} which is used by this instance
+     */
     public OioServerSocketChannel(Integer id, ServerSocket socket) {
         super(null, id);
         if (socket == null) {

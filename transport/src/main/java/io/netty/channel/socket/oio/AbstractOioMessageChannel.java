@@ -21,14 +21,20 @@ import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 
+/**
+ * Abstract base class for OIO which reads and writes objects from/to a Socket
+ */
 abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
+    /**
+     * @see AbstractOioChannel#AbstractOioChannel(Channel, Integer)
+     */
     protected AbstractOioMessageChannel(Channel parent, Integer id) {
         super(parent, id);
     }
 
     @Override
-    protected OioMessageUnsafe newUnsafe() {
+    protected AbstractOioUnsafe newUnsafe() {
         return new OioMessageUnsafe();
     }
 
@@ -75,6 +81,21 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         }
     }
 
+    /**
+     * Read Objects from the underlying Socket.
+     *
+     * @param buf           the {@link MessageBuf} into which the read objects will be written
+     * @return amount       the number of objects read. This may return a negative amount if the underlying
+     *                      Socket was closed
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
+
+    /**
+     * Write the Objects which is hold by the {@link MessageBuf} to the underlying Socket.
+     *
+     * @param buf           the {@link MessageBuf} which holds the data to transfer
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract void doWriteMessages(MessageBuf<Object> buf) throws Exception;
 }
