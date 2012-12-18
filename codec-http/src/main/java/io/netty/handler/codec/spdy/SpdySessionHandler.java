@@ -914,7 +914,6 @@ public class SpdySessionHandler
 
         @Override
         public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
-            System.err.println("ASDF");
             ctx.close(future);
         }
     }
