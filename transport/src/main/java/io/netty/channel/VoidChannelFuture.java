@@ -19,7 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class VoidChannelFuture implements ChannelFuture.Unsafe {
+class VoidChannelFuture implements ChannelFuture.Unsafe {
 
     private final Channel channel;
 

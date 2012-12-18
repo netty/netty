@@ -17,8 +17,15 @@ package io.netty.channel;
 
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * Abstract base class for {@link EventLoopGroup} implementations that handles their tasks with multiple threads at
+ * the same time.
+ */
 public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
 
+    /**
+     * @see #MultithreadEventLoopGroup(int, java.util.concurrent.ThreadFactory, Object...)
+     */
     protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory,
             Object... args) {
         super(nThreads, threadFactory, args);

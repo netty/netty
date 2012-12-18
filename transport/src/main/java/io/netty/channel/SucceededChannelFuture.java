@@ -15,14 +15,13 @@
  */
 package io.netty.channel;
 
-import java.nio.channels.Channels;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
- * recommended to use {@link Channels#succeededFuture(Channel)} instead of
+ * recommended to use {@link Channel#newSucceededFuture()} instead of
  * calling the constructor of this future.
  */
 public class SucceededChannelFuture extends CompleteChannelFuture {

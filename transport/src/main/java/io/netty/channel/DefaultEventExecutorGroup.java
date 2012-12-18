@@ -17,12 +17,22 @@ package io.netty.channel;
 
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor} instances
+ * to handle the tasks.
+ */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
 
+    /**
+     * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)
+     */
     public DefaultEventExecutorGroup(int nThreads) {
         this(nThreads, null);
     }
 
+    /**
+     * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)
+     */
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
     }

@@ -64,6 +64,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         }
     };
 
+    /**
+     * Return the {@link SingleThreadEventExecutor} which belongs the current {@link Thread}.
+     */
     public static SingleThreadEventExecutor currentEventLoop() {
         return CURRENT_EVENT_LOOP.get();
     }
@@ -78,6 +81,14 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private volatile int state = ST_NOT_STARTED;
     private long lastAccessTimeNanos;
 
+    /**
+     * Create a new instance
+     *
+     * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
+     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param scheduler         the {@link ChannelTaskScheduler} which will be used to schedule Tasks for later
+     *                          execution
+     */
     protected SingleThreadEventExecutor(
             EventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
         if (threadFactory == null) {

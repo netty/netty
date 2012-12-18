@@ -30,10 +30,8 @@ import java.util.concurrent.TimeoutException;
 import static java.util.concurrent.TimeUnit.*;
 
 /**
- * The default {@link ChannelFuture} implementation.  It is recommended to
- * use {@link Channels#future(Channel)} and {@link Channels#future(Channel, boolean)}
- * to create a new {@link ChannelFuture} rather than calling the constructor
- * explicitly.
+ * The default {@link ChannelFuture} implementation.  It is recommended to use {@link Channel#newFuture()} to create
+ * a new {@link ChannelFuture} rather than calling the constructor explicitly.
  */
 public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFuture {
 

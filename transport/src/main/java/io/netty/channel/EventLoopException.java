@@ -15,6 +15,10 @@
  */
 package io.netty.channel;
 
+/**
+ * Special {@link ChannelException} which will be thrown by {@link EventLoop} and {@link EventLoopGroup}
+ * implementations when an error accours.
+ */
 public class EventLoopException extends ChannelException {
 
     private static final long serialVersionUID = -8969100344583703616L;
