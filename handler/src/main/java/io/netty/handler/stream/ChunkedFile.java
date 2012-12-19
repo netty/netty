@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.FileRegion;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class ChunkedFile implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedFile(File file, int chunkSize) throws IOException {
         this(new RandomAccessFile(file, "r"), chunkSize);
@@ -64,7 +65,7 @@ public class ChunkedFile implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
         this(file, 0, file.length(), chunkSize);
@@ -76,7 +77,7 @@ public class ChunkedFile implements ChunkedByteInput {
      * @param offset the offset of the file where the transfer begins
      * @param length the number of bytes to transfer
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
         if (file == null) {

@@ -16,6 +16,7 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.FileRegion;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -49,7 +50,7 @@ public class ChunkedNioFile implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedNioFile(File in, int chunkSize) throws IOException {
         this(new FileInputStream(in).getChannel(), chunkSize);
@@ -66,7 +67,7 @@ public class ChunkedNioFile implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedNioFile(FileChannel in, int chunkSize) throws IOException {
         this(in, 0, in.size(), chunkSize);
@@ -78,7 +79,7 @@ public class ChunkedNioFile implements ChunkedByteInput {
      * @param offset the offset of the file where the transfer begins
      * @param length the number of bytes to transfer
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize)
             throws IOException {

@@ -60,7 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * Some {@link ChunkedInput} generates a chunk on a certain event or timing.
  * Such {@link ChunkedInput} implementation often returns {@code null} on
- * {@link ChunkedInput#nextChunk()}, resulting in the indefinitely suspended
+ * {@link ChunkedInput#readChunk(Object)}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  * @apiviz.landmark
