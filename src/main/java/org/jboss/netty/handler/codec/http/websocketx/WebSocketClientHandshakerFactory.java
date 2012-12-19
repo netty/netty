@@ -76,6 +76,10 @@ public class WebSocketClientHandshakerFactory {
             return new WebSocketClientHandshaker08(
                     webSocketURL, V08, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
         }
+        if (version == V07) {
+            return new WebSocketClientHandshaker07(
+                    webSocketURL, V07, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
+        }
         if (version == V00) {
             return new WebSocketClientHandshaker00(
                     webSocketURL, V00, subprotocol, customHeaders, maxFramePayloadLength);
