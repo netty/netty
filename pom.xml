@@ -77,7 +77,6 @@
     <module>buffer</module>
     <module>codec</module>
     <module>codec-http</module>
-    <module>codec-snappy</module>
     <module>codec-socks</module>
     <module>transport</module>
     <module>handler</module>
