@@ -49,7 +49,7 @@ public class ChunkedStream implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified stream.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedStream(InputStream in, int chunkSize) {
         if (in == null) {
