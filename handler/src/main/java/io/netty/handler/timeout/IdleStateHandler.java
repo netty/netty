@@ -19,15 +19,15 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOperationHandler;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventExecutor;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
+import io.netty.channel.FileRegion;
 
-import java.nio.channels.Channels;
+import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -65,46 +65,34 @@ import java.util.concurrent.TimeUnit;
  * // for 30 seconds.  The connection is closed when there is no inbound traffic
  * // for 60 seconds.
  *
- * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *
- *     private final {@link Timer} timer;
- *     private final {@link ChannelHandler} idleStateHandler;
- *
- *     public MyPipelineFactory({@link Timer} timer) {
- *         this.timer = timer;
- *         this.idleStateHandler = <b>new {@link IdleStateHandler}(timer, 60, 30, 0), // timer must be shared.</b>
- *     }
- *
- *     public {@link ChannelPipeline} getPipeline() {
- *         return {@link Channels}.pipeline(
- *             idleStateHandler,
- *             new MyHandler());
+ * public class MyChannelInitializer extends {@link ChannelInitializer} {
+ *     public void initChannel({@link Channel} channel) {
+ *         {@link Channel}.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0);
+ *         {@link Channel}.pipeline().addLast("myHandler", new MyHandler());
  *     }
  * }
  *
  * // Handler should handle the {@link IdleStateEvent} triggered by {@link IdleStateHandler}.
- * public class MyHandler extends {@link IdleStateAwareChannelHandler} {
- *
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *     {@code @Override}
- *     public void channelIdle({@link ChannelHandlerContext} ctx, {@link IdleStateEvent} e) {
- *         if (e.getState() == {@link IdleState}.READER_IDLE) {
- *             e.getChannel().close();
- *         } else if (e.getState() == {@link IdleState}.WRITER_IDLE) {
- *             e.getChannel().write(new PingMessage());
+ *     public void userEventTriggered({@link ChannelHandlerContext} ctx, {@link Object} evt) throws {@link Exception} {
+ *         if (evt instanceof {@link IdleState}} {
+ *             {@link IdleState} e = ({@link IdleState}) evt;
+ *             if (e.getState() == {@link IdleState}.READER_IDLE) {
+ *                 ctx.channel().close();
+ *             } else if (e.getState() == {@link IdleState}.WRITER_IDLE) {
+ *                 ctx.channel().write(new PingMessage());
+ *             }
  *         }
  *     }
  * }
  *
  * {@link ServerBootstrap} bootstrap = ...;
- * {@link Timer} timer = new {@link HashedWheelTimer}();
  * ...
- * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
+ * bootstrap.childHandler(new MyChannelInitializer());
  * ...
  * </pre>
  *
- * The {@link Timer} which was specified when the {@link IdleStateHandler} is
- * created should be stopped manually by calling {@link #releaseExternalResources()}
- * or {@link Timer#stop()} when your application shuts down.
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  *
@@ -112,7 +100,7 @@ import java.util.concurrent.TimeUnit;
  * @apiviz.uses io.netty.util.HashedWheelTimer
  * @apiviz.has io.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
-public class IdleStateHandler extends ChannelHandlerAdapter {
+public class IdleStateHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
     private final long readerIdleTimeMillis;
     private final long writerIdleTimeMillis;
@@ -282,7 +270,45 @@ public class IdleStateHandler extends ChannelHandlerAdapter {
             }
         });
 
-        super.flush(ctx, future);
+        ctx.flush(future);
+    }
+
+    @Override
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
+        ctx.bind(localAddress, future);
+    }
+
+    @Override
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                        ChannelFuture future) throws Exception {
+        ctx.connect(remoteAddress, localAddress);
+    }
+
+    @Override
+    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        ctx.disconnect(future);
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        ctx.close(future);
+    }
+
+    @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        ctx.deregister(future);
+    }
+
+    @Override
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                lastWriteTime = System.currentTimeMillis();
+                writerIdleCount = allIdleCount = 0;
+            }
+        });
+        ctx.sendFile(region);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
