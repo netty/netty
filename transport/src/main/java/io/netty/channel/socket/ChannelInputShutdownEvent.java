@@ -13,10 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.socket;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateHandler;
+
+/**
+ * Special event which will be fired and passed to the
+ * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the input of
+ * a {@link SocketChannel} was shutdown and the {@link SocketChannelConfig#isAllowHalfClosure()} method returns
+ * {@code true}.
+ */
 public final class ChannelInputShutdownEvent {
 
+    /**
+     * Instance to use
+     */
     public static final ChannelInputShutdownEvent INSTANCE = new ChannelInputShutdownEvent();
 
     private ChannelInputShutdownEvent() { }
