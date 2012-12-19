@@ -15,11 +15,6 @@
  */
 package com.sun.nio.sctp;
 
-/**
- * TODO Document me.
- *
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- */
 public enum HandlerResult {
     CONTINUE, RETURN
 }
