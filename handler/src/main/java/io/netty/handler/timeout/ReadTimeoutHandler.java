@@ -16,14 +16,12 @@
 package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelStateHandlerAdapter;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
 
-import java.nio.channels.Channels;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -32,39 +30,38 @@ import java.util.concurrent.TimeUnit;
  * period of time.
  *
  * <pre>
- * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
+ * // The connection is closed when there is no inbound traffic
+ * // for 30 seconds.
  *
- *     private final {@link Timer} timer;
- *     private final {@link ChannelHandler} timeoutHandler;
- *
- *     public MyPipelineFactory({@link Timer} timer) {
- *         this.timer = timer;
- *         this.timeoutHandler = <b>new {@link ReadTimeoutHandler}(timer, 30), // timer must be shared.</b>
+ * public class MyChannelInitializer extends {@link ChannelInitializer} {
+ *     public void initChannel({@link Channel} channel) {
+ *         {@link Channel}.pipeline().addLast("readTimeoutHandler", new {@link ReadTimeoutHandler}(30);
+ *         {@link Channel}.pipeline().addLast("myHandler", new MyHandler());
  *     }
+ * }
  *
- *     public {@link ChannelPipeline} getPipeline() {
- *         // An example configuration that implements 30-second read timeout:
- *         return {@link Channels}.pipeline(
- *             timeoutHandler,
- *             new MyHandler());
+ * // Handler should handle the {@link ReadTimeoutException}.
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
+ *     {@code @Override}
+ *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
+ *             throws {@link Exception} {
+ *         if (cause instanceof {@link ReadTimeoutException}) {
+ *             // do something
+ *         } else {
+ *             super.exceptionCaught(ctx, cause);
+ *         }
  *     }
  * }
  *
  * {@link ServerBootstrap} bootstrap = ...;
- * {@link Timer} timer = new {@link HashedWheelTimer}();
  * ...
- * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
+ * bootstrap.childHandler(new MyChannelInitializer());
  * ...
  * </pre>
- *
- * The {@link Timer} which was specified when the {@link ReadTimeoutHandler} is
- * created should be stopped manually by calling {@link #releaseExternalResources()}
- * or {@link Timer#stop()} when your application shuts down.
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
  *
  * @apiviz.landmark
- * @apiviz.uses io.netty.util.HashedWheelTimer
  * @apiviz.has io.netty.handler.timeout.TimeoutException oneway - - raises
  */
 public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
