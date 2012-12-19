@@ -34,6 +34,4 @@ public interface ByteBufAllocator {
     CompositeByteBuf compositeHeapBuffer(int maxNumComponents);
     CompositeByteBuf compositeDirectBuffer();
     CompositeByteBuf compositeDirectBuffer(int maxNumComponents);
-
-    int bufferMaxCapacity();
 }

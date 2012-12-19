@@ -130,6 +130,9 @@ abstract class PoolArena<T> {
                     }
                 }
             }
+        } else if (normCapacity > chunkSize) {
+            allocateHuge(buf, reqCapacity);
+            return;
         }
 
         allocateNormal(buf, reqCapacity, normCapacity);
@@ -150,8 +153,16 @@ abstract class PoolArena<T> {
         qInit.add(c);
     }
 
+    private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
+        buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
+    }
+
     synchronized void free(PoolChunk<T> chunk, long handle) {
-        chunk.parent.free(chunk, handle);
+        if (chunk.unpooled) {
+            destroyChunk(chunk);
+        } else {
+            chunk.parent.free(chunk, handle);
+        }
     }
 
     void addSubpage(PoolSubpage<T> subpage) {
@@ -175,8 +186,11 @@ abstract class PoolArena<T> {
     }
 
     private int normalizeCapacity(int reqCapacity) {
-        if (reqCapacity < 0 || reqCapacity > chunkSize) {
-            throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0-" + chunkSize + ')');
+        if (reqCapacity < 0) {
+            throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
+        }
+        if (reqCapacity >= chunkSize) {
+            return reqCapacity;
         }
 
         if ((reqCapacity & 0xFFFFFE00) != 0) { // >= 512
@@ -240,6 +254,7 @@ abstract class PoolArena<T> {
     }
 
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
+    protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
     protected abstract void memoryCopy(T src, int srcOffset, T dst, int dstOffset, int length);
     protected abstract void destroyChunk(PoolChunk<T> chunk);
@@ -312,6 +327,11 @@ abstract class PoolArena<T> {
         }
 
         @Override
+        protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
+            return new PoolChunk<byte[]>(this, new byte[capacity], capacity);
+        }
+
+        @Override
         protected void destroyChunk(PoolChunk<byte[]> chunk) {
             // Rely on GC.
         }
@@ -341,6 +361,11 @@ abstract class PoolArena<T> {
         protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             return new PoolChunk<ByteBuffer>(
                     this, ByteBuffer.allocateDirect(chunkSize), pageSize, maxOrder, pageShifts, chunkSize);
+        }
+
+        @Override
+        protected PoolChunk<ByteBuffer> newUnpooledChunk(int capacity) {
+            return new PoolChunk<ByteBuffer>(this, ByteBuffer.allocateDirect(capacity), capacity);
         }
 
         @Override

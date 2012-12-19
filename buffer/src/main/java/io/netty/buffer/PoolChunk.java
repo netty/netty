@@ -28,6 +28,7 @@ final class PoolChunk<T> {
 
     final PoolArena<T> arena;
     final T memory;
+    final boolean unpooled;
 
     private final int[] memoryMap;
     private final PoolSubpage<T>[] subpages;
@@ -51,6 +52,7 @@ final class PoolChunk<T> {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     PoolChunk(PoolArena<T> arena, T memory, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
+        unpooled = false;
         this.arena = arena;
         this.memory = memory;
         this.pageSize = pageSize;
@@ -74,6 +76,20 @@ final class PoolChunk<T> {
         }
 
         subpages = newSubpageArray(maxSubpageAllocs);
+    }
+
+    /** Creates a special chunk that is not pooled. */
+    PoolChunk(PoolArena<T> arena, T memory, int size) {
+        unpooled = true;
+        this.arena = arena;
+        this.memory = memory;
+        memoryMap = null;
+        subpages = null;
+        subpageOverflowMask = 0;
+        pageSize = 0;
+        pageShifts = 0;
+        chunkSize = size;
+        maxSubpageAllocs = 0;
     }
 
     @SuppressWarnings("unchecked")
@@ -266,7 +282,7 @@ final class PoolChunk<T> {
         if (bitmapIdx == 0) {
             int val = memoryMap[memoryMapIdx];
             assert (val & 3) == ST_ALLOCATED : String.valueOf(val & 3);
-            buf.init(this, handle, memory, runOffset(val), reqCapacity, runLength(val));
+            buf.init(this, handle, runOffset(val), reqCapacity, runLength(val));
         } else {
             initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
         }
@@ -288,7 +304,7 @@ final class PoolChunk<T> {
         assert reqCapacity <= subpage.elemSize;
 
         buf.init(
-                this, handle, memory,
+                this, handle,
                 runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize);
     }
 

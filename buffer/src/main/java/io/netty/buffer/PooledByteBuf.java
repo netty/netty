@@ -37,16 +37,28 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         super(maxCapacity);
     }
 
-    final void init(PoolChunk<T> chunk, long handle, T memory, int offset, int length, int maxLength) {
+    final void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
         assert handle >= 0;
-        assert memory != null;
+        assert chunk != null;
 
         this.chunk = chunk;
         this.handle = handle;
-        this.memory = memory;
+        memory = chunk.memory;
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
+        setIndex(0, 0);
+        tmpNioBuf = null;
+    }
+
+    final void initUnpooled(PoolChunk<T> chunk, int length) {
+        assert chunk != null;
+
+        this.chunk = chunk;
+        handle = 0;
+        memory = chunk.memory;
+        offset = 0;
+        this.length = maxLength = length;
         setIndex(0, 0);
         tmpNioBuf = null;
     }
@@ -61,27 +73,33 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         checkUnfreed();
 
         // If the request capacity does not require reallocation, just update the length of the memory.
-        if (newCapacity > length) {
-            if (newCapacity <= maxLength) {
-                length = newCapacity;
+        if (chunk.unpooled) {
+            if (newCapacity == length) {
                 return this;
             }
-        } else if (newCapacity < length) {
-            if (newCapacity > maxLength >>> 1) {
-                if (maxLength <= 512) {
-                    if (newCapacity > maxLength - 16) {
+        } else {
+            if (newCapacity > length) {
+                if (newCapacity <= maxLength) {
+                    length = newCapacity;
+                    return this;
+                }
+            } else if (newCapacity < length) {
+                if (newCapacity > maxLength >>> 1) {
+                    if (maxLength <= 512) {
+                        if (newCapacity > maxLength - 16) {
+                            length = newCapacity;
+                            setIndex(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
+                            return this;
+                        }
+                    } else { // > 512 (i.e. >= 1024)
                         length = newCapacity;
                         setIndex(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
                         return this;
                     }
-                } else { // > 512 (i.e. >= 1024)
-                    length = newCapacity;
-                    setIndex(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
-                    return this;
                 }
+            } else {
+                return this;
             }
-        } else {
-            return this;
         }
 
         // Reallocation required.
@@ -144,7 +162,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         }
 
         for (Allocation<T> a: suspendedDeallocations) {
-            chunk.arena.free(a.chunk, a.handle);
+            a.chunk.arena.free(a.chunk, a.handle);
         }
         return this;
     }
