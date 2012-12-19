@@ -504,7 +504,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         if (content == null) {
             content = buffer.readBytes((int) length);
         } else {
-            content.writeBytes(buffer.readBytes((int) length));
+            content.writeBytes(buffer, (int) length);
         }
         return reset();
     }
