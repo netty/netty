@@ -13,15 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression.snappy;
-
-import static org.junit.Assert.assertArrayEquals;
+package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.compression.CompressionException;
-
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class SnappyTest {
@@ -46,7 +43,7 @@ public class SnappyTest {
         byte[] expected = {
             0x6e, 0x65, 0x74, 0x74, 0x79
         };
-        assertArrayEquals("Literal was not decoded correctly", expected, out.array());
+        Assert.assertArrayEquals("Literal was not decoded correctly", expected, out.array());
     }
 
     @Test
@@ -65,7 +62,7 @@ public class SnappyTest {
         byte[] expected = {
             0x6e, 0x65, 0x74, 0x74, 0x79, 0x6e, 0x65, 0x74, 0x74, 0x79
         };
-        assertArrayEquals("Copy was not decoded correctly", expected, out.array());
+        Assert.assertArrayEquals("Copy was not decoded correctly", expected, out.array());
     }
 
     @Test(expected = CompressionException.class)
@@ -118,7 +115,7 @@ public class SnappyTest {
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
         };
-        assertArrayEquals("Encoded literal was invalid", expected, out.array());
+        Assert.assertArrayEquals("Encoded literal was invalid", expected, out.array());
     }
 
     @Test
@@ -168,6 +165,6 @@ public class SnappyTest {
             0x15, 0x4c
         };
 
-        assertArrayEquals("Encoded result was incorrect", expected, out.array());
+        Assert.assertArrayEquals("Encoded result was incorrect", expected, out.array());
     }
 }

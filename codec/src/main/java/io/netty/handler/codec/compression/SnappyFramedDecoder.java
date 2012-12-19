@@ -13,17 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression.snappy;
-
-import java.nio.charset.Charset;
-import java.util.Arrays;
-
-import static io.netty.handler.codec.compression.snappy.SnappyChecksumUtil.validateChecksum;
+package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteDecoder;
-import io.netty.handler.codec.compression.CompressionException;
+
+import java.nio.charset.Charset;
+import java.util.Arrays;
+
+import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.

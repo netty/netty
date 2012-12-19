@@ -13,17 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression.snappy;
-
-import static org.junit.Assert.assertEquals;
-
-import static io.netty.handler.codec.compression.snappy.SnappyChecksumUtil.*;
+package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.compression.CompressionException;
-
 import org.junit.Test;
+
+import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
+import static org.junit.Assert.*;
 
 public class SnappyChecksumUtilTest {
     @Test
