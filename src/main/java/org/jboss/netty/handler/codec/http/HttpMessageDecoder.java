@@ -467,37 +467,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (length < contentRead) {
             if (!message.isChunked()) {
                 message.setChunked(true);
-                return new Object[] {message, new DefaultHttpChunk(read(buffer, toRead))};
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
             } else {
-                return new DefaultHttpChunk(read(buffer, toRead));
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
             }
         }
         if (content == null) {
-            content = read(buffer, (int) length);
+            content = buffer.readBytes((int) length);
         } else {
-            content.writeBytes(buffer.readBytes((int) length));
+            content.writeBytes(buffer, (int) length);
         }
         return reset();
-    }
-
-    /**
-     * Try to do an optimized "read" of len from the given {@link ChannelBuffer}.
-     *
-     * This is part of #412 to safe byte copies
-     *
-     */
-    private ChannelBuffer read(ChannelBuffer buffer, int len) {
-        ChannelBuffer internal = internalBuffer();
-        if (internal.readableBytes() >= len) {
-            int index = internal.readerIndex();
-            ChannelBuffer buf = internal.slice(index, len);
-
-            // update the readerindex so an the next read its on the correct position
-            buffer.readerIndex(index + len);
-            return buf;
-        } else {
-            return buffer.readBytes(len);
-        }
     }
 
     private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
