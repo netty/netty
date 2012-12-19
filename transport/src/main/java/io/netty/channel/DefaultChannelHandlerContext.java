@@ -1241,7 +1241,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 data = ctx.alloc().buffer(dataLen, dataLen);
             }
 
-            byteBuf.readBytes(data, dataLen).discardSomeReadBytes();
+            byteBuf.readBytes(data).discardSomeReadBytes();
 
             exchangeBuf.add(data);
         }
