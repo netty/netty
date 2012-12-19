@@ -83,23 +83,23 @@ abstract class PoolArena<T> {
         return new Deque[size];
     }
 
-    PooledByteBuf<T> allocate(PoolThreadCache cache, int minCapacity, int maxCapacity) {
+    PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
         PooledByteBuf<T> buf = newByteBuf(maxCapacity);
-        allocate(cache, buf, minCapacity);
+        allocate(cache, buf, reqCapacity);
         return buf;
     }
 
-    private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, int minCapacity) {
-        final int capacity = normalizeCapacity(minCapacity);
-        if ((capacity & subpageOverflowMask) == 0) { // capacity < pageSize
+    private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
+        final int normCapacity = normalizeCapacity(reqCapacity);
+        if ((normCapacity & subpageOverflowMask) == 0) { // capacity < pageSize
             int tableIdx;
             Deque<PoolSubpage<T>>[] table;
-            if ((capacity & 0xFFFFFE00) == 0) { // < 512
-                tableIdx = capacity >>> 4;
+            if ((normCapacity & 0xFFFFFE00) == 0) { // < 512
+                tableIdx = normCapacity >>> 4;
                 table = tinySubpagePools;
             } else {
                 tableIdx = 0;
-                int i = capacity >>> 10;
+                int i = normCapacity >>> 10;
                 while (i != 0) {
                     i >>>= 1;
                     tableIdx ++;
@@ -115,7 +115,7 @@ abstract class PoolArena<T> {
                         break;
                     }
 
-                    if (!s.doNotDestroy || s.elemSize != capacity) {
+                    if (!s.doNotDestroy || s.elemSize != normCapacity) {
                         // The subpage has been destroyed or being used for different element size.
                         subpages.removeFirst();
                         continue;
@@ -125,28 +125,28 @@ abstract class PoolArena<T> {
                     if (handle < 0) {
                         subpages.removeFirst();
                     } else {
-                        s.chunk.initBufWithSubpage(buf, handle);
+                        s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
                         return;
                     }
                 }
             }
         }
 
-        allocateNormal(buf, capacity);
+        allocateNormal(buf, reqCapacity, normCapacity);
     }
 
-    private synchronized void allocateNormal(PooledByteBuf<T> buf, int capacity) {
-        if (q050.allocate(buf, capacity) || q025.allocate(buf, capacity) ||
-            q000.allocate(buf, capacity) || qInit.allocate(buf, capacity) ||
-            q075.allocate(buf, capacity)) {
+    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
+            q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
+            q075.allocate(buf, reqCapacity, normCapacity)) {
             return;
         }
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-        long handle = c.allocate(capacity);
+        long handle = c.allocate(normCapacity);
         assert handle > 0;
-        c.initBuf(buf, handle);
+        c.initBuf(buf, handle, reqCapacity);
         qInit.add(c);
     }
 
@@ -174,26 +174,26 @@ abstract class PoolArena<T> {
         table[tableIdx].addFirst(subpage);
     }
 
-    private int normalizeCapacity(int capacity) {
-        if (capacity < 0 || capacity > chunkSize) {
-            throw new IllegalArgumentException("capacity: " + capacity + " (expected: 0-" + chunkSize + ')');
+    private int normalizeCapacity(int reqCapacity) {
+        if (reqCapacity < 0 || reqCapacity > chunkSize) {
+            throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0-" + chunkSize + ')');
         }
 
-        if ((capacity & 0xFFFFFE00) != 0) { // >= 512
+        if ((reqCapacity & 0xFFFFFE00) != 0) { // >= 512
             // Doubled
             int normalizedCapacity = 512;
-            while (normalizedCapacity < capacity) {
+            while (normalizedCapacity < reqCapacity) {
                 normalizedCapacity <<= 1;
             }
             return normalizedCapacity;
         }
 
         // Quantum-spaced
-        if ((capacity & 15) == 0) {
-            return capacity;
+        if ((reqCapacity & 15) == 0) {
+            return reqCapacity;
         }
 
-        return (capacity & ~15) + 16;
+        return (reqCapacity & ~15) + 16;
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {

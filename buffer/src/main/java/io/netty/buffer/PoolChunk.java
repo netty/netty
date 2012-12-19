@@ -93,16 +93,16 @@ final class PoolChunk<T> {
         return 100 - freePercentage;
     }
 
-    long allocate(int capacity) {
+    long allocate(int normCapacity) {
         int firstVal = memoryMap[1];
-        if ((capacity & subpageOverflowMask) != 0) { // >= pageSize
-            return allocateRun(capacity, 1, firstVal);
+        if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
+            return allocateRun(normCapacity, 1, firstVal);
         } else {
-            return allocateSubpage(capacity, 1, firstVal);
+            return allocateSubpage(normCapacity, 1, firstVal);
         }
     }
 
-    private long allocateRun(int capacity, int curIdx, int val) {
+    private long allocateRun(int normCapacity, int curIdx, int val) {
         for (;;) {
             if ((val & ST_ALLOCATED) != 0) { // state == ST_ALLOCATED || state == ST_ALLOCATED_SUBPAGE
                 return -1;
@@ -110,7 +110,7 @@ final class PoolChunk<T> {
 
             if ((val & ST_BRANCH) != 0) { // state == ST_BRANCH
                 int nextIdx = curIdx << 1 ^ nextRandom();
-                long res = allocateRun(capacity, nextIdx, memoryMap[nextIdx]);
+                long res = allocateRun(normCapacity, nextIdx, memoryMap[nextIdx]);
                 if (res > 0) {
                     return res;
                 }
@@ -121,18 +121,18 @@ final class PoolChunk<T> {
             }
 
             // state == ST_UNUSED
-            return allocateRunSimple(capacity, curIdx, val);
+            return allocateRunSimple(normCapacity, curIdx, val);
         }
     }
 
-    private long allocateRunSimple(int capacity, int curIdx, int val) {
+    private long allocateRunSimple(int normCapacity, int curIdx, int val) {
         int runLength = runLength(val);
-        if (capacity > runLength) {
+        if (normCapacity > runLength) {
             return -1;
         }
 
         for (;;) {
-            if (capacity == runLength) {
+            if (normCapacity == runLength) {
                 // Found the run that fits.
                 // Note that capacity has been normalized already, so we don't need to deal with
                 // the values that are not power of 2.
@@ -154,26 +154,26 @@ final class PoolChunk<T> {
         }
     }
 
-    private long allocateSubpage(int capacity, int curIdx, int val) {
+    private long allocateSubpage(int normCapacity, int curIdx, int val) {
         int state = val & 3;
         if (state == ST_BRANCH) {
             int nextIdx = curIdx << 1 ^ nextRandom();
-            long res = branchSubpage(capacity, nextIdx);
+            long res = branchSubpage(normCapacity, nextIdx);
             if (res > 0) {
                 return res;
             }
 
-            return branchSubpage(capacity, nextIdx ^ 1);
+            return branchSubpage(normCapacity, nextIdx ^ 1);
         }
 
         if (state == ST_UNUSED) {
-            return allocateSubpageSimple(capacity, curIdx, val);
+            return allocateSubpageSimple(normCapacity, curIdx, val);
         }
 
         if (state == ST_ALLOCATED_SUBPAGE) {
             PoolSubpage<T> subpage = subpages[subpageIdx(curIdx)];
             int elemSize = subpage.elemSize;
-            if (capacity != elemSize) {
+            if (normCapacity != elemSize) {
                 return -1;
             }
 
@@ -183,7 +183,7 @@ final class PoolChunk<T> {
         return -1;
     }
 
-    private long allocateSubpageSimple(int capacity, int curIdx, int val) {
+    private long allocateSubpageSimple(int normCapacity, int curIdx, int val) {
         int runLength = runLength(val);
         for (;;) {
             if (runLength == pageSize) {
@@ -193,10 +193,10 @@ final class PoolChunk<T> {
                 int subpageIdx = subpageIdx(curIdx);
                 PoolSubpage<T> subpage = subpages[subpageIdx];
                 if (subpage == null) {
-                    subpage = new PoolSubpage<T>(this, curIdx, runOffset(val), pageSize, capacity);
+                    subpage = new PoolSubpage<T>(this, curIdx, runOffset(val), pageSize, normCapacity);
                     subpages[subpageIdx] = subpage;
                 } else {
-                    subpage.init(capacity);
+                    subpage.init(normCapacity);
                 }
                 arena.addSubpage(subpage);
                 return subpage.allocate();
@@ -215,10 +215,10 @@ final class PoolChunk<T> {
         }
     }
 
-    private long branchSubpage(int capacity, int nextIdx) {
+    private long branchSubpage(int normCapacity, int nextIdx) {
         int nextVal = memoryMap[nextIdx];
         if ((nextVal & 3) != ST_ALLOCATED) {
-            return allocateSubpage(capacity, nextIdx, nextVal);
+            return allocateSubpage(normCapacity, nextIdx, nextVal);
         }
         return -1;
     }
@@ -260,23 +260,23 @@ final class PoolChunk<T> {
         }
     }
 
-    void initBuf(PooledByteBuf<T> buf, long handle) {
+    void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity) {
         int memoryMapIdx = (int) handle;
         int bitmapIdx = (int) (handle >>> 32);
         if (bitmapIdx == 0) {
             int val = memoryMap[memoryMapIdx];
             assert (val & 3) == ST_ALLOCATED : String.valueOf(val & 3);
-            buf.init(this, handle, memory, runOffset(val), runLength(val));
+            buf.init(this, handle, memory, runOffset(val), reqCapacity, runLength(val));
         } else {
-            initBufWithSubpage(buf, handle, bitmapIdx);
+            initBufWithSubpage(buf, handle, bitmapIdx, reqCapacity);
         }
     }
 
-    void initBufWithSubpage(PooledByteBuf<T> buf, long handle) {
-        initBufWithSubpage(buf, handle, (int) (handle >>> 32));
+    void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int reqCapacity) {
+        initBufWithSubpage(buf, handle, (int) (handle >>> 32), reqCapacity);
     }
 
-    private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx) {
+    private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
         assert bitmapIdx != 0;
 
         int memoryMapIdx = (int) handle;
@@ -285,10 +285,11 @@ final class PoolChunk<T> {
 
         PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
         assert subpage.doNotDestroy;
+        assert reqCapacity <= subpage.elemSize;
 
         buf.init(
                 this, handle, memory,
-                runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, subpage.elemSize);
+                runOffset(val) + (bitmapIdx & 0x3FFFFFFF) * subpage.elemSize, reqCapacity, subpage.elemSize);
     }
 
     private static int parentIdx(int memoryMapIdx) {
