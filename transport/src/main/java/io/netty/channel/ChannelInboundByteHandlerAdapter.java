@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBuf;
  * Abstract base class for {@link ChannelInboundHandlerAdapter} which should be extended by the user to
  * get notified once more data is ready to get consumed from the inbound {@link ByteBuf}.
  *
- * This implementation is a good starting point for must users.
+ * This implementation is a good starting point for most users.
  */
 public abstract class ChannelInboundByteHandlerAdapter
         extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {

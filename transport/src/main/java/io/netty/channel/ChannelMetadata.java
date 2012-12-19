@@ -27,6 +27,14 @@ public final class ChannelMetadata {
     private final BufType bufferType;
     private final boolean hasDisconnect;
 
+    /**
+     * Create a new instance
+     *
+     * @param bufferType        the {@link BufType} which will be used by the {@link Channel}.
+     * @param hasDisconnect     {@code true} if and only if the channel has the {@code disconnect()} operation
+     *                          that allows a user to disconnect and then call {@link Channel#connect(SocketAddress)}
+     *                                      again, such as UDP/IP.
+     */
     public ChannelMetadata(BufType bufferType, boolean hasDisconnect) {
         if (bufferType == null) {
             throw new NullPointerException("bufferType");
@@ -36,6 +44,9 @@ public final class ChannelMetadata {
         this.hasDisconnect = hasDisconnect;
     }
 
+    /**
+     * Returns the {@link BufType} which will be used by the {@link Channel}.
+     */
     public BufType bufferType() {
         return bufferType;
     }
