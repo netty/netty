@@ -112,21 +112,21 @@ public class ChunkedNioFile implements ChunkedByteInput {
     /**
      * Returns the offset in the file where the transfer began.
      */
-    public long getStartOffset() {
+    public long startOffset() {
         return startOffset;
     }
 
     /**
      * Returns the offset in the file where the transfer will end.
      */
-    public long getEndOffset() {
+    public long endOffset() {
         return endOffset;
     }
 
     /**
      * Returns the offset in the file where the transfer is happening currently.
      */
-    public long getCurrentOffset() {
+    public long currentOffset() {
         return offset;
     }
 

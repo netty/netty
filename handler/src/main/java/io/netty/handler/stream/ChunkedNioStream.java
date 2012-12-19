@@ -67,7 +67,7 @@ public class ChunkedNioStream implements ChunkedByteInput {
     /**
      * Returns the number of transferred bytes.
      */
-    public long getTransferredBytes() {
+    public long transferredBytes() {
         return offset;
     }
 
