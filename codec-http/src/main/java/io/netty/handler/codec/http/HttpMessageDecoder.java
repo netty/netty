@@ -496,37 +496,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         if (length < contentRead) {
             if (message.getTransferEncoding() != HttpTransferEncoding.STREAMED) {
                 message.setTransferEncoding(HttpTransferEncoding.STREAMED);
-                return new Object[] {message, new DefaultHttpChunk(read(buffer, toRead))};
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
             } else {
-                return new DefaultHttpChunk(read(buffer, toRead));
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
             }
         }
         if (content == null) {
-            content = read(buffer, (int) length);
+            content = buffer.readBytes((int) length);
         } else {
             content.writeBytes(buffer.readBytes((int) length));
         }
         return reset();
-    }
-
-    /**
-     * Try to do an optimized "read" of len from the given {@link ByteBuf}.
-     *
-     * This is part of #412 to safe byte copies
-     *
-     */
-    private ByteBuf read(ByteBuf buffer, int len) {
-        ByteBuf internal = internalBuffer();
-        if (internal.readableBytes() >= len) {
-            int index = internal.readerIndex();
-            ByteBuf buf = internal.slice(index, len);
-
-            // update the readerindex so an the next read its on the correct position
-            buffer.readerIndex(index + len);
-            return buf;
-        } else {
-            return buffer.readBytes(len);
-        }
     }
 
     private State readHeaders(ByteBuf buffer) {
