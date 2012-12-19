@@ -16,7 +16,6 @@
 package io.netty.handler.codec.cipher;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteCodec;
 
@@ -26,34 +25,41 @@ public class CipherCodec extends ByteToByteCodec {
     private final Cipher encrypt;
     private final Cipher decrypt;
 
-    private final ByteBuf heapOut = Unpooled.buffer();
 
-    public CipherCodec(Cipher encrypt, Cipher decrypt) throws Exception {
+    public CipherCodec(Cipher encrypt, Cipher decrypt) {
         this.encrypt = encrypt;
         this.decrypt = decrypt;
     }
 
     @Override
     public void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        if (out.hasArray()) {
-            process(encrypt, in, out);
+        int capacity = encrypt.getOutputSize(in.readableBytes());
+
+        if (!out.hasArray()) {
+            ByteBuf heapOut = ctx.alloc().heapBuffer(capacity);
+
+            try {
+                process(encrypt, in, heapOut);
+                out.writeBytes(heapOut);
+            } finally {
+                heapOut.free();
+            }
         } else {
-            process(encrypt, in, heapOut);
-            out.writeBytes(heapOut);
-            heapOut.discardReadBytes();
-            heapOut.capacity(0);
+            out.ensureWritableBytes(capacity);
+            process(encrypt, in, out);
         }
     }
 
     @Override
     public void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+        int capacity = decrypt.getOutputSize(in.readableBytes());
+
+        out.ensureWritableBytes(capacity);
         process(decrypt, in, out);
     }
 
     private static void process(Cipher cipher, ByteBuf in, ByteBuf out) throws Exception {
         int readable = in.readableBytes();
-        out.ensureWritableBytes(cipher.getOutputSize(readable));
-
         int processed = cipher.update(in.array(), in.arrayOffset() + in.readerIndex(), readable, out.array(), out.arrayOffset() + out.writerIndex());
 
         in.readerIndex(in.readerIndex() + readable);
