@@ -28,6 +28,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     protected T memory;
     protected int offset;
     protected int length;
+    private int maxLength;
 
     private ByteBuffer tmpNioBuf;
     private Queue<Allocation<T>> suspendedDeallocations;
@@ -36,7 +37,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         super(maxCapacity);
     }
 
-    final void init(PoolChunk<T> chunk, long handle, T memory, int offset, int length) {
+    final void init(PoolChunk<T> chunk, long handle, T memory, int offset, int length, int maxLength) {
         assert handle >= 0;
         assert memory != null;
 
@@ -45,6 +46,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         this.memory = memory;
         this.offset = offset;
         this.length = length;
+        this.maxLength = maxLength;
         setIndex(0, 0);
         tmpNioBuf = null;
     }
@@ -57,6 +59,32 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     @Override
     public final ByteBuf capacity(int newCapacity) {
         checkUnfreed();
+
+        // If the request capacity does not require reallocation, just update the length of the memory.
+        if (newCapacity > length) {
+            if (newCapacity <= maxLength) {
+                length = newCapacity;
+                return this;
+            }
+        } else if (newCapacity < length) {
+            if (newCapacity > maxLength >>> 1) {
+                if (maxLength <= 512) {
+                    if (newCapacity > maxLength - 16) {
+                        length = newCapacity;
+                        setIndex(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
+                        return this;
+                    }
+                } else { // > 512 (i.e. >= 1024)
+                    length = newCapacity;
+                    setIndex(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
+                    return this;
+                }
+            }
+        } else {
+            return this;
+        }
+
+        // Reallocation required.
         if (suspendedDeallocations == null) {
             chunk.arena.reallocate(this, newCapacity, true);
         } else {
