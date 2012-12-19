@@ -13,10 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression.snappy;
+package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.compression.CompressionException;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an

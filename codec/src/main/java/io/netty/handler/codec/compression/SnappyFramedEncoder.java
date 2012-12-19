@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression.snappy;
+package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteEncoder;
 
-import static io.netty.handler.codec.compression.snappy.SnappyChecksumUtil.*;
+import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.
