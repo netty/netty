@@ -142,6 +142,25 @@ import java.util.regex.Pattern;
  * <li>insert the {@link SslHandler} to the {@link ChannelPipeline}, and</li>
  * <li>Initiate SSL handshake by calling {@link SslHandler#handshake()}.</li>
  * </ol>
+ *
+ * <h3>Known issues</h3>
+ * <p>
+ * Because of a known issue with the current implementation of the SslEngine that comes
+ * with Java it may be possible that you see blocked IO-Threads while a full GC is done.
+ * <p>
+ * So if you are affected you can workaround this problem by adjust the cache settings
+ * like shown below:
+ *
+ * <pre>
+ *     SslContext context = ...;
+ *     context.getServerSessionContext().setSessionCacheSize(someSaneSize);
+ *     context.getServerSessionContext().setSessionTime(someSameTimeout);
+ * </pre>
+ * <p>
+ * What values to use here depends on the nature of your application and should be set
+ * based on monitoring and debugging of it.
+ * For more details see
+ * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.ssl.SslBufferPool
  */
