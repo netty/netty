@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInputShutdownEvent;
 
 import java.net.Socket;
 import java.net.StandardSocketOptions;
