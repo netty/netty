@@ -24,7 +24,7 @@ import java.util.concurrent.TimeoutException;
  * recommended to use {@link Channel#newSucceededFuture()} instead of
  * calling the constructor of this future.
  */
-public class SucceededChannelFuture extends CompleteChannelFuture {
+ class SucceededChannelFuture extends CompleteChannelFuture {
 
     /**
      * Creates a new instance.

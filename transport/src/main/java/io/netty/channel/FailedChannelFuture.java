@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import java.nio.channels.Channels;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -25,7 +24,7 @@ import java.util.concurrent.TimeoutException;
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
-public class FailedChannelFuture extends CompleteChannelFuture {
+class FailedChannelFuture extends CompleteChannelFuture {
 
     private final Throwable cause;
 
