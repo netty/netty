@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
  */
-public abstract class CompleteChannelFuture implements ChannelFuture {
+abstract class CompleteChannelFuture implements ChannelFuture {
 
     private final Channel channel;
 
