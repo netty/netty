@@ -19,8 +19,12 @@ import io.netty.buffer.Buf;
 
 import java.net.SocketAddress;
 
-public class CombinedChannelHandler
-        extends ChannelHandlerAdapter implements ChannelInboundHandler, ChannelOutboundHandler {
+/**
+ *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
+ *
+ */
+public class CombinedChannelHandler extends ChannelStateHandlerAdapter implements ChannelInboundHandler,
+        ChannelOutboundHandler {
 
     private ChannelOutboundHandler out;
     private ChannelInboundHandler in;
@@ -196,5 +200,10 @@ public class CombinedChannelHandler
     public void flush(
             ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         out.flush(ctx, future);
+    }
+
+    @Override
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+        out.sendFile(ctx, region, future);
     }
 }
