@@ -23,7 +23,6 @@ public final class ChannelFlushFutureNotifier {
     private long writeCounter;
     private final Queue<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
 
-
     /**
      * Add a {@link ChannelFuture} to this {@link ChannelFlushFutureNotifier} which will be notified after the given
      * pendingDataSize was reached.
