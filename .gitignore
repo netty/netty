@@ -1,6 +1,7 @@
 /.project
 /.classpath
 /.settings
+/.idea
 /target
 /reports
 /src/main/java/org/jboss/netty/util/Version.java
