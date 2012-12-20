@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit;
  *
  * public class MyChannelInitializer extends {@link ChannelInitializer} {
  *     public void initChannel({@link Channel} channel) {
- *         {@link Channel}.pipeline().addLast("writeTimeoutHandler", new {@link WriteTimeoutHandler}(30);
- *         {@link Channel}.pipeline().addLast("myHandler", new MyHandler());
+ *         channel.pipeline().addLast("writeTimeoutHandler", new {@link WriteTimeoutHandler}(30);
+ *         channel.pipeline().addLast("myHandler", new MyHandler());
  *     }
  * }
  *
