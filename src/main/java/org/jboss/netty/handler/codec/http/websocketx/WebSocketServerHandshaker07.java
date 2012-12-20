@@ -39,8 +39,8 @@ import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 /**
  * <p>
  * Performs server side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
- * 10</a>
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07" >draft-ietf-hybi-thewebsocketprotocol-
+ * 07</a>
  * </p>
  */
 public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {

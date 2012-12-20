@@ -43,7 +43,7 @@ import java.util.Map;
  * <p>
  * Performs client side opening and closing handshakes for web socket specification version <a
  * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07" >draft-ietf-hybi-thewebsocketprotocol-
- * 10</a>
+ * 07</a>
  * </p>
  */
 public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
