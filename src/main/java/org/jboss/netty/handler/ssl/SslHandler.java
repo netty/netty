@@ -660,69 +660,70 @@ public class SslHandler extends FrameDecoder
                                         channel.getRemoteAddress()));
                         offered = true;
                     } else {
-                        SSLEngineResult result = null;
-                        try {
-                            synchronized (handshakeLock) {
+                        synchronized (handshakeLock) {
+
+                            SSLEngineResult result = null;
+                            try {
                                 result = engine.wrap(outAppBuf, outNetBuf);
-                            }
-                        } finally {
-                            if (!outAppBuf.hasRemaining()) {
-                                pendingUnencryptedWrites.remove();
-                            }
-                        }
-
-                        if (result.bytesProduced() > 0) {
-                            outNetBuf.flip();
-                            msg = ChannelBuffers.buffer(outNetBuf.remaining());
-                            msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
-                            outNetBuf.clear();
-
-                            if (pendingWrite.outAppBuf.hasRemaining()) {
-                                // pendingWrite's future shouldn't be notified if
-                                // only partial data is written.
-                                future = succeededFuture(channel);
-                            } else {
-                                future = pendingWrite.future;
+                            } finally {
+                                if (!outAppBuf.hasRemaining()) {
+                                    pendingUnencryptedWrites.remove();
+                                }
                             }
 
-                            MessageEvent encryptedWrite = new DownstreamMessageEvent(
-                                    channel, future, msg, channel.getRemoteAddress());
-                            offerEncryptedWriteRequest(encryptedWrite);
-                            offered = true;
-                        } else if (result.getStatus() == Status.CLOSED) {
-                            // SSLEngine has been closed already.
-                            // Any further write attempts should be denied.
-                            success = false;
-                            break;
-                        } else {
-                            final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                            handleRenegotiation(handshakeStatus);
-                            switch (handshakeStatus) {
-                            case NEED_WRAP:
-                                if (outAppBuf.hasRemaining()) {
-                                    break;
+                            if (result.bytesProduced() > 0) {
+                                outNetBuf.flip();
+                                msg = ChannelBuffers.buffer(outNetBuf.remaining());
+                                msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
+                                outNetBuf.clear();
+
+                                if (pendingWrite.outAppBuf.hasRemaining()) {
+                                    // pendingWrite's future shouldn't be notified if
+                                    // only partial data is written.
+                                    future = succeededFuture(channel);
                                 } else {
-                                    break loop;
+                                    future = pendingWrite.future;
                                 }
-                            case NEED_UNWRAP:
-                                needsUnwrap = true;
-                                break loop;
-                            case NEED_TASK:
-                                runDelegatedTasks();
+
+                                MessageEvent encryptedWrite = new DownstreamMessageEvent(
+                                        channel, future, msg, channel.getRemoteAddress());
+                                offerEncryptedWriteRequest(encryptedWrite);
+                                offered = true;
+                            } else if (result.getStatus() == Status.CLOSED) {
+                                // SSLEngine has been closed already.
+                                // Any further write attempts should be denied.
+                                success = false;
                                 break;
-                            case FINISHED:
-                            case NOT_HANDSHAKING:
-                                if (handshakeStatus == HandshakeStatus.FINISHED) {
-                                    setHandshakeSuccess(channel);
+                            } else {
+                                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                                handleRenegotiation(handshakeStatus);
+                                switch (handshakeStatus) {
+                                case NEED_WRAP:
+                                    if (outAppBuf.hasRemaining()) {
+                                        break;
+                                    } else {
+                                        break loop;
+                                    }
+                                case NEED_UNWRAP:
+                                    needsUnwrap = true;
+                                    break loop;
+                                case NEED_TASK:
+                                    runDelegatedTasks();
+                                    break;
+                                case FINISHED:
+                                case NOT_HANDSHAKING:
+                                    if (handshakeStatus == HandshakeStatus.FINISHED) {
+                                        setHandshakeSuccess(channel);
+                                    }
+                                    if (result.getStatus() == Status.CLOSED) {
+                                        success = false;
+                                    }
+                                    break loop;
+                                default:
+                                    throw new IllegalStateException(
+                                            "Unknown handshake status: " +
+                                            handshakeStatus);
                                 }
-                                if (result.getStatus() == Status.CLOSED) {
-                                    success = false;
-                                }
-                                break loop;
-                            default:
-                                throw new IllegalStateException(
-                                        "Unknown handshake status: " +
-                                        handshakeStatus);
                             }
                         }
                     }
@@ -900,37 +901,37 @@ public class SslHandler extends FrameDecoder
 
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
-                }
 
-                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                handleRenegotiation(handshakeStatus);
-                switch (handshakeStatus) {
-                case NEED_UNWRAP:
-                    if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
+
+                    final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                    handleRenegotiation(handshakeStatus);
+                    switch (handshakeStatus) {
+                    case NEED_UNWRAP:
+                        if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
+                            break;
+                        } else {
+                            break loop;
+                        }
+                    case NEED_WRAP:
+                        wrapNonAppData(ctx, channel);
                         break;
-                    } else {
+                    case NEED_TASK:
+                        runDelegatedTasks();
+                        break;
+                    case FINISHED:
+                        setHandshakeSuccess(channel);
+                        needsWrap = true;
                         break loop;
+                    case NOT_HANDSHAKING:
+                        needsWrap = true;
+                        break loop;
+                    default:
+                        throw new IllegalStateException(
+                                "Unknown handshake status: " + handshakeStatus);
                     }
-                case NEED_WRAP:
-                    wrapNonAppData(ctx, channel);
-                    break;
-                case NEED_TASK:
-                    runDelegatedTasks();
-                    break;
-                case FINISHED:
-                    setHandshakeSuccess(channel);
-                    needsWrap = true;
-                    break loop;
-                case NOT_HANDSHAKING:
-                    needsWrap = true;
-                    break loop;
-                default:
-                    throw new IllegalStateException(
-                            "Unknown handshake status: " + handshakeStatus);
-                }
                 
+                }
             }
-
             if (needsWrap) {
                 // wrap() acquires pendingUnencryptedWrites first and then
                 // handshakeLock.  If handshakeLock is already hold by the
