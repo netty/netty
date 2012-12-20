@@ -29,6 +29,19 @@ import io.netty.logging.InternalLoggerFactory;
  * {@link ServerBootstrap#handler(ChannelHandler)} and {@link ServerBootstrap#childHandler(ChannelHandler)} to
  * setup the {@link ChannelPipeline} of a {@link Channel}.
  *
+ * <pre>
+ *
+ * public class MyChannelInitializer extends {@link ChannelInitializer} {
+ *     public void initChannel({@link Channel} channel) {
+ *         channel.pipeline().addLast("myHandler", new MyHandler());
+ *     }
+ * }
+ *
+ * {@link ServerBootstrap} bootstrap = ...;
+ * ...
+ * bootstrap.childHandler(new MyChannelInitializer());
+ * ...
+ * </pre>
  * Be aware that this class is marked as {@link Sharable} and so the implementation must be safe to be re-used.
  *
  * @param <C>   A sub-type of {@link Channel}
