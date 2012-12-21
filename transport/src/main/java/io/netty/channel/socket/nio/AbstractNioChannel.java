@@ -34,6 +34,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Abstract base class for {@link Channel} implementations which use a Selector based approach.
+ */
 public abstract class AbstractNioChannel extends AbstractChannel {
 
     private static final InternalLogger logger =
@@ -67,6 +70,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
+    /**
+     * Create a new instance
+     *
+     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
+     * @param id                the id of this instance or {@code null} if one should be generated
+     * @param ch                the underlying {@link SelectableChannel} on which it operates
+     * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
+     */
     protected AbstractNioChannel(
             Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
         super(parent, id);
@@ -117,19 +128,31 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return (NioEventLoop) super.eventLoop();
     }
 
+    /**
+     * Return the current {@link SelectionKey}
+     */
     protected SelectionKey selectionKey() {
         assert selectionKey != null;
         return selectionKey;
     }
 
+    /**
+     * Return {@code true} if the input of this {@link Channel} is shutdown
+     */
     boolean isInputShutdown() {
         return inputShutdown;
     }
 
+    /**
+     * Shutdown the input of this {@link Channel}.
+     */
     void setInputShutdown() {
         inputShutdown = true;
     }
 
+    /**
+     * Special {@link Unsafe} sub-type which allows to access the underlying {@link SelectableChannel}
+     */
     public interface NioUnsafe extends Unsafe {
         SelectableChannel ch();
         void finishConnect();
@@ -254,7 +277,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        NioEventLoop loop = (NioEventLoop) eventLoop();
+        NioEventLoop loop = eventLoop();
         selectionKey = javaChannel().register(
                 loop.selector, isActive() && !inputShutdown ? readInterestOp : 0, this);
         return null;
@@ -262,9 +285,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((NioEventLoop) eventLoop()).cancel(selectionKey());
+        eventLoop().cancel(selectionKey());
     }
 
+    /**
+     * Conect to the remote peer
+     */
     protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+
+    /**
+     * Finish the connect
+     */
     protected abstract void doFinishConnect() throws Exception;
 }

@@ -44,6 +44,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+/**
+ * {@link io.netty.channel.socket.SctpChannel} implementation which use non-blocking mode and allows to read / write
+ * {@link SctpMessage}s to the underlying {@link SctpChannel}.
+ *
+ * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
+ * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
+ */
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.socket.SctpChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 

@@ -42,7 +42,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
      *                          of {@link #DEFAULT_POOL_SIZE}
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      * @param args              arguments which will passed to each
-     *                          {@link #newChild(java.util.concurrent.ThreadFactory, ChannelTaskScheduler, Object...)}
+     *                          {@link #newChild(ThreadFactory, ChannelTaskScheduler, Object...)}
      *                          call.
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {

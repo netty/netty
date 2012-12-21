@@ -29,8 +29,18 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
+ */
 abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
+    /**
+     * Create a new instance
+     *
+     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
+     * @param id                the id of this instance or {@code null} if one should be generated
+     * @param ch                the underlying {@link SelectableChannel} on which it operates
+     */
     protected AbstractNioByteChannel(
             Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id, ch, SelectionKey.OP_READ);
@@ -205,7 +215,18 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
+    /**
+     * Read bytes into the given {@link ByteBuf} and return the amount.
+     */
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
+
+    /**
+     * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
+     * @param buf           the {@link ByteBuf} from which the bytes should be written
+     * @param lastSpin      {@code true} if this is the last write try
+     * @return amount       the amount of written bytes
+     * @throws Exception    thrown if an error accour
+     */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
     // 0 - not expanded because the buffer is writable
