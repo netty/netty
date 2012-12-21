@@ -234,7 +234,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
+    protected AbstractUnsafe newUnsafe() {
         return new DefaultUnsafe();
     }
 

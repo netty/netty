@@ -140,7 +140,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
+    protected AbstractUnsafe newUnsafe() {
         return new LocalServerUnsafe();
     }
 

@@ -21,10 +21,25 @@ package io.netty.channel;
  */
 public interface ChannelStateHandler extends ChannelHandler {
 
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
+     */
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
+     */
     void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} is now active
+     */
     void channelActive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
+     * end of lifetime.
+     */
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
 
     /**
