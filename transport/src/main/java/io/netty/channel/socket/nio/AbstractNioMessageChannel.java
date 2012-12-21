@@ -22,15 +22,21 @@ import io.netty.channel.ChannelPipeline;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 
+/**
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
+ */
 abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
+    /**
+     * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, Integer, SelectableChannel, int)}
+     */
     protected AbstractNioMessageChannel(
             Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
         super(parent, id, ch, readInterestOp);
     }
 
     @Override
-    protected NioMessageUnsafe newUnsafe() {
+    protected AbstractNioUnsafe newUnsafe() {
         return new NioMessageUnsafe();
     }
 
@@ -94,6 +100,17 @@ abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
     }
 
+    /**
+     * Read messages into the given {@link MessageBuf} and return the amount.
+     */
     protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
+
+    /**
+     * Write messages form the given {@link MessageBuf} to the underlying {@link java.nio.channels.Channel}.
+     * @param buf           the {@link MessageBuf} from which the bytes should be written
+     * @param lastSpin      {@code true} if this is the last write try
+     * @return amount       the amount of written bytes
+     * @throws Exception    thrown if an error accour
+     */
     protected abstract int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception;
 }

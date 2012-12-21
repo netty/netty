@@ -33,6 +33,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+/**
+ * {@link io.netty.channel.socket.SctpServerChannel} implementation which use non-blocking mode to accept new
+ * connections and create the {@link NioSctpChannel} for them.
+ *
+ * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
+ * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
+ */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.socket.SctpServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
@@ -48,6 +55,9 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
 
     private final SctpServerChannelConfig config;
 
+    /**
+     * Create a new instance
+     */
     public NioSctpServerChannel() {
         super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultSctpServerChannelConfig(javaChannel());
