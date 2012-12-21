@@ -119,6 +119,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         return this;
     }
 
+    /**
+     * Set the specific {@link AttributeKey} with the given value on every child {@link Channel}. If the value is
+     * {@code null} the {@link AttributeKey} is removed
+     */
     public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
         if (childKey == null) {
             throw new NullPointerException("childKey");

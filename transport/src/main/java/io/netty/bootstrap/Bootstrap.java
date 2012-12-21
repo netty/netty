@@ -50,7 +50,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     /**
-     * See {@link #remoteAddress(SocketAddress)}
+     * @see {@link #remoteAddress(SocketAddress)}
      */
     public Bootstrap remoteAddress(String host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
@@ -58,7 +58,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     /**
-     * See {@link #remoteAddress(SocketAddress)}
+     * @see {@link #remoteAddress(SocketAddress)}
      */
     public Bootstrap remoteAddress(InetAddress host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
@@ -96,7 +96,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     /**
-     * See {@link #connect()}
+     * @see {@link #connect()}
      */
     public ChannelFuture connect(ChannelFuture future) {
         validate(future);
@@ -166,6 +166,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     /**
      * Create a new {@link Bootstrap} which has the identical configuration with this {@link Bootstrap}.
      * This method is useful when you make multiple connections with similar settings.
+     *
+     * Be aware that if you call {@link #shutdown()} on one of them it will shutdown shared resources.
      */
     public Bootstrap duplicate() {
         validate();
