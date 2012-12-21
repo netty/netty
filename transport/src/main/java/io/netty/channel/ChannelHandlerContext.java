@@ -152,6 +152,11 @@ public interface ChannelHandlerContext
      * The {@link ChannelHandler} that is bound this {@link ChannelHandlerContext}.
      */
     ChannelHandler handler();
+
+    /**
+     * Return an unmodifiable {@link Set} that contains all the {@link ChannelHandlerType}s which are handled by this
+     * context and the {@link ChannelHandler} it belongs to.
+     */
     Set<ChannelHandlerType> types();
 
     /**

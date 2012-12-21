@@ -75,16 +75,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     protected boolean isFlushPending() {
         return false;
     }

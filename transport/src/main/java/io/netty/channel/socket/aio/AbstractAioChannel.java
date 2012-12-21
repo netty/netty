@@ -90,16 +90,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        return null;
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
-    }
-
-    @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof AioEventLoop;
     }

@@ -15,6 +15,9 @@
  */
 package io.netty.channel.socket.aio;
 
+/**
+ * Allow to fine the {@link AbstractAioChannel} for a task.
+ */
 interface AioChannelFinder {
 
     /**

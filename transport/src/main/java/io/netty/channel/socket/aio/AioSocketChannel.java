@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
- * {@link io.netty.channel.socket.SocketChannel} implementation which uses NIO2.
+ * {@link SocketChannel} implementation which uses NIO2.
  *
  * NIO2 is only supported on Java 7+.
  */
@@ -544,7 +544,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected Unsafe newUnsafe() {
+    protected AbstractUnsafe newUnsafe() {
         return new AioSocketChannelAsyncUnsafe();
     }
 

@@ -195,6 +195,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return remoteAddress;
     }
 
+    /**
+     * Reset the stored remoteAddress
+     */
     protected void invalidateRemoteAddress() {
         remoteAddress = null;
     }
@@ -330,7 +333,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return pipeline.sendFile(region, future);
     }
 
-    protected abstract Unsafe newUnsafe();
+    /**
+     * Create a new {@link AbstractUnsafe} instance which will be used for the life-time of the {@link Channel}
+     */
+    protected abstract AbstractUnsafe newUnsafe();
 
     /**
      * Returns the ID of this channel.
@@ -393,6 +399,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+    /**
+     * {@link Unsafe} implementation which sub-classes must extend and use.
+     */
     protected abstract class AbstractUnsafe implements Unsafe {
 
         private final class FlushTask {
@@ -865,27 +874,86 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    /**
+     * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
+     */
     protected abstract boolean isCompatible(EventLoop loop);
 
+    /**
+     * Returns the {@link SocketAddress} which is bound locally.
+     */
     protected abstract SocketAddress localAddress0();
+
+    /**
+     * Return the {@link SocketAddress} which the {@link Channel} is connected to.
+     */
     protected abstract SocketAddress remoteAddress0();
 
-    protected abstract Runnable doRegister() throws Exception;
+    /**
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * You can return a {@link Runnable} which will be run as post-task of the registration process.
+     *
+     * Sub-classes may override this method as it will just return {@code null}
+     */
+    protected Runnable doRegister() throws Exception {
+        return null;
+    }
+
+    /**
+     * Bind the {@link Channel} to the {@link SocketAddress}
+     */
     protected abstract void doBind(SocketAddress localAddress) throws Exception;
+
+    /**
+     * Disconnect this {@link Channel} from its remote peer
+     */
     protected abstract void doDisconnect() throws Exception;
+
+    /**
+     * Will be called before the actual close operation will be performed. Sub-classes may override this as the default
+     * is to do nothing.
+     */
     protected void doPreClose() throws Exception {
         // NOOP by default
     }
 
+    /**
+     * Close the {@link Channel}
+     */
     protected abstract void doClose() throws Exception;
-    protected abstract void doDeregister() throws Exception;
+
+    /**
+     * Deregister the {@link Channel} from its {@link EventLoop}.
+     *
+     * Sub-classes may override this method
+     */
+    protected void doDeregister() throws Exception {
+        // NOOP
+    }
+
+    /**
+     * Flush the content of the given {@link ByteBuf} to the remote peer.
+     *
+     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     */
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         throw new UnsupportedOperationException();
     }
+
+    /**
+     * Flush the content of the given {@link MessageBuf} to the remote peer.
+     *
+     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     */
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Flush the content of the given {@link FileRegion} to the remote peer.
+     *
+     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     */
     protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
         throw new UnsupportedOperationException();
     }
@@ -898,6 +966,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    /**
+     * Return {@code true} if a flush to the {@link Channel} is currently pending.
+     */
     protected abstract boolean isFlushPending();
 
     private final class CloseFuture extends DefaultChannelFuture implements ChannelFuture.Unsafe {

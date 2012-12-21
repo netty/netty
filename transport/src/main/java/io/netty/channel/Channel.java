@@ -118,7 +118,20 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      */
     ChannelMetadata metadata();
 
+    /**
+     * Return the last {@link ByteBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
+     *
+     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
+     * {@link ChannelPipeline} does not contain any {@link ByteBuf}.
+     */
     ByteBuf outboundByteBuffer();
+
+    /**
+     * Return the last {@link MessageBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
+     *
+     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
+     * {@link ChannelPipeline} does not contain any {@link MessageBuf}.
+     */
     <T> MessageBuf<T> outboundMessageBuffer();
 
     /**

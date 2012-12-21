@@ -106,17 +106,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        // NOOP
-        return null;
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
-    }
-
-    @Override
     protected boolean isFlushPending() {
         return false;
     }

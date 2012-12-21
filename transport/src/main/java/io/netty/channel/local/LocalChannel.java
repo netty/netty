@@ -108,7 +108,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
+    protected AbstractUnsafe newUnsafe() {
         return new LocalUnsafe();
     }
 
