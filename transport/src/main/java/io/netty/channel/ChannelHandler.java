@@ -15,7 +15,10 @@
  */
 package io.netty.channel;
 
-import io.netty.channel.group.ChannelGroup;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,21 +26,28 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.nio.channels.Channels;
 
 /**
- * Handles or intercepts a {@link ChannelEvent}, and sends a
- * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
+ * Handles or intercepts a {@link ChannelInboundInvoker} or {@link ChannelOutboundInvoker} operation, and forwards it
+ * to the next handler in a {@link ChannelPipeline}.
  *
  * <h3>Sub-types</h3>
  * <p>
- * {@link ChannelHandler} itself does not provide any method.  To handle a
- * {@link ChannelEvent} you need to implement its sub-interfaces.  There are
- * two sub-interfaces which handles a received event, one for upstream events
- * and the other for downstream events:
+ * {@link ChannelHandler} itself does not provide many methods.  To handle a
+ * a {@link ChannelInboundInvoker} or {@link ChannelOutboundInvoker} operation
+ * you need to implement its sub-interfaces.  There are many different sub-interfaces
+ * which handles inbound and outbound operations.
+ *
+ * But the most useful for developers may be:
  * <ul>
- * <li>{@link ChannelUpstreamHandler} handles and intercepts an upstream {@link ChannelEvent}.</li>
- * <li>{@link ChannelDownstreamHandler} handles and intercepts a downstream {@link ChannelEvent}.</li>
+ * <li>{@link ChannelInboundByteHandlerAdapter} handles and intercepts inbound operations where the inbound message
+ * type is a {@link ByteBuf}.</li>
+ * <li>{@link ChannelInboundMessageHandlerAdapter} handles and intercepts inbound operations where the inbound message
+ * type is a {@link MessageBuf}.</li>
+ *  * <li>{@link ChannelOutboundByteHandlerAdapter} handles and intercepts outbound operations where the inbound message
+ * type is a {@link ByteBuf}.</li>
+ * <li>{@link ChannelOutboundMessageHandlerAdapter} handles and intercepts outbound operations where the inbound message
+ * type is a {@link MessageBuf}.</li>
  * </ul>
  *
  * You will also find more detailed explanation from the documentation of
@@ -58,20 +68,23 @@ import java.nio.channels.Channels;
  * A {@link ChannelHandler} often needs to store some stateful information.
  * The simplest and recommended approach is to use member variables:
  * <pre>
- * public class DataServerHandler extends {@link SimpleChannelHandler} {
+ * public interface Message {
+ *     // your methods here
+ * }
+ *
+ * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&ltMessage&gt {
  *
  *     <b>private boolean loggedIn;</b>
  *
  *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
  *         {@link Channel} ch = e.getChannel();
- *         Object o = e.getMessage();
- *         if (o instanceof LoginMessage) {
- *             authenticate((LoginMessage) o);
+ *         if (message instanceof LoginMessage) {
+ *             authenticate((LoginMessage) message);
  *             <b>loggedIn = true;</b>
- *         } else (o instanceof GetDataMessage) {
+ *         } else (message instanceof GetDataMessage) {
  *             if (<b>loggedIn</b>) {
- *                 ch.write(fetchSecret((GetDataMessage) o));
+ *                 ch.write(fetchSecret((GetDataMessage) message));
  *             } else {
  *                 fail();
  *             }
@@ -86,12 +99,14 @@ import java.nio.channels.Channels;
  * the confidential information:
  * <pre>
  * // Create a new handler instance per channel.
- * // See {@link ClientBootstrap#setPipelineFactory(ChannelPipelineFactory)}.
- * public class DataServerPipelineFactory implements {@link ChannelPipelineFactory} {
- *     public {@link ChannelPipeline} getPipeline() {
- *         return {@link Channels}.pipeline(<b>new DataServerHandler()</b>);
+ * // See {@link ChannelInitializer#initChannel(Channel)}.
+ * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
+ *     {@code @Override}
+ *     public void initChannel({@link Channel} channel) {
+ *         channel.pipeline().addLast("handler", <b>new DataServerHandler()</b>);
  *     }
  * }
+ *
  * </pre>
  *
  * <h4>Using an attachment</h4>
@@ -101,18 +116,29 @@ import java.nio.channels.Channels;
  * In such a case, you can use an <em>attachment</em> which is provided by
  * {@link ChannelHandlerContext}:
  * <pre>
+ * public interface Message {
+ *     // your methods here
+ * }
+ *
  * {@code @Sharable}
- * public class DataServerHandler extends {@link SimpleChannelHandler} {
+ * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&ltMessage&gt {
+ *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
+ *           new {@link AttributeKey}&lt{@link Boolean}&gt("auth");
+ *
+ *   // This handler will receive a sequence of increasing integers starting
+ *   // from 1.
+ *   {@code @Override}
+ *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *     {@link Attribute}&lt{@link Boolean}&gt attr = ctx.getAttr(auth);
  *
  *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *         {@link Channel} ch = e.getChannel();
- *         Object o = e.getMessage();
- *         if (o instanceof LoginMessage) {
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
+ *         {@link Channel} ch = ctx.channel();
+ *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) o);
- *             <b>ctx.setAttachment(true)</b>;
- *         } else (o instanceof GetDataMessage) {
- *             if (<b>Boolean.TRUE.equals(ctx.getAttachment())</b>) {
+ *             <b>attr.set(true)</b>;
+ *         } else (message instanceof GetDataMessage) {
+ *             if (<b>Boolean.TRUE.equals(attr.get())</b>) {
  *                 ch.write(fetchSecret((GetDataMessage) o));
  *             } else {
  *                 fail();
@@ -125,64 +151,21 @@ import java.nio.channels.Channels;
  * Now that the state of the handler is stored as an attachment, you can add the
  * same handler instance to different pipelines:
  * <pre>
- * public class DataServerPipelineFactory implements {@link ChannelPipelineFactory} {
+ * public class DataServerInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
  *
  *     private static final DataServerHandler <b>SHARED</b> = new DataServerHandler();
  *
- *     public {@link ChannelPipeline} getPipeline() {
- *         return {@link Channels}.pipeline(<b>SHARED</b>);
- *     }
- * }
- * </pre>
- *
- * <h4>Using a {@link ChannelLocal}</h4>
- *
- * If you have a state variable which needs to be accessed either from other
- * handlers or outside handlers, you can use {@link ChannelLocal}:
- * <pre>
- * public final class DataServerState {
- *
- *     <b>public static final {@link ChannelLocal}&lt;Boolean&gt; loggedIn = new {@link ChannelLocal}&lt;&gt;() {
- *         protected Boolean initialValue(Channel channel) {
- *             return false;
- *         }
- *     }</b>
- *     ...
- * }
- *
- * {@code @Sharable}
- * public class DataServerHandler extends {@link SimpleChannelHandler} {
- *
  *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *         Channel ch = e.getChannel();
- *         Object o = e.getMessage();
- *         if (o instanceof LoginMessage) {
- *             authenticate((LoginMessage) o);
- *             <b>DataServerState.loggedIn.set(ch, true);</b>
- *         } else (o instanceof GetDataMessage) {
- *             if (<b>DataServerState.loggedIn.get(ch)</b>) {
- *                 ctx.getChannel().write(fetchSecret((GetDataMessage) o));
- *             } else {
- *                 fail();
- *             }
- *         }
- *     }
- *     ...
- * }
- *
- * // Print the remote addresses of the authenticated clients:
- * {@link ChannelGroup} allClientChannels = ...;
- * for ({@link Channel} ch: allClientChannels) {
- *     if (<b>DataServerState.loggedIn.get(ch)</b>) {
- *         System.out.println(ch.getRemoteAddress());
+ *     public void initChannel({@link Channel} channel) {
+ *         channel.pipeline().addLast("handler", <b>SHARED</b>);
  *     }
  * }
  * </pre>
+ *
  *
  * <h4>The {@code @Sharable} annotation</h4>
  * <p>
- * In the examples above which used an attachment or a {@link ChannelLocal},
+ * In the examples above which used an attachment,
  * you might have noticed the {@code @Sharable} annotation.
  * <p>
  * If a {@link ChannelHandler} is annotated with the {@code @Sharable}
@@ -199,9 +182,10 @@ import java.nio.channels.Channels;
  *
  * <h3>Additional resources worth reading</h3>
  * <p>
- * Please refer to the {@link ChannelEvent} and {@link ChannelPipeline} to find
- * out what a upstream event and a downstream event are, what fundamental
- * differences they have, and how they flow in a pipeline.
+ * Please refer to the {@link ChannelHandler}, and
+ * {@link ChannelPipeline} to find out more about inbound and outbound operations,
+ * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
+ * the operation in your application.
  * @apiviz.landmark
  * @apiviz.exclude ^io\.netty\.handler\..*$
  */

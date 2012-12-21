@@ -91,7 +91,7 @@ import java.util.Set;
  *   // from 1.
  *   {@code @Override}
  *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
- *     {@link Attribute}&lt{@link Integer}&gt} attr = ctx.getAttr(counter);
+ *     {@link Attribute}&lt{@link Integer}&gt attr = ctx.getAttr(counter);
  *     Integer a = ctx.getAttr(counter).get();
  *
  *     if (a == null) {
