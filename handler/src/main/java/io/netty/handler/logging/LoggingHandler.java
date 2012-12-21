@@ -28,9 +28,7 @@ import java.net.SocketAddress;
 
 /**
  * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
- * By default, all events are logged at <tt>DEBUG</tt> level.  You can extend
- * this class and override {@link #log(ChannelEvent)} to change the default
- * behavior.
+ * By default, all events are logged at <tt>DEBUG</tt> level.
  * @apiviz.landmark
  */
 @Sharable
@@ -118,7 +116,6 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
     /**
      * Returns the {@link InternalLogLevel} that this handler uses to log
-     * a {@link ChannelEvent}.
      */
     public LogLevel level() {
         return level;

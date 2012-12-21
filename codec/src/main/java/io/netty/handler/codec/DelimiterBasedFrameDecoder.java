@@ -39,7 +39,7 @@ import io.netty.channel.ChannelHandlerContext;
  * | ABC\nDEF\r\n |
  * +--------------+
  * </pre>
- * a {@link DelimiterBasedFrameDecoder}{@code (}{@link Delimiters#lineDelimiter() Delimiters.lineDelimiter()}{@code )}
+ * a {@link DelimiterBasedFrameDecoder}({@link Delimiters#lineDelimiter() Delimiters.lineDelimiter()})
  * will choose {@code '\n'} as the first delimiter and produce two frames:
  * <pre>
  * +-----+-----+

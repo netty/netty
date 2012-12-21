@@ -19,6 +19,10 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Iterator;
 
+/**
+ * Default {@link MessageBuf} implementation
+ *
+ */
 final class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T> {
 
     private static final long serialVersionUID = 1229808623624907552L;

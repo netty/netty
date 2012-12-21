@@ -19,6 +19,29 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
+/**
+ * {@link ChannelInboundByteHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
+ * other.
+ *
+ * This kind of decoder is often useful for doing on-the-fly processiing like i.e. compression.
+ *
+ * But you can also do other things with it. For example here is an implementation which reads {@link Integer}s from
+ * the input {@link ByteBuf} and square them before write them to the output {@link ByteBuf}.
+ *
+ * <pre>
+ *     public class SquareDecoder extends {@link ByteToByteDecoder} {
+ *         {@code @Override}
+ *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             if (in.readableBytes() < 4) {
+ *                 return;
+ *             }
+ *             int value = in.readInt();
+ *             out.writeInt(value * value);
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
     @Override
@@ -52,6 +75,9 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         ctx.fireChannelInactive();
     }
 
+    /**
+     * Call the {@link #decode(ChannelHandlerContext, ByteBuf, ByteBuf)} method until it is done.
+     */
     private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         int oldOutSize = out.readableBytes();
         while (in.readable()) {
@@ -76,8 +102,24 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         }
     }
 
+    /**
+     * Decode the from one {@link ByteBuf} to an other. This method will be called till either the input
+     * {@link ByteBuf} has nothing to read anymore or till nothing was read from the input {@link ByteBuf}.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToByteDecoder} belongs to
+     * @param in            the {@link ByteBuf} from which to read data
+     * @param out           the {@link ByteBuf} to which the decoded data will be written
+     * @throws Exception    is thrown if an error accour
+     */
     public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
 
+    /**
+     * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
+     * {@link #channelInactive(ChannelHandlerContext)} was triggered.
+     *
+     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, ByteBuf)} but sub-classes may
+     * override this for some special cleanup operation.
+     */
     public void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         decode(ctx, in, out);
     }

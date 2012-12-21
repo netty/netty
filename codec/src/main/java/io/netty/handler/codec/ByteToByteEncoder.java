@@ -20,6 +20,29 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 
+/**
+ * {@link ChannelOutboundByteHandlerAdapter} which encodes bytes in a stream-like fashion from one {@link ByteBuf} to an
+ * other.
+ *
+ * This kind of decoder is often useful for doing on-the-fly processing like i.e. compression.
+ *
+ * But you can also do other things with it. For example here is an implementation which reads {@link Integer}s from
+ * the input {@link ByteBuf} and square them before write them to the output {@link ByteBuf}.
+ *
+ * <pre>
+ *     public class SquareEncoder extends {@link ByteToByteEncoder} {
+ *         {@code @Override}
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             if (in.readableBytes() < 4) {
+ *                 return;
+ *             }
+ *             int value = in.readInt();
+ *             out.writeInt(value * value);
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapter {
 
     @Override
@@ -47,5 +70,14 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         ctx.flush(future);
     }
 
+    /**
+     * Encodes the from one {@link ByteBuf} to an other. This method will be called till either the input
+     * {@link ByteBuf} has nothing to read anymore or till nothing was read from the input {@link ByteBuf}.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToByteDecoder} belongs to
+     * @param in            the {@link ByteBuf} from which to read data
+     * @param out           the {@link ByteBuf} to which the decoded data will be written
+     * @throws Exception    is thrown if an error accour
+     */
     public abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
 }

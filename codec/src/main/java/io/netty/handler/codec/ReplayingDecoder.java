@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
@@ -28,44 +27,41 @@ import io.netty.util.internal.Signal;
  * of a non-blocking decoder in the blocking I/O paradigm.
  * <p>
  * The biggest difference between {@link ReplayingDecoder} and
- * {@link FrameDecoder} is that {@link ReplayingDecoder} allows you to
+ * {@link ByteToMessageDecoder} is that {@link ReplayingDecoder} allows you to
  * implement the {@code decode()} and {@code decodeLast()} methods just like
  * all required bytes were received already, rather than checking the
  * availability of the required bytes.  For example, the following
- * {@link FrameDecoder} implementation:
+ * {@link ByteToByteDecoder} implementation:
  * <pre>
- * public class IntegerHeaderFrameDecoder extends {@link FrameDecoder} {
+ * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
  *
  *   {@code @Override}
- *   protected Object decode({@link ChannelHandlerContext} ctx,
- *                           {@link Channel} channel,
- *                           {@link ByteBuf} buf) throws Exception {
+ *   protected ByteBuf decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in) throws Exception {
  *
- *     if (buf.readableBytes() &lt; 4) {
+ *     if (in.readableBytes() &lt; 4) {
  *        return <strong>null</strong>;
  *     }
  *
- *     buf.markReaderIndex();
- *     int length = buf.readInt();
+ *     in.markReaderIndex();
+ *     int length = in.readInt();
  *
- *     if (buf.readableBytes() &lt; length) {
- *        buf.resetReaderIndex();
+ *     if (in.readableBytes() &lt; length) {
+ *        in.resetReaderIndex();
  *        return <strong>null</strong>;
  *     }
  *
- *     return buf.readBytes(length);
+ *     return in.readBytes(length);
  *   }
  * }
  * </pre>
  * is simplified like the following with {@link ReplayingDecoder}:
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf},{@link Void}&gt; {
  *
  *   protected Object decode({@link ChannelHandlerContext} ctx,
- *                           {@link Channel} channel,
- *                           {@link ByteBuf} buf,
- *                           {@link VoidEnum} state) throws Exception {
+ *                           {@link ByteBuf} buf) throws Exception {
  *
  *     return buf.readBytes(buf.readInt());
  *   }
@@ -104,12 +100,12 @@ import io.netty.util.internal.Signal;
  * <li>You must keep in mind that {@code decode(..)} method can be called many
  *     times to decode a single message.  For example, the following code will
  *     not work:
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Integer}, {@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public Object decode(.., {@link ByteBuf} buffer, ..) throws Exception {
+ *   public {@link Integer} decode(.., {@link ByteBuf} in) throws Exception {
  *
  *     // A message contains 2 integers.
  *     values.offer(buffer.readInt());
@@ -124,12 +120,12 @@ import io.netty.util.internal.Signal;
  *      The correct implementation looks like the following, and you can also
  *      utilize the 'checkpoint' feature which is explained in detail in the
  *      next section.
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Integer}, {@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public Object decode(.., {@link ByteBuf} buffer, ..) throws Exception {
+ *   public {@link Integer} decode(.., {@link ByteBuf} buffer) throws Exception {
  *
  *     // Revert the state of the variable that might have been changed
  *     // since the last partial decode.
@@ -171,7 +167,7 @@ import io.netty.util.internal.Signal;
  * }
  *
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;<strong>MyDecoderState</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf}, <strong>MyDecoderState</strong>&gt; {
  *
  *   private int length;
  *
@@ -181,16 +177,14 @@ import io.netty.util.internal.Signal;
  *   }
  *
  *   {@code @Override}
- *   protected Object decode({@link ChannelHandlerContext} ctx,
- *                           {@link Channel} channel,
- *                           {@link ByteBuf} buf,
- *                           <b>MyDecoderState</b> state) throws Exception {
- *     switch (state) {
+ *   protected {@link ByteBuf} decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in) throws Exception {
+ *     switch (state()) {
  *     case READ_LENGTH:
  *       length = buf.readInt();
  *       <strong>checkpoint(MyDecoderState.READ_CONTENT);</strong>
  *     case READ_CONTENT:
- *       ChannelBuffer frame = buf.readBytes(length);
+ *       ByteBuf frame = buf.readBytes(length);
  *       <strong>checkpoint(MyDecoderState.READ_LENGTH);</strong>
  *       return frame;
  *     default:
@@ -205,16 +199,14 @@ import io.netty.util.internal.Signal;
  * An alternative way to manage the decoder state is to manage it by yourself.
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;<strong>{@link Void}</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf},<strong>{@link Void}</strong>&gt; {
  *
  *   <strong>private boolean readLength;</strong>
  *   private int length;
  *
  *   {@code @Override}
- *   protected Object decode({@link ChannelHandlerContext} ctx,
- *                           {@link Channel} channel,
- *                           {@link ByteBuf} buf,
- *                           {@link Void} state) throws Exception {
+ *   protected {@link ByteBuf} decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
  *       <strong>readLength = true;</strong>
@@ -222,7 +214,7 @@ import io.netty.util.internal.Signal;
  *     }
  *
  *     if (readLength) {
- *       ChannelBuffer frame = buf.readBytes(length);
+ *       ByteBuf frame = buf.readBytes(length);
  *       <strong>readLength = false;</strong>
  *       <strong>checkpoint();</strong>
  *       return frame;
@@ -235,31 +227,26 @@ import io.netty.util.internal.Signal;
  * <p>
  * If you are going to write a protocol multiplexer, you will probably want to
  * replace a {@link ReplayingDecoder} (protocol detector) with another
- * {@link ReplayingDecoder} or {@link FrameDecoder} (actual protocol decoder).
+ * {@link ReplayingDecoder}, {@link ByteToByteDecoder}, {@link ByteToMessageDecoder} or {@link MessageToMessageDecoder}
+ * (actual protocol decoder).
  * It is not possible to achieve this simply by calling
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
  * some additional steps are required:
  * <pre>
- * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
- *
- *     public FirstDecoder() {
- *         super(true); // Enable unfold
- *     }
+ * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link Object}, {@link Void}&gt; {
  *
  *     {@code @Override}
  *     protected Object decode({@link ChannelHandlerContext} ctx,
- *                             {@link Channel} ch,
- *                             {@link ByteBuf} buf,
- *                             {@link Void} state) {
+ *                             {@link ByteBuf} in) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;
  *
  *         // Add the second decoder
- *         ctx.getPipeline().addLast("second", new SecondDecoder());
+ *         ctx.pipeline().addLast("second", new SecondDecoder());
  *
  *         // Remove the first decoder (me)
- *         ctx.getPipeline().remove(this);
+ *         ctx.pipeline().remove(this);
  *
  *         if (buf.readable()) {
  *             // Hand off the remaining data to the second decoder

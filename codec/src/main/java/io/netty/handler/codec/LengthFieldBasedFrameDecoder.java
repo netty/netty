@@ -411,14 +411,10 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     /**
-     * Extract the sub-region of the specified buffer. This method is called by
-     * {@link #decode(ChannelInboundHandlerContext, ByteBuf)} for each
-     * frame.  The default implementation returns a copy of the sub-region.
-     * For example, you could override this method to use an alternative
-     * {@link ByteBufFactory}.
+     * Extract the sub-region of the specified buffer.
      * <p>
      * If you are sure that the frame and its content are not accessed after
-     * the current {@link #decode(ChannelInboundHandlerContext, ByteBuf)}
+     * the current {@link #decode(ChannelHandlerContext, ByteBuf)}
      * call returns, you can even avoid memory copy by returning the sliced
      * sub-region (i.e. <tt>return buffer.slice(index, length)</tt>).
      * It's often useful when you convert the extracted frame into an object.

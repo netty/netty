@@ -23,6 +23,36 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 
+/**
+ * A Codec for on-the-fly encoding/decoding of bytes.
+ *
+ * This can be though of an combination of {@link ByteToByteDecoder} and {@link ByteToByteEncoder}.
+ *
+ * Here is an example of a {@link ByteToByteCodec} which just square {@link Integer} read from a {@link ByteBuf}.
+ * <pre>
+ *     public class SquareCodec extends {@link ByteToByteCodec} {
+ *         {@code @Override}
+ *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             if (in.readableBytes() < 4) {
+ *                 return;
+ *             }
+ *             int value = in.readInt();
+ *             out.writeInt(value * value);
+ *         }
+ *
+ *         {@code @Overrride}
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             if (in.readableBytes() < 4) {
+ *                 return;
+ *             }
+ *             int value = in.readInt();
+ *             out.writeInt(value / value);
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class ByteToByteCodec
         extends ChannelHandlerAdapter
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
@@ -76,10 +106,16 @@ public abstract class ByteToByteCodec
         encoder.freeOutboundBuffer(ctx, buf);
     }
 
+    /**
+     * @see {@link ByteToByteEncoder#encode(ChannelHandlerContext, ByteBuf, ByteBuf)}
+     */
     public abstract void encode(
             ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception;
 
+    /**
+     * @see {@link ByteToByteDecoder#decode(ChannelHandlerContext, ByteBuf, ByteBuf)}
+     */
     public abstract void decode(
             ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception;
