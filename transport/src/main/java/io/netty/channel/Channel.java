@@ -24,7 +24,6 @@ import io.netty.util.AttributeMap;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 
 
 /**
@@ -36,7 +35,7 @@ import java.nio.channels.SelectionKey;
  * <li>the current state of the channel (e.g. is it open? is it connected?),</li>
  * <li>the {@linkplain ChannelConfig configuration parameters} of the channel (e.g. receive buffer size),</li>
  * <li>the I/O operations that the channel supports (e.g. read, write, connect, and bind), and</li>
- * <li>the {@link ChannelPipeline} which handles all {@linkplain ChannelEvent I/O events and requests}
+ * <li>the {@link ChannelPipeline} which handles all I/O events and requests
  *     associated with the channel.</li>
  * </ul>
  *
@@ -50,10 +49,10 @@ import java.nio.channels.SelectionKey;
  *
  * <h3>Channels are hierarchical</h3>
  * <p>
- * A {@link Channel} can have a {@linkplain #getParent() parent} depending on
+ * A {@link Channel} can have a {@linkplain #parent() parent} depending on
  * how it was created.  For instance, a {@link SocketChannel}, that was accepted
  * by {@link ServerSocketChannel}, will return the {@link ServerSocketChannel}
- * as its parent on {@link #getParent()}.
+ * as its parent on {@link #parent()}.
  * <p>
  * The semantics of the hierarchical structure depends on the transport
  * implementation where the {@link Channel} belongs to.  For example, you could
@@ -68,38 +67,6 @@ import java.nio.channels.SelectionKey;
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
  *
- * <h3>InterestOps</h3>
- * <p>
- * A {@link Channel} has a property called {@link #getInterestOps() interestOps}
- * which is similar to that of {@link SelectionKey#interestOps() NIO SelectionKey}.
- * It is represented as a <a href="http://en.wikipedia.org/wiki/Bit_field">bit
- * field</a> which is composed of the two flags.
- * <ul>
- * <li>{@link #OP_READ} - If set, a message sent by a remote peer will be read
- *     immediately.  If unset, the message from the remote peer will not be read
- *     until the {@link #OP_READ} flag is set again (i.e. read suspension).</li>
- * <li>{@link #OP_WRITE} - If set, a write request will not be sent to a remote
- *     peer until the {@link #OP_WRITE} flag is cleared and the write request
- *     will be pending in a queue.  If unset, the write request will be flushed
- *     out as soon as possible from the queue.</li>
- * <li>{@link #OP_READ_WRITE} - This is a combination of {@link #OP_READ} and
- *     {@link #OP_WRITE}, which means only write requests are suspended.</li>
- * <li>{@link #OP_NONE} - This is a combination of (NOT {@link #OP_READ}) and
- *     (NOT {@link #OP_WRITE}), which means only read operation is suspended.</li>
- * </ul>
- * </p><p>
- * You can set or clear the {@link #OP_READ} flag to suspend and resume read
- * operation via {@link #setReadable(boolean)}.
- * </p><p>
- * Please note that you cannot suspend or resume write operation just like you
- * can set or clear {@link #OP_READ}. The {@link #OP_WRITE} flag is read only
- * and provided simply as a mean to tell you if the size of pending write
- * requests exceeded a certain threshold or not so that you don't issue too many
- * pending writes that lead to an {@link OutOfMemoryError}.  For example, the
- * NIO socket transport uses the {@code writeBufferLowWaterMark} and
- * {@code writeBufferHighWaterMark} properties in {@link NioSocketChannelConfig}
- * to determine when to set or clear the {@link #OP_WRITE} flag.
- * </p>
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.ChannelConfig
  * @apiviz.composedOf io.netty.channel.ChannelPipeline
@@ -131,8 +98,19 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      */
     ChannelConfig config();
 
+    /**
+     * Returns {@code true} if the {@link Channel} is open an may get active later
+     */
     boolean isOpen();
+
+    /**
+     * Returns {@code true} if the {@link Channel} is registered with an {@link EventLoop}.
+     */
     boolean isRegistered();
+
+    /**
+     * Return {@code true} if the {@link Channel} is active and so connected.
+     */
     boolean isActive();
 
     /**

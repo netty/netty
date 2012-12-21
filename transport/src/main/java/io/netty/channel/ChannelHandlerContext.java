@@ -18,6 +18,8 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 
 import java.nio.channels.Channels;
@@ -25,20 +27,19 @@ import java.util.Set;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
- * and other handlers.  A handler can send a {@link ChannelEvent} upstream or
- * downstream, modify the {@link ChannelPipeline} it belongs to dynamically.
+ * and other handlers.  A handler can notify the next {@link ChannelHandler} in the {@link ChannelPipeline},
+ * modify the {@link ChannelPipeline} it belongs to dynamically.
  *
- * <h3>Sending an event</h3>
+ * <h3>Notify</h3>
  *
- * You can send or forward a {@link ChannelEvent} to the closest handler in the
- * same {@link ChannelPipeline} by calling {@link #sendUpstream(ChannelEvent)}
- * or {@link #sendDownstream(ChannelEvent)}.  Please refer to
- * {@link ChannelPipeline} to understand how an event flows.
+ * You can notify the closest handler in the
+ * same {@link ChannelPipeline} by calling one of the various methods which are listed in {@link ChannelInboundInvoker}
+ * and {@link ChannelOutboundInvoker}.  Please refer to {@link ChannelPipeline} to understand how an event flows.
  *
  * <h3>Modifying a pipeline</h3>
  *
  * You can get the {@link ChannelPipeline} your handler belongs to by calling
- * {@link #getPipeline()}.  A non-trivial application could insert, remove, or
+ * {@link #pipeline()}.  A non-trivial application could insert, remove, or
  * replace handlers in the pipeline dynamically in runtime.
  *
  * <h3>Retrieving for later use</h3>
@@ -46,8 +47,7 @@ import java.util.Set;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link SimpleChannelHandler}
- *                        implements {@link LifeCycleAwareChannelHandler} {
+ * public class MyHandler extends {@link ChannelHandlerAdapter} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
@@ -56,10 +56,7 @@ import java.util.Set;
  *     }
  *
  *     public void login(String username, password) {
- *         {@link Channels}.write(
- *                 <b>this.ctx</b>,
- *                 {@link Channels}.succeededFuture(<b>this.ctx.getChannel()</b>),
- *                 new LoginMessage(username, password));
+ *         ctx.write(new LoginMessage(username, password));
  *     }
  *     ...
  * }
@@ -67,7 +64,7 @@ import java.util.Set;
  *
  * <h3>Storing stateful information</h3>
  *
- * {@link #setAttachment(Object)} and {@link #getAttachment()} allow you to
+ * {@link #attr(AttributeKey)} allow you to
  * store and access stateful information that is related with a handler and its
  * context.  Please refer to {@link ChannelHandler} to learn various recommended
  * ways to manage stateful information.
@@ -85,20 +82,23 @@ import java.util.Set;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler extends {@link SimpleChannelHandler} {
+ * public class FactorialHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt{@link Integer}&gt {
+ *
+ *   private final {@link AttributeKey}&lt{@link Integer}&gt counter =
+ *           new {@link AttributeKey}&lt{@link Integer}&gt("counter");
  *
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} evt) {
- *     Integer a = (Integer) ctx.getAttachment();
- *     Integer b = (Integer) evt.getMessage();
+ *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *     {@link Attribute}&lt{@link Integer}&gt} attr = ctx.getAttr(counter);
+ *     Integer a = ctx.getAttr(counter).get();
  *
  *     if (a == null) {
  *       a = 1;
  *     }
  *
- *     ctx.setAttachment(Integer.valueOf(a * b));
+ *     attr.set(a * integer));
  *   }
  * }
  *
@@ -119,10 +119,10 @@ import java.util.Set;
  *
  * <h3>Additional resources worth reading</h3>
  * <p>
- * Please refer to the {@link ChannelHandler}, {@link ChannelEvent}, and
- * {@link ChannelPipeline} to find out what a upstream event and a downstream
- * event are, what fundamental differences they have, how they flow in a
- * pipeline,  and how to handle the event in your application.
+ * Please refer to the {@link ChannelHandler}, and
+ * {@link ChannelPipeline} to find out more about inbound and outbound operations,
+ * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
+ * the operation in your application.
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext

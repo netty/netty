@@ -27,6 +27,13 @@ public final class DatagramPacket {
     private final ByteBuf data;
     private final InetSocketAddress remoteAddress;
 
+    /**
+     * Create a new instance
+     *
+     * @param data              the {@link ByteBuf} which holds the data of the packet
+     * @param remoteAddress     the (@link InetSocketAddress} from which the packet was received or to which the
+     *                          packet will be send
+     */
     public DatagramPacket(ByteBuf data, InetSocketAddress remoteAddress) {
         if (data == null) {
             throw new NullPointerException("data");
@@ -48,7 +55,6 @@ public final class DatagramPacket {
 
     /**
      * The {@link InetSocketAddress} which this {@link DatagramPacket} will send to or was received from.
-     * If {@code null} is used the default address will be used which the {@link DatagramChannel} was connected to.
      */
     public InetSocketAddress remoteAddress() {
         return remoteAddress;
