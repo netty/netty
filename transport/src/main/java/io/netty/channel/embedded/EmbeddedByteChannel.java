@@ -18,13 +18,22 @@ package io.netty.channel.embedded;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPipeline;
 
-public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
+
+/**
+ * Embedded {@link Channel} which operates on bytes
+ */
+public class EmbeddedByteChannel extends AbstractEmbeddedChannel<ByteBuf> {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
 
+    /**
+     * Create a new instance with the given {@link ChannelHandler}s in the {@link ChannelPipeline}
+     */
     public EmbeddedByteChannel(ChannelHandler... handlers) {
         super(Unpooled.buffer(), handlers);
     }
@@ -34,14 +43,17 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
         return METADATA;
     }
 
+    @Override
     public ByteBuf inboundBuffer() {
         return pipeline().inboundByteBuffer();
     }
 
+    @Override
     public ByteBuf lastOutboundBuffer() {
         return (ByteBuf) lastOutboundBuffer;
     }
 
+    @Override
     public ByteBuf readOutbound() {
         if (!lastOutboundBuffer().readable()) {
             return null;
@@ -53,29 +65,14 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel {
         }
     }
 
-    public boolean writeInbound(ByteBuf data) {
-        ensureOpen();
+    @Override
+    protected void writeInbound0(ByteBuf data) {
         inboundBuffer().writeBytes(data);
-        pipeline().fireInboundBufferUpdated();
-        runPendingTasks();
-        checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty();
     }
 
-    public boolean writeOutbound(Object msg) {
-        ensureOpen();
-        write(msg);
-        runPendingTasks();
-        checkException();
+    @Override
+    protected boolean hasReadableOutboundBuffer() {
         return lastOutboundBuffer().readable();
-    }
-
-    public boolean finish() {
-        close();
-        runPendingTasks();
-        checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
-               lastOutboundBuffer().readable();
     }
 
     @Override
