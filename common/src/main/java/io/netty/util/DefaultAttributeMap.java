@@ -19,6 +19,10 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Default {@link AttributeMap} implementation which use simple synchronization to keep the memory overhead
+ * as low as possible.
+ */
 public class DefaultAttributeMap implements AttributeMap {
 
     // Initialize lazily to reduce memory consumption.
@@ -41,7 +45,7 @@ public class DefaultAttributeMap implements AttributeMap {
         return attr;
     }
 
-    private class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
+    private static final class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
 
         private static final long serialVersionUID = -2661411462200283011L;
 

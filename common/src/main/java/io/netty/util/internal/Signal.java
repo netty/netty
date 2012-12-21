@@ -21,6 +21,11 @@ import io.netty.util.UniqueName;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * A special {@link Error} which is used to signal some state via an {@link Error}.
+ *
+ * This instance will have no stacktrace filled or any cause set to safe the overhead.
+ */
 public final class Signal extends Error {
 
     private static final long serialVersionUID = -221145131122459977L;
@@ -30,11 +35,20 @@ public final class Signal extends Error {
 
     private final UniqueName uname;
 
+    /**
+     * Create a new instance
+     *
+     * @param name      the name under which it is registered
+     */
     public Signal(String name) {
         super(name);
         uname = new UniqueName(map, name);
     }
 
+    /**
+     * Check if the given {@link Signal} is the same as this instance. If not an {@link IllegalStateException} will
+     * be thrown.
+     */
     public void expect(Signal signal) {
         if (this != signal) {
             throw new IllegalStateException("unexpected signal: " + signal);

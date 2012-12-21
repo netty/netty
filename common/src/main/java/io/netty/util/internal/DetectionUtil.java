@@ -118,14 +118,24 @@ public final class DetectionUtil {
         return IS_ROOT;
     }
 
+    /**
+     * Return {@code true} if {@link sun.misc.Unsafe} was found on the classpath and can be used.
+     */
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;
     }
 
+    /**
+     * Return the version of Java under which this library is used.
+     */
     public static int javaVersion() {
         return JAVA_VERSION;
     }
 
+    /**
+     * Return {@code true} if direct buffers can be freed using an optimized way and so memory footprint will be very
+     * small.
+     */
     public static boolean canFreeDirectBuffer() {
         return CAN_FREE_DIRECT_BUFFER;
     }
