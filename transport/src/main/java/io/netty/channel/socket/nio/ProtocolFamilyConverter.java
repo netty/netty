@@ -22,8 +22,6 @@ import java.net.StandardProtocolFamily;
 
 /**
  * Helper class which convert the {@link InternetProtocolFamily}.
- *
- *
  */
 final class ProtocolFamilyConverter {
 
@@ -38,7 +36,6 @@ final class ProtocolFamilyConverter {
         switch (family) {
         case IPv4:
             return StandardProtocolFamily.INET;
-
         case IPv6:
             return StandardProtocolFamily.INET6;
         default:
