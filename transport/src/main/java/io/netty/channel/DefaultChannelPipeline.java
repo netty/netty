@@ -581,8 +581,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         name2ctx.put(newName, newCtx);
 
-        ChannelHandlerLifeCycleException removeException = null;
-        ChannelHandlerLifeCycleException addException = null;
+        ChannelPipelineException removeException = null;
+        ChannelPipelineException addException = null;
         boolean removed = false;
         try {
             callAfterRemove(ctx);
@@ -591,7 +591,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ctx.readable(true);
 
             removed = true;
-        } catch (ChannelHandlerLifeCycleException e) {
+        } catch (ChannelPipelineException e) {
             removeException = e;
         }
 
@@ -599,14 +599,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             callAfterAdd(newCtx);
             added = true;
-        } catch (ChannelHandlerLifeCycleException e) {
+        } catch (ChannelPipelineException e) {
             addException = e;
         }
 
         if (!removed && !added) {
             logger.warn(removeException.getMessage(), removeException);
             logger.warn(addException.getMessage(), addException);
-            throw new ChannelHandlerLifeCycleException(
+            throw new ChannelPipelineException(
                     "Both " + ctx.handler().getClass().getName() +
                     ".afterRemove() and " + newCtx.handler().getClass().getName() +
                     ".afterAdd() failed; see logs.");
@@ -622,7 +622,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (handler instanceof ChannelStateHandlerAdapter) {
             ChannelStateHandlerAdapter h = (ChannelStateHandlerAdapter) handler;
             if (!h.isSharable() && h.added) {
-                throw new ChannelHandlerLifeCycleException(
+                throw new ChannelPipelineException(
                         h.getClass().getName()  +
                         " is not a @Sharable handler, so can't be added or removed multiple times.");
             }
@@ -631,7 +631,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             handler.beforeAdd(ctx);
         } catch (Throwable t) {
-            throw new ChannelHandlerLifeCycleException(
+            throw new ChannelPipelineException(
                     handler.getClass().getName() +
                     ".beforeAdd() has thrown an exception; not adding.", t);
         }
@@ -652,11 +652,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             if (removed) {
-                throw new ChannelHandlerLifeCycleException(
+                throw new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
                         ".afterAdd() has thrown an exception; removed.", t);
             } else {
-                throw new ChannelHandlerLifeCycleException(
+                throw new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
                         ".afterAdd() has thrown an exception; also failed to remove.", t);
             }
@@ -667,7 +667,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ctx.handler().beforeRemove(ctx);
         } catch (Throwable t) {
-            throw new ChannelHandlerLifeCycleException(
+            throw new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
                     ".beforeRemove() has thrown an exception; not removing.", t);
         }
@@ -677,7 +677,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ctx.handler().afterRemove(ctx);
         } catch (Throwable t) {
-            throw new ChannelHandlerLifeCycleException(
+            throw new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
                     ".afterRemove() has thrown an exception.", t);
         }
