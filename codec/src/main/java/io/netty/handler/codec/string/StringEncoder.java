@@ -20,8 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.nio.charset.Charset;
@@ -33,7 +32,7 @@ import java.nio.charset.Charset;
  * {@link ChannelPipeline} pipeline = ...;
  *
  * // Decoders
- * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}({@link Delimiters#lineDelimiter()}));
+ * pipeline.addLast("frameDecoder", new {@link LineBasedFrameDecoder}(80));
  * pipeline.addLast("stringDecoder", new {@link StringDecoder}(CharsetUtil.UTF_8));
  *
  * // Encoder
@@ -42,8 +41,7 @@ import java.nio.charset.Charset;
  * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     String msg = (String) e.getMessage();
+ * void messageReceived({@link ChannelHandlerContext} ctx, {@link String} msg) {
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>

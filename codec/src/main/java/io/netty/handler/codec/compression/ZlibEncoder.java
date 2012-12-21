@@ -32,8 +32,19 @@ public abstract class ZlibEncoder extends ByteToByteEncoder {
      */
     public abstract boolean isClosed();
 
+    /**
+     * Close this {@link ZlibEncoder} and so finish the encoding.
+     *
+     * The returned {@link ChannelFuture} will be notified once the
+     * operation completes.
+     */
     public abstract ChannelFuture close();
 
+    /**
+     * Close this {@link ZlibEncoder} and so finish the encoding.
+     * The given {@link ChannelFuture} will be notified once the operation
+     * completes and will also be returned.
+     */
     public abstract ChannelFuture close(ChannelFuture future);
 
 }
