@@ -22,6 +22,23 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 
+/**
+ * {@link ChannelInboundByteHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an other
+ * Message type.
+ *
+ * For example here is an implementation which reads all readable bytes from
+ * the input {@link ByteBuf} and create a new {@link ByteBuf}.
+ *
+ * <pre>
+ *     public class SquareDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
+ *         {@code @Override}
+ *         public {@link ByteBuf} decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in)
+ *                 throws {@link Exception} {
+ *             return in.readBytes(in.readableBytes());
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class ByteToMessageDecoder<O>
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
@@ -138,8 +155,26 @@ public abstract class ByteToMessageDecoder<O>
         }
     }
 
+    /**
+     * Decode the from one {@link ByteBuf} to an other. This method will be called till either the input
+     * {@link ByteBuf} has nothing to read anymore, till nothing was read from the input {@link ByteBuf} or till
+     * this method returns {@code null}.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToByteDecoder} belongs to
+     * @param in            the {@link ByteBuf} from which to read data
+     * @return message      the message to which the content of the {@link ByteBuf} was decoded, or {@code null} if
+     *                      there was not enough data left in the {@link ByteBuf} to decode.
+     * @throws Exception    is thrown if an error accour
+     */
     public abstract O decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 
+    /**
+     * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
+     * {@link #channelInactive(ChannelHandlerContext)} was triggered.
+     *
+     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf)} but sub-classes may
+     * override this for some special cleanup operation.
+     */
     public O decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         return decode(ctx, in);
     }

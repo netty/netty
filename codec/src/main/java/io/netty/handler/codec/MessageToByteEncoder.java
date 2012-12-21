@@ -22,6 +22,24 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
 
+
+/**
+ * {@link ChannelOutboundMessageHandlerAdapter} which encodes message in a stream-like fashion from one message to an
+ * {@link ByteBuf}.
+ *
+ *
+ * Example implementation which encodes {@link Integer}s to a {@link ByteBuf}.
+ *
+ * <pre>
+ *     public class IntegerEncoder extends {@link MessageToByteEncoder}&lt;{@link Integer}&gt; {
+ *         {@code @Override}
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} msg, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             out.writeInt(msg);
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
@@ -71,5 +89,14 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
         return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
+    /**
+     * Encode a message into a {@link ByteBuf}. This method will be called till the {@link MessageBuf} has
+     * nothing left.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
+     * @param msg           the message to encode
+     * @param out           the {@link ByteBuf} into which the encoded message will be written
+     * @throws Exception    is thrown if an error accour
+     */
     public abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
 }

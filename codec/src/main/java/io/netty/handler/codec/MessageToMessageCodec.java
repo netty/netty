@@ -24,6 +24,30 @@ import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 
+/**
+ * A Codec for on-the-fly encoding/decoding of message.
+ *
+ * This can be though of an combination of {@link MessageToMessageDecoder} and {@link MessageToMessageEncoder}.
+ *
+ * Here is an example of a {@link MessageToMessageCodec} which just decode from {@link Integer} to {@link Long}
+ * and encode from {@link Long} to {@link Integer}.
+ * <pre>
+ *     public class NumberCodec extends
+ *             {@link MessageToMessageCodec}&lt;{@link Integer}, {@link Long}, {@link Long}, {@link Integer}&gt; {
+ *         {@code @Override}
+ *         public {@link Long} decode({@link ChannelHandlerContext} ctx, {@link Integer} msg)
+ *                 throws {@link Exception} {
+ *             return msg.longValue();
+ *         }
+ *
+ *         {@code @Overrride}
+ *         public {@link Integer} encode({@link ChannelHandlerContext} ctx, {@link Long} msg)
+ *                 throws {@link Exception} {
+ *             return msg.intValue();
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
         extends ChannelHandlerAdapter
         implements ChannelInboundMessageHandler<INBOUND_IN>,

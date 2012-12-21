@@ -21,12 +21,38 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelPipeline;
 
+/**
+ * {@link ChannelInboundMessageHandler} which decodes from one message to an other message
+ *
+ * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
+ * the length of the {@link String}.
+ *
+ * <pre>
+ *     public class StringToIntegerDecoder extends
+ *             {@link MessageToMessageDecoder}&lt;{@link String},{@link Integer}&gt; {
+ *         public StringToIntegerDecoder() {
+ *             super(String.class);
+ *         }
+ *
+ *         {@code @Override}
+ *         public {@link Integer} decode({@link ChannelHandlerContext} ctx, {@link String} message)
+ *                 throws {@link Exception} {
+ *             return message.length());
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class MessageToMessageDecoder<I, O>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
+    /**
+     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwared
+     * to the next {@link ChannelInboundMessageHandler} in the {@link ChannelPipeline}
+     */
     protected MessageToMessageDecoder(Class<?>... acceptedMsgTypes) {
         this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
@@ -80,12 +106,20 @@ public abstract class MessageToMessageDecoder<I, O>
 
     /**
      * Returns {@code true} if and only if the specified message can be decoded by this decoder.
-     *
-     * @param msg the message
      */
     public boolean isDecodable(Object msg) throws Exception {
         return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
+    /**
+     * Decode from one message to an other. This method will be called till either the {@link MessageBuf} has
+     * nothing left or till this method returns {@code null}.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
+     * @param msg           the message to decode to an other one
+     * @return message      the decoded message or {@code null} if more messages are needed be cause the implementation
+     *                      needs to do some kind of aggragation
+     * @throws Exception    is thrown if an error accour
+     */
     public abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;
 }

@@ -19,13 +19,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.nio.ByteOrder;
 
 /**
  * An encoder that prepends the length of the message.  The length value is
- * prepended as a binary form.  It is encoded in either big endian or little
- * endian depending on the default {@link ByteOrder} of the current
- * {@link ByteBufFactory}.
+ * prepended as a binary form.
  * <p>
  * For example, <tt>{@link LengthFieldPrepender}(2)</tt> will encode the
  * following 12-bytes string:

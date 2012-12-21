@@ -31,6 +31,9 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
+/**
+ * Special {@link ByteBuf} implementation which is used by the {@link ReplayingDecoder}
+ */
 final class ReplayingDecoderBuffer implements ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;

@@ -18,13 +18,39 @@ package io.netty.handler.codec;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
+import io.netty.channel.ChannelPipeline;
 
+/**
+ * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
+ *
+ * For example here is an implementation which decodes an {@link Integer} to an {@link String}.
+ *
+ * <pre>
+ *     public class IntegerToStringEncoder extends
+ *             {@link MessageToMessageEncoder}&lt;{@link Integer},{@link String}&gt; {
+ *         public StringToIntegerDecoder() {
+ *             super(String.class);
+ *         }
+ *
+ *         {@code @Override}
+ *         public {@link String} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
+ *                 throws {@link Exception} {
+ *             return message.toString();
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
+    /**
+     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwared
+     * to the next {@link ChannelOutboundMessageHandler} in the {@link ChannelPipeline}
+     */
     protected MessageToMessageEncoder(Class<?>... acceptedMsgTypes) {
         this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
@@ -75,5 +101,15 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
         return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
+    /**
+     * Encode from one message to an other. This method will be called till either the {@link MessageBuf} has nothing
+     * left or till this method returns {@code null}.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
+     * @param msg           the message to encode to an other one
+     * @return message      the encoded message or {@code null} if more messages are needed be cause the implementation
+     *                      needs to do some kind of aggragation
+     * @throws Exception    is thrown if an error accour
+     */
     public abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
 }
