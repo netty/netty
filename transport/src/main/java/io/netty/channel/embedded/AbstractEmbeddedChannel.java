@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -37,7 +38,12 @@ import io.netty.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
-public abstract class AbstractEmbeddedChannel extends AbstractChannel {
+/**
+ * Base class for {@link Channel} implementations that are used in an embedded fashion.
+ *
+ * @param <O>  the type of data that can be written to this {@link Channel}
+ */
+public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEmbeddedChannel.class);
 
@@ -51,6 +57,12 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
 
+    /**
+     * Create a new instance
+     *
+     * @param lastOutboundBuffer    the last outbound buffer which will hold all the written data
+     * @param handlers              the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
     AbstractEmbeddedChannel(Object lastOutboundBuffer, ChannelHandler... handlers) {
         super(null, null);
 
@@ -101,14 +113,25 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         return state == 1;
     }
 
+    /**
+     * Return the last inbound {@link MessageBuf} which will hold all the {@link Object}s that where received
+     * by this {@link Channel}
+     */
     public MessageBuf<Object> lastInboundMessageBuffer() {
         return lastInboundMessageBuffer;
     }
 
+    /**
+     * Return the last inbound {@link ByteBuf} which will hold all the bytes that where received
+     * by this {@link Channel}
+     */
     public ByteBuf lastInboundByteBuffer() {
         return lastInboundByteBuffer;
     }
 
+    /**
+     * Return received data from this {@link Channel}
+     */
     public Object readInbound() {
         if (lastInboundByteBuffer.readable()) {
             try {
@@ -120,6 +143,9 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         return lastInboundMessageBuffer.poll();
     }
 
+    /**
+     * Run all tasks that are pending in the {@link EventLoop} for this {@link Channel}
+     */
     public void runPendingTasks() {
         try {
             loop.runTasks();
@@ -138,6 +164,9 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         }
     }
 
+    /**
+     * Check if there was any {@link Throwable} received and if so rethrow it.
+     */
     public void checkException() {
         Throwable t = lastException;
         if (t == null) {
@@ -156,7 +185,7 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
         throw new ChannelException(t);
     }
 
-    protected void ensureOpen() {
+    protected final void ensureOpen() {
         if (!isOpen()) {
             recordException(new ClosedChannelException());
             checkException();
@@ -213,6 +242,74 @@ public abstract class AbstractEmbeddedChannel extends AbstractChannel {
     protected boolean isFlushPending() {
         return false;
     }
+
+    /**
+     * Read data froum the outbound. This may return {@code null} if nothing is readable.
+     */
+    public abstract O readOutbound();
+
+    /**
+     * Return the inbound buffer in which inbound messages are stored.
+     */
+    public abstract Buf inboundBuffer();
+
+    /**
+     * Return the last outbound buffer in which all the written outbound messages are stored.
+     */
+    public abstract Buf lastOutboundBuffer();
+
+    /**
+     * Mark this {@link Channel} as finished. Any futher try to write data to it will fail.
+     *
+     *
+     * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
+     */
+    public boolean finish() {
+        close();
+        runPendingTasks();
+        checkException();
+        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
+                hasReadableOutboundBuffer();
+    }
+
+    /**
+     * Write data to the inbound of this {@link Channel}.
+     *
+     * @param data              data that should be written
+     * @return bufferReadable   returns {@code true} if the write operation did add something to the the inbound buffer
+     */
+    public boolean writeInbound(O data) {
+        ensureOpen();
+        writeInbound0(data);
+        pipeline().fireInboundBufferUpdated();
+        runPendingTasks();
+        checkException();
+        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty();
+    }
+
+    /**
+     * Write data to the outbound of this {@link Channel}.
+     *
+     * @param data              data that should be written
+     * @return bufferReadable   returns {@code true} if the write operation did add something to the the outbound buffer
+     */
+    public boolean writeOutbound(Object data) {
+        ensureOpen();
+        write(data);
+        runPendingTasks();
+        checkException();
+        return hasReadableOutboundBuffer();
+    }
+
+    /**
+     * Returns {@code true} if the outbound buffer hold some data which can be read
+     */
+    protected abstract boolean hasReadableOutboundBuffer();
+
+    /**
+     * Add the data to the inbound buffer.
+     */
+    protected abstract void writeInbound0(O data);
 
     private class DefaultUnsafe extends AbstractUnsafe {
         @Override

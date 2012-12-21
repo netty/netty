@@ -18,13 +18,21 @@ package io.netty.channel.embedded;
 import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPipeline;
 
-public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
+/**
+ * Embedded {@@link Channel} which operates on messages which can be of any time.
+ */
+public class EmbeddedMessageChannel extends AbstractEmbeddedChannel<Object> {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
+    /**
+     * Create a new instance with the given {@link ChannelHandler}s in the {@link ChannelPipeline}
+     */
     public EmbeddedMessageChannel(ChannelHandler... handlers) {
         super(Unpooled.messageBuffer(), handlers);
     }
@@ -34,6 +42,7 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
         return METADATA;
     }
 
+    @Override
     public MessageBuf<Object> inboundBuffer() {
         return pipeline().inboundMessageBuffer();
     }
@@ -43,33 +52,19 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel {
         return (MessageBuf<Object>) lastOutboundBuffer;
     }
 
+    @Override
     public Object readOutbound() {
         return lastOutboundBuffer().poll();
     }
 
-    public boolean writeInbound(Object msg) {
-        ensureOpen();
-        inboundBuffer().add(msg);
-        pipeline().fireInboundBufferUpdated();
-        runPendingTasks();
-        checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty();
+    @Override
+    protected void writeInbound0(Object data) {
+        inboundBuffer().add(data);
     }
 
-    public boolean writeOutbound(Object msg) {
-        ensureOpen();
-        write(msg);
-        runPendingTasks();
-        checkException();
+    @Override
+    protected boolean hasReadableOutboundBuffer() {
         return !lastOutboundBuffer().isEmpty();
-    }
-
-    public boolean finish() {
-        close();
-        runPendingTasks();
-        checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
-               !lastOutboundBuffer().isEmpty();
     }
 
     @Override
