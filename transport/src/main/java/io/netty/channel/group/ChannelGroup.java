@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 
@@ -75,12 +76,12 @@ import java.util.Set;
  *     b.releaseExternalResources();
  * }
  *
- * public class MyHandler extends {@link SimpleChannelUpstreamHandler} {
+ * public class MyHandler extends {@link ChannelStateHandlerAdapter} {
  *     {@code @Override}
- *     public void channelOpen({@link ChannelHandlerContext} ctx, {@link ChannelStateEvent} e) {
- *         // Add all open channels to the global group so that they are
+ *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         // closed on shutdown.
  *         <strong>allChannels.add(e.getChannel());</strong>
+ *         super.channelActive(ctx);
  *     }
  * }
  * </pre>

@@ -102,21 +102,21 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     }
 
     /**
-     * See {@link #localAddress(SocketAddress)}
+     * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(int port) {
         return localAddress(new InetSocketAddress(port));
     }
 
     /**
-     * See {@link #localAddress(SocketAddress)}
+     * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(String host, int port) {
         return localAddress(new InetSocketAddress(host, port));
     }
 
     /**
-     * See {@link #localAddress(SocketAddress)}
+     * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(InetAddress host, int port) {
         return localAddress(new InetSocketAddress(host, port));
@@ -249,6 +249,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return attrs;
     }
 
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
@@ -308,6 +309,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             }
         }
 
+        @Override
         public String toString() {
             return clazz.getSimpleName() + ".class";
         }
