@@ -17,6 +17,12 @@ package io.netty.channel;
 
 import io.netty.buffer.MessageBuf;
 
+/**
+ * ChannelOutboundHandler implementation which operates on messages of a specific type
+ * by pass them in a {@link MessageBuf} and consume then from there.
+ *
+ * @param <I>   the message type
+ */
 public interface ChannelOutboundMessageHandler<I> extends ChannelOutboundHandler {
     @Override
     MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;

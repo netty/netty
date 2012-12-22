@@ -16,11 +16,22 @@
 package io.netty.channel;
 
 
+/**
+ * Abstract base class for {@link ChannelStateHandler} implementations which provide
+ * implementations of all of their methods.
+ *
+ * This implementation just forward the operation to the next {@link ChannelHandler} in the
+ * {@link ChannelPipeline}. Sub-classes may override a method implementation to change this.
+ */
 public class ChannelStateHandlerAdapter implements ChannelStateHandler {
 
     // Not using volatile because it's used only for a sanity check.
     boolean added;
 
+    /**
+     * Return {@code true} if the implementation is {@link Sharable} and so can be added
+     * to different {@link ChannelPipeline}s.
+     */
     final boolean isSharable() {
         return getClass().isAnnotationPresent(Sharable.class);
     }

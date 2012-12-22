@@ -17,13 +17,17 @@ package io.netty.channel;
 
 import io.netty.buffer.Buf;
 
+
+/**
+ * Abstract base class for a {@link ChannelHandler} that handles outbound data.
+ *
+ * Most of the times you either want to extend {@link ChannelOutboundByteHandlerAdapter} or
+ * {@link ChannelOutboundMessageHandlerAdapter}.
+ */
 public abstract class ChannelOutboundHandlerAdapter
         extends ChannelOperationHandlerAdapter implements ChannelOutboundHandler {
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         buf.free();
     }
-
-    @Override
-    public abstract void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
 }
