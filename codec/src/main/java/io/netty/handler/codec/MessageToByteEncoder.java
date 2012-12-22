@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelHandlerUtil;
 
 
@@ -44,6 +46,10 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
 
     private final Class<?>[] acceptedMsgTypes;
 
+    /**
+     * The types which will be accepted by the encoder. If a received message is an other type it will be just forwared
+     * to the next {@link ChannelOutboundMessageHandler} in the {@link ChannelPipeline}
+     */
     protected MessageToByteEncoder(Class<?>... acceptedMsgTypes) {
         this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
