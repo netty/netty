@@ -17,6 +17,9 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * {@link ChannelOutboundHandler} which operates on bytes which are hold in a {@link ByteBuf}.
+ */
 public interface ChannelOutboundByteHandler extends ChannelOutboundHandler {
     @Override
     ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
