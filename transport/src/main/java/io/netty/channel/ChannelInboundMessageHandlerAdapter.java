@@ -18,11 +18,37 @@ package io.netty.channel;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 
+/**
+ * {@link ChannelHandler} which handles inbound messages of a specific type.
+ *
+ * <pre>
+ *     public class StringHandler extends
+ *             {@link ChannelInboundMessageHandlerAdapter}&lt;{@link String}&gt; {
+ *         public StringToIntegerDecoder() {
+ *             super(String.class);
+ *         }
+ *
+ *         {@code @Override}
+ *         public void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
+ *                 throws {@link Exception} {
+ *             // Do something with the String
+ *             ...
+ *             ...
+ *         }
+ *     }
+ * </pre>
+ *
+ * @param <I>   The type of the messages to handle
+ */
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
+    /**
+     * The types which will be accepted by the message handler. If a received message is an other type it will be just
+     * forwarded  to the next {@link ChannelInboundMessageHandler} in the {@link ChannelPipeline}.
+     */
     protected ChannelInboundMessageHandlerAdapter(Class<?>... acceptedMsgTypes) {
         this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
@@ -92,10 +118,30 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * This will return {@code true} by default, and may get overriden by sub-classes for
      * special handling.
      */
+    @SuppressWarnings("unused")
     public boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
         return true;
     }
 
+    /**
+     * Is called once a message was received.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+     * @param msg           the message to handle
+     * @throws Exception    thrown when an error accour
+     */
     public abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
-    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception { }
+
+    /**
+     * Is called after all messages of the {@link MessageBuf} was consumed.
+     *
+     * Super-classes may-override this for special handling.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+     * @throws Exception    thrown when an error accour
+     */
+    @SuppressWarnings("unused")
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
 }

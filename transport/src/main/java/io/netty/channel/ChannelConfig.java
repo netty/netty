@@ -80,12 +80,12 @@ public interface ChannelConfig {
      * Sets a configuration property with the specified name and value.
      * To override this method properly, you must call the super class:
      * <pre>
-     * public boolean setOption(String name, Object value) {
-     *     if (super.setOption(name, value)) {
+     * public boolean setOption(ChannelOption&lt;T&gt; option, T value) {
+     *     if (super.setOption(option, value)) {
      *         return true;
      *     }
      *
-     *     if (name.equals("additionalOption")) {
+     *     if (option.equals(additionalOption)) {
      *         ....
      *         return true;
      *     }

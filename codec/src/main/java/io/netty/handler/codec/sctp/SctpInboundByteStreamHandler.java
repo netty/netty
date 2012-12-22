@@ -23,8 +23,8 @@ import io.netty.channel.socket.SctpMessage;
 import io.netty.handler.codec.CodecException;
 
 /**
- * A ChannelHandler which receives  {@link SctpMessage} belongs to a application protocol form a specific SCTP Stream
- * and decode it as {@link ByteBuf}.
+ * A ChannelHandler which receives {@link SctpMessage}s which belong to a application protocol form a specific
+ * SCTP Stream  and decode it as {@link ByteBuf}.
  */
 public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAdapter<SctpMessage> {
     private final int protocolIdentifier;

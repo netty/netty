@@ -31,6 +31,7 @@ import io.netty.channel.ChannelOutboundMessageHandler;
  *
  * Here is an example of a {@link MessageToMessageCodec} which just decode from {@link Integer} to {@link Long}
  * and encode from {@link Long} to {@link Integer}.
+ *
  * <pre>
  *     public class NumberCodec extends
  *             {@link MessageToMessageCodec}&lt;{@link Integer}, {@link Long}, {@link Long}, {@link Integer}&gt; {

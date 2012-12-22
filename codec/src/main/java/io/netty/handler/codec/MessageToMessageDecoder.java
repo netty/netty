@@ -50,7 +50,7 @@ public abstract class MessageToMessageDecoder<I, O>
     private final Class<?>[] acceptedMsgTypes;
 
     /**
-     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwared
+     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwarded
      * to the next {@link ChannelInboundMessageHandler} in the {@link ChannelPipeline}
      */
     protected MessageToMessageDecoder(Class<?>... acceptedMsgTypes) {

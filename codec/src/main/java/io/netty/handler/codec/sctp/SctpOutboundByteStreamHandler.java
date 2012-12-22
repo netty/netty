@@ -34,8 +34,8 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
     private final int protocolIdentifier;
 
     /**
-     * @param streamIdentifier stream number, this should be >=0 or <= max stream number of the association.
-     * @param protocolIdentifier supported application protocol id.
+     * @param streamIdentifier      stream number, this should be >=0 or <= max stream number of the association.
+     * @param protocolIdentifier    supported application protocol id.
      */
     public SctpOutboundByteStreamHandler(int streamIdentifier, int protocolIdentifier) {
         this.streamIdentifier = streamIdentifier;
