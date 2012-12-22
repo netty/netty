@@ -24,7 +24,7 @@ import java.util.concurrent.TimeoutException;
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
-class FailedChannelFuture extends CompleteChannelFuture {
+final class FailedChannelFuture extends CompleteChannelFuture {
 
     private final Throwable cause;
 
