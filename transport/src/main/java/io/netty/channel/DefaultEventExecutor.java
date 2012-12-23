@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadFactory;
  * serial fashion
  *
  */
-class DefaultEventExecutor extends SingleThreadEventExecutor {
+final class DefaultEventExecutor extends SingleThreadEventExecutor {
 
     /**
      * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, ChannelTaskScheduler)

@@ -18,6 +18,10 @@ package io.netty.channel;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+/**
+ * This implementation allows to register {@link ChannelFuture} instances which will get notified once some amount of
+ * data was written and so a checkpoint was reached.
+ */
 public final class ChannelFlushFutureNotifier {
 
     private long writeCounter;

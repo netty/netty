@@ -83,6 +83,9 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         return children[Math.abs(childIndex.getAndIncrement() % children.length)];
     }
 
+    /**
+     * Return a safe-copy of all of the children of this group.
+     */
     protected Set<EventExecutor> children() {
         Set<EventExecutor> children = Collections.newSetFromMap(new LinkedHashMap<EventExecutor, Boolean>());
         Collections.addAll(children, this.children);

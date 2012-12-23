@@ -150,6 +150,12 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         taskQueue = newTaskQueue();
     }
 
+    /**
+     * Create a new {@link Queue} which will holds the tasks to execute. This default implementation will return a
+     * {@link LinkedBlockingQueue} but if your sub-class of {@link SingleThreadEventExecutor} will not do any blocking
+     * calls on the this {@link Queue} it may make sense to {@code @Override} this and return some more performant
+     * implementation that does not support blocking operations at all.
+     */
     protected Queue<Runnable> newTaskQueue() {
         return new LinkedBlockingQueue<Runnable>();
     }
@@ -164,15 +170,27 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return this;
     }
 
+    /**
+     * Interrupt the current running {@link Thread}.
+     */
     protected void interruptThread() {
         thread.interrupt();
     }
 
+    /**
+     * @see {@link Queue#poll()}
+     */
     protected Runnable pollTask() {
         assert inEventLoop();
         return taskQueue.poll();
     }
 
+    /**
+     * Take the next {@link Runnable} from the task queue and so will block if no task is currently present.
+     *
+     * Be aware that this method will throw an {@link UnsupportedOperationException} if the task queue, which was
+     * created via {@link #newTaskQueue()}, does not implement {@link BlockingQueue}.
+     */
     protected Runnable takeTask() throws InterruptedException {
         assert inEventLoop();
         if (taskQueue instanceof BlockingQueue) {
@@ -182,16 +200,26 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         }
     }
 
+    /**
+     * @see {@link Queue#peek()}
+     */
     protected Runnable peekTask() {
         assert inEventLoop();
         return taskQueue.peek();
     }
 
+    /**
+     * @see {@link Queue#isEmpty()}
+     */
     protected boolean hasTasks() {
         assert inEventLoop();
         return !taskQueue.isEmpty();
     }
 
+    /**
+     * Add a task to the task queue, or throws a {@link RejectedExecutionException} if this instance was shutdown
+     * before.
+     */
     protected void addTask(Runnable task) {
         if (task == null) {
             throw new NullPointerException("task");
@@ -202,6 +230,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         taskQueue.add(task);
     }
 
+    /**
+     * @see {@link Queue#remove(Object)}
+     */
     protected boolean removeTask(Runnable task) {
         if (task == null) {
             throw new NullPointerException("task");
@@ -209,6 +240,10 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return taskQueue.remove(task);
     }
 
+    /**
+     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
+     * @return
+     */
     protected boolean runAllTasks() {
         boolean ran = false;
         for (;;) {
@@ -231,10 +266,16 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return ran;
     }
 
+    /**
+     *
+     */
     protected abstract void run();
 
+    /**
+     * Do nothing, sub-classes may override
+     */
     protected void cleanup() {
-        // Do nothing. Subclasses will override.
+        // NOOP
     }
 
     protected void wakeup(boolean inEventLoop) {
@@ -253,6 +294,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return thread == this.thread;
     }
 
+    /**
+     * Add a {@link Runnable} which will be executed on shutdown of this instance
+     */
     public void addShutdownHook(final Runnable task) {
         if (inEventLoop()) {
             shutdownHooks.add(task);
@@ -266,6 +310,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         }
     }
 
+    /**
+     * Remove a previous added {@link Runnable} as a shutdown hook
+     */
     public void removeShutdownHook(final Runnable task) {
         if (inEventLoop()) {
             shutdownHooks.remove(task);
@@ -348,6 +395,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         return state == ST_TERMINATED;
     }
 
+    /**
+     * Confirm that the shutdown if the instance should be done now!
+     */
     protected boolean confirmShutdown() {
         if (!isShutdown()) {
             throw new IllegalStateException("must be invoked after shutdown()");

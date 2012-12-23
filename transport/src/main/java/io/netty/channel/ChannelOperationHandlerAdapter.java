@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
+public abstract class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
 
     /**
      * Do nothing by default, sub-classes may override this method.

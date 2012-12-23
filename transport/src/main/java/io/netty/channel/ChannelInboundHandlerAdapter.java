@@ -27,6 +27,11 @@ import io.netty.buffer.Buf;
 public abstract class ChannelInboundHandlerAdapter
         extends ChannelStateHandlerAdapter implements ChannelInboundHandler {
 
+    /**
+     * Calls {@link Buf#free()} to free the buffer, sub-classes may override this.
+     *
+     * When doing so be aware that you will need to handle all the resource management by your own.
+     */
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
         buf.free();

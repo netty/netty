@@ -21,16 +21,33 @@ import io.netty.channel.ChannelTaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * {@link MultithreadEventLoopGroup} which must be used for the local transport.
+ */
 public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
 
+    /**
+     * Create a new instance which used {@link #DEFAULT_POOL_SIZE} number of Threads
+     */
     public LocalEventLoopGroup() {
         this(0);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param nThreads          the number of Threads to use or {@code 0} for the default of {@link #DEFAULT_POOL_SIZE}
+     */
     public LocalEventLoopGroup(int nThreads) {
         this(nThreads, null);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param nThreads          the number of Threads to use or {@code 0} for the default of {@link #DEFAULT_POOL_SIZE}
+     * @param threadFactory     the {@link ThreadFactory} or {@code null} to use the default
+     */
     public LocalEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
     }

@@ -26,7 +26,7 @@ import io.netty.channel.SingleThreadEventLoop;
 import java.net.SocketAddress;
 
 /**
- * A {@link ServerChannel} for the local transport.
+ * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
 public class LocalServerChannel extends AbstractServerChannel {
 
@@ -41,10 +41,18 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
 
+    /**
+     * Creates a new instance
+     */
     public LocalServerChannel() {
         this(null);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param id    the id to use or {@code null} if a new id should be generated
+     */
     public LocalServerChannel(Integer id) {
         super(id);
     }
