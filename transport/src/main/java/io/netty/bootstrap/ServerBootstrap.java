@@ -215,7 +215,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
         }
-
     }
 
     private class Acceptor
