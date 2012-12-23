@@ -15,11 +15,9 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-class VoidChannelFuture implements ChannelFuture.Unsafe {
+final class VoidChannelFuture implements ChannelFuture.Unsafe {
 
     private final Channel channel;
 
@@ -68,13 +66,13 @@ class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean await(long timeout, TimeUnit unit) {
         fail();
         return false;
     }
 
     @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
+    public boolean await(long timeoutMillis) {
         fail();
         return false;
     }
@@ -123,7 +121,7 @@ class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public ChannelFuture sync() throws InterruptedException {
+    public ChannelFuture sync() {
         fail();
         return this;
     }
@@ -135,14 +133,13 @@ class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public Void get() throws InterruptedException, ExecutionException {
+    public Void get() {
         fail();
         return null;
     }
 
     @Override
-    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
-            TimeoutException {
+    public Void get(long timeout, TimeUnit unit) {
         fail();
         return null;
     }
