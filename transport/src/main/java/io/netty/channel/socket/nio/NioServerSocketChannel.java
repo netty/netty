@@ -29,6 +29,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+/**
+ * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
+ * NIO selector based implementation to accept new connections.
+ */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 

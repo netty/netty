@@ -271,7 +271,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelFuture} once it completes
          * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
-         * automaticly closed via {@link io.netty.channel.FileRegion#close()}.
+         * automaticly closed via {@link FileRegion#close()}.
          */
         void sendFile(FileRegion region, ChannelFuture future);
     }
