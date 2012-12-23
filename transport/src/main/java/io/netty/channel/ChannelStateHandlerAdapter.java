@@ -35,59 +35,115 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
     final boolean isSharable() {
         return getClass().isAnnotationPresent(Sharable.class);
     }
-
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
         ctx.fireExceptionCaught(cause);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
             throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireChannelRegistered()} to forward
+     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelRegistered();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireChannelUnregistered()} to forward
+     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelUnregistered();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireChannelActive()} to forward
+     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelActive();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireChannelInactive()} to forward
+     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireInboundBufferUpdated()} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     *
+     * Be aware that if your class also implement {@link ChannelInboundHandler} it need to {@code @Override} this
+     * method and provide some proper implementation. Fail to do so, will result in an {@link IllegalStateException}!
+     */
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (this instanceof ChannelInboundHandler) {

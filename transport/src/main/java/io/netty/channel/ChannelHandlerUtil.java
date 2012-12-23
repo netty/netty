@@ -16,9 +16,27 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 
+/**
+ * Utilities for {@link ChannelHandler} implementations.
+ */
 public final class ChannelHandlerUtil {
 
+    /**
+     * Unfold the given msg and pass it to the next buffer depending on the msg type.
+     *
+     * @param ctx
+     *          the {@link ChannelHandlerContext} on which to operate
+     * @param msg
+     *          the msg to unfold and pass to the next buffer
+     * @param inbound
+     *          {@code true} if it is an inbound message, {@code false} otherwise
+     * @return added
+     *          {@code true} if the message was added to the next {@link ByteBuf} or {@link MessageBuf}
+     * @throws Exception
+     *          thrown if an error accour
+     */
     public static boolean unfoldAndAdd(
             ChannelHandlerContext ctx, Object msg, boolean inbound) throws Exception {
         if (msg == null) {
@@ -80,6 +98,9 @@ public final class ChannelHandlerUtil {
 
     private static final Class<?>[] EMPTY_TYPES = new Class<?>[0];
 
+    /**
+     * Creates a safe copy of the given array and return it.
+     */
     public static Class<?>[] acceptedMessageTypes(Class<?>[] acceptedMsgTypes) {
         if (acceptedMsgTypes == null) {
             return EMPTY_TYPES;
@@ -99,8 +120,12 @@ public final class ChannelHandlerUtil {
         return newAllowedMsgTypes;
     }
 
+    /**
+     * Return {@code true} if the given msg is compatible with one of the given acceptedMessageTypes or if
+     * acceptedMessageTypes is null / empty.
+     */
     public static boolean acceptMessage(Class<?>[] acceptedMsgTypes, Object msg) {
-        if (acceptedMsgTypes.length == 0) {
+        if (acceptedMsgTypes == null || acceptedMsgTypes.length == 0) {
             return true;
         }
 
@@ -113,6 +138,9 @@ public final class ChannelHandlerUtil {
         return false;
     }
 
+    /**
+     * Add the given msg to the next outbound {@link MessageBuf}.
+     */
     public static void addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
         try {
             ctx.nextOutboundMessageBuffer().add(msg);
@@ -124,6 +152,9 @@ public final class ChannelHandlerUtil {
         }
     }
 
+    /**
+     * Add the given msg to the next inbound {@link MessageBuf}.
+     */
     public static void addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
         try {
             ctx.nextInboundMessageBuffer().add(msg);

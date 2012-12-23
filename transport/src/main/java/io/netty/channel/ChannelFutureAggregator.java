@@ -25,7 +25,7 @@ import java.util.Set;
  * listening to the individual futures and producing an aggregated result
  * (success/failure) when all futures have completed.
  */
-public class ChannelFutureAggregator implements ChannelFutureListener {
+public final class ChannelFutureAggregator implements ChannelFutureListener {
 
     private final ChannelFuture aggregateFuture;
 

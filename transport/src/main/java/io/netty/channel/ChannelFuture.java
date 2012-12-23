@@ -18,6 +18,9 @@ package io.netty.channel;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.bootstrap.Bootstrap;
+
+
 /**
  * The result of an asynchronous {@link Channel} I/O operation.
  * <p>
@@ -90,34 +93,30 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     if (e.getMessage() instanceof GoodByeMessage) {
- *         {@link ChannelFuture} future = e.getChannel().close();
- *         future.awaitUninterruptibly();
- *         // Perform post-closure operation
- *         // ...
- *     }
+ * public void messageReceived({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
+ *     {@link ChannelFuture} future = ctx.channel().close();
+ *     future.awaitUninterruptibly();
+ *     // Perform post-closure operation
+ *     // ...
  * }
  *
  * // GOOD
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     if (e.getMessage() instanceof GoodByeMessage) {
- *         {@link ChannelFuture} future = e.getChannel().close();
- *         future.addListener(new {@link ChannelFutureListener}() {
- *             public void operationComplete({@link ChannelFuture} future) {
- *                 // Perform post-closure operation
- *                 // ...
- *             }
- *         });
- *     }
+ * public void messageReceived({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
+ *     {@link ChannelFuture} future = ctx.channel().close();
+ *     future.addListener(new {@link ChannelFutureListener}() {
+ *         public void operationComplete({@link ChannelFuture} future) {
+ *             // Perform post-closure operation
+ *             // ...
+ *         }
+ *     });
  * }
  * </pre>
  * <p>
  * In spite of the disadvantages mentioned above, there are certainly the cases
  * where it is more convenient to call {@link #await()}. In such a case, please
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
- * {@link IllegalStateException} will be raised to prevent a dead lock.
+ * {@link BlockingOperationException} will be raised to prevent a dead lock.
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  *
@@ -145,7 +144,7 @@ import java.util.concurrent.TimeUnit;
  * // GOOD
  * {@link Bootstrap} b = ...;
  * // Configure the connect timeout option.
- * <b>b.setOption("connectTimeoutMillis", 10000);</b>
+ * <b>b.setOption({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly();
  *

@@ -33,11 +33,19 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
         // User will call init in the subclass constructor.
     }
 
+    /**
+     * Combine the given {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}.
+     */
     public CombinedChannelHandler(
             ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         init(inboundHandler, outboundHandler);
     }
 
+    /**
+     * Needs to get called before the handler can be added to the {@link ChannelPipeline}.
+     * Otherwise it will trigger a {@link IllegalStateException} later.
+     *
+     */
     protected void init(
             ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         if (inboundHandler == null) {
