@@ -44,7 +44,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
+ * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel} which can be used
+ * to send and receive {@link DatagramPacket}'s.
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
@@ -79,18 +80,34 @@ public final class NioDatagramChannel
         }
     }
 
+    /**
+     * Create a new instance which will use the Operation Systems default {@link InternetProtocolFamily}.
+     */
     public NioDatagramChannel() {
         this(newSocket());
     }
 
+    /**
+     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
+     * on the Operation Systems default which will be chosen.
+     */
     public NioDatagramChannel(InternetProtocolFamily ipFamily) {
         this(newSocket(ipFamily));
     }
 
+    /**
+     * Create a new instance from the given {@link DatagramChannel}.
+     */
     public NioDatagramChannel(DatagramChannel socket) {
         this(null, socket);
     }
 
+    /**
+     * Create a new instance from the given {@link DatagramChannel}.
+     *
+     * @param id        the id to use for this instance or {@code null} if a new one should be generated.
+     * @param socket    the {@link DatagramChannel} which will be used
+     */
     public NioDatagramChannel(Integer id, DatagramChannel socket) {
         super(null, id, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(socket);

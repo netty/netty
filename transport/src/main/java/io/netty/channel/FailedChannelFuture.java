@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
@@ -53,7 +52,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture sync() throws InterruptedException {
+    public ChannelFuture sync() {
         return rethrow();
     }
 
@@ -75,13 +74,12 @@ final class FailedChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public Void get() throws InterruptedException, ExecutionException {
+    public Void get() throws ExecutionException {
         throw new ExecutionException(cause);
     }
 
     @Override
-    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
-            TimeoutException {
+    public Void get(long timeout, TimeUnit unit) throws ExecutionException {
         throw new ExecutionException(cause);
     }
 }

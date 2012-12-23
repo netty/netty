@@ -40,7 +40,7 @@ public final class SctpMessage {
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
         this.payloadBuffer = payloadBuffer;
-        this.msgInfo = null;
+        msgInfo = null;
     }
 
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {

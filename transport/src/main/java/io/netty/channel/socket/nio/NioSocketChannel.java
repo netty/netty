@@ -32,6 +32,9 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
+/**
+ * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
+ */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
@@ -48,14 +51,27 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
+    /**
+     * Create a new instance
+     */
     public NioSocketChannel() {
         this(newSocket());
     }
 
+    /**
+     * Create a new instance using the given {@link SocketChannel}.
+     */
     public NioSocketChannel(SocketChannel socket) {
         this(null, null, socket);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
+     * @param id        the id to use for this instance or {@code null} if a new one should be generated
+     * @param socket    the {@link SocketChannel} which will be used
+     */
     public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
         super(parent, id, socket);
         try {
