@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
-import io.netty.util.AttributeKey;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -53,12 +52,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * Default delay between two checks: 1s
      */
     public static final long DEFAULT_CHECK_INTERVAL = 1000;
-
-    /**
-     * AttributeKey to indicate whether this handler has suspended read
-     * operations on the channel
-     */
-    protected AttributeKey<Boolean> readSuspended;
 
     /**
      * Default minimal time to wait
@@ -218,7 +211,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
             if (ctx != null && ctx.channel() != null &&
                     ctx.channel().isActive()) {
-                ctx.attr(readSuspended).set(null);
                 ctx.readable(true);
             }
         }
@@ -281,8 +273,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                 Channel channel = ctx.channel();
                 // try to limit the traffic
                 if (channel != null && channel.isActive()) {
-                    if (ctx.attr(readSuspended).get() == null) {
-                        ctx.attr(readSuspended).set(Boolean.TRUE);
+                    if (ctx.isReadable()) {
                         ctx.readable(false);
                         Runnable timerTask = new ReopenReadTimerTask(ctx);
                         scheduledFuture = ctx.executor().schedule(timerTask, wait,

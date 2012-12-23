@@ -17,7 +17,6 @@ package io.netty.handler.traffic;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.EventExecutor;
-import io.netty.util.AttributeKey;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
@@ -52,7 +51,6 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create the global TrafficCounter
      */
     void createGlobalTrafficCounter(EventExecutor executor) {
-        readSuspended = new AttributeKey<Boolean>("readSuspended-global");
         TrafficCounter tc;
         if (executor != null) {
             tc = new TrafficCounter(this, executor, "GlobalTC",

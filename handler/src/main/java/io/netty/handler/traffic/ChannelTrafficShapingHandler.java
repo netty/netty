@@ -16,7 +16,6 @@
 package io.netty.handler.traffic;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.AttributeKey;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for channel
@@ -71,8 +70,6 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        readSuspended = new AttributeKey<Boolean>("readSuspended-channel");
-        ctx.attr(readSuspended).set(Boolean.TRUE);
         ctx.readable(false);
         if (trafficCounter == null) {
             // create a new counter now
@@ -86,7 +83,6 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         }
         super.channelActive(ctx);
 
-        ctx.attr(readSuspended).set(null);
         ctx.readable(true);
     }
 
