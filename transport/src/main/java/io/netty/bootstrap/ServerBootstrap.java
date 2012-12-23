@@ -33,9 +33,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetworkConstants;
 
-import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -48,7 +46,6 @@ import java.util.Map.Entry;
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
-    private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(NetworkConstants.LOCALHOST, 0);
 
     private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
         @Override
@@ -211,14 +208,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
         }
+        if (localAddress() == null) {
+            throw new IllegalStateException("localAddress not set");
+        }
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
         }
-        if (localAddress() == null) {
-            logger.warn("localAddress is not set. Using " + DEFAULT_LOCAL_ADDR + " instead.");
-            localAddress(DEFAULT_LOCAL_ADDR);
-        }
+
     }
 
     private class Acceptor
