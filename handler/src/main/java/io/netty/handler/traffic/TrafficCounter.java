@@ -155,7 +155,7 @@ public class TrafficCounter {
             if (trafficShapingHandler1 != null) {
                 trafficShapingHandler1.doAccounting(counter);
             }
-            timeout = 
+            counter.timeout = 
                 counter.timer.newTimeout(this, counter.checkInterval.get(), TimeUnit.MILLISECONDS);                        
         }
     }
