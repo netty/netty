@@ -27,7 +27,7 @@ import java.util.Queue;
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
  * The original content is replaced with the new content encoded by the
- * {@link EncoderEmbedder}, which is created by {@link #beginEncode(HttpMessage, String)}.
+ * {@link EmbeddedByteChannel}, which is created by {@link #beginEncode(HttpMessage, String)}.
  * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
  * is set to the target content encoding, as returned by
  * {@link #beginEncode(HttpMessage, String)}.
@@ -163,7 +163,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
      *        the value of the {@code "Accept-Encoding"} header
      *
      * @return the result of preparation, which is composed of the determined
-     *         target content encoding and a new {@link EncoderEmbedder} that
+     *         target content encoding and a new {@link EmbeddedByteChannel} that
      *         encodes the content into the target content encoding.
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).

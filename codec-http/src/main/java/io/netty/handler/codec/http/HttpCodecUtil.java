@@ -57,7 +57,7 @@ final class HttpCodecUtil {
     /**
      * Validates the specified header value
      *
-     * @param value The value being validated
+     * @param headerValue The value being validated
      */
     static void validateHeaderValue(String headerValue) {
         //Check to see if the value is null
