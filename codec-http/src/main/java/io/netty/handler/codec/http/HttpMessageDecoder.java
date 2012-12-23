@@ -76,8 +76,8 @@ import java.util.List;
  * </pre>
  * triggers {@link HttpRequestDecoder} to generate 4 objects:
  * <ol>
- * <li>An {@link HttpRequest} whose {@link HttpMessage#isChunked() chunked}
- *     property is {@code true},</li>
+ * <li>An {@link HttpRequest} whose {@link HttpMessage#getTransferEncoding()}
+ *     property is {@link HttpTransferEncoding#CHUNKED},</li>
  * <li>The first {@link HttpChunk} whose content is {@code 'abcdefghijklmnopqrstuvwxyz'},</li>
  * <li>The second {@link HttpChunk} whose content is {@code '1234567890abcdef'}, and</li>
  * <li>An {@link HttpChunkTrailer} which marks the end of the content.</li>

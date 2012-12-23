@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
 
 /**
- * {@link MessageToMessageCodec} that takes care of adding the right {@link SpdyHttpHeaders#Names#STREAM_ID} to the
+ * {@link MessageToMessageCodec} that takes care of adding the right {@link SpdyHttpHeaders.Names#STREAM_ID} to the
  * {@link HttpResponse} if one is not present. This makes it possible to just re-use plan handlers current used
  * for HTTP.
  */

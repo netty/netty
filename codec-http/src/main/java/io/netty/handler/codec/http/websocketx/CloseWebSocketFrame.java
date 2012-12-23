@@ -24,6 +24,8 @@ import io.netty.util.CharsetUtil;
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
 
+    private static final byte[] EMTPY_REASON = new byte[0];
+
     /**
      * Creates a new empty close frame.
      */
@@ -73,7 +75,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         setFinalFragment(finalFragment);
         setRsv(rsv);
 
-        byte[] reasonBytes = new byte[0];
+        byte[] reasonBytes = EMTPY_REASON;
         if (reasonText != null) {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
         }
