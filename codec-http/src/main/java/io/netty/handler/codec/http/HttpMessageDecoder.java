@@ -271,8 +271,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return readFixedLengthContent(buffer);
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            assert chunkSize <= Integer.MAX_VALUE;
-            int chunkSize = (int) this.chunkSize;
+            long chunkSize = this.chunkSize;
             int readLimit = actualReadableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
@@ -285,12 +284,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                 return null;
             }
 
-            int toRead = chunkSize;
+            int toRead = readLimit;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
-            if (toRead > readLimit) {
-                toRead = readLimit;
+            if (toRead > chunkSize) {
+                toRead = (int) chunkSize;
             }
             HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
             if (chunkSize > toRead) {
