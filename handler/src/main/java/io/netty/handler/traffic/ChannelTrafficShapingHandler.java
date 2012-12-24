@@ -44,46 +44,59 @@ import io.netty.channel.ChannelHandlerContext;
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
 
+    /**
+     * Create a new instance
+     *
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
     public ChannelTrafficShapingHandler(long writeLimit,
             long readLimit, long checkInterval) {
         super(writeLimit, readLimit, checkInterval);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     */
     public ChannelTrafficShapingHandler(long writeLimit,
             long readLimit) {
         super(writeLimit, readLimit);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
     public ChannelTrafficShapingHandler(long checkInterval) {
         super(checkInterval);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx)
-            throws Exception {
-        if (trafficCounter != null) {
-            trafficCounter.stop();
-        }
-
-        super.channelInactive(ctx);
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        TrafficCounter trafficCounter = new TrafficCounter(this, ctx.executor(), "ChannelTC" +
+                ctx.channel().id(), checkInterval);
+        setTrafficCounter(trafficCounter);
+        trafficCounter.start();
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ctx.readable(false);
-        if (trafficCounter == null) {
-            // create a new counter now
-            if (ctx.executor() != null) {
-                trafficCounter = new TrafficCounter(this, ctx.executor(), "ChannelTC" +
-                        ctx.channel().id(), checkInterval);
-            }
-        }
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        super.afterRemove(ctx);
         if (trafficCounter != null) {
-            trafficCounter.start();
+            trafficCounter.stop();
         }
-        super.channelActive(ctx);
-
-        ctx.readable(true);
     }
-
 }

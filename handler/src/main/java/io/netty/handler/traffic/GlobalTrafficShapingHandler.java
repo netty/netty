@@ -18,6 +18,8 @@ package io.netty.handler.traffic;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.EventExecutor;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
  * traffic shaping, that is to say a global limitation of the bandwidth, whatever
@@ -44,40 +46,90 @@ import io.netty.channel.EventExecutor;
  * to 5 or 10 minutes.<br>
  * </li>
  * </ul><br>
+ *
+ * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
+ * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
  */
 @Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * Create the global TrafficCounter
      */
-    void createGlobalTrafficCounter(EventExecutor executor) {
-        TrafficCounter tc;
-        if (executor != null) {
-            tc = new TrafficCounter(this, executor, "GlobalTC",
-                    checkInterval);
-            setTrafficCounter(tc);
-            tc.start();
+    void createGlobalTrafficCounter(ScheduledExecutorService executor) {
+        if (executor == null) {
+            throw new NullPointerException("executor");
         }
+        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC",
+                    checkInterval);
+        setTrafficCounter(tc);
+        tc.start();
     }
 
-    public GlobalTrafficShapingHandler(EventExecutor executor, long writeLimit,
+    /**
+     * Create a new instance
+     *
+     * @param executor
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit,
             long readLimit, long checkInterval) {
         super(writeLimit, readLimit, checkInterval);
         createGlobalTrafficCounter(executor);
     }
 
-    public GlobalTrafficShapingHandler(EventExecutor executor, long writeLimit,
+    /**
+     * Create a new instance
+     *
+     * @param executor
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     * @param writeLimit
+     *          0 or a limit in bytes/s
+     * @param readLimit
+     *          0 or a limit in bytes/s
+     */
+    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long writeLimit,
             long readLimit) {
         super(writeLimit, readLimit);
         createGlobalTrafficCounter(executor);
     }
 
-    public GlobalTrafficShapingHandler(EventExecutor executor, long checkInterval) {
+    /**
+     * Create a new instance
+     *
+     * @param executor
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     * @param checkInterval
+     *          The delay between two computations of performances for
+     *            channels or 0 if no stats are to be computed
+     */
+    public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
         super(checkInterval);
         createGlobalTrafficCounter(executor);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param executor
+     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}
+     */
     public GlobalTrafficShapingHandler(EventExecutor executor) {
         createGlobalTrafficCounter(executor);
+    }
+
+    /**
+     * Release all internal resources of this instance
+     */
+    public final void release() {
+        if (trafficCounter != null) {
+            trafficCounter.stop();
+        }
     }
 }

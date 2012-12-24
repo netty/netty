@@ -17,16 +17,15 @@ package io.netty.handler.traffic;
 
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AbstractTrafficShapingHandler allows to limit the global bandwidth
@@ -64,11 +63,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     protected TrafficCounter trafficCounter;
 
     /**
-     * used in releaseExternalResources() to cancel the timer
-     */
-    private volatile ScheduledFuture<?> scheduledFuture;
-
-    /**
      * Limit in B/s to apply to write
      */
     private long writeLimit;
@@ -83,12 +77,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
-    /**
-     * Boolean associated with the release of this TrafficShapingHandler.
-     * It will be true only once when the releaseExternalRessources is called
-     * to prevent waiting when shutdown.
-     */
-    final AtomicBoolean release = new AtomicBoolean(false);
+    private static final AttributeKey<Runnable> REOPEN_TASK = new AttributeKey<Runnable>("reopenTask");
+    private static final AttributeKey<Runnable> BUFFER_UPDATE_TASK = new AttributeKey<Runnable>("bufferUpdateTask");
 
     /**
      *
@@ -190,6 +180,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * @param counter
      *            the TrafficCounter that computes its performance
      */
+    @SuppressWarnings("unused")
     protected void doAccounting(TrafficCounter counter) {
         // NOOP by default
     }
@@ -197,7 +188,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     /**
      * Class to implement setReadable at fix time
      */
-    private class ReopenReadTimerTask implements Runnable {
+     private static final class ReopenReadTimerTask implements Runnable {
         final ChannelHandlerContext ctx;
         ReopenReadTimerTask(ChannelHandlerContext ctx) {
             this.ctx = ctx;
@@ -205,12 +196,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
         @Override
         public void run() {
-            if (release.get()) {
-                return;
-            }
-
-            if (ctx != null && ctx.channel() != null &&
-                    ctx.channel().isActive()) {
+            if (ctx.channel().isActive()) {
                 ctx.readable(true);
             }
         }
@@ -228,31 +214,31 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
             // Time is too short, so just lets continue
             return 0;
         }
-        return ((bytes * 1000 / limit - interval) / 10) * 10;
+        return (bytes * 1000 / limit - interval / 10) * 10;
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ctx.nextInboundByteBuffer();
     }
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+        // do nothing
     }
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ctx.nextOutboundByteBuffer();
     }
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+        // do nothing
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
         ByteBuf buf = ctx.inboundByteBuffer();
         long curtime = System.currentTimeMillis();
         long size = buf.readableBytes();
@@ -261,6 +247,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
             trafficCounter.bytesRecvFlowControl(size);
             if (readLimit == 0) {
                 // no action
+                ctx.fireInboundBufferUpdated();
+
                 return;
             }
 
@@ -270,60 +258,69 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                                       trafficCounter.getLastTime(), curtime);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
-                Channel channel = ctx.channel();
                 // try to limit the traffic
-                if (channel != null && channel.isActive()) {
-                    if (ctx.isReadable()) {
-                        ctx.readable(false);
-                        Runnable timerTask = new ReopenReadTimerTask(ctx);
-                        scheduledFuture = ctx.executor().schedule(timerTask, wait,
+                if (ctx.isReadable()) {
+                    ctx.readable(false);
+
+                    // Create a Runnable to reactive the read if needed. If one was create before it will just be
+                    // reused to limit object creation
+                    Attribute<Runnable> attr  = ctx.attr(REOPEN_TASK);
+                    Runnable reopenTask = attr.get();
+                    if (reopenTask == null) {
+                        reopenTask = new ReopenReadTimerTask(ctx);
+                        attr.set(reopenTask);
+                    }
+                    ctx.executor().schedule(reopenTask, wait,
                                                    TimeUnit.MILLISECONDS);
-                    } else {
-                        // should be waiting: but can occurs sometime so as
-                        // a FIX
-                        if (release.get()) {
-                            return;
-                        }
-                        Thread.sleep(wait);
-                    }
                 } else {
-                    // Not connected or no channel
-                    if (release.get()) {
-                        return;
+                    // Create a Runnable to update the next handler in the chain. If one was create before it will
+                    // just be reused to limit object creation
+                    Attribute<Runnable> attr  = ctx.attr(BUFFER_UPDATE_TASK);
+                    Runnable bufferUpdateTask = attr.get();
+                    if (bufferUpdateTask == null) {
+                        bufferUpdateTask = new Runnable() {
+                            @Override
+                            public void run() {
+                                ctx.fireInboundBufferUpdated();
+                            }
+                        };
+                        attr.set(bufferUpdateTask);
                     }
-                    Thread.sleep(wait);
+                    ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
+                    return;
                 }
             }
         }
+        ctx.fireInboundBufferUpdated();
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
         long curtime = System.currentTimeMillis();
         long size = ctx.outboundByteBuffer().readableBytes();
 
-        try {
-            if (trafficCounter != null) {
-                trafficCounter.bytesWriteFlowControl(size);
-                if (writeLimit == 0) {
-                    return;
-                }
-                // compute the number of ms to wait before continue with the
-                // channel
-                long wait = getTimeToWait(writeLimit,
-                        trafficCounter.getCurrentWrittenBytes(),
-                        trafficCounter.getLastTime(), curtime);
-                if (wait >= MINIMAL_WAIT) {
-                    // Global or Channel
-                    if (release.get()) {
-                        return;
-                    }
-                    Thread.sleep(wait);
-                }
+        if (trafficCounter != null) {
+            trafficCounter.bytesWriteFlowControl(size);
+            if (writeLimit == 0) {
+                ctx.flush(future);
+                return;
             }
-        } finally {
-            ctx.flush(future);
+            // compute the number of ms to wait before continue with the
+            // channel
+            long wait = getTimeToWait(writeLimit,
+                    trafficCounter.getCurrentWrittenBytes(),
+                    trafficCounter.getLastTime(), curtime);
+            if (wait >= MINIMAL_WAIT) {
+                ctx.executor().schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        ctx.flush(future);
+                    }
+                }, wait, TimeUnit.MILLISECONDS);
+                return;
+            }
         }
+        ctx.flush(future);
     }
 
     /**
@@ -339,10 +336,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     public void beforeRemove(ChannelHandlerContext ctx) {
         if (trafficCounter != null) {
             trafficCounter.stop();
-        }
-        release.set(true);
-        if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
         }
     }
 

@@ -15,8 +15,7 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.channel.EventExecutor;
-
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -105,7 +104,7 @@ public class TrafficCounter {
     /**
      * Executor that will run the monitor
      */
-    private final EventExecutor executor;
+    private final ScheduledExecutorService executor;
     /**
      * Monitor created once in start()
      */
@@ -228,7 +227,7 @@ public class TrafficCounter {
      * @param checkInterval the checkInterval in millisecond between two computations
      */
     public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler,
-            EventExecutor executor, String name, long checkInterval) {
+                          ScheduledExecutorService executor, String name, long checkInterval) {
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;
         this.name = name;
@@ -242,7 +241,7 @@ public class TrafficCounter {
      * @param newcheckInterval The new check interval (in milliseconds)
      */
     public void configure(long newcheckInterval) {
-        long newInterval = (newcheckInterval / 10) * 10;
+        long newInterval = newcheckInterval / 10 * 10;
         if (checkInterval.get() != newInterval) {
             checkInterval.set(newInterval);
             if (newInterval <= 0) {
