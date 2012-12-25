@@ -111,5 +111,5 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    public abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
 }

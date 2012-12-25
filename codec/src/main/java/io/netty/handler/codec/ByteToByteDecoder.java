@@ -111,7 +111,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      * @param out           the {@link ByteBuf} to which the decoded data will be written
      * @throws Exception    is thrown if an error accour
      */
-    public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
 
     /**
      * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
@@ -120,7 +120,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, ByteBuf)} but sub-classes may
      * override this for some special cleanup operation.
      */
-    public void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         decode(ctx, in, out);
     }
 }

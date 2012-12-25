@@ -77,7 +77,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
     }
 
     @Override
-    public String decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected String decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         return msg.toString(charset);
     }
 }

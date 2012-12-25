@@ -73,7 +73,7 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence, ByteBuf
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+    protected ByteBuf encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
         return Unpooled.copiedBuffer(msg, charset);
     }
 }

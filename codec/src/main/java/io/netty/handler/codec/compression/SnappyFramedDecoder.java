@@ -69,7 +69,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
     }
 
     @Override
-    public void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (!in.readable()) {
             return;
         }

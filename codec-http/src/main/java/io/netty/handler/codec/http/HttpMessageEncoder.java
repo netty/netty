@@ -54,7 +54,7 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
             HttpTransferEncoding te = m.getTransferEncoding();

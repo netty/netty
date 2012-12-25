@@ -54,7 +54,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void>
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         if (discardingTooLongFrame) {
             buffer.skipBytes(actualReadableBytes());
             checkpoint();
@@ -82,7 +82,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void>
     }
 
     @Override
-    public Object decodeLast(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return null;

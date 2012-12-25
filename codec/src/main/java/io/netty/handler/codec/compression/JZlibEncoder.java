@@ -265,7 +265,7 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx,
+    protected void encode(ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception {
         if (finished.get()) {
             return;

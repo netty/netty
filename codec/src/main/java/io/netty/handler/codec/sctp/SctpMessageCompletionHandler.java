@@ -29,7 +29,7 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
 
         final ByteBuf byteBuf = msg.getPayloadBuffer();
         final int protocolIdentifier = msg.getProtocolIdentifier();

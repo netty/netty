@@ -39,7 +39,7 @@ public abstract class RtspMessageEncoder extends HttpMessageEncoder {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg,
+    protected void encode(ChannelHandlerContext ctx, Object msg,
             ByteBuf out) throws Exception {
         // Ignore unrelated message types such as HttpChunk.
         if (!(msg instanceof HttpMessage)) {

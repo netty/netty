@@ -60,7 +60,7 @@ public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ByteBuf> {
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, byte[] msg) throws Exception {
+    protected ByteBuf encode(ChannelHandlerContext ctx, byte[] msg) throws Exception {
         if (msg.length == 0) {
             return null;
         }

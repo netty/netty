@@ -61,7 +61,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    public HttpMessage decode(ChannelHandlerContext ctx, HttpMessage msg)
+    protected HttpMessage decode(ChannelHandlerContext ctx, HttpMessage msg)
             throws Exception {
         String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {

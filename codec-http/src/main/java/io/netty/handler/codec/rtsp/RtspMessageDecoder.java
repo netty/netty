@@ -74,7 +74,7 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         Object o = super.decode(ctx, buffer);
         if (o != null && aggregator.writeInbound(o)) {
             return aggregator.readInbound();

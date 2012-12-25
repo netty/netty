@@ -53,5 +53,5 @@ public abstract class ChannelInboundByteHandlerAdapter
      * with the data at this point is up to the implementation.
      * Implementations may choose to read it or just let it in the buffer to read it later.
      */
-    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+    protected abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

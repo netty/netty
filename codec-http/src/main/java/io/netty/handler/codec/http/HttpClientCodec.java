@@ -82,7 +82,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
 
     private final class Encoder extends HttpRequestEncoder {
         @Override
-        public void encode(
+        protected void encode(
                 ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
@@ -109,7 +109,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
         }
 
         @Override
-        public Object decode(
+        protected Object decode(
                 ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
             if (done) {
                 return buffer.readBytes(actualReadableBytes());

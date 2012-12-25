@@ -44,7 +44,7 @@ public class ObjectEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         int startIdx = out.writerIndex();
 
         ByteBufOutputStream bout = new ByteBufOutputStream(out);

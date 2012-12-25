@@ -119,7 +119,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * special handling.
      */
     @SuppressWarnings("unused")
-    public boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    protected boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
         return true;
     }
 
@@ -130,7 +130,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * @param msg           the message to handle
      * @throws Exception    thrown when an error accour
      */
-    public abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
 
     /**
      * Is called after all messages of the {@link MessageBuf} was consumed.
@@ -141,7 +141,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * @throws Exception    thrown when an error accour
      */
     @SuppressWarnings("unused")
-    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 }

@@ -67,7 +67,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected ByteBuf decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
 
         final int eol = findEndOfLine(buffer);
         if (eol != -1) {

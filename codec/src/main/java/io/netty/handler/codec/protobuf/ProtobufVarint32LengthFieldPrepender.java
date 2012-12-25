@@ -48,7 +48,7 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<B
     }
 
     @Override
-    public void encode(
+    protected void encode(
             ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
         int bodyLen = msg.readableBytes();
         int headerLen = CodedOutputStream.computeRawVarint32Size(bodyLen);
