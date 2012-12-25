@@ -52,7 +52,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;

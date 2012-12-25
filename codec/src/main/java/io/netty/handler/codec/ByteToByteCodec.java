@@ -109,14 +109,14 @@ public abstract class ByteToByteCodec
     /**
      * @see {@link ByteToByteEncoder#encode(ChannelHandlerContext, ByteBuf, ByteBuf)}
      */
-    public abstract void encode(
+    protected abstract void encode(
             ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception;
 
     /**
      * @see {@link ByteToByteDecoder#decode(ChannelHandlerContext, ByteBuf, ByteBuf)}
      */
-    public abstract void decode(
+    protected abstract void decode(
             ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception;
 }

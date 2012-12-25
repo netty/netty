@@ -53,7 +53,7 @@ public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf, byte[]> {
     }
 
     @Override
-    public byte[] decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected byte[] decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         byte[] array;
         if (msg.hasArray()) {
             if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {

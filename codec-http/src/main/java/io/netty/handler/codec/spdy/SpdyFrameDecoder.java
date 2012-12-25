@@ -101,7 +101,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch(state) {
         case READ_COMMON_HEADER:
             state = readCommonHeader(buffer);

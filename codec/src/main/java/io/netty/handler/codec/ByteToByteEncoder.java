@@ -79,5 +79,5 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
      * @param out           the {@link ByteBuf} to which the decoded data will be written
      * @throws Exception    is thrown if an error accour
      */
-    public abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
 }

@@ -307,7 +307,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (discardingTooLongFrame) {
             long bytesToDiscard = this.bytesToDiscard;
             int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());

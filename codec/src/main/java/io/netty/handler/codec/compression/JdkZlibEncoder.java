@@ -177,7 +177,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (finished.get()) {
             out.writeBytes(in);
             in.discardReadBytes();

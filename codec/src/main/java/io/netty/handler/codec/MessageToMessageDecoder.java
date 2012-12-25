@@ -121,5 +121,5 @@ public abstract class MessageToMessageDecoder<I, O>
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    public abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;
 }

@@ -80,10 +80,10 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         encoder.freeOutboundBuffer(ctx, buf);
     }
 
-    public abstract void encode(
+    protected abstract void encode(
             ChannelHandlerContext ctx,
             OUTBOUND_IN msg, ByteBuf out) throws Exception;
 
-    public abstract INBOUND_OUT decode(
+    protected abstract INBOUND_OUT decode(
             ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

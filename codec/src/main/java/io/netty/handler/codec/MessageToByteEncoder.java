@@ -104,5 +104,5 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
      * @param out           the {@link ByteBuf} into which the encoded message will be written
      * @throws Exception    is thrown if an error accour
      */
-    public abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
 }

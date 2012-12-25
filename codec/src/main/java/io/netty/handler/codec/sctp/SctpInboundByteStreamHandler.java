@@ -44,7 +44,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         if (!isDecodable(msg)) {
             ctx.nextInboundMessageBuffer().add(msg);
             ctx.fireInboundBufferUpdated();

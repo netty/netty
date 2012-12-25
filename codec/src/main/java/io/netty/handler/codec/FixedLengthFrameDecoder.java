@@ -74,7 +74,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder<Object> {
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {

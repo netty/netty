@@ -142,6 +142,6 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         return ChannelHandlerUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
     }
 
-    public abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
-    public abstract INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+    protected abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
+    protected abstract INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
 }

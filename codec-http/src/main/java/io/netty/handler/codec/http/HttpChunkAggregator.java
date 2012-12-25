@@ -110,7 +110,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, Htt
     }
 
     @Override
-    public HttpMessage decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    protected HttpMessage decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {

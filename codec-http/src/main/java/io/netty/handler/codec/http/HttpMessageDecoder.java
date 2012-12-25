@@ -168,7 +168,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {

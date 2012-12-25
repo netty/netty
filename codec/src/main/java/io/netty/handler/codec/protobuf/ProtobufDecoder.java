@@ -84,7 +84,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLit
     }
 
     @Override
-    public MessageLite decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected MessageLite decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         if (msg.hasArray()) {
             final int offset = msg.readerIndex();
             if (extensionRegistry == null) {

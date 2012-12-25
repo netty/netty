@@ -209,8 +209,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
     private boolean isSubclass() {
         return getClass() != DelimiterBasedFrameDecoder.class;
     }
+
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         if (lineBasedDecoder != null) {
             return lineBasedDecoder.decode(ctx, buffer);
         }

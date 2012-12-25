@@ -48,7 +48,7 @@ public class CompatibleMarshallingEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         Marshaller marshaller = provider.getMarshaller(ctx);
         marshaller.start(new ChannelBufferByteOutput(out));
         marshaller.writeObject(msg);
