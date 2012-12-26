@@ -46,13 +46,13 @@ public final class MonitorName {
 
     /**
      * Create a new {@code MonitorName}, using the supplied
-     * {@code monitoredClass}'s {@code package name} as its {@link #getGroup()
+     * {@code monitoredClass}'s {@code package name} as its {@link #group()
      * group}, the {@code monitoredClass}'s {@code simple name} as its
-     * {@link #getType()} and the supplied {@code name} as its
-     * {@link #getName() name}.
+     * {@link #type()} and the supplied {@code name} as its
+     * {@link #name() name}.
      * @param monitoredClass The class to be monitored, i.e. a class that
      *            represents a resource whose statistics we are interested in
-     * @param name Our new {@code MonitorName}'s {@link #getName() name}
+     * @param name Our new {@code MonitorName}'s {@link #name() name}
      * @throws NullPointerException If either {@code monitoredClass} or
      *             {@code name} is {@code null}
      */
@@ -63,15 +63,15 @@ public final class MonitorName {
 
     /**
      * Create a new {@code MonitorName}, using the supplied
-     * {@code monitoredClass}'s {@code package name} as its {@link #getGroup()
+     * {@code monitoredClass}'s {@code package name} as its {@link #group()
      * group}, the {@code monitoredClass}'s {@code simple name} as its
-     * {@link #getType()}, the supplied {@code name} as its {@link #getName()
-     * name} and the supplied {@code instance} as its {@link #getInstance()
+     * {@link #type()}, the supplied {@code name} as its {@link #name()
+     * name} and the supplied {@code instance} as its {@link #instance()
      * instance}.
      * @param monitoredClass The class to be monitored, i.e. a class that
      *            represents a resource whose statistics we are interested in
-     * @param name Our new {@code MonitorName}'s {@link #getName() name}
-     * @param instance Our new {@code MonitorName}'s {@link #getInstance()
+     * @param name Our new {@code MonitorName}'s {@link #name() name}
+     * @param instance Our new {@code MonitorName}'s {@link #instance()
      *            instance}
      * @throws NullPointerException If either {@code monitoredClass} or
      *             {@code name} is {@code null}
@@ -83,9 +83,9 @@ public final class MonitorName {
     /**
      * Create a new {@code MonitorName} out of the supplied {@code group},
      * {@code type} and {@code name}.
-     * @param group Our new {@code MonitorName}'s {@link #getGroup() group}
-     * @param type Our new {@code MonitorName}'s {@link #getType() type}
-     * @param name Our new {@code MonitorName}'s {@link #getName() name}
+     * @param group Our new {@code MonitorName}'s {@link #group() group}
+     * @param type Our new {@code MonitorName}'s {@link #type() type}
+     * @param name Our new {@code MonitorName}'s {@link #name() name}
      * @throws NullPointerException If one of {@code group}, {@code type} and
      *             {@code name} is {@code null}
      */
@@ -96,10 +96,10 @@ public final class MonitorName {
     /**
      * Create a new {@code MonitorName} out of the supplied {@code group},
      * {@code type}, {@code name} and {@code instance}
-     * @param group Our new {@code MonitorName}'s {@link #getGroup() group}
-     * @param type Our new {@code MonitorName}'s {@link #getType() type}
-     * @param name Our new {@code MonitorName}'s {@link #getName() name}
-     * @param instance Our new {@code MonitorName}'s {@link #getInstance()
+     * @param group Our new {@code MonitorName}'s {@link #group() group}
+     * @param type Our new {@code MonitorName}'s {@link #type() type}
+     * @param name Our new {@code MonitorName}'s {@link #name() name}
+     * @param instance Our new {@code MonitorName}'s {@link #instance()
      *            instance}
      * @throws NullPointerException If one of {@code group}, {@code type} and
      *             {@code name} is {@code null}
@@ -122,13 +122,13 @@ public final class MonitorName {
 
     /**
      * Returns a copy of this {@code MonitorName} with its
-     * {@link #getInstance() instance} field replaced by the supplied
+     * {@link #instance() instance} field replaced by the supplied
      * {@code instance}. Serves to support a poor man's templating mechanism for
      * {@code MonitorNames}.
      * @param instance The instance to be used in the {@code MonitorName}
      *            returned by this method
      * @return A copy of this {@code MonitorName} with its
-     *         {@link #getInstance() instance} field replaced by the supplied
+     *         {@link #instance() instance} field replaced by the supplied
      *         {@code instance}
      * @throws NullPointerException If {@code instance} is {@code null}
      */
@@ -148,7 +148,7 @@ public final class MonitorName {
      * @return The group, an arbitrary name for a set of logically related
      *         {@code Monitors}
      */
-    public String getGroup() {
+    public String group() {
         return group;
     }
 
@@ -159,7 +159,7 @@ public final class MonitorName {
      * @return The type, an arbitrary string identifying a {@code Monitor}'s
      *         {@code type}, commonly denoting the resource to be monitored
      */
-    public String getType() {
+    public String type() {
         return type;
     }
 
@@ -169,7 +169,7 @@ public final class MonitorName {
      * @return The name, an arbitrary string identifying what is actually
      *         monitored
      */
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -182,7 +182,7 @@ public final class MonitorName {
      *         exact resource instance to be monitored, in case we aren't
      *         dealing with a singleton resource
      */
-    public String getInstance() {
+    public String instance() {
         return instance;
     }
 

@@ -26,8 +26,8 @@ import io.netty.monitor.MonitorName;
 final class Utils {
 
     static MetricName toMetricName(final MonitorName monitorName) {
-        return new MetricName(monitorName.getGroup(), monitorName.getType(), monitorName.getName(),
-                monitorName.getInstance());
+        return new MetricName(monitorName.group(), monitorName.type(), monitorName.name(),
+                monitorName.instance());
     }
 
     private Utils() {
