@@ -24,12 +24,12 @@ public interface Timeout {
     /**
      * Returns the {@link Timer} that created this handle.
      */
-    Timer getTimer();
+    Timer timer();
 
     /**
      * Returns the {@link TimerTask} which is associated with this handle.
      */
-    TimerTask getTask();
+    TimerTask task();
 
     /**
      * Returns {@code true} if and only if the {@link TimerTask} associated

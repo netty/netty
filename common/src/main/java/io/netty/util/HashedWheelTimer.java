@@ -589,12 +589,12 @@ public class HashedWheelTimer implements Timer {
         }
 
         @Override
-        public Timer getTimer() {
+        public Timer timer() {
             return HashedWheelTimer.this;
         }
 
         @Override
-        public TimerTask getTask() {
+        public TimerTask task() {
             return task;
         }
 
