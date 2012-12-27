@@ -400,7 +400,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 unsafe.finishConnect();
             }
         } catch (CancelledKeyException e) {
-            if (readyOps != 1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
+            if (readyOps != -1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
                 unregisterWritableTasks(ch);
             }
             unsafe.close(unsafe.voidFuture());
