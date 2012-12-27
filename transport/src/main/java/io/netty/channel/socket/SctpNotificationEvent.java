@@ -16,12 +16,28 @@
 package io.netty.channel.socket;
 
 import com.sun.nio.sctp.Notification;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 
+/**
+ * Will be passed to {@link ChannelPipeline#fireUserEventTriggered(Object)} method and so forwarded to the added
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}  method.
+ */
 public final class SctpNotificationEvent {
     private final Notification notification;
     private final Object attachment;
 
+    /**
+     * Create a new instance
+     *
+     * @param notification  the {@link Notification} which triggered this event
+     * @param attachment    the attachment or {@code null} if non is attached.
+     */
     public SctpNotificationEvent(Notification notification, Object attachment) {
+        if (notification == null) {
+            throw new NullPointerException("notification");
+        }
         this.notification = notification;
         this.attachment = attachment;
     }
