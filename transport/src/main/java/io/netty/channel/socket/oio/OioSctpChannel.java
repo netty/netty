@@ -163,7 +163,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
-            for (SelectionKey _ : reableKeys) {
+            for (SelectionKey ignored : reableKeys) {
                 ByteBuffer data = ByteBuffer.allocate(config().getReceiveBufferSize());
                 MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
                 if (messageInfo == null) {
@@ -194,7 +194,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         final int selectedKeys = writeSelector.select(SO_TIMEOUT);
         if (selectedKeys > 0) {
             final Set<SelectionKey> writableKeys = writeSelector.selectedKeys();
-            for (SelectionKey _ : writableKeys) {
+            for (SelectionKey ignored : writableKeys) {
                 SctpMessage packet = (SctpMessage) buf.poll();
                 if (packet == null) {
                     return;
@@ -339,7 +339,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         ch.close();
     }
 
-    private void closeSelector(String selectorName, Selector selector) {
+    private static void closeSelector(String selectorName, Selector selector) {
         try {
             selector.close();
         } catch (IOException e) {
