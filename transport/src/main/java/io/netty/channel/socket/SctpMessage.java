@@ -64,21 +64,21 @@ public final class SctpMessage {
     /**
      * Return the stream-identifier
      */
-    public int getStreamIdentifier() {
+    public int streamIdentifier() {
         return streamIdentifier;
     }
 
     /**
      * Return the protocol-identifier
      */
-    public int getProtocolIdentifier() {
+    public int protocolIdentifier() {
         return protocolIdentifier;
     }
 
     /**
      * Return a view of the readable bytes of the payload.
      */
-    public ByteBuf getPayloadBuffer() {
+    public ByteBuf payloadBuffer() {
         if (payloadBuffer.readable()) {
             return payloadBuffer.slice();
         } else {
@@ -90,7 +90,7 @@ public final class SctpMessage {
      * Return the {@link MessageInfo} for inbound messages or {@code null} for
      * outbound messages.
      */
-    public MessageInfo getMessageInfo() {
+    public MessageInfo messageInfo() {
         return msgInfo;
     }
 
@@ -145,6 +145,6 @@ public final class SctpMessage {
     public String toString() {
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                ", payloadBuffer=" + ByteBufUtil.hexDump(getPayloadBuffer()) + '}';
+                ", payloadBuffer=" + ByteBufUtil.hexDump(payloadBuffer()) + '}';
     }
 }

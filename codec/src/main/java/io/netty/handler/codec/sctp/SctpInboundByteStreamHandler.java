@@ -40,7 +40,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     protected boolean isDecodable(SctpMessage msg) {
-        return msg.getProtocolIdentifier() == protocolIdentifier && msg.getStreamIdentifier() == streamIdentifier;
+        return msg.protocolIdentifier() == protocolIdentifier && msg.streamIdentifier() == streamIdentifier;
     }
 
     @Override
@@ -56,7 +56,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
 
-        ctx.nextInboundByteBuffer().writeBytes(msg.getPayloadBuffer());
+        ctx.nextInboundByteBuffer().writeBytes(msg.payloadBuffer());
         ctx.fireInboundBufferUpdated();
     }
 }
