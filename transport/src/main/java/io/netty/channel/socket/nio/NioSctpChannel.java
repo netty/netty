@@ -260,7 +260,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         SctpMessage packet = (SctpMessage) buf.peek();
-        ByteBuf data = packet.getPayloadBuffer();
+        ByteBuf data = packet.payloadBuffer();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {
@@ -271,9 +271,9 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             nioData.flip();
         }
 
-        final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.getStreamIdentifier());
-        mi.payloadProtocolID(packet.getProtocolIdentifier());
-        mi.streamNumber(packet.getStreamIdentifier());
+        final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
+        mi.payloadProtocolID(packet.protocolIdentifier());
+        mi.streamNumber(packet.streamIdentifier());
 
         final int writtenBytes = javaChannel().send(nioData, mi);
 
