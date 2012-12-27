@@ -43,21 +43,41 @@ public final class SctpMessage {
         msgInfo = null;
     }
 
+    /**
+     * Essential data that is being carried within SCTP Data Chunk
+     * @param msgInfo       the {@link MessageInfo}
+     * @param payloadBuffer channel buffer
+     */
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
+        if (msgInfo == null) {
+            throw new NullPointerException("msgInfo");
+        }
+        if (payloadBuffer == null) {
+            throw new NullPointerException("payloadBuffer");
+        }
         this.msgInfo = msgInfo;
         streamIdentifier = msgInfo.streamNumber();
         protocolIdentifier = msgInfo.payloadProtocolID();
         this.payloadBuffer = payloadBuffer;
     }
 
+    /**
+     * Return the stream-identifier
+     */
     public int getStreamIdentifier() {
         return streamIdentifier;
     }
 
+    /**
+     * Return the protocol-identifier
+     */
     public int getProtocolIdentifier() {
         return protocolIdentifier;
     }
 
+    /**
+     * Return a view of the readable bytes of the payload.
+     */
     public ByteBuf getPayloadBuffer() {
         if (payloadBuffer.readable()) {
             return payloadBuffer.slice();
@@ -66,10 +86,17 @@ public final class SctpMessage {
         }
     }
 
+    /**
+     * Return the {@link MessageInfo} for inbound messages or {@code null} for
+     * outbound messages.
+     */
     public MessageInfo getMessageInfo() {
         return msgInfo;
     }
 
+    /**
+     * Return {@code true} if this message is complete.
+     */
     public boolean isComplete() {
         if (msgInfo != null) {
             return msgInfo.isComplete();
