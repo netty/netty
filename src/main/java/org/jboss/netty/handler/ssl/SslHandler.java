@@ -1244,20 +1244,19 @@ public class SslHandler extends FrameDecoder
                                 "Unknown handshake status: " + handshakeStatus);
                     }
                 }
-
-                if (needsWrap) {
-                    // wrap() acquires pendingUnencryptedWrites first and then
-                    // handshakeLock.  If handshakeLock is already hold by the
-                    // current thread, calling wrap() will lead to a dead lock
-                    // i.e. pendingUnencryptedWrites -> handshakeLock vs.
-                    //      handshakeLock -> pendingUnencryptedLock -> handshakeLock
-                    //
-                    // There is also a same issue between pendingEncryptedWrites
-                    // and pendingUnencryptedWrites.
-                    if (!Thread.holdsLock(handshakeLock) &&
+            }
+            if (needsWrap) {
+                // wrap() acquires pendingUnencryptedWrites first and then
+                // handshakeLock.  If handshakeLock is already hold by the
+                // current thread, calling wrap() will lead to a dead lock
+                // i.e. pendingUnencryptedWrites -> handshakeLock vs.
+                //      handshakeLock -> pendingUnencryptedLock -> handshakeLock
+                //
+                // There is also a same issue between pendingEncryptedWrites
+                // and pendingUnencryptedWrites.
+                if (!Thread.holdsLock(handshakeLock) &&
                         !pendingEncryptedWritesLock.isHeldByCurrentThread()) {
-                        wrap(ctx, channel);
-                    }
+                    wrap(ctx, channel);
                 }
             }
             outAppBuf.flip();
