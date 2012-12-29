@@ -383,6 +383,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private static void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final NioUnsafe unsafe = ch.unsafe();
+        if (!k.isValid()) {
+            // close the channel if the key is not valid anymore
+            unsafe.close(unsafe.voidFuture());
+            return;
+        }
+
         int readyOps = -1;
         try {
             readyOps = k.readyOps();
