@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOperationHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 
 import java.util.concurrent.ScheduledFuture;
@@ -104,26 +105,26 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
-        scheduleTimeout(ctx, future);
+    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+        scheduleTimeout(ctx, promise);
 
-        super.flush(ctx, future);
+        super.flush(ctx, promise);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
-        scheduleTimeout(ctx, future);
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        scheduleTimeout(ctx, promise);
 
-        super.sendFile(ctx, region, future);
+        super.sendFile(ctx, region, promise);
     }
 
-    private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelFuture future) {
+    private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
         if (timeoutMillis > 0) {
             // Schedule a timeout.
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (future.setFailure(WriteTimeoutException.INSTANCE)) {
+                    if (future.tryFailure(WriteTimeoutException.INSTANCE)) {
                         // If succeeded to mark as failure, notify the pipeline, too.
                         try {
                             writeTimedOut(ctx);

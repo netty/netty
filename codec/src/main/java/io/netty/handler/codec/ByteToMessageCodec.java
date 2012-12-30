@@ -18,11 +18,11 @@ package io.netty.handler.codec;
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPromise;
 
 public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         extends ChannelHandlerAdapter
@@ -66,8 +66,8 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
 
     @Override
     public void flush(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        encoder.flush(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.flush(ctx, promise);
     }
 
     @Override

@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -155,11 +156,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     @Override
     public ChannelFuture close() {
-        return close(ctx().newFuture());
+        return close(ctx().newPromise());
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
+    public ChannelFuture close(ChannelPromise future) {
         return finishEncode(ctx(), future);
     }
 
@@ -209,12 +210,12 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newFuture());
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(future);
+                ctx.close(promise);
             }
         });
 
@@ -223,16 +224,16 @@ public class JdkZlibEncoder extends ZlibEncoder {
             ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(future);
+                    ctx.close(promise);
                 }
             }, 10, TimeUnit.SECONDS); // FIXME: Magic number
         }
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
         if (!finished.compareAndSet(false, true)) {
-            future.setSuccess();
-            return future;
+            promise.setSuccess();
+            return promise;
         }
 
         ByteBuf footer = Unpooled.buffer();
@@ -258,9 +259,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         ctx.nextOutboundByteBuffer().writeBytes(footer);
-        ctx.flush(future);
+        ctx.flush(promise);
 
-        return future;
+        return promise;
     }
 
     @Override

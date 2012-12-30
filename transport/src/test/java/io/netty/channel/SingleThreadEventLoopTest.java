@@ -277,7 +277,7 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public ChannelFuture register(Channel channel, ChannelFuture future) {
+        public ChannelFuture register(Channel channel, ChannelPromise future) {
             // Untested
             return future;
         }

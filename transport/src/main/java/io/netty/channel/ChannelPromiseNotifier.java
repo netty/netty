@@ -18,45 +18,34 @@ package io.netty.channel;
 /**
  * ChannelFutureListener implementation which takes other {@link ChannelFuture}(s) and notifies them on completion.
  */
-public final class ChannelFutureNotifier implements ChannelFutureListener {
+public final class ChannelPromiseNotifier implements ChannelFutureListener {
 
-    private final ChannelFuture[] futures;
+    private final ChannelPromise[] promises;
 
-    public ChannelFutureNotifier(ChannelFuture... futures) {
-        if (futures == null) {
-            throw new NullPointerException("futures");
+    public ChannelPromiseNotifier(ChannelPromise... promises) {
+        if (promises == null) {
+            throw new NullPointerException("promises");
         }
-        this.futures = futures.clone();
+        for (ChannelPromise promise: promises) {
+            if (promise == null) {
+                throw new IllegalArgumentException("promises contains null ChannelPromise");
+            }
+        }
+        this.promises = promises.clone();
     }
 
     @Override
     public void operationComplete(ChannelFuture cf) throws Exception {
         if (cf.isSuccess()) {
-            for (ChannelFuture f: futures) {
-                if (f == null) {
-                    break;
-                }
-                f.setSuccess();
-            }
-            return;
-        }
-
-        if (cf.isCancelled()) {
-            for (ChannelFuture f: futures) {
-                if (f == null) {
-                    break;
-                }
-                f.cancel();
+            for (ChannelPromise p: promises) {
+                p.setSuccess();
             }
             return;
         }
 
         Throwable cause = cf.cause();
-        for (ChannelFuture f: futures) {
-            if (f == null) {
-                break;
-            }
-            f.setFailure(cause);
+        for (ChannelPromise p: promises) {
+            p.setFailure(cause);
         }
     }
 }

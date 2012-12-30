@@ -18,6 +18,7 @@ package io.netty.channel.socket.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.SingleThreadEventLoop;
 
 
@@ -37,8 +38,8 @@ class OioEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    public ChannelFuture register(Channel channel, ChannelFuture future) {
-        return super.register(channel, future).addListener(new ChannelFutureListener() {
+    public ChannelFuture register(Channel channel, ChannelPromise promise) {
+        return super.register(channel, promise).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {

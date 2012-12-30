@@ -27,6 +27,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DefaultSctpChannelConfig;
 import io.netty.channel.socket.SctpChannelConfig;
 import io.netty.channel.socket.SctpMessage;
@@ -306,51 +307,51 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
-        return bindAddress(localAddress, newFuture());
+        return bindAddress(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    bindAddress(localAddress, future);
+                    bindAddress(localAddress, promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 
     @Override
     public ChannelFuture unbindAddress(InetAddress localAddress) {
-        return unbindAddress(localAddress, newFuture());
+        return unbindAddress(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    unbindAddress(localAddress, future);
+                    unbindAddress(localAddress, promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 }

@@ -18,8 +18,9 @@ package io.netty.channel.socket.aio;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFlushFutureNotifier;
+import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
@@ -136,38 +137,38 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelFuture future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
                 javaChannel().shutdownOutput();
                 outputShutdown = true;
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput(future);
+                    shutdownOutput(promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, final ChannelFuture future) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, final ChannelPromise promise) {
         if (localAddress != null) {
             try {
                 javaChannel().bind(localAddress);
             } catch (IOException e) {
-                future.setFailure(e);
+                promise.setFailure(e);
                 return;
             }
         }
@@ -324,8 +325,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
-        region.transferTo(new WritableByteChannelAdapter(region, future), 0);
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
+        region.transferTo(new WritableByteChannelAdapter(region, promise), 0);
     }
 
     private void beginRead() {
@@ -401,7 +402,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             // Notify flush futures only when the handler is called outside of unsafe().flushNow()
             // because flushNow() will do that for us.
-            ChannelFlushFutureNotifier notifier = channel.flushFutureNotifier;
+            ChannelFlushPromiseNotifier notifier = channel.flushFutureNotifier;
             notifier.increaseWriteCounter(writtenBytes);
             notifier.notifyFlushFutures();
 
@@ -573,12 +574,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     private final class WritableByteChannelAdapter implements WritableByteChannel {
         private final FileRegion region;
-        private final ChannelFuture future;
+        private final ChannelPromise promise;
         private long written;
 
-        public WritableByteChannelAdapter(FileRegion region, ChannelFuture future) {
+        public WritableByteChannelAdapter(FileRegion region, ChannelPromise promise) {
             this.region = region;
-            this.future = future;
+            this.promise = promise;
         }
 
         @Override
@@ -594,14 +595,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         }
                         if (result == -1) {
                             checkEOF(region, written);
-                            future.setSuccess();
+                            promise.setSuccess();
                             return;
                         }
                         written += result;
 
                         if (written >= region.count()) {
                             region.close();
-                            future.setSuccess();
+                            promise.setSuccess();
                             return;
                         }
                         if (src.hasRemaining()) {
@@ -611,14 +612,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         }
                     } catch (Throwable cause) {
                         region.close();
-                        future.setFailure(cause);
+                        promise.setFailure(cause);
                     }
                 }
 
                 @Override
                 public void failed(Throwable exc, Object attachment) {
                     region.close();
-                    future.setFailure(exc);
+                    promise.setFailure(exc);
                 }
             });
             return 0;
