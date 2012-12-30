@@ -200,28 +200,4 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     public ServerSocketChannelConfig config() {
         return config;
     }
-
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new AioServerSocketUnsafe();
-    }
-
-    private final class AioServerSocketUnsafe extends AbstractAioUnsafe {
-
-        @Override
-        public void suspendRead() {
-            readSuspended.set(true);
-        }
-
-        @Override
-        public void resumeRead() {
-            if (readSuspended.compareAndSet(true, false)) {
-                if (eventLoop().inEventLoop()) {
-                    doAccept();
-                } else {
-                    eventLoop().execute(acceptTask);
-                }
-            }
-        }
-    }
 }

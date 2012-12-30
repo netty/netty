@@ -20,11 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
@@ -527,48 +527,20 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
-            ((AbstractAioUnsafe) channel.unsafe()).connectSuccess();
+            ((DefaultAioUnsafe) channel.unsafe()).connectSuccess();
             channel.pipeline().fireChannelActive();
             channel.beginRead();
         }
 
         @Override
         protected void failed0(Throwable exc, AioSocketChannel channel) {
-            ((AbstractAioUnsafe) channel.unsafe()).connectFailed(exc);
+            ((DefaultAioUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }
 
     @Override
     public AioSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new AioSocketChannelAsyncUnsafe();
-    }
-
-    private final class AioSocketChannelAsyncUnsafe extends AbstractAioUnsafe {
-
-        @Override
-        public void suspendRead() {
-            readSuspended.set(true);
-        }
-
-        @Override
-        public void resumeRead() {
-            if (readSuspended.compareAndSet(true, false)) {
-                if (inputShutdown) {
-                    return;
-                }
-
-                if (eventLoop().inEventLoop()) {
-                    beginRead();
-                } else {
-                    eventLoop().execute(readTask);
-                }
-            }
-        }
     }
 
     private final class WritableByteChannelAdapter implements WritableByteChannel {

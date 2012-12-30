@@ -88,16 +88,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
                 });
             }
         }
-
-        @Override
-        public void suspendRead() {
-            readSuspended = true;
-        }
-
-        @Override
-        public void resumeRead() {
-            readSuspended = false;
-        }
     }
 
     @Override

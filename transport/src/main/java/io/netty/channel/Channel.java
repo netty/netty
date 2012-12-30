@@ -264,18 +264,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void flushNow();
 
         /**
-         * Suspend reads from the underlying transport, which basicly has the effect of no new data that will
-         * get dispatched.
-         */
-        void suspendRead();
-
-        /**
-         * Resume reads from the underlying transport. If {@link #suspendRead()} was not called before, this
-         * has no effect.
-         */
-        void resumeRead();
-
-        /**
          * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelFuture} once it completes
          * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
          * automaticly closed via {@link FileRegion#close()}.

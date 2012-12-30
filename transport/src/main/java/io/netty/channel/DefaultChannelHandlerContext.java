@@ -31,7 +31,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
@@ -55,7 +54,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final Set<ChannelHandlerType> type;
     private final ChannelHandler handler;
     final int flags;
-    final AtomicBoolean readable = new AtomicBoolean(true);
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -1275,16 +1273,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
         }
-    }
-
-    @Override
-    public boolean isReadable() {
-        return readable.get();
-    }
-
-    @Override
-    public void readable(boolean readable) {
-        pipeline.readable(this, readable);
     }
 
     @Override

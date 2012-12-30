@@ -249,30 +249,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectFuture = null;
             }
         }
-
-        @Override
-        public void suspendRead() {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                suspendReadTask.run();
-            } else {
-                loop.execute(suspendReadTask);
-            }
-        }
-
-        @Override
-        public void resumeRead() {
-            if (inputShutdown) {
-                return;
-            }
-
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                resumeReadTask.run();
-            } else {
-                loop.execute(resumeReadTask);
-            }
-        }
     }
 
     @Override
