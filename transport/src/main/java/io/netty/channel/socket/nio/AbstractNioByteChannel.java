@@ -32,7 +32,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
-abstract class AbstractNioByteChannel extends AbstractNioChannel {
+public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     /**
      * Create a new instance
@@ -163,7 +163,7 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
             this.future = future;
         }
 
-        public void transfer() {
+        void transfer() {
             try {
                 for (;;) {
                     long localWrittenBytes = region.transferTo(wch, writtenBytes);
