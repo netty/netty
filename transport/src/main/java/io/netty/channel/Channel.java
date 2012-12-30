@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
@@ -155,7 +156,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      *         {@code null} if this channel is not connected.
      *         If this channel is not connected but it can receive messages
      *         from arbitrary remote addresses (e.g. {@link DatagramChannel},
-     *         use {@link io.netty.channel.socket.DatagramPacket#remoteAddress()} to determine
+     *         use {@link DatagramPacket#remoteAddress()} to determine
      *         the origination of the received message as this method will
      *         return {@code null}.
      */
@@ -244,6 +245,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * {@link ChannelFuture} once the operation was complete.
          */
         void deregister(ChannelFuture future);
+
+        /**
+         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
+         * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
+         */
+        void beginRead();
 
         /**
          * Flush out all data that was buffered in the buffer of the {@link #directOutboundContext()} and was not

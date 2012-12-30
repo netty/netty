@@ -1223,16 +1223,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     void read(final DefaultChannelHandlerContext ctx) {
-        EventExecutor executor = ctx.executor();
-        if (executor.inEventLoop()) {
-            read0(ctx);
+        if (ctx == null) {
+            // Reached at the head of the pipeline.
+            channel.unsafe().beginRead();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    read0(ctx);
-                }
-            });
+            EventExecutor executor = ctx.executor();
+            if (executor.inEventLoop()) {
+                read0(ctx);
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        read0(ctx);
+                    }
+                });
+            }
         }
     }
 

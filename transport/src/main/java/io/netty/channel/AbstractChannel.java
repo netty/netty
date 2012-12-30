@@ -289,6 +289,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public void read() {
+        pipeline.read();
+    }
+
+    @Override
     public ChannelFuture flush(ChannelFuture future) {
         return pipeline.flush(future);
     }
@@ -438,6 +443,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 });
             }
         }
+
+        private final Runnable beginReadTask = new Runnable() {
+            @Override
+            public void run() {
+                beginRead();
+            }
+        };
 
         private final Runnable flushLaterTask = new Runnable() {
             @Override
@@ -726,6 +738,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
+        public void beginRead() {
+            if (eventLoop().inEventLoop()) {
+                try {
+                    doBeginRead();
+                } catch (Exception e) {
+                    pipeline().fireExceptionCaught(e);
+                    close(unsafe().voidFuture());
+                }
+            } else {
+                eventLoop().execute(beginReadTask);
+            }
+        }
+
+        @Override
         public void flush(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
 
@@ -930,6 +956,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected void doDeregister() throws Exception {
         // NOOP
     }
+
+    /**
+     * Schedule a read operation.
+     */
+    protected abstract void doBeginRead() throws Exception;
 
     /**
      * Flush the content of the given {@link ByteBuf} to the remote peer.
