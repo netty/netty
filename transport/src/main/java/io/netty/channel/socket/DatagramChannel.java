@@ -17,6 +17,7 @@ package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -50,7 +51,7 @@ public interface DatagramChannel extends Channel {
      *
      * The given {@link ChannelFuture} will be notified and also returned.
      */
-    ChannelFuture joinGroup(InetAddress multicastAddress, ChannelFuture future);
+    ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future);
 
     /**
      * Joins the specified multicast group at the specified interface and notifies the {@link ChannelFuture}
@@ -65,7 +66,7 @@ public interface DatagramChannel extends Channel {
      * The given {@link ChannelFuture} will be notified and also returned.
      */
     ChannelFuture joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelPromise future);
 
     /**
      * Joins the specified multicast group at the specified interface and notifies the {@link ChannelFuture}
@@ -80,7 +81,7 @@ public interface DatagramChannel extends Channel {
      * The given {@link ChannelFuture} will be notified and also returned.
      */
     ChannelFuture joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelFuture future);
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelPromise future);
 
     /**
      * Leaves a multicast group and notifies the {@link ChannelFuture} once the operation completes.
@@ -92,7 +93,7 @@ public interface DatagramChannel extends Channel {
      *
      * The given {@link ChannelFuture} will be notified and also returned.
      */
-    ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelFuture future);
+    ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future);
 
     /**
      * Leaves a multicast group on a specified local interface and notifies the {@link ChannelFuture} once the
@@ -107,7 +108,7 @@ public interface DatagramChannel extends Channel {
      * The given {@link ChannelFuture} will be notified and also returned.
      */
     ChannelFuture leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelFuture future);
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelPromise future);
 
     /**
      * Leave the specified multicast group at the specified interface using the specified source and notifies
@@ -125,7 +126,7 @@ public interface DatagramChannel extends Channel {
      */
     ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            ChannelFuture future);
+            ChannelPromise future);
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface and notifies
@@ -145,7 +146,7 @@ public interface DatagramChannel extends Channel {
      */
     ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock, ChannelFuture future);
+            InetAddress sourceToBlock, ChannelPromise future);
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link ChannelFuture} once
@@ -162,5 +163,5 @@ public interface DatagramChannel extends Channel {
      * The given {@link ChannelFuture} will be notified and also returned.
      */
     ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelFuture future);
+            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future);
 }

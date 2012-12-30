@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.Bootstrap;
@@ -162,7 +161,7 @@ import io.netty.bootstrap.Bootstrap;
  * @apiviz.landmark
  * @apiviz.owns io.netty.channel.ChannelFutureListener - - notifies
  */
-public interface ChannelFuture extends Future<Void> {
+public interface ChannelFuture {
 
     /**
      * Returns a channel where the I/O operation associated with this
@@ -172,18 +171,9 @@ public interface ChannelFuture extends Future<Void> {
 
     /**
      * Returns {@code true} if and only if this future is
-     * complete, regardless of whether the operation was successful, failed,
-     * or cancelled.
+     * complete, regardless of whether the operation was successful or failed.
      */
-    @Override
     boolean isDone();
-
-    /**
-     * Returns {@code true} if and only if this future was
-     * cancelled by a {@link #cancel()} method.
-     */
-    @Override
-    boolean isCancelled();
 
     /**
      * Returns {@code true} if and only if the I/O operation was completed
@@ -200,46 +190,6 @@ public interface ChannelFuture extends Future<Void> {
      *         completed yet.
      */
     Throwable cause();
-
-    /**
-     * Cancels the I/O operation associated with this future
-     * and notifies all listeners if canceled successfully.
-     *
-     * @return {@code true} if and only if the operation has been canceled.
-     *         {@code false} if the operation can't be canceled or is already
-     *         completed.
-     */
-    boolean cancel();
-
-    /**
-     * Marks this future as a success and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a success. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
-    boolean setSuccess();
-
-    /**
-     * Marks this future as a failure and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a failure. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
-    boolean setFailure(Throwable cause);
-
-    /**
-     * Notifies the progress of the operation to the listeners that implements
-     * {@link ChannelFutureProgressListener}. Please note that this method will
-     * not do anything and return {@code false} if this future is complete
-     * already.
-     *
-     * @return {@code true} if and only if notification was made.
-     */
-    boolean setProgress(long amount, long current, long total);
 
     /**
      * Adds the specified listener to this future.  The

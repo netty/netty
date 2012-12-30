@@ -19,6 +19,7 @@ package io.netty.channel.socket.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -60,7 +61,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
      *                          {@link ChannelException} on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelFuture)} method.
+     *                          {@link #register(Channel, ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
      */
     public OioEventLoopGroup(int maxChannels) {
@@ -73,7 +74,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
      *                          {@link ChannelException} on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelFuture)} method.
+     *                          {@link #register(Channel, ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
      * @param threadFactory     the {@link ThreadFactory} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
@@ -199,14 +200,16 @@ public class OioEventLoopGroup implements EventLoopGroup {
     }
 
     @Override
-    public ChannelFuture register(Channel channel, ChannelFuture future) {
+    public ChannelFuture register(Channel channel, ChannelPromise promise) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
         try {
-            return nextChild().register(channel, future);
+            return nextChild().register(channel, promise);
         } catch (Throwable t) {
-            return channel.newFailedFuture(t);
+            promise.setFailure(t);
+
+            return promise;
         }
     }
 

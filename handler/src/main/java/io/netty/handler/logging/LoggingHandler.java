@@ -15,11 +15,11 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogLevel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -186,48 +186,48 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
     @Override
     public void bind(ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelFuture future) throws Exception {
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND(" + localAddress + ')'));
         }
-        super.bind(ctx, localAddress, future);
+        super.bind(ctx, localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelFuture future) throws Exception {
+            ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT(" + remoteAddress + ", " + localAddress + ')'));
         }
-        super.connect(ctx, remoteAddress, localAddress, future);
+        super.connect(ctx, remoteAddress, localAddress, promise);
     }
 
     @Override
     public void disconnect(ChannelHandlerContext ctx,
-            ChannelFuture future) throws Exception {
+            ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT()"));
         }
-        super.disconnect(ctx, future);
+        super.disconnect(ctx, promise);
     }
 
     @Override
     public void close(ChannelHandlerContext ctx,
-            ChannelFuture future) throws Exception {
+            ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE()"));
         }
-        super.close(ctx, future);
+        super.close(ctx, promise);
     }
 
     @Override
     public void deregister(ChannelHandlerContext ctx,
-            ChannelFuture future) throws Exception {
+             ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER()"));
         }
-        super.deregister(ctx, future);
+        super.deregister(ctx, promise);
     }
 
     @Override
@@ -236,9 +236,9 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     @Override

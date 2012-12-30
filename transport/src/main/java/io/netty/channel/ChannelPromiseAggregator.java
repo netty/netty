@@ -25,48 +25,43 @@ import java.util.Set;
  * listening to the individual futures and producing an aggregated result
  * (success/failure) when all futures have completed.
  */
-public final class ChannelFutureAggregator implements ChannelFutureListener {
+public final class ChannelPromiseAggregator implements ChannelFutureListener {
 
-    private final ChannelFuture aggregateFuture;
+    private final ChannelPromise aggregatePromise;
 
-    private Set<ChannelFuture> pendingFutures;
+    private Set<ChannelPromise> pendingPromises;
 
-    public ChannelFutureAggregator(ChannelFuture aggregateFuture) {
-        this.aggregateFuture = aggregateFuture;
+    public ChannelPromiseAggregator(ChannelPromise aggregatePromise) {
+        this.aggregatePromise = aggregatePromise;
     }
 
-    public void addFuture(ChannelFuture future) {
+    public void addFuture(ChannelPromise promise) {
         synchronized (this) {
-            if (pendingFutures == null) {
-                pendingFutures = new HashSet<ChannelFuture>();
+            if (pendingPromises == null) {
+                pendingPromises = new HashSet<ChannelPromise>();
             }
-            pendingFutures.add(future);
+            pendingPromises.add(promise);
         }
-        future.addListener(this);
+        promise.addListener(this);
     }
 
     @Override
     public void operationComplete(ChannelFuture future)
             throws Exception {
-        if (future.isCancelled()) {
-            // TODO: what should the correct behaviour be when a fragment is cancelled?
-            // cancel all outstanding fragments and cancel the aggregate?
-            return;
-        }
 
         synchronized (this) {
-            if (pendingFutures == null) {
-                aggregateFuture.setSuccess();
+            if (pendingPromises == null) {
+                aggregatePromise.setSuccess();
             } else {
-                pendingFutures.remove(future);
+                pendingPromises.remove(future);
                 if (!future.isSuccess()) {
-                    aggregateFuture.setFailure(future.cause());
-                    for (ChannelFuture pendingFuture: pendingFutures) {
-                        pendingFuture.cancel();
+                    aggregatePromise.setFailure(future.cause());
+                    for (ChannelPromise pendingFuture: pendingPromises) {
+                        pendingFuture.setFailure(future.cause());
                     }
                 } else {
-                    if (pendingFutures.isEmpty()) {
-                        aggregateFuture.setSuccess();
+                    if (pendingPromises.isEmpty()) {
+                        aggregatePromise.setSuccess();
                     }
                 }
             }

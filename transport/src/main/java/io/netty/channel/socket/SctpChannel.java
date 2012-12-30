@@ -18,6 +18,7 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.Association;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
@@ -88,7 +89,7 @@ public interface SctpChannel extends Channel {
      *
      * The given {@link ChannelFuture} will be notified and also returned.
      */
-    ChannelFuture bindAddress(InetAddress localAddress, ChannelFuture future);
+    ChannelFuture bindAddress(InetAddress localAddress, ChannelPromise future);
 
     /**
      *  Unbind the address from channel's multi-homing address list.
@@ -102,5 +103,5 @@ public interface SctpChannel extends Channel {
      *
      * The given {@link ChannelFuture} will be notified and also returned.
      */
-    ChannelFuture unbindAddress(InetAddress localAddress, ChannelFuture future);
+    ChannelFuture unbindAddress(InetAddress localAddress, ChannelPromise future);
 }

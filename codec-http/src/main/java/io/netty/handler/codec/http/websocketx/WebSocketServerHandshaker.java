@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.StringUtil;
 
@@ -115,7 +116,7 @@ public abstract class WebSocketServerHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return handshake(channel, req, channel.newFuture());
+        return handshake(channel, req, channel.newPromise());
     }
 
     /**
@@ -125,10 +126,10 @@ public abstract class WebSocketServerHandshaker {
      *            Channel
      * @param req
      *            HTTP Request
-     * @param future
-     *            the {@link ChannelFuture} to be notified when the opening handshake is done
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future);
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise);
 
     /**
      * Performs the closing handshake
@@ -142,7 +143,7 @@ public abstract class WebSocketServerHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return close(channel, frame, channel.newFuture());
+        return close(channel, frame, channel.newPromise());
     }
 
     /**
@@ -152,10 +153,10 @@ public abstract class WebSocketServerHandshaker {
      *            Channel
      * @param frame
      *            Closing Frame that was received
-     * @param future
-     *            the {@link ChannelFuture} to be notified when the closing handshake is done
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
-    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future);
+    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise);
 
     /**
      * Selects the first matching supported sub protocol

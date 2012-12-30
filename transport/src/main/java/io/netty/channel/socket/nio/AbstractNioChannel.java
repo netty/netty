@@ -18,7 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -52,7 +52,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelFuture connectFuture;
+    private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
@@ -165,25 +165,25 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 try {
-                    if (connectFuture != null) {
+                    if (connectPromise != null) {
                         throw new IllegalStateException("connection attempt already made");
                     }
 
                     boolean wasActive = isActive();
                     if (doConnect(remoteAddress, localAddress)) {
-                        future.setSuccess();
+                        promise.setSuccess();
                         if (!wasActive && isActive()) {
                             pipeline().fireChannelActive();
                         }
                     } else {
-                        connectFuture = future;
+                        connectPromise = promise;
 
                         // Schedule connect timeout.
                         int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -194,8 +194,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                     if (connectTimeoutException == null) {
                                         connectTimeoutException = new ConnectException("connection timed out");
                                     }
-                                    ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
-                                    if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
+                                    ChannelPromise connectFuture = AbstractNioChannel.this.connectPromise;
+                                    if (connectFuture != null && connectFuture.tryFailure(connectTimeoutException)) {
                                         close(voidFuture());
                                     }
                                 }
@@ -203,14 +203,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress, future);
+                        connect(remoteAddress, localAddress, promise);
                     }
                 });
             }
@@ -219,20 +219,20 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public void finishConnect() {
             assert eventLoop().inEventLoop();
-            assert connectFuture != null;
+            assert connectPromise != null;
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                connectFuture.setSuccess();
+                connectPromise.setSuccess();
                 if (!wasActive && isActive()) {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {
-                connectFuture.setFailure(t);
+                connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {
                 connectTimeoutFuture.cancel(false);
-                connectFuture = null;
+                connectPromise = null;
             }
         }
     }

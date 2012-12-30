@@ -185,9 +185,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         ChannelHandlerContext directOutboundContext();
 
         /**
-         * Return a {@link VoidChannelFuture}. This method always return the same instance.
+         * Return a {@link VoidChannelPromise}. This method always return the same instance.
          */
-        ChannelFuture voidFuture();
+        ChannelPromise voidFuture();
 
         /**
          * Return the {@link SocketAddress} to which is bound local or
@@ -202,37 +202,37 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         SocketAddress remoteAddress();
 
         /**
-         * Register the {@link Channel} of the {@link ChannelFuture} with the {@link EventLoop} and notify
+         * Register the {@link Channel} of the {@link ChannelPromise} with the {@link EventLoop} and notify
          * the {@link ChannelFuture} once the registration was complete.
          */
-        void register(EventLoop eventLoop, ChannelFuture future);
+        void register(EventLoop eventLoop, ChannelPromise promise);
 
         /**
-         * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelFuture} and notify
+         * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
          * it once its done.
          */
-        void bind(SocketAddress localAddress, ChannelFuture future);
+        void bind(SocketAddress localAddress, ChannelPromise promise);
 
         /**
          * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
          * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
          * pass {@code null} to it.
          *
-         * The {@link ChannelFuture} will get notified once the connect operation was complete.
+         * The {@link ChannelPromise} will get notified once the connect operation was complete.
          */
-        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
+        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
 
         /**
-         * Disconnect the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelFuture} once the
+         * Disconnect the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelPromise} once the
          * operation was complete.
          */
-        void disconnect(ChannelFuture future);
+        void disconnect(ChannelPromise promise);
 
         /**
-         * Close the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelFuture} once the
+         * Close the {@link Channel} of the {@link ChannelPromise} and notify the {@link ChannelPromise} once the
          * operation was complete.
          */
-        void close(ChannelFuture future);
+        void close(ChannelPromise promise);
 
         /**
          * Closes the {@link Channel} immediately without firing any events.  Probably only useful
@@ -241,10 +241,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void closeForcibly();
 
         /**
-         * Deregister the {@link Channel} of the {@link ChannelFuture} from {@link EventLoop} and notify the
-         * {@link ChannelFuture} once the operation was complete.
+         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
+         * {@link ChannelPromise} once the operation was complete.
          */
-        void deregister(ChannelFuture future);
+        void deregister(ChannelPromise promise);
 
         /**
          * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
@@ -256,7 +256,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * Flush out all data that was buffered in the buffer of the {@link #directOutboundContext()} and was not
          * flushed out yet. After that is done the {@link ChannelFuture} will get notified
          */
-        void flush(ChannelFuture future);
+        void flush(ChannelPromise promise);
 
         /**
          * Flush out all data now.
@@ -264,10 +264,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void flushNow();
 
         /**
-         * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelFuture} once it completes
+         * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelPromise} once it completes
          * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
          * automaticly closed via {@link FileRegion#close()}.
          */
-        void sendFile(FileRegion region, ChannelFuture future);
+        void sendFile(FileRegion region, ChannelPromise promise);
     }
 }
