@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -30,6 +29,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+
+import static org.junit.Assert.*;
 
 public class ServerSocketSuspendTest extends AbstractServerSocketTest {
 
@@ -46,10 +47,10 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         AcceptedChannelCounter counter = new AcceptedChannelCounter(NUM_CHANNELS);
 
         sb.option(ChannelOption.SO_BACKLOG, 1);
+        sb.option(ChannelOption.AUTO_READ, false);
         sb.childHandler(counter);
 
         Channel sc = sb.bind().sync().channel();
-        sc.pipeline().firstContext().readable(false);
 
         List<Socket> sockets = new ArrayList<Socket>();
 
@@ -61,11 +62,13 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
                 sockets.add(s);
             }
 
-            sc.pipeline().firstContext().readable(true);
+            sc.config().setAutoRead(true);
+            sc.read();
+
             counter.latch.await();
 
             long endTime = System.nanoTime();
-            Assert.assertTrue(endTime - startTime > TIMEOUT);
+            assertTrue(endTime - startTime > TIMEOUT);
         } finally {
             for (Socket s: sockets) {
                 s.close();
@@ -83,7 +86,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
             }
             long endTime = System.nanoTime();
 
-            Assert.assertTrue(endTime - startTime < TIMEOUT);
+            assertTrue(endTime - startTime < TIMEOUT);
         } finally {
             for (Socket s: sockets) {
                 s.close();

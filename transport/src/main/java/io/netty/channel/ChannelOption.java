@@ -44,6 +44,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Integer>("WRITE_SPIN_COUNT");
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE =
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
+    public static final ChannelOption<Boolean> AUTO_READ =
+            new ChannelOption<Boolean>("AUTO_READ");
 
     public static final ChannelOption<Boolean> SO_BROADCAST =
             new ChannelOption<Boolean>("SO_BROADCAST");

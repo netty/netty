@@ -225,8 +225,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             return Unpooled.messageBuffer();
         }
 
-        @SuppressWarnings("unchecked")
         @Override
+        @SuppressWarnings("unchecked")
         public void inboundBufferUpdated(ChannelHandlerContext ctx) {
             MessageBuf<Channel> in = ctx.inboundMessageBuffer();
             for (;;) {

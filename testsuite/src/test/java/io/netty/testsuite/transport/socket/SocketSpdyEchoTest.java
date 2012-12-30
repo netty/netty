@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -30,13 +29,14 @@ import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
 import io.netty.handler.codec.spdy.SpdyFrameEncoder;
 import io.netty.util.NetUtil;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketSpdyEchoTest extends AbstractSocketTest {
 

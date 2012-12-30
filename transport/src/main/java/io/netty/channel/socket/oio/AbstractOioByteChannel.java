@@ -17,9 +17,9 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
 
@@ -42,88 +42,85 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected AbstractOioUnsafe newUnsafe() {
-        return new OioByteUnsafe();
-    }
-
-    private final class OioByteUnsafe extends AbstractOioUnsafe {
-        @Override
-        public void read() {
-            assert eventLoop().inEventLoop();
-
-            if (inputShutdown) {
-                try {
-                    Thread.sleep(SO_TIMEOUT);
-                } catch (InterruptedException e) {
-                    // ignore
-                }
-                return;
-            }
-
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
-            boolean closed = false;
-            boolean read = false;
+    protected void doRead() {
+        if (inputShutdown) {
             try {
-                for (;;) {
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount > 0) {
-                        read = true;
-                    } else if (localReadAmount < 0) {
-                        closed = true;
-                    }
+                Thread.sleep(SO_TIMEOUT);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            return;
+        }
 
-                    final int available = available();
-                    if (available <= 0) {
-                        break;
-                    }
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBuf byteBuf = pipeline.inboundByteBuffer();
+        boolean closed = false;
+        boolean read = false;
+        boolean firedInboundBufferSuspeneded = false;
+        try {
+            for (;;) {
+                int localReadAmount = doReadBytes(byteBuf);
+                if (localReadAmount > 0) {
+                    read = true;
+                } else if (localReadAmount < 0) {
+                    closed = true;
+                }
 
-                    if (byteBuf.writable()) {
-                        continue;
-                    }
+                final int available = available();
+                if (available <= 0) {
+                    break;
+                }
 
-                    final int capacity = byteBuf.capacity();
-                    final int maxCapacity = byteBuf.maxCapacity();
-                    if (capacity == maxCapacity) {
-                        if (read) {
-                            read = false;
-                            pipeline.fireInboundBufferUpdated();
-                            if (!byteBuf.writable()) {
-                                throw new IllegalStateException(
-                                        "an inbound handler whose buffer is full must consume at " +
-                                        "least one byte.");
-                            }
+                if (byteBuf.writable()) {
+                    continue;
+                }
+
+                final int capacity = byteBuf.capacity();
+                final int maxCapacity = byteBuf.maxCapacity();
+                if (capacity == maxCapacity) {
+                    if (read) {
+                        read = false;
+                        pipeline.fireInboundBufferUpdated();
+                        if (!byteBuf.writable()) {
+                            throw new IllegalStateException(
+                                    "an inbound handler whose buffer is full must consume at " +
+                                    "least one byte.");
                         }
+                    }
+                } else {
+                    final int writerIndex = byteBuf.writerIndex();
+                    if (writerIndex + available > maxCapacity) {
+                        byteBuf.capacity(maxCapacity);
                     } else {
-                        final int writerIndex = byteBuf.writerIndex();
-                        if (writerIndex + available > maxCapacity) {
-                            byteBuf.capacity(maxCapacity);
-                        } else {
-                            byteBuf.ensureWritableBytes(available);
-                        }
+                        byteBuf.ensureWritableBytes(available);
                     }
                 }
-            } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireInboundBufferUpdated();
-                }
-                pipeline().fireExceptionCaught(t);
-                if (t instanceof IOException) {
-                    close(voidFuture());
-                }
-            } finally {
-                if (read) {
-                    pipeline.fireInboundBufferUpdated();
-                }
-                if (closed) {
-                    inputShutdown = true;
-                    if (isOpen()) {
-                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                        } else {
-                            close(voidFuture());
-                        }
+            }
+        } catch (Throwable t) {
+            if (read) {
+                read = false;
+                pipeline.fireInboundBufferUpdated();
+            }
+            firedInboundBufferSuspeneded = true;
+            pipeline.fireInboundBufferSuspended();
+            pipeline.fireExceptionCaught(t);
+            if (t instanceof IOException) {
+                unsafe().close(unsafe().voidFuture());
+            }
+        } finally {
+            if (read) {
+                pipeline.fireInboundBufferUpdated();
+            }
+            if (!firedInboundBufferSuspeneded) {
+                pipeline.fireInboundBufferSuspended();
+            }
+            if (closed) {
+                inputShutdown = true;
+                if (isOpen()) {
+                    if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                        pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                    } else {
+                        unsafe().close(unsafe().voidFuture());
                     }
                 }
             }

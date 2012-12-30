@@ -157,15 +157,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             return -1;
         }
 
-        if (readSuspended) {
-            try {
-                Thread.sleep(SO_TIMEOUT);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-            return 0;
-        }
-
         Socket s = null;
         try {
             s = socket.accept();

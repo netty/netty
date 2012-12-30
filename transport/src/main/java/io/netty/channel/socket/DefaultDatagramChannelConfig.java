@@ -376,4 +376,9 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     public DatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (DatagramChannelConfig) super.setAllocator(allocator);
     }
+
+    @Override
+    public DatagramChannelConfig setAutoRead(boolean autoRead) {
+        return (DatagramChannelConfig) super.setAutoRead(autoRead);
+    }
 }

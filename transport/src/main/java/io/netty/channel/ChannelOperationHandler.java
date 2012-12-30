@@ -72,6 +72,11 @@ public interface ChannelOperationHandler extends ChannelHandler {
     void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
 
     /**
+     * Intercepts {@link ChannelHandlerContext#read()}.
+     */
+    void read(ChannelHandlerContext ctx);
+
+    /**
      * Called once a flush operation is made and so the outbound data should be written.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made

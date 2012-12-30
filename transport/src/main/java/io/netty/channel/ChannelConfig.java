@@ -149,4 +149,16 @@ public interface ChannelConfig {
      * to allocate buffers.
      */
     ChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    /**
+     * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that
+     * a user application doesn't need to call it at all. The default value is {@code true}.
+     */
+    boolean isAutoRead();
+
+    /**
+     * Sets if {@link ChannelHandlerContext#read()} will be invoked automatically so that a user application doesn't
+     * need to call it at all. The default value is {@code true}.
+     */
+    ChannelConfig setAutoRead(boolean autoRead);
 }

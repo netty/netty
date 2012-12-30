@@ -43,24 +43,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
     private final SelectableChannel ch;
-    private final int readInterestOp;
+    protected final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
     final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
-
-    final Runnable suspendReadTask = new Runnable() {
-        @Override
-        public void run() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~readInterestOp);
-        }
-    };
-
-    final Runnable resumeReadTask = new Runnable() {
-        @Override
-        public void run() {
-            selectionKey().interestOps(selectionKey().interestOps() | readInterestOp);
-        }
-    };
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -249,30 +235,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectFuture = null;
             }
         }
-
-        @Override
-        public void suspendRead() {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                suspendReadTask.run();
-            } else {
-                loop.execute(suspendReadTask);
-            }
-        }
-
-        @Override
-        public void resumeRead() {
-            if (inputShutdown) {
-                return;
-            }
-
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                resumeReadTask.run();
-            } else {
-                loop.execute(resumeReadTask);
-            }
-        }
     }
 
     @Override
@@ -288,15 +250,32 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        NioEventLoop loop = eventLoop();
-        selectionKey = javaChannel().register(
-                loop.selector, isActive() && !inputShutdown ? readInterestOp : 0, this);
+        selectionKey = javaChannel().register(eventLoop().selector, 0, this);
         return null;
     }
 
     @Override
     protected void doDeregister() throws Exception {
         eventLoop().cancel(selectionKey());
+    }
+
+    @Override
+    protected void doBeginRead() throws Exception {
+        if (inputShutdown) {
+            return;
+        }
+
+        final SelectionKey selectionKey = this.selectionKey;
+        if (!selectionKey.isValid()) {
+            return;
+        }
+
+        final int interestOps = selectionKey.interestOps();
+        if ((interestOps & readInterestOp) != 0) {
+            return;
+        }
+
+        this.selectionKey.interestOps(interestOps | readInterestOp);
     }
 
     /**

@@ -86,6 +86,11 @@ public abstract class ChannelHandlerAdapter extends ChannelStateHandlerAdapter i
         ctx.deregister(future);
     }
 
+    @Override
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
     /**
      * Calls {@link ChannelHandlerContext#flush(ChannelFuture)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.

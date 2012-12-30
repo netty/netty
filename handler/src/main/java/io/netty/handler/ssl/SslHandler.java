@@ -401,6 +401,11 @@ public class SslHandler
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    @Override
     public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();

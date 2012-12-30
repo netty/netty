@@ -15,8 +15,6 @@
  */
 package io.netty.channel.socket.aio;
 
-import static io.netty.channel.ChannelOption.*;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
@@ -31,6 +29,8 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The Async {@link ServerSocketChannelConfig} implementation.
@@ -212,5 +212,10 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (ServerSocketChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
+        return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
     }
 }

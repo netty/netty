@@ -49,4 +49,10 @@ public interface ChannelStateHandler extends ChannelHandler {
      * to wait for more data and consume it later.
      */
     void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when a {@link ChannelHandlerContext#read()} is finished and the inbound buffer of this handler will not
+     * be updated until another {@link ChannelHandlerContext#read()} request is issued.
+     */
+    void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception;
 }

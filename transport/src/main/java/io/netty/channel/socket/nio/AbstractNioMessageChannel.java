@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
@@ -44,11 +45,14 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
+            final SelectionKey key = selectionKey();
+            key.interestOps(key.interestOps() & ~readInterestOp);
 
             final ChannelPipeline pipeline = pipeline();
             final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
+            boolean firedInboundBufferSuspended = false;
             try {
                 for (;;) {
                     int localReadAmount = doReadMessages(msgBuf);
@@ -66,6 +70,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     read = false;
                     pipeline.fireInboundBufferUpdated();
                 }
+
+                firedInboundBufferSuspended = true;
+                pipeline.fireInboundBufferSuspended();
+
                 pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
                     close(voidFuture());
@@ -73,6 +81,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             } finally {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
+                }
+                if (!firedInboundBufferSuspended) {
+                    pipeline.fireInboundBufferSuspended();
                 }
                 if (closed && isOpen()) {
                     close(voidFuture());

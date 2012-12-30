@@ -367,6 +367,11 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             ctx.outboundMessageBuffer().clear();
@@ -444,6 +449,11 @@ public class LocalTransportThreadModelTest {
             }
 
             ctx.fireInboundBufferUpdated();
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
         }
 
         @Override
@@ -535,6 +545,11 @@ public class LocalTransportThreadModelTest {
             }
             in.discardReadBytes();
             ctx.fireInboundBufferUpdated();
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
         }
 
         @Override
@@ -631,6 +646,11 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(ChannelHandlerContext ctx,
                 ChannelFuture future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
@@ -709,6 +729,11 @@ public class LocalTransportThreadModelTest {
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, msg);
             }
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
         }
 
         @Override

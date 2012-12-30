@@ -329,19 +329,4 @@ public interface ChannelHandlerContext
      * {@link UnsupportedOperationException} is thrown.
      */
     MessageBuf<Object> nextOutboundMessageBuffer();
-
-    /**
-     * Return {@code true} if the {@link ChannelHandlerContext} was marked as readable. This basically means
-     * that once its not readable anymore no new data will be read from the transport and passed down the
-     * {@link ChannelPipeline}.
-     *
-     * Only if all {@link ChannelHandlerContext}'s {@link #isReadable()} return {@code true}, the data is
-     * passed again down the {@link ChannelPipeline}.
-     */
-    boolean isReadable();
-
-    /**
-     * Mark the {@link ChannelHandlerContext} as readable or suspend it. See {@link #isReadable()}
-     */
-    void readable(boolean readable);
 }

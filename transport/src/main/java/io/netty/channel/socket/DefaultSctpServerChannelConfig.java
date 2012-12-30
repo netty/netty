@@ -26,9 +26,7 @@ import io.netty.util.NetUtil;
 import java.io.IOException;
 import java.util.Map;
 
-import static com.sun.nio.sctp.SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS;
-import static com.sun.nio.sctp.SctpStandardSocketOptions.SO_RCVBUF;
-import static com.sun.nio.sctp.SctpStandardSocketOptions.SO_SNDBUF;
+import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 
 /**
  * The default {@link SctpServerChannelConfig} implementation for SCTP.
@@ -168,5 +166,10 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     @Override
     public SctpServerChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (SctpServerChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public SctpServerChannelConfig setAutoRead(boolean autoRead) {
+        return (SctpServerChannelConfig) super.setAutoRead(autoRead);
     }
 }

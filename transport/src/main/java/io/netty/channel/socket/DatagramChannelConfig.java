@@ -163,4 +163,7 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     @Override
     DatagramChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    DatagramChannelConfig setAutoRead(boolean autoRead);
 }
