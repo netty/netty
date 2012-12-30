@@ -17,7 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
 import java.net.ConnectException;
@@ -39,7 +39,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    protected ChannelFuture connectFuture;
+    protected ChannelPromise connectPromise;
     protected ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
@@ -103,19 +103,19 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 try {
-                    if (connectFuture != null) {
+                    if (connectPromise != null) {
                         throw new IllegalStateException("connection attempt already made");
                     }
-                    connectFuture = future;
+                    connectPromise = promise;
 
-                    doConnect(remoteAddress, localAddress, future);
+                    doConnect(remoteAddress, localAddress, promise);
 
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -126,9 +126,9 @@ abstract class AbstractAioChannel extends AbstractChannel {
                                 if (connectTimeoutException == null) {
                                     connectTimeoutException = new ConnectException("connection timed out");
                                 }
-                                ChannelFuture connectFuture = AbstractAioChannel.this.connectFuture;
+                                ChannelPromise connectFuture = connectPromise;
                                 if (connectFuture != null &&
-                                        connectFuture.setFailure(connectTimeoutException)) {
+                                        connectFuture.tryFailure(connectTimeoutException)) {
                                     pipeline().fireExceptionCaught(connectTimeoutException);
                                     close(voidFuture());
                                 }
@@ -136,40 +136,40 @@ abstract class AbstractAioChannel extends AbstractChannel {
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress, future);
+                        connect(remoteAddress, localAddress, promise);
                     }
                 });
             }
         }
 
         protected void connectFailed(Throwable t) {
-            connectFuture.setFailure(t);
+            connectPromise.setFailure(t);
             pipeline().fireExceptionCaught(t);
             closeIfClosed();
         }
 
         protected void connectSuccess() {
             assert eventLoop().inEventLoop();
-            assert connectFuture != null;
+            assert connectPromise != null;
             try {
                 boolean wasActive = isActive();
-                connectFuture.setSuccess();
+                connectPromise.setSuccess();
                 if (!wasActive && isActive()) {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {
-                connectFuture.setFailure(t);
+                connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {
                 connectTimeoutFuture.cancel(false);
-                connectFuture = null;
+                connectPromise = null;
             }
         }
     }
@@ -178,6 +178,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
      * Connect to the remote peer using the given localAddress if one is specified or {@code null} otherwise.
      */
     protected abstract void doConnect(SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelFuture connectFuture);
+            SocketAddress localAddress, ChannelPromise connectPromise);
 
 }

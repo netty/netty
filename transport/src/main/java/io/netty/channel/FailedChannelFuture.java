@@ -15,9 +15,6 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
@@ -71,15 +68,5 @@ final class FailedChannelFuture extends CompleteChannelFuture {
         }
 
         throw new ChannelException(cause);
-    }
-
-    @Override
-    public Void get() throws ExecutionException {
-        throw new ExecutionException(cause);
-    }
-
-    @Override
-    public Void get(long timeout, TimeUnit unit) throws ExecutionException {
-        throw new ExecutionException(cause);
     }
 }

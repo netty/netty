@@ -18,9 +18,9 @@ package io.netty.handler.codec.sctp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SctpMessage;
 import io.netty.handler.codec.EncoderException;
 
@@ -43,7 +43,7 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ByteBuf in = ctx.outboundByteBuffer();
 
         try {
@@ -56,6 +56,6 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
             ctx.fireExceptionCaught(new EncoderException(t));
         }
 
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 }

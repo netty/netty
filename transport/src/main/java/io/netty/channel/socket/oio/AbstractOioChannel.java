@@ -17,7 +17,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
 import java.net.InetSocketAddress;
@@ -66,28 +66,28 @@ abstract class AbstractOioChannel extends AbstractChannel {
         @Override
         public void connect(
                 final SocketAddress remoteAddress,
-                final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 try {
                     boolean wasActive = isActive();
                     doConnect(remoteAddress, localAddress);
-                    future.setSuccess();
+                    promise.setSuccess();
                     if (!wasActive && isActive()) {
                         pipeline().fireChannelActive();
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress, future);
+                        connect(remoteAddress, localAddress, promise);
                     }
                 });
             }

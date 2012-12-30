@@ -17,11 +17,11 @@ package io.netty.handler.traffic;
 
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -302,14 +302,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         long curtime = System.currentTimeMillis();
         long size = ctx.outboundByteBuffer().readableBytes();
 
         if (trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.flush(future);
+                ctx.flush(promise);
                 return;
             }
             // compute the number of ms to wait before continue with the
@@ -321,13 +321,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.flush(future);
+                        ctx.flush(promise);
                     }
                 }, wait, TimeUnit.MILLISECONDS);
                 return;
             }
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**

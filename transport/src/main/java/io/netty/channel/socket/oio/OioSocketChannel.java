@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
@@ -138,11 +139,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelFuture future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise future) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
@@ -239,7 +240,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -254,12 +255,12 @@ public class OioSocketChannel extends AbstractOioByteChannel
             if (localWritten == -1) {
                 checkEOF(region, written);
                 region.close();
-                future.setSuccess();
+                promise.setSuccess();
                 return;
             }
             written += localWritten;
             if (written >= region.count()) {
-                future.setSuccess();
+                promise.setSuccess();
                 return;
             }
         }

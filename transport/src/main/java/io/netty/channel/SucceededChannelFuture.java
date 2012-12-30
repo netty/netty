@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
  * recommended to use {@link Channel#newSucceededFuture()} instead of
@@ -52,15 +50,4 @@ final class SucceededChannelFuture extends CompleteChannelFuture {
     public ChannelFuture syncUninterruptibly() {
         return this;
     }
-
-    @Override
-    public Void get() {
-        return null;
-    }
-
-    @Override
-    public Void get(long timeout, TimeUnit unit) {
-        return null;
-    }
-
 }

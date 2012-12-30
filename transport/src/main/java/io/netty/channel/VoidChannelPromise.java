@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import java.util.concurrent.TimeUnit;
 
-final class VoidChannelFuture implements ChannelFuture.Unsafe {
+final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
 
     private final Channel channel;
 
@@ -26,7 +26,7 @@ final class VoidChannelFuture implements ChannelFuture.Unsafe {
      *
      * @param channel the {@link Channel} associated with this future
      */
-    public VoidChannelFuture(Channel channel) {
+    public VoidChannelPromise(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -34,31 +34,31 @@ final class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public ChannelFuture addListener(final ChannelFutureListener listener) {
+    public ChannelPromise addListener(final ChannelFutureListener listener) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelFuture addListeners(final ChannelFutureListener... listeners) {
+    public ChannelPromise addListeners(final ChannelFutureListener... listeners) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelFuture removeListener(ChannelFutureListener listener) {
+    public ChannelPromise removeListener(ChannelFutureListener listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
+    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
         // NOOP
         return this;
     }
 
     @Override
-    public ChannelFuture await() throws InterruptedException {
+    public ChannelPromise await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -78,7 +78,7 @@ final class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public ChannelFuture awaitUninterruptibly() {
+    public ChannelPromise awaitUninterruptibly() {
         fail();
         return this;
     }
@@ -106,11 +106,6 @@ final class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public boolean isCancelled() {
-        return false;
-    }
-
-    @Override
     public boolean isSuccess() {
         return false;
     }
@@ -121,51 +116,41 @@ final class VoidChannelFuture implements ChannelFuture.Unsafe {
     }
 
     @Override
-    public ChannelFuture sync() {
+    public ChannelPromise sync() {
         fail();
         return this;
     }
 
     @Override
-    public ChannelFuture syncUninterruptibly() {
+    public ChannelPromise syncUninterruptibly() {
         fail();
         return this;
     }
 
     @Override
-    public Void get() {
-        fail();
-        return null;
+    public void setProgress(long amount, long current, long total) {
     }
 
     @Override
-    public Void get(long timeout, TimeUnit unit) {
-        fail();
-        return null;
+    public void setFailure(Throwable cause) {
     }
 
     @Override
-    public boolean setProgress(long amount, long current, long total) {
+    public void setSuccess() {
+    }
+
+    @Override
+    public boolean tryProgress(long amount, long current, long total) {
         return false;
     }
 
     @Override
-    public boolean setFailure(Throwable cause) {
+    public boolean tryFailure(Throwable cause) {
         return false;
     }
 
     @Override
-    public boolean setSuccess() {
-        return false;
-    }
-
-    @Override
-    public boolean cancel() {
-        return false;
-    }
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
+    public boolean trySuccess() {
         return false;
     }
 

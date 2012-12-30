@@ -16,9 +16,9 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 
 /**
  * {@link ChannelOutboundByteHandlerAdapter} which encodes bytes in a stream-like fashion from one {@link ByteBuf} to an
@@ -46,7 +46,7 @@ import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapter {
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ByteBuf in = ctx.outboundByteBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -67,7 +67,7 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         }
 
         in.discardSomeReadBytes();
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**

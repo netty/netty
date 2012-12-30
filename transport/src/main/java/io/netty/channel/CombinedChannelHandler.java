@@ -174,34 +174,34 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     @Override
     public void bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelFuture future) throws Exception {
-        out.bind(ctx, localAddress, future);
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        out.bind(ctx, localAddress, promise);
     }
 
     @Override
     public void connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelFuture future) throws Exception {
-        out.connect(ctx, remoteAddress, localAddress, future);
+            ChannelPromise promise) throws Exception {
+        out.connect(ctx, remoteAddress, localAddress, promise);
     }
 
     @Override
     public void disconnect(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.disconnect(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.disconnect(ctx, promise);
     }
 
     @Override
     public void close(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.close(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.close(ctx, promise);
     }
 
     @Override
     public void deregister(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.deregister(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.deregister(ctx, promise);
     }
 
     @Override
@@ -211,12 +211,12 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
 
     @Override
     public void flush(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.flush(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.flush(ctx, promise);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
-        out.sendFile(ctx, region, future);
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        out.sendFile(ctx, region, promise);
     }
 }

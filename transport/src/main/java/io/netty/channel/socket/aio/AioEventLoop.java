@@ -18,6 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.SingleThreadEventLoop;
 
@@ -65,7 +66,7 @@ final class AioEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    public ChannelFuture register(Channel channel, ChannelFuture future) {
+    public ChannelFuture register(Channel channel, ChannelPromise future) {
         return super.register(channel, future).addListener(registrationListener);
     }
 

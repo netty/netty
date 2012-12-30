@@ -47,27 +47,27 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return register(channel, channel.newFuture());
+        return register(channel, channel.newPromise());
     }
 
     @Override
-    public ChannelFuture register(final Channel channel, final ChannelFuture future) {
+    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
         if (isShutdown()) {
             channel.unsafe().closeForcibly();
-            future.setFailure(new EventLoopException("cannot register a channel to a shut down loop"));
-            return future;
+            promise.setFailure(new EventLoopException("cannot register a channel to a shut down loop"));
+            return promise;
         }
 
         if (inEventLoop()) {
-            channel.unsafe().register(this, future);
+            channel.unsafe().register(this, promise);
         } else {
             execute(new Runnable() {
                 @Override
                 public void run() {
-                    channel.unsafe().register(SingleThreadEventLoop.this, future);
+                    channel.unsafe().register(SingleThreadEventLoop.this, promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 }

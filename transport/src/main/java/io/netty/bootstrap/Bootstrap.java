@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
@@ -66,7 +67,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelFuture future) {
+    public ChannelFuture bind(ChannelPromise future) {
         validate(future);
         if (localAddress() == null) {
             throw new IllegalStateException("localAddress not set");
@@ -92,13 +93,13 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     public ChannelFuture connect() {
         validate();
         Channel channel = factory().newChannel();
-        return connect(channel.newFuture());
+        return connect(channel.newPromise());
     }
 
     /**
      * @see {@link #connect()}
      */
-    public ChannelFuture connect(ChannelFuture future) {
+    public ChannelFuture connect(ChannelPromise future) {
         validate(future);
         if (remoteAddress == null) {
             throw new IllegalStateException("remoteAddress not set");
