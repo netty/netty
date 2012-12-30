@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushFutureNotifier;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
@@ -140,7 +141,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelFuture future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise future) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
@@ -162,7 +163,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, final ChannelFuture future) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, final ChannelPromise future) {
         if (localAddress != null) {
             try {
                 javaChannel().bind(localAddress);
@@ -324,7 +325,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise future) throws Exception {
         region.transferTo(new WritableByteChannelAdapter(region, future), 0);
     }
 
@@ -573,10 +574,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     private final class WritableByteChannelAdapter implements WritableByteChannel {
         private final FileRegion region;
-        private final ChannelFuture future;
+        private final ChannelPromise future;
         private long written;
 
-        public WritableByteChannelAdapter(FileRegion region, ChannelFuture future) {
+        public WritableByteChannelAdapter(FileRegion region, ChannelPromise future) {
             this.region = region;
             this.future = future;
         }

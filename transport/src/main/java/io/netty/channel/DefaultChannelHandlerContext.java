@@ -1103,37 +1103,37 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise future) {
         return pipeline.bind(nextContext(prev, DIR_OUTBOUND), localAddress, future);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise future) {
         return connect(remoteAddress, null, future);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) {
         return pipeline.connect(nextContext(prev, DIR_OUTBOUND), remoteAddress, localAddress, future);
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelFuture future) {
+    public ChannelFuture disconnect(ChannelPromise future) {
         return pipeline.disconnect(nextContext(prev, DIR_OUTBOUND), future);
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
+    public ChannelFuture close(ChannelPromise future) {
         return pipeline.close(nextContext(prev, DIR_OUTBOUND), future);
     }
 
     @Override
-    public ChannelFuture deregister(ChannelFuture future) {
+    public ChannelFuture deregister(ChannelPromise future) {
         return pipeline.deregister(nextContext(prev, DIR_OUTBOUND), future);
     }
 
     @Override
-    public ChannelFuture flush(final ChannelFuture future) {
+    public ChannelFuture flush(final ChannelPromise future) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             DefaultChannelHandlerContext prev = nextContext(this.prev, DIR_OUTBOUND);
@@ -1152,7 +1152,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelFuture future) {
+    public ChannelFuture write(Object message, ChannelPromise future) {
         return pipeline.write(prev, message, future);
     }
 
@@ -1176,7 +1176,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture newFuture() {
+    public ChannelPromise newFuture() {
         return channel.newFuture();
     }
 
@@ -1285,7 +1285,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise future) {
         return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, future);
     }
 }

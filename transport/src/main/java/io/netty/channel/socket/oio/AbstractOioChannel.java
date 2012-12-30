@@ -17,7 +17,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
 import java.net.InetSocketAddress;
@@ -62,7 +62,7 @@ abstract class AbstractOioChannel extends AbstractChannel {
         @Override
         public void connect(
                 final SocketAddress remoteAddress,
-                final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress localAddress, final ChannelPromise future) {
             if (eventLoop().inEventLoop()) {
                 if (!ensureOpen(future)) {
                     return;

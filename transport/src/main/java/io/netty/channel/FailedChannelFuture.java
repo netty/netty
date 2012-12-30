@@ -72,14 +72,4 @@ final class FailedChannelFuture extends CompleteChannelFuture {
 
         throw new ChannelException(cause);
     }
-
-    @Override
-    public Void get() throws ExecutionException {
-        throw new ExecutionException(cause);
-    }
-
-    @Override
-    public Void get(long timeout, TimeUnit unit) throws ExecutionException {
-        throw new ExecutionException(cause);
-    }
 }

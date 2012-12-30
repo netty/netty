@@ -1030,12 +1030,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise future) {
         return bind(firstContext(DIR_OUTBOUND), localAddress, future);
     }
 
     ChannelFuture bind(
-            final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelFuture future) {
+            final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelPromise future) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
@@ -1060,18 +1060,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise future) {
         return connect(remoteAddress, null, future);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) {
         return connect(firstContext(DIR_OUTBOUND), remoteAddress, localAddress, future);
     }
 
     ChannelFuture connect(
             final DefaultChannelHandlerContext ctx, final SocketAddress remoteAddress,
-            final SocketAddress localAddress, final ChannelFuture future) {
+            final SocketAddress localAddress, final ChannelPromise future) {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
@@ -1097,11 +1097,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelFuture future) {
+    public ChannelFuture disconnect(ChannelPromise future) {
         return disconnect(firstContext(DIR_OUTBOUND), future);
     }
 
-    ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
+    ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
         // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
         // So far, UDP/IP is the only transport that has such behavior.
         if (!ctx.channel().metadata().hasDisconnect()) {
@@ -1129,11 +1129,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
+    public ChannelFuture close(ChannelPromise future) {
         return close(firstContext(DIR_OUTBOUND), future);
     }
 
-    ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
+    ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
         validateFuture(future);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -1155,11 +1155,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture deregister(final ChannelFuture future) {
+    public ChannelFuture deregister(final ChannelPromise future) {
         return deregister(firstContext(DIR_OUTBOUND), future);
     }
 
-    ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
+    ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
         validateFuture(future);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -1186,12 +1186,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise future) {
         return sendFile(firstContext(DIR_OUTBOUND), region, future);
     }
 
     ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, final FileRegion region,
-                           final ChannelFuture future) {
+                           final ChannelPromise future) {
         if (region == null) {
             throw new NullPointerException("region");
         }
@@ -1217,11 +1217,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return future;
     }
     @Override
-    public ChannelFuture flush(ChannelFuture future) {
+    public ChannelFuture flush(ChannelPromise future) {
         return flush(firstContext(DIR_OUTBOUND), future);
     }
 
-    ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
+    ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
         validateFuture(future);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -1238,7 +1238,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return future;
     }
 
-    private void flush0(final DefaultChannelHandlerContext ctx, ChannelFuture future) {
+    private void flush0(final DefaultChannelHandlerContext ctx, ChannelPromise future) {
         if (!channel.isRegistered() && !channel.isActive()) {
             future.setFailure(new ClosedChannelException());
             return;
@@ -1260,14 +1260,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelFuture future) {
+    public ChannelFuture write(Object message, ChannelPromise future) {
         if (message instanceof FileRegion) {
             return sendFile((FileRegion) message, future);
         }
         return write(tail, message, future);
     }
 
-    ChannelFuture write(DefaultChannelHandlerContext ctx, final Object message, final ChannelFuture future) {
+    ChannelFuture write(DefaultChannelHandlerContext ctx, final Object message, final ChannelPromise future) {
         if (message == null) {
             throw new NullPointerException("message");
         }
@@ -1325,7 +1325,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return future;
     }
 
-    private void write0(DefaultChannelHandlerContext ctx, Object message, ChannelFuture future, boolean msgBuf) {
+    private void write0(DefaultChannelHandlerContext ctx, Object message, ChannelPromise future, boolean msgBuf) {
         if (!channel.isRegistered() && !channel.isActive()) {
             future.setFailure(new ClosedChannelException());
             return;
@@ -1514,7 +1514,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void bind(
-                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future)
+                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise future)
                 throws Exception {
             unsafe.bind(localAddress, future);
         }
@@ -1523,27 +1523,27 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
-                ChannelFuture future) throws Exception {
+                ChannelPromise future) throws Exception {
             unsafe.connect(remoteAddress, localAddress, future);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             unsafe.disconnect(future);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             unsafe.close(future);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             unsafe.deregister(future);
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             unsafe.flush(future);
         }
 
@@ -1558,7 +1558,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+        public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
             unsafe.sendFile(region, future);
         }
     }

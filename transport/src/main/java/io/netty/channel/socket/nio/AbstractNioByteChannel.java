@@ -17,7 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -141,7 +141,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushFileRegion(final FileRegion region, final ChannelFuture future) throws Exception {
+    protected void doFlushFileRegion(final FileRegion region, final ChannelPromise future) throws Exception {
         if (javaChannel() instanceof WritableByteChannel) {
             TransferTask transferTask = new TransferTask(region, (WritableByteChannel) javaChannel(), future);
             transferTask.transfer();
@@ -155,9 +155,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         private long writtenBytes;
         private final FileRegion region;
         private final WritableByteChannel wch;
-        private final ChannelFuture future;
+        private final ChannelPromise future;
 
-        TransferTask(FileRegion region, WritableByteChannel wch, ChannelFuture future) {
+        TransferTask(FileRegion region, WritableByteChannel wch, ChannelPromise future) {
             this.region = region;
             this.wch = wch;
             this.future = future;

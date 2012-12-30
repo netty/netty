@@ -36,7 +36,7 @@ interface ChannelPropertyAccess {
     /**
      * Create a new {@link ChannelFuture}
      */
-    ChannelFuture newFuture();
+    ChannelPromise newFuture();
 
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}

@@ -27,6 +27,7 @@ import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -144,7 +145,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelFuture future) {
+    public ChannelFuture bind(ChannelPromise future) {
         validate(future);
         Channel channel = future.channel();
         if (channel.isActive()) {

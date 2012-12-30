@@ -15,11 +15,11 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogLevel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -186,7 +186,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
     @Override
     public void bind(ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelFuture future) throws Exception {
+            SocketAddress localAddress, ChannelPromise future) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND(" + localAddress + ')'));
         }
@@ -196,7 +196,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     @Override
     public void connect(ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelFuture future) throws Exception {
+            ChannelPromise future) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT(" + remoteAddress + ", " + localAddress + ')'));
         }
@@ -205,7 +205,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
     @Override
     public void disconnect(ChannelHandlerContext ctx,
-            ChannelFuture future) throws Exception {
+            ChannelPromise future) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT()"));
         }
@@ -214,7 +214,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
     @Override
     public void close(ChannelHandlerContext ctx,
-            ChannelFuture future) throws Exception {
+            ChannelPromise future) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE()"));
         }
@@ -223,7 +223,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
 
     @Override
     public void deregister(ChannelHandlerContext ctx,
-            ChannelFuture future) throws Exception {
+             ChannelPromise future) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER()"));
         }
@@ -231,7 +231,7 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         ctx.flush(future);
     }

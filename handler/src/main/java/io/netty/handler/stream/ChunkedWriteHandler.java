@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -140,7 +141,7 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         queue.add(future);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
@@ -181,8 +182,8 @@ public class ChunkedWriteHandler
                     logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
                 }
                 closeInput(in);
-            } else if (currentEvent instanceof ChannelFuture) {
-                ChannelFuture f = (ChannelFuture) currentEvent;
+            } else if (currentEvent instanceof ChannelPromise) {
+                ChannelPromise f = (ChannelPromise) currentEvent;
                 if (!success) {
                     fireExceptionCaught = true;
                     if (cause == null) {
@@ -216,9 +217,9 @@ public class ChunkedWriteHandler
             }
 
             final Object currentEvent = this.currentEvent;
-            if (currentEvent instanceof ChannelFuture) {
+            if (currentEvent instanceof ChannelPromise) {
                 this.currentEvent = null;
-                ctx.flush((ChannelFuture) currentEvent);
+                ctx.flush((ChannelPromise) currentEvent);
             } else if (currentEvent instanceof ChunkedInput) {
                 final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
                 boolean read;

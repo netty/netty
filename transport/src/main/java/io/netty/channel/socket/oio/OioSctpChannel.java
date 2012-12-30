@@ -27,6 +27,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DefaultSctpChannelConfig;
 import io.netty.channel.socket.SctpChannelConfig;
 import io.netty.channel.socket.SctpMessage;
@@ -353,7 +354,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise future) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.bindAddress(localAddress);
@@ -378,7 +379,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelFuture future) {
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise future) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.unbindAddress(localAddress);

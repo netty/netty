@@ -20,9 +20,9 @@ package io.netty.channel;
  */
 public final class ChannelFutureNotifier implements ChannelFutureListener {
 
-    private final ChannelFuture[] futures;
+    private final ChannelPromise[] futures;
 
-    public ChannelFutureNotifier(ChannelFuture... futures) {
+    public ChannelFutureNotifier(ChannelPromise... futures) {
         if (futures == null) {
             throw new NullPointerException("futures");
         }
@@ -32,7 +32,7 @@ public final class ChannelFutureNotifier implements ChannelFutureListener {
     @Override
     public void operationComplete(ChannelFuture cf) throws Exception {
         if (cf.isSuccess()) {
-            for (ChannelFuture f: futures) {
+            for (ChannelPromise f: futures) {
                 if (f == null) {
                     break;
                 }
@@ -41,18 +41,8 @@ public final class ChannelFutureNotifier implements ChannelFutureListener {
             return;
         }
 
-        if (cf.isCancelled()) {
-            for (ChannelFuture f: futures) {
-                if (f == null) {
-                    break;
-                }
-                f.cancel();
-            }
-            return;
-        }
-
         Throwable cause = cf.cause();
-        for (ChannelFuture f: futures) {
+        for (ChannelPromise f: futures) {
             if (f == null) {
                 break;
             }

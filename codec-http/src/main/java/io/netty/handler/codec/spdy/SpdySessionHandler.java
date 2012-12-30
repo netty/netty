@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPromise;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -62,7 +63,7 @@ public class SpdySessionHandler
     private volatile boolean sentGoAwayFrame;
     private volatile boolean receivedGoAwayFrame;
 
-    private volatile ChannelFuture closeSessionFuture;
+    private volatile ChannelPromise closeSessionFuture;
 
     private final boolean server;
     private final boolean flowControl;
@@ -438,12 +439,12 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         sendGoAwayFrame(ctx, future);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
@@ -876,7 +877,7 @@ public class SpdySessionHandler
         }
     }
 
-    private void sendGoAwayFrame(ChannelHandlerContext ctx, ChannelFuture future) {
+    private void sendGoAwayFrame(ChannelHandlerContext ctx, ChannelPromise future) {
         // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
             ctx.close(future);
@@ -905,9 +906,9 @@ public class SpdySessionHandler
 
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
-        private final ChannelFuture future;
+        private final ChannelPromise future;
 
-        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelFuture future) {
+        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise future) {
             this.ctx = ctx;
             this.future = future;
         }

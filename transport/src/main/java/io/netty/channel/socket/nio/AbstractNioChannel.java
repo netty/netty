@@ -18,7 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -66,7 +66,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelFuture connectFuture;
+    private ChannelPromise connectFuture;
     private ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
@@ -179,7 +179,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise future) {
             if (eventLoop().inEventLoop()) {
                 if (!ensureOpen(future)) {
                     return;
@@ -208,7 +208,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                     if (connectTimeoutException == null) {
                                         connectTimeoutException = new ConnectException("connection timed out");
                                     }
-                                    ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
+                                    ChannelPromise connectFuture = AbstractNioChannel.this.connectFuture;
                                     if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
                                         close(voidFuture());
                                     }

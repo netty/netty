@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -244,7 +245,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelFuture future) {
+    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future) {
         ensureBound();
         try {
             socket.joinGroup(multicastAddress);
@@ -263,7 +264,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public ChannelFuture joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelFuture future) {
+            ChannelPromise future) {
         ensureBound();
         try {
             socket.joinGroup(multicastAddress, networkInterface);
@@ -283,7 +284,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            ChannelFuture future) {
+            ChannelPromise future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
     }
@@ -302,7 +303,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelFuture future) {
+    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future) {
         try {
             socket.leaveGroup(multicastAddress);
             future.setSuccess();
@@ -321,7 +322,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelFuture future) {
+            ChannelPromise future) {
         try {
             socket.leaveGroup(multicastAddress, networkInterface);
             future.setSuccess();
@@ -340,7 +341,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            ChannelFuture future) {
+            ChannelPromise future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
     }
@@ -354,7 +355,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public ChannelFuture block(InetAddress multicastAddress,
             NetworkInterface networkInterface, InetAddress sourceToBlock,
-            ChannelFuture future) {
+            ChannelPromise future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
     }
@@ -367,7 +368,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture block(InetAddress multicastAddress,
-            InetAddress sourceToBlock, ChannelFuture future) {
+            InetAddress sourceToBlock, ChannelPromise future) {
         future.setFailure(new UnsupportedOperationException());
         return future;
     }

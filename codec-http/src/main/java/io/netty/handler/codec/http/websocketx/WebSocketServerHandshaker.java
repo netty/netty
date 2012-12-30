@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.StringUtil;
 
@@ -126,9 +127,9 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *            HTTP Request
      * @param future
-     *            the {@link ChannelFuture} to be notified when the opening handshake is done
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future);
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise future);
 
     /**
      * Performs the closing handshake
@@ -155,7 +156,7 @@ public abstract class WebSocketServerHandshaker {
      * @param future
      *            the {@link ChannelFuture} to be notified when the closing handshake is done
      */
-    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future);
+    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise future);
 
     /**
      * Selects the first matching supported sub protocol

@@ -19,13 +19,10 @@ import io.netty.channel.ChannelFlushFutureNotifier.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
-import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.*;
 
@@ -33,7 +30,7 @@ import static java.util.concurrent.TimeUnit.*;
  * The default {@link ChannelFuture} implementation.  It is recommended to use {@link Channel#newFuture()} to create
  * a new {@link ChannelFuture} rather than calling the constructor explicitly.
  */
-public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFuture {
+public class DefaultChannelFuture extends FlushCheckpoint implements ChannelPromise {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
@@ -46,10 +43,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         }
     };
 
-    private static final Throwable CANCELLED = new Throwable();
-
     private final Channel channel;
-    private final boolean cancellable;
 
     private ChannelFutureListener firstListener;
     private List<ChannelFutureListener> otherListeners;
@@ -68,12 +62,9 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
      *
      * @param channel
      *        the {@link Channel} associated with this future
-     * @param cancellable
-     *        {@code true} if and only if this future can be canceled
      */
-    public DefaultChannelFuture(Channel channel, boolean cancellable) {
+    public DefaultChannelFuture(Channel channel) {
         this.channel = channel;
-        this.cancellable = cancellable;
     }
 
     @Override
@@ -93,20 +84,11 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
 
     @Override
     public synchronized Throwable cause() {
-        if (cause != CANCELLED) {
-            return cause;
-        } else {
-            return null;
-        }
+        return cause;
     }
 
     @Override
-    public synchronized boolean isCancelled() {
-        return cause == CANCELLED;
-    }
-
-    @Override
-    public ChannelFuture addListener(final ChannelFutureListener listener) {
+    public ChannelPromise addListener(final ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -142,7 +124,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    public ChannelFuture addListeners(ChannelFutureListener... listeners) {
+    public ChannelPromise addListeners(ChannelFutureListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
@@ -157,7 +139,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    public ChannelFuture removeListener(ChannelFutureListener listener) {
+    public ChannelPromise removeListener(ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -184,7 +166,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
+    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
@@ -199,43 +181,17 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    public ChannelFuture sync() throws InterruptedException {
+    public ChannelPromise sync() throws InterruptedException {
         await();
         rethrowIfFailed();
         return this;
     }
 
     @Override
-    public ChannelFuture syncUninterruptibly() {
+    public ChannelPromise syncUninterruptibly() {
         awaitUninterruptibly();
         rethrowIfFailed();
         return this;
-    }
-
-    @Override
-    public Void get() throws InterruptedException, ExecutionException {
-        await();
-        Throwable cause = cause();
-        if (cause == null) {
-            return null;
-        } else {
-            throw new ExecutionException(cause);
-        }
-    }
-
-    @Override
-    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
-            TimeoutException {
-        if (!await(timeout, unit)) {
-            throw new TimeoutException();
-        }
-
-        Throwable cause = cause();
-        if (cause == null) {
-            return null;
-        } else {
-            throw new ExecutionException(cause);
-        }
     }
 
     private void rethrowIfFailed() {
@@ -256,7 +212,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    public ChannelFuture await() throws InterruptedException {
+    public ChannelPromise await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -287,7 +243,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    public ChannelFuture awaitUninterruptibly() {
+    public ChannelPromise awaitUninterruptibly() {
         boolean interrupted = false;
         synchronized (this) {
             while (!done) {
@@ -420,34 +376,6 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
         return true;
     }
 
-    @Override
-    public boolean cancel() {
-        if (!cancellable) {
-            return false;
-        }
-
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return false;
-            }
-
-            cause = CANCELLED;
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
-            }
-        }
-
-        notifyListeners();
-        return true;
-    }
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return cancel();
-    }
-
     private void notifyListeners() {
         // This method doesn't need synchronization because:
         // 1) This method is always called after synchronized (this) block.
@@ -576,7 +504,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelFutu
     }
 
     @Override
-    ChannelFuture future() {
+    ChannelPromise future() {
         return this;
     }
 }

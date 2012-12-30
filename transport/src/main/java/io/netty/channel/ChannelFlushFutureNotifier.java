@@ -28,10 +28,10 @@ public final class ChannelFlushFutureNotifier {
     private final Queue<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
 
     /**
-     * Add a {@link ChannelFuture} to this {@link ChannelFlushFutureNotifier} which will be notified after the given
+     * Add a {@link ChannelPromise} to this {@link ChannelFlushFutureNotifier} which will be notified after the given
      * pendingDataSize was reached.
      */
-    public void addFlushFuture(ChannelFuture future, int pendingDataSize) {
+    public void addFlushFuture(ChannelPromise future, int pendingDataSize) {
         if (future == null) {
             throw new NullPointerException("future");
         }
@@ -66,7 +66,7 @@ public final class ChannelFlushFutureNotifier {
     }
 
     /**
-     * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelFuture, int)} and
+     * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelPromise, int)} and
      * their pendingDatasize is smaller after the the current writeCounter returned by {@link #writeCounter()}.
      *
      * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushFutureNotifier} and
@@ -77,7 +77,7 @@ public final class ChannelFlushFutureNotifier {
     }
 
     /**
-     * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelFuture, int)} and
+     * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelPromise, int)} and
      * their pendingDatasize isis smaller then the current writeCounter returned by {@link #writeCounter()}.
      *
      * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushFutureNotifier} and
@@ -99,7 +99,7 @@ public final class ChannelFlushFutureNotifier {
     }
 
     /**
-     * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelFuture, int)} and
+     * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelPromise, int)} and
      * their pendingDatasize is smaller then the current writeCounter returned by {@link #writeCounter()} using
      * the given cause1.
      *
@@ -171,14 +171,14 @@ public final class ChannelFlushFutureNotifier {
     abstract static class FlushCheckpoint {
         abstract long flushCheckpoint();
         abstract void flushCheckpoint(long checkpoint);
-        abstract ChannelFuture future();
+        abstract ChannelPromise future();
     }
 
     private static class DefaultFlushCheckpoint extends FlushCheckpoint {
         private long checkpoint;
-        private final ChannelFuture future;
+        private final ChannelPromise future;
 
-        DefaultFlushCheckpoint(long checkpoint, ChannelFuture future) {
+        DefaultFlushCheckpoint(long checkpoint, ChannelPromise future) {
             this.checkpoint = checkpoint;
             this.future = future;
         }
@@ -194,7 +194,7 @@ public final class ChannelFlushFutureNotifier {
         }
 
         @Override
-        ChannelFuture future() {
+        ChannelPromise future() {
             return future;
         }
     }

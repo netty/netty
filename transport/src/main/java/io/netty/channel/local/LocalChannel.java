@@ -21,9 +21,9 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventExecutor;
@@ -55,7 +55,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile ChannelFuture connectFuture;
+    private volatile ChannelPromise connectFuture;
 
     public LocalChannel() {
         this(null);
@@ -246,7 +246,7 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelFuture future) {
+                SocketAddress localAddress, final ChannelPromise future) {
             if (eventLoop().inEventLoop()) {
                 if (!ensureOpen(future)) {
                     return;

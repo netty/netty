@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOperationHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 
 import java.util.concurrent.ScheduledFuture;
@@ -104,20 +105,20 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, final ChannelPromise future) throws Exception {
         scheduleTimeout(ctx, future);
 
         super.flush(ctx, future);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
         scheduleTimeout(ctx, future);
 
         super.sendFile(ctx, region, future);
     }
 
-    private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelFuture future) {
+    private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {
         if (timeoutMillis > 0) {
             // Schedule a timeout.
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {

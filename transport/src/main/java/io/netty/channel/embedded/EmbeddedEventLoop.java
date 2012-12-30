@@ -17,6 +17,7 @@ package io.netty.channel.embedded;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
@@ -109,7 +110,7 @@ final class EmbeddedEventLoop extends AbstractExecutorService implements EventLo
     }
 
     @Override
-    public ChannelFuture register(Channel channel, ChannelFuture future) {
+    public ChannelFuture register(Channel channel, ChannelPromise future) {
         channel.unsafe().register(this, future);
         return future;
     }

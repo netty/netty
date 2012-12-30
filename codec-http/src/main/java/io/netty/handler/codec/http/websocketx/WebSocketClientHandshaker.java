@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpResponse;
 
 import java.net.URI;
@@ -135,9 +136,9 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      * @param future
-     *            the {@link ChannelFuture} to be notified when the opening handshake is sent
+     *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
-    public abstract ChannelFuture handshake(Channel channel, ChannelFuture future);
+    public abstract ChannelFuture handshake(Channel channel, ChannelPromise future);
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.

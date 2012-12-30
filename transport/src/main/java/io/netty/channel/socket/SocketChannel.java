@@ -17,6 +17,7 @@ package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -55,7 +56,7 @@ public interface SocketChannel extends Channel {
     /**
      * @see Socket#shutdownOutput()
      *
-     * Will notify and return the given {@link ChannelFuture}
+     * Will notify the given {@link ChannelPromise}
      */
-    ChannelFuture shutdownOutput(ChannelFuture future);
+    ChannelFuture shutdownOutput(ChannelPromise future);
 }

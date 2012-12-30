@@ -120,34 +120,4 @@ abstract class CompleteChannelFuture implements ChannelFuture {
     public boolean isDone() {
         return true;
     }
-
-    @Override
-    public boolean setProgress(long amount, long current, long total) {
-        return false;
-    }
-
-    @Override
-    public boolean setFailure(Throwable cause) {
-        return false;
-    }
-
-    @Override
-    public boolean setSuccess() {
-        return false;
-    }
-
-    @Override
-    public boolean cancel() {
-        return false;
-    }
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return false;
-    }
 }

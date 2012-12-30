@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -253,7 +254,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelFuture future) {
+    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future) {
         try {
             return joinGroup(
                     multicastAddress,
@@ -274,7 +275,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelFuture future) {
+            ChannelPromise future) {
         return joinGroup(multicastAddress.getAddress(), networkInterface, null, future);
     }
 
@@ -287,7 +288,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress source, ChannelFuture future) {
+            InetAddress source, ChannelPromise future) {
         if (DetectionUtil.javaVersion() >= 7) {
             if (multicastAddress == null) {
                 throw new NullPointerException("multicastAddress");
@@ -330,7 +331,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelFuture future) {
+    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future) {
         try {
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, future);
@@ -349,7 +350,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, ChannelFuture future) {
+            NetworkInterface networkInterface, ChannelPromise future) {
         return leaveGroup(multicastAddress.getAddress(), networkInterface, null, future);
     }
 
@@ -362,7 +363,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            ChannelFuture future) {
+            ChannelPromise future) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         }
@@ -416,7 +417,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock, ChannelFuture future) {
+            InetAddress sourceToBlock, ChannelPromise future) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
@@ -464,7 +465,7 @@ public final class NioDatagramChannel
      */
     @Override
     public ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelFuture future) {
+            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future) {
         try {
             return block(
                     multicastAddress,

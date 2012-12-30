@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOperationHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.FileRegion;
@@ -262,7 +263,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -275,33 +276,33 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise future) throws Exception {
         ctx.bind(localAddress, future);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelFuture future) throws Exception {
+                        ChannelPromise future) throws Exception {
         ctx.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         ctx.disconnect(future);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         ctx.close(future);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         ctx.deregister(future);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {

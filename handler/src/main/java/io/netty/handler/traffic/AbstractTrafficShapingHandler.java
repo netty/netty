@@ -17,11 +17,11 @@ package io.netty.handler.traffic;
 
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -295,7 +295,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, final ChannelPromise future) throws Exception {
         long curtime = System.currentTimeMillis();
         long size = ctx.outboundByteBuffer().readableBytes();
 

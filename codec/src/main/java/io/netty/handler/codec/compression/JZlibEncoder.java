@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
@@ -247,7 +248,7 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
+    public ChannelFuture close(ChannelPromise future) {
         return finishEncode(ctx(), future);
     }
 
@@ -338,7 +339,7 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     public void close(
             final ChannelHandlerContext ctx,
-            final ChannelFuture future) throws Exception {
+            final ChannelPromise future) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newFuture());
         f.addListener(new ChannelFutureListener() {
             @Override
@@ -358,7 +359,7 @@ public class JZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise future) {
         if (!finished.compareAndSet(false, true)) {
             future.setSuccess();
             return future;

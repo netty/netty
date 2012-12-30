@@ -27,18 +27,18 @@ import java.util.Set;
  */
 public final class ChannelFutureAggregator implements ChannelFutureListener {
 
-    private final ChannelFuture aggregateFuture;
+    private final ChannelPromise aggregateFuture;
 
-    private Set<ChannelFuture> pendingFutures;
+    private Set<ChannelPromise> pendingFutures;
 
-    public ChannelFutureAggregator(ChannelFuture aggregateFuture) {
+    public ChannelFutureAggregator(ChannelPromise aggregateFuture) {
         this.aggregateFuture = aggregateFuture;
     }
 
-    public void addFuture(ChannelFuture future) {
+    public void addFuture(ChannelPromise future) {
         synchronized (this) {
             if (pendingFutures == null) {
-                pendingFutures = new HashSet<ChannelFuture>();
+                pendingFutures = new HashSet<ChannelPromise>();
             }
             pendingFutures.add(future);
         }
@@ -48,11 +48,6 @@ public final class ChannelFutureAggregator implements ChannelFutureListener {
     @Override
     public void operationComplete(ChannelFuture future)
             throws Exception {
-        if (future.isCancelled()) {
-            // TODO: what should the correct behaviour be when a fragment is cancelled?
-            // cancel all outstanding fragments and cancel the aggregate?
-            return;
-        }
 
         synchronized (this) {
             if (pendingFutures == null) {
@@ -61,8 +56,8 @@ public final class ChannelFutureAggregator implements ChannelFutureListener {
                 pendingFutures.remove(future);
                 if (!future.isSuccess()) {
                     aggregateFuture.setFailure(future.cause());
-                    for (ChannelFuture pendingFuture: pendingFutures) {
-                        pendingFuture.cancel();
+                    for (ChannelPromise pendingFuture: pendingFutures) {
+                        pendingFuture.setFailure(future.cause());
                     }
                 } else {
                     if (pendingFutures.isEmpty()) {

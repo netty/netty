@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelFuture;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -162,7 +163,7 @@ public class SslHandler
     private final boolean startTls;
     private boolean sentFirstMessage;
 
-    private final Queue<ChannelFuture> handshakeFutures = new ArrayDeque<ChannelFuture>();
+    private final Queue<ChannelPromise> handshakeFutures = new ArrayDeque<ChannelPromise>();
     private final SSLEngineInboundCloseFuture sslCloseFuture = new SSLEngineInboundCloseFuture();
 
     private volatile long handshakeTimeoutMillis = 10000;
@@ -283,10 +284,10 @@ public class SslHandler
     /**
      * Starts an SSL / TLS handshake for the specified channel.
      *
-     * @return a {@link ChannelFuture} which is notified when the handshake
+     * @return a {@link ChannelPromise} which is notified when the handshake
      *         succeeds or fails.
      */
-    public ChannelFuture handshake(final ChannelFuture future) {
+    public ChannelFuture handshake(final ChannelPromise future) {
         final ChannelHandlerContext ctx = this.ctx;
 
         final ScheduledFuture<?> timeoutFuture;
@@ -343,7 +344,7 @@ public class SslHandler
      * See {@link #close()}
 
      */
-    public ChannelFuture close(final ChannelFuture future) {
+    public ChannelFuture close(final ChannelPromise future) {
         final ChannelHandlerContext ctx = this.ctx;
         ctx.executor().execute(new Runnable() {
             @Override
@@ -390,18 +391,18 @@ public class SslHandler
 
     @Override
     public void disconnect(final ChannelHandlerContext ctx,
-            final ChannelFuture future) throws Exception {
+            final ChannelPromise future) throws Exception {
         closeOutboundAndChannel(ctx, future, true);
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx,
-            final ChannelFuture future) throws Exception {
+            final ChannelPromise future) throws Exception {
         closeOutboundAndChannel(ctx, future, false);
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -872,7 +873,7 @@ public class SslHandler
      */
     private void setHandshakeSuccess() {
         for (;;) {
-            ChannelFuture f = handshakeFutures.poll();
+            ChannelPromise f = handshakeFutures.poll();
             if (f == null) {
                 break;
             }
@@ -902,7 +903,7 @@ public class SslHandler
         }
 
         for (;;) {
-            ChannelFuture f = handshakeFutures.poll();
+            ChannelPromise f = handshakeFutures.poll();
             if (f == null) {
                 break;
             }
@@ -913,7 +914,7 @@ public class SslHandler
     }
 
     private void closeOutboundAndChannel(
-            final ChannelHandlerContext ctx, final ChannelFuture future, boolean disconnect) throws Exception {
+            final ChannelHandlerContext ctx, final ChannelPromise future, boolean disconnect) throws Exception {
         if (!ctx.channel().isActive()) {
             if (disconnect) {
                 ctx.disconnect(future);
@@ -925,7 +926,7 @@ public class SslHandler
 
         engine.closeOutbound();
 
-        ChannelFuture closeNotifyFuture = ctx.newFuture();
+        ChannelPromise closeNotifyFuture = ctx.newFuture();
         flush(ctx, closeNotifyFuture);
         safeClose(ctx, closeNotifyFuture, future);
     }
@@ -971,7 +972,7 @@ public class SslHandler
 
     private void safeClose(
             final ChannelHandlerContext ctx, ChannelFuture flushFuture,
-            final ChannelFuture closeFuture) {
+            final ChannelPromise closeFuture) {
         if (!ctx.channel().isActive()) {
             ctx.close(closeFuture);
             return;
@@ -1010,7 +1011,7 @@ public class SslHandler
 
     private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
         public SSLEngineInboundCloseFuture() {
-            super(null, true);
+            super(null);
         }
 
         void setClosed() {

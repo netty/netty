@@ -17,7 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
 import java.net.ConnectException;
@@ -39,7 +39,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    protected ChannelFuture connectFuture;
+    protected ChannelPromise connectFuture;
     protected ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
@@ -98,7 +98,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress localAddress, final ChannelPromise future) {
             if (eventLoop().inEventLoop()) {
                 if (!ensureOpen(future)) {
                     return;
@@ -121,7 +121,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
                                 if (connectTimeoutException == null) {
                                     connectTimeoutException = new ConnectException("connection timed out");
                                 }
-                                ChannelFuture connectFuture = AbstractAioChannel.this.connectFuture;
+                                ChannelPromise connectFuture = AbstractAioChannel.this.connectFuture;
                                 if (connectFuture != null &&
                                         connectFuture.setFailure(connectTimeoutException)) {
                                     pipeline().fireExceptionCaught(connectTimeoutException);
@@ -173,6 +173,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
      * Connect to the remote peer using the given localAddress if one is specified or {@code null} otherwise.
      */
     protected abstract void doConnect(SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelFuture connectFuture);
+            SocketAddress localAddress, ChannelPromise connectFuture);
 
 }

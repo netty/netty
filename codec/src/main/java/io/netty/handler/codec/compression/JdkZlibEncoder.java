@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -159,7 +160,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
+    public ChannelFuture close(ChannelPromise future) {
         return finishEncode(ctx(), future);
     }
 
@@ -209,7 +210,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise future) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newFuture());
         f.addListener(new ChannelFutureListener() {
             @Override
@@ -229,7 +230,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise future) {
         if (!finished.compareAndSet(false, true)) {
             future.setSuccess();
             return future;

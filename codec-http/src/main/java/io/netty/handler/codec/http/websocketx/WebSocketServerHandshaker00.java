@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -118,7 +119,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelFuture future) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise future) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
@@ -207,7 +208,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelFuture future) {
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise future) {
         return channel.write(frame, future);
     }
 }

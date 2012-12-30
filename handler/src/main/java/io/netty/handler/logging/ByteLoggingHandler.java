@@ -17,10 +17,10 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
+import io.netty.channel.ChannelPromise;
 
 public class ByteLoggingHandler
         extends LoggingHandler implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
@@ -138,7 +138,7 @@ public class ByteLoggingHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         ByteBuf buf = ctx.outboundByteBuffer();
         if (logger.isEnabled(internalLevel)) {

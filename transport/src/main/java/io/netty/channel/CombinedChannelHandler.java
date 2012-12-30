@@ -174,7 +174,7 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     @Override
     public void bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelFuture future) throws Exception {
+            SocketAddress localAddress, ChannelPromise future) throws Exception {
         out.bind(ctx, localAddress, future);
     }
 
@@ -182,36 +182,36 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     public void connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelFuture future) throws Exception {
+            ChannelPromise future) throws Exception {
         out.connect(ctx, remoteAddress, localAddress, future);
     }
 
     @Override
     public void disconnect(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+            ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         out.disconnect(ctx, future);
     }
 
     @Override
     public void close(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+            ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         out.close(ctx, future);
     }
 
     @Override
     public void deregister(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+            ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         out.deregister(ctx, future);
     }
 
     @Override
     public void flush(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+            ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         out.flush(ctx, future);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
         out.sendFile(ctx, region, future);
     }
 }
