@@ -222,15 +222,6 @@ public class OioSocketChannel extends AbstractOioByteChannel
             return -1;
         }
 
-        if (readSuspended) {
-            try {
-                Thread.sleep(SO_TIMEOUT);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-            return 0;
-        }
-
         try {
             return buf.writeBytes(is, buf.writableBytes());
         } catch (SocketTimeoutException e) {

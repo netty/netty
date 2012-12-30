@@ -90,8 +90,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().socket().bind(localAddress, config.getBacklog());
-        SelectionKey selectionKey = selectionKey();
-        selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
     }
 
     @Override

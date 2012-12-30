@@ -141,6 +141,15 @@ public interface ChannelOutboundInvoker {
     ChannelFuture deregister(ChannelFuture future);
 
     /**
+     * Reads data from the {@link Channel} into the first inbound buffer, triggers an
+     * {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext) inboundBufferUpdated} event if data was
+     * read, and triggers an
+     * {@link ChannelStateHandler#inboundBufferSuspended(ChannelHandlerContext) inboundBufferSuspended} event so the
+     * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
+     */
+    void read();
+
+    /**
      * Flush all pending data which belongs to this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
      *

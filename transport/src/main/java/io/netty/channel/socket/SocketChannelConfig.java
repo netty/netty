@@ -153,4 +153,7 @@ public interface SocketChannelConfig extends ChannelConfig {
 
     @Override
     SocketChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    SocketChannelConfig setAutoRead(boolean autoRead);
 }

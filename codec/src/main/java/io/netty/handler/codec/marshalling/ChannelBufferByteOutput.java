@@ -16,10 +16,9 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
+import org.jboss.marshalling.ByteOutput;
 
 import java.io.IOException;
-
-import org.jboss.marshalling.ByteOutput;
 
 /**
  * {@link ByteOutput} implementation which writes the data to a {@link ByteBuf}
@@ -39,7 +38,7 @@ class ChannelBufferByteOutput implements ByteOutput {
 
     @Override
     public void close() throws IOException {
-        // Nothing todo
+        // Nothing to do
     }
 
     @Override

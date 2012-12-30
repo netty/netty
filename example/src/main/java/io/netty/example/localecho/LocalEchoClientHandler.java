@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 public class LocalEchoClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, String msg) {
         // Print as received

@@ -181,15 +181,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
-        if (readSuspended) {
-            try {
-                Thread.sleep(SO_TIMEOUT);
-            } catch (InterruptedException e) {
-                // ignore;
-            }
-            return 0;
-        }
-
         int packetSize = config().getReceivePacketSize();
         byte[] data = new byte[packetSize];
         tmpPacket.setData(data);
@@ -202,11 +193,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             buf.add(new DatagramPacket(Unpooled.wrappedBuffer(
                     data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
 
-            if (readSuspended) {
-                return 0;
-            } else {
-                return 1;
-            }
+            return 1;
         } catch (SocketTimeoutException e) {
             // Expected
             return 0;

@@ -24,7 +24,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 
 /**
- * Embedded {@@link Channel} which operates on messages which can be of any time.
+ * Embedded {@link Channel} which operates on messages which can be of any time.
  */
 public class EmbeddedMessageChannel extends AbstractEmbeddedChannel<Object> {
 
@@ -47,6 +47,7 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel<Object> {
         return pipeline().inboundMessageBuffer();
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public MessageBuf<Object> lastOutboundBuffer() {
         return (MessageBuf<Object>) lastOutboundBuffer;

@@ -94,7 +94,12 @@ abstract class AbstractAioChannel extends AbstractChannel {
         return loop instanceof AioEventLoop;
     }
 
-    protected abstract class AbstractAioUnsafe extends AbstractUnsafe {
+    @Override
+    protected AbstractUnsafe newUnsafe() {
+        return new DefaultAioUnsafe();
+    }
+
+    protected final class DefaultAioUnsafe extends AbstractUnsafe {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
@@ -144,13 +149,13 @@ abstract class AbstractAioChannel extends AbstractChannel {
             }
         }
 
-        protected final void connectFailed(Throwable t) {
+        protected void connectFailed(Throwable t) {
             connectFuture.setFailure(t);
             pipeline().fireExceptionCaught(t);
             closeIfClosed();
         }
 
-        protected final void connectSuccess() {
+        protected void connectSuccess() {
             assert eventLoop().inEventLoop();
             assert connectFuture != null;
             try {

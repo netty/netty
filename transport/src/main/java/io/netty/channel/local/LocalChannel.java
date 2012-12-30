@@ -56,6 +56,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
     private volatile ChannelFuture connectFuture;
+    private volatile boolean readInProgress;
 
     public LocalChannel() {
         this(null);
@@ -208,6 +209,23 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
+    protected void doBeginRead() throws Exception {
+        if (readInProgress) {
+            return;
+        }
+
+        ChannelPipeline pipeline = pipeline();
+        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
+        if (buf.isEmpty()) {
+            readInProgress = true;
+            return;
+        }
+
+        pipeline.fireInboundBufferUpdated();
+        pipeline.fireInboundBufferSuspended();
+    }
+
+    @Override
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
@@ -222,7 +240,7 @@ public class LocalChannel extends AbstractChannel {
 
         if (peerLoop == eventLoop()) {
             buf.drainTo(peerPipeline.inboundMessageBuffer());
-            peerPipeline.fireInboundBufferUpdated();
+            finishPeerRead(peer, peerPipeline);
         } else {
             final Object[] msgs = buf.toArray();
             buf.clear();
@@ -231,9 +249,17 @@ public class LocalChannel extends AbstractChannel {
                 public void run() {
                     MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
                     Collections.addAll(buf, msgs);
-                    peerPipeline.fireInboundBufferUpdated();
+                    finishPeerRead(peer, peerPipeline);
                 }
             });
+        }
+    }
+
+    private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
+        if (peer.readInProgress) {
+            peer.readInProgress = false;
+            peerPipeline.fireInboundBufferUpdated();
+            peerPipeline.fireInboundBufferSuspended();
         }
     }
 
@@ -304,16 +330,6 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
-        }
-
-        @Override
-        public void suspendRead() {
-            // TODO: Implement me
-        }
-
-        @Override
-        public void resumeRead() {
-            // TODO: Implement me
         }
     }
 }

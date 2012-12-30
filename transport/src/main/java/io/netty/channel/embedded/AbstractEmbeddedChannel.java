@@ -234,6 +234,11 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     }
 
     @Override
+    protected void doBeginRead() throws Exception {
+        // NOOP
+    }
+
+    @Override
     protected AbstractUnsafe newUnsafe() {
         return new DefaultUnsafe();
     }
@@ -316,16 +321,6 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         public void connect(SocketAddress remoteAddress,
                 SocketAddress localAddress, ChannelFuture future) {
             future.setSuccess();
-        }
-
-        @Override
-        public void suspendRead() {
-            // NOOP
-        }
-
-        @Override
-        public void resumeRead() {
-            // NOOP
         }
     }
 

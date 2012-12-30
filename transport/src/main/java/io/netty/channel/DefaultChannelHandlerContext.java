@@ -31,7 +31,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
@@ -40,10 +39,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private static final EnumSet<ChannelHandlerType> EMPTY_TYPE = EnumSet.noneOf(ChannelHandlerType.class);
 
-    static final int DIR_INBOUND  = 1;
-    static final int DIR_OUTBOUND = 2;
-
-    private static final int FLAG_NEEDS_LAZY_INIT = 4;
+    private static final int FLAG_STATE_HANDLER = 1;
+    static final int FLAG_OPERATION_HANDLER = 2;
+    static final int FLAG_INBOUND_HANDLER = 4;
+    private static final int FLAG_OUTBOUND_HANDLER = 8;
+    private static final int FLAG_NEEDS_LAZY_INIT = 16;
 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
@@ -54,7 +54,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final Set<ChannelHandlerType> type;
     private final ChannelHandler handler;
     final int flags;
-    final AtomicBoolean readable = new AtomicBoolean(true);
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -143,7 +142,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         @Override
         public void run() {
             DefaultChannelHandlerContext next = nextContext(
-                    DefaultChannelHandlerContext.this.next, DIR_INBOUND);
+                    DefaultChannelHandlerContext.this.next, FLAG_STATE_HANDLER);
             if (next != null) {
                 next.fillBridge();
                 EventExecutor executor = next.executor();
@@ -152,6 +151,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } else {
                     executor.execute(next.curCtxFireInboundBufferUpdatedTask);
                 }
+            }
+        }
+    };
+    private final Runnable fireInboundBufferSuspendedTask = new Runnable() {
+        @Override
+        public void run() {
+            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            try {
+                ((ChannelStateHandler) ctx.handler).inboundBufferSuspended(ctx);
+            } catch (Throwable t) {
+                pipeline.notifyHandlerException(t);
             }
         }
     };
@@ -176,12 +186,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
 
-            DefaultChannelHandlerContext nextCtx = nextContext(ctx.next, DIR_INBOUND);
+            DefaultChannelHandlerContext nextCtx = nextContext(ctx.next, FLAG_STATE_HANDLER);
             if (nextCtx != null) {
                 nextCtx.callFreeInboundBuffer();
             } else {
                 // Freed all inbound buffers. Free all outbound buffers in a reverse order.
-                pipeline.firstContext(DIR_OUTBOUND).callFreeOutboundBuffer();
+                pipeline.lastContext(FLAG_OPERATION_HANDLER).callFreeOutboundBuffer();
             }
         }
     };
@@ -206,10 +216,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
 
-            DefaultChannelHandlerContext nextCtx = nextContext(ctx.prev, DIR_OUTBOUND);
+            DefaultChannelHandlerContext nextCtx = prevContext(ctx.prev, FLAG_OPERATION_HANDLER);
             if (nextCtx != null) {
                 nextCtx.callFreeOutboundBuffer();
             }
+        }
+    };
+
+    final Runnable read0Task = new Runnable() {
+        @Override
+        public void run() {
+            pipeline.read0(DefaultChannelHandlerContext.this);
         }
     };
 
@@ -232,16 +249,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         EnumSet<ChannelHandlerType> type = EMPTY_TYPE.clone();
         if (handler instanceof ChannelStateHandler) {
             type.add(ChannelHandlerType.STATE);
-            flags |= DIR_INBOUND;
+            flags |= FLAG_STATE_HANDLER;
             if (handler instanceof ChannelInboundHandler) {
                 type.add(ChannelHandlerType.INBOUND);
+                flags |= FLAG_INBOUND_HANDLER;
             }
         }
         if (handler instanceof ChannelOperationHandler) {
             type.add(ChannelHandlerType.OPERATION);
-            flags |= DIR_OUTBOUND;
+            flags |= FLAG_OPERATION_HANDLER;
             if (handler instanceof ChannelOutboundHandler) {
                 type.add(ChannelHandlerType.OUTBOUND);
+                flags |= FLAG_OUTBOUND_HANDLER;
             }
         }
         this.type = Collections.unmodifiableSet(type);
@@ -267,7 +286,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             executor = null;
         }
 
-        if (type.contains(ChannelHandlerType.INBOUND)) {
+        if ((flags & FLAG_INBOUND_HANDLER) != 0) {
             Buf buf;
             try {
                 buf = ((ChannelInboundHandler) handler).newInboundBuffer(this);
@@ -299,7 +318,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             inMsgBridge = null;
         }
 
-        if (type.contains(ChannelHandlerType.OUTBOUND)) {
+        if ((flags & FLAG_OUTBOUND_HANDLER) != 0) {
             if (prev == null) {
                 // Special case: if pref == null, it means this context for HeadHandler.
                 // HeadHandler is an outbound handler instantiated by the constructor of DefaultChannelPipeline.
@@ -930,7 +949,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelRegistered() {
-        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
+        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -943,7 +962,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelUnregistered() {
-        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
+        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
@@ -956,7 +975,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelActive() {
-        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
+        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -969,7 +988,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelInactive() {
-        DefaultChannelHandlerContext next = nextContext(this.next, DIR_INBOUND);
+        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
@@ -1063,6 +1082,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
+    public void fireInboundBufferSuspended() {
+        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        if (next != null) {
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop() && prev != null) {
+                next.fireInboundBufferSuspendedTask.run();
+            } else {
+                executor.execute(next.fireInboundBufferSuspendedTask);
+            }
+        }
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress) {
         return bind(localAddress, newFuture());
     }
@@ -1104,7 +1136,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-        return pipeline.bind(nextContext(prev, DIR_OUTBOUND), localAddress, future);
+        return pipeline.bind(prevContext(prev, FLAG_OPERATION_HANDLER), localAddress, future);
     }
 
     @Override
@@ -1114,29 +1146,34 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        return pipeline.connect(nextContext(prev, DIR_OUTBOUND), remoteAddress, localAddress, future);
+        return pipeline.connect(prevContext(prev, FLAG_OPERATION_HANDLER), remoteAddress, localAddress, future);
     }
 
     @Override
     public ChannelFuture disconnect(ChannelFuture future) {
-        return pipeline.disconnect(nextContext(prev, DIR_OUTBOUND), future);
+        return pipeline.disconnect(prevContext(prev, FLAG_OPERATION_HANDLER), future);
     }
 
     @Override
     public ChannelFuture close(ChannelFuture future) {
-        return pipeline.close(nextContext(prev, DIR_OUTBOUND), future);
+        return pipeline.close(prevContext(prev, FLAG_OPERATION_HANDLER), future);
     }
 
     @Override
     public ChannelFuture deregister(ChannelFuture future) {
-        return pipeline.deregister(nextContext(prev, DIR_OUTBOUND), future);
+        return pipeline.deregister(prevContext(prev, FLAG_OPERATION_HANDLER), future);
+    }
+
+    @Override
+    public void read() {
+        pipeline.read(prevContext(prev, FLAG_OPERATION_HANDLER));
     }
 
     @Override
     public ChannelFuture flush(final ChannelFuture future) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            DefaultChannelHandlerContext prev = nextContext(this.prev, DIR_OUTBOUND);
+            DefaultChannelHandlerContext prev = prevContext(this.prev, FLAG_OPERATION_HANDLER);
             prev.fillBridge();
             pipeline.flush(prev, future);
         } else {
@@ -1270,22 +1307,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public boolean isReadable() {
-        return readable.get();
-    }
-
-    @Override
-    public void readable(boolean readable) {
-        pipeline.readable(this, readable);
-    }
-
-    @Override
     public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, newFuture());
+        return pipeline.sendFile(prevContext(prev, FLAG_OPERATION_HANDLER), region, newFuture());
     }
 
     @Override
     public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
-        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, future);
+        return pipeline.sendFile(prevContext(prev, FLAG_OPERATION_HANDLER), region, future);
     }
 }

@@ -30,7 +30,15 @@ abstract class AbstractOioChannel extends AbstractChannel {
 
     static final int SO_TIMEOUT = 1000;
 
-    protected volatile boolean readSuspended;
+    private boolean readInProgress;
+
+    private final Runnable readTask = new Runnable() {
+        @Override
+        public void run() {
+            readInProgress = false;
+            doRead();
+        }
+    };
 
     /**
      * @see AbstractChannel#AbstractChannel(Channel, Integer)
@@ -50,15 +58,11 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     @Override
-    public OioUnsafe unsafe() {
-        return (OioUnsafe) super.unsafe();
+    protected AbstractUnsafe newUnsafe() {
+        return new DefaultOioUnsafe();
     }
 
-    public interface OioUnsafe extends Unsafe {
-        void read();
-    }
-
-    abstract class AbstractOioUnsafe extends AbstractUnsafe implements OioUnsafe {
+    private final class DefaultOioUnsafe extends AbstractUnsafe {
         @Override
         public void connect(
                 final SocketAddress remoteAddress,
@@ -88,16 +92,6 @@ abstract class AbstractOioChannel extends AbstractChannel {
                 });
             }
         }
-
-        @Override
-        public void suspendRead() {
-            readSuspended = true;
-        }
-
-        @Override
-        public void resumeRead() {
-            readSuspended = false;
-        }
     }
 
     @Override
@@ -115,4 +109,16 @@ abstract class AbstractOioChannel extends AbstractChannel {
      */
     protected abstract void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+
+    @Override
+    protected void doBeginRead() throws Exception {
+        if (readInProgress) {
+            return;
+        }
+
+        readInProgress = true;
+        eventLoop().execute(readTask);
+    }
+
+    protected abstract void doRead();
 }

@@ -118,8 +118,6 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().bind(localAddress, config.getBacklog());
-        SelectionKey selectionKey = selectionKey();
-        selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
     }
 
     @Override

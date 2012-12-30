@@ -140,6 +140,11 @@ public class ChunkedWriteHandler
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         queue.add(future);
         if (isWritable() || !ctx.channel().isActive()) {

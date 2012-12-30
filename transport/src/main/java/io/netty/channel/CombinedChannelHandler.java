@@ -205,6 +205,11 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) {
+        out.read(ctx);
+    }
+
+    @Override
     public void flush(
             ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         out.flush(ctx, future);
