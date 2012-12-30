@@ -15,9 +15,6 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channel#newFailedFuture(Throwable)}

@@ -244,7 +244,7 @@ public class JZlibEncoder extends ZlibEncoder {
 
     @Override
     public ChannelFuture close() {
-        return close(ctx().channel().newFuture());
+        return close(ctx().channel().newPromise());
     }
 
     @Override
@@ -340,7 +340,7 @@ public class JZlibEncoder extends ZlibEncoder {
     public void close(
             final ChannelHandlerContext ctx,
             final ChannelPromise future) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newFuture());
+        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {

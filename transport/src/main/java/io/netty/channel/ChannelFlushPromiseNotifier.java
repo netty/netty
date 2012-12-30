@@ -22,13 +22,13 @@ import java.util.Queue;
  * This implementation allows to register {@link ChannelFuture} instances which will get notified once some amount of
  * data was written and so a checkpoint was reached.
  */
-public final class ChannelFlushFutureNotifier {
+public final class ChannelFlushPromiseNotifier {
 
     private long writeCounter;
     private final Queue<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
 
     /**
-     * Add a {@link ChannelPromise} to this {@link ChannelFlushFutureNotifier} which will be notified after the given
+     * Add a {@link ChannelPromise} to this {@link ChannelFlushPromiseNotifier} which will be notified after the given
      * pendingDataSize was reached.
      */
     public void addFlushFuture(ChannelPromise future, int pendingDataSize) {
@@ -59,7 +59,7 @@ public final class ChannelFlushFutureNotifier {
     }
 
     /**
-     * Return the current write counter of this {@link ChannelFlushFutureNotifier}
+     * Return the current write counter of this {@link ChannelFlushPromiseNotifier}
      */
     public long writeCounter() {
         return writeCounter;
@@ -69,7 +69,7 @@ public final class ChannelFlushFutureNotifier {
      * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelPromise, int)} and
      * their pendingDatasize is smaller after the the current writeCounter returned by {@link #writeCounter()}.
      *
-     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushFutureNotifier} and
+     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notificiation.
      */
     public void notifyFlushFutures() {
@@ -80,7 +80,7 @@ public final class ChannelFlushFutureNotifier {
      * Notify all {@link ChannelFuture}s that were registered with {@link #addFlushFuture(ChannelPromise, int)} and
      * their pendingDatasize isis smaller then the current writeCounter returned by {@link #writeCounter()}.
      *
-     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushFutureNotifier} and
+     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notificiation.
      *
      * The rest of the remaining {@link ChannelFuture}s will be failed with the given {@link Throwable}.
@@ -103,7 +103,7 @@ public final class ChannelFlushFutureNotifier {
      * their pendingDatasize is smaller then the current writeCounter returned by {@link #writeCounter()} using
      * the given cause1.
      *
-     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushFutureNotifier} and
+     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notificiation.
      *
      * The rest of the remaining {@link ChannelFuture}s will be failed with the given {@link Throwable}.

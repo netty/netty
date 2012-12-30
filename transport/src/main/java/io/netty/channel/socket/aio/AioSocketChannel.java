@@ -18,7 +18,7 @@ package io.netty.channel.socket.aio;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFlushFutureNotifier;
+import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -137,7 +137,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override
@@ -402,7 +402,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             // Notify flush futures only when the handler is called outside of unsafe().flushNow()
             // because flushNow() will do that for us.
-            ChannelFlushFutureNotifier notifier = channel.flushFutureNotifier;
+            ChannelFlushPromiseNotifier notifier = channel.flushFutureNotifier;
             notifier.increaseWriteCounter(writtenBytes);
             notifier.notifyFlushFutures();
 

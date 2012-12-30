@@ -241,7 +241,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newFuture());
+        return joinGroup(multicastAddress, newPromise());
     }
 
     @Override
@@ -258,7 +258,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newFuture());
+        return joinGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
@@ -299,7 +299,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newFuture());
+        return leaveGroup(multicastAddress, newPromise());
     }
 
     @Override
@@ -316,7 +316,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newFuture());
+        return leaveGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override

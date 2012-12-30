@@ -25,13 +25,13 @@ import java.util.Set;
  * listening to the individual futures and producing an aggregated result
  * (success/failure) when all futures have completed.
  */
-public final class ChannelFutureAggregator implements ChannelFutureListener {
+public final class ChannelPromiseAggregator implements ChannelFutureListener {
 
     private final ChannelPromise aggregateFuture;
 
     private Set<ChannelPromise> pendingFutures;
 
-    public ChannelFutureAggregator(ChannelPromise aggregateFuture) {
+    public ChannelPromiseAggregator(ChannelPromise aggregateFuture) {
         this.aggregateFuture = aggregateFuture;
     }
 

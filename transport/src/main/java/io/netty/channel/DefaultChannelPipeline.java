@@ -991,42 +991,42 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, channel.newFuture());
+        return bind(localAddress, channel.newPromise());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, channel.newFuture());
+        return connect(remoteAddress, channel.newPromise());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, channel.newFuture());
+        return connect(remoteAddress, localAddress, channel.newPromise());
     }
 
     @Override
     public ChannelFuture disconnect() {
-        return disconnect(channel.newFuture());
+        return disconnect(channel.newPromise());
     }
 
     @Override
     public ChannelFuture close() {
-        return close(channel.newFuture());
+        return close(channel.newPromise());
     }
 
     @Override
     public ChannelFuture deregister() {
-        return deregister(channel.newFuture());
+        return deregister(channel.newPromise());
     }
 
     @Override
     public ChannelFuture flush() {
-        return flush(channel.newFuture());
+        return flush(channel.newPromise());
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        return write(message, channel.newFuture());
+        return write(message, channel.newPromise());
     }
 
     @Override
@@ -1182,7 +1182,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture sendFile(FileRegion region) {
-        return sendFile(region, channel().newFuture());
+        return sendFile(region, channel().newPromise());
     }
 
     @Override

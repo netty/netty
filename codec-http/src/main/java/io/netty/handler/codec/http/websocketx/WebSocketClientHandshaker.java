@@ -127,7 +127,7 @@ public abstract class WebSocketClientHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return handshake(channel, channel.newFuture());
+        return handshake(channel, channel.newPromise());
     }
 
     /**

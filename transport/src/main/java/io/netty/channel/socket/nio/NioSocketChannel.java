@@ -126,7 +126,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override

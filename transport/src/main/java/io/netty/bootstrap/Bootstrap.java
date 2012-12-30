@@ -93,7 +93,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     public ChannelFuture connect() {
         validate();
         Channel channel = factory().newChannel();
-        return connect(channel.newFuture());
+        return connect(channel.newPromise());
     }
 
     /**

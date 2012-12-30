@@ -18,11 +18,11 @@ package io.netty.channel;
 /**
  * ChannelFutureListener implementation which takes other {@link ChannelFuture}(s) and notifies them on completion.
  */
-public final class ChannelFutureNotifier implements ChannelFutureListener {
+public final class ChannelPromiseNotifier implements ChannelFutureListener {
 
     private final ChannelPromise[] futures;
 
-    public ChannelFutureNotifier(ChannelPromise... futures) {
+    public ChannelPromiseNotifier(ChannelPromise... futures) {
         if (futures == null) {
             throw new NullPointerException("futures");
         }

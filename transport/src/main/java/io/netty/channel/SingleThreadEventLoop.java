@@ -47,7 +47,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return register(channel, channel.newFuture());
+        return register(channel, channel.newPromise());
     }
 
     @Override

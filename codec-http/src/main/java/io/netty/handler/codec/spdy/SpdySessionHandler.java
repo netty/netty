@@ -889,7 +889,7 @@ public class SpdySessionHandler
         if (spdySession.noActiveStreams()) {
             f.addListener(new ClosingChannelFutureListener(ctx, future));
         } else {
-            closeSessionFuture = ctx.newFuture();
+            closeSessionFuture = ctx.newPromise();
             closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx, future));
         }
         // FIXME: Close the connection forcibly after timeout.

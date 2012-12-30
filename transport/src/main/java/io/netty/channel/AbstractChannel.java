@@ -82,7 +82,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final VoidChannelPromise voidFuture = new VoidChannelPromise(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
-    protected final ChannelFlushFutureNotifier flushFutureNotifier = new ChannelFlushFutureNotifier();
+    protected final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -299,8 +299,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelPromise newFuture() {
-        return new DefaultChannelFuture(this);
+    public ChannelPromise newPromise() {
+        return new DefaultChannelPromise(this);
     }
 
     @Override
@@ -452,7 +452,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             if (eventLoop().inEventLoop()) {
                 if (outboundBufSize() > 0) {
-                    flushNotifier(newFuture()).addListener(new ChannelFutureListener() {
+                    flushNotifier(newPromise()).addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture cf) throws Exception {
                             sendFile0(region, promise);
@@ -971,7 +971,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract boolean isFlushPending();
 
-    private final class CloseFuture extends DefaultChannelFuture implements ChannelFuture.Unsafe {
+    private final class CloseFuture extends DefaultChannelPromise implements ChannelFuture.Unsafe {
 
         CloseFuture(AbstractChannel ch) {
             super(ch);

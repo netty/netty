@@ -139,7 +139,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override

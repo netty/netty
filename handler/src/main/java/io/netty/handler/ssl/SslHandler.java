@@ -19,7 +19,7 @@ import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFlushFutureNotifier;
+import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -28,7 +28,7 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelFuture;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DetectionUtil;
@@ -158,7 +158,7 @@ public class SslHandler
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final Executor delegatedTaskExecutor;
-    private final ChannelFlushFutureNotifier flushFutureNotifier = new ChannelFlushFutureNotifier();
+    private final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
 
     private final boolean startTls;
     private boolean sentFirstMessage;
@@ -278,7 +278,7 @@ public class SslHandler
      * get notified once the handshake completes.
      */
     public ChannelFuture handshake() {
-        return handshake(ctx.newFuture());
+        return handshake(ctx.newPromise());
     }
 
     /**
@@ -319,7 +319,7 @@ public class SslHandler
                     }
                     engine.beginHandshake();
                     handshakeFutures.add(future);
-                    flush(ctx, ctx.newFuture());
+                    flush(ctx, ctx.newPromise());
                 } catch (Exception e) {
                     if (future.setFailure(e)) {
                         ctx.fireExceptionCaught(e);
@@ -337,7 +337,7 @@ public class SslHandler
      * destroys the underlying {@link SSLEngine}.
      */
     public ChannelFuture close() {
-        return close(ctx.newFuture());
+        return close(ctx.newPromise());
     }
 
     /**
@@ -484,7 +484,7 @@ public class SslHandler
     }
 
     private void flush0(final ChannelHandlerContext ctx, final int bytesConsumed) {
-        ctx.flush(ctx.newFuture().addListener(new ChannelFutureListener() {
+        ctx.flush(ctx.newPromise().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (ctx.executor() == ctx.channel().eventLoop()) {
@@ -508,7 +508,7 @@ public class SslHandler
     }
 
     private void flush0(final ChannelHandlerContext ctx, final int bytesConsumed, final Throwable cause) {
-        ChannelFuture flushFuture = ctx.flush(ctx.newFuture().addListener(new ChannelFutureListener() {
+        ChannelFuture flushFuture = ctx.flush(ctx.newPromise().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (ctx.executor() == ctx.channel().eventLoop()) {
@@ -530,7 +530,7 @@ public class SslHandler
             }
         }));
 
-        safeClose(ctx, flushFuture, ctx.newFuture());
+        safeClose(ctx, flushFuture, ctx.newPromise());
     }
 
     private static SSLEngineResult wrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
@@ -819,7 +819,7 @@ public class SslHandler
             }
 
             if (wrapLater) {
-                flush(ctx, ctx.newFuture());
+                flush(ctx, ctx.newPromise());
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -926,7 +926,7 @@ public class SslHandler
 
         engine.closeOutbound();
 
-        ChannelPromise closeNotifyFuture = ctx.newFuture();
+        ChannelPromise closeNotifyFuture = ctx.newPromise();
         flush(ctx, closeNotifyFuture);
         safeClose(ctx, closeNotifyFuture, future);
     }
@@ -1009,7 +1009,7 @@ public class SslHandler
         });
     }
 
-    private final class SSLEngineInboundCloseFuture extends DefaultChannelFuture {
+    private final class SSLEngineInboundCloseFuture extends DefaultChannelPromise {
         public SSLEngineInboundCloseFuture() {
             super(null);
         }

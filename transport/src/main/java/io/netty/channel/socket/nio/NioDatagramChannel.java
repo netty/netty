@@ -250,7 +250,7 @@ public final class NioDatagramChannel
 
     @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newFuture());
+        return joinGroup(multicastAddress, newPromise());
     }
 
     @Override
@@ -269,7 +269,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newFuture());
+        return joinGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
@@ -282,7 +282,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newFuture());
+        return joinGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
     @Override
@@ -327,7 +327,7 @@ public final class NioDatagramChannel
 
     @Override
     public ChannelFuture leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newFuture());
+        return leaveGroup(multicastAddress, newPromise());
     }
 
     @Override
@@ -344,7 +344,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newFuture());
+        return leaveGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
@@ -357,7 +357,7 @@ public final class NioDatagramChannel
     @Override
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newFuture());
+        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
     @Override
@@ -408,7 +408,7 @@ public final class NioDatagramChannel
     public ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newFuture());
+        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
     }
 
     /**
@@ -456,7 +456,7 @@ public final class NioDatagramChannel
      */
     @Override
     public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newFuture());
+        return block(multicastAddress, sourceToBlock, newPromise());
     }
 
     /**

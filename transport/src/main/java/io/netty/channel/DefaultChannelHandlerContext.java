@@ -1064,42 +1064,42 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, newFuture());
+        return bind(localAddress, newPromise());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newFuture());
+        return connect(remoteAddress, newPromise());
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newFuture());
+        return connect(remoteAddress, localAddress, newPromise());
     }
 
     @Override
     public ChannelFuture disconnect() {
-        return disconnect(newFuture());
+        return disconnect(newPromise());
     }
 
     @Override
     public ChannelFuture close() {
-        return close(newFuture());
+        return close(newPromise());
     }
 
     @Override
     public ChannelFuture deregister() {
-        return deregister(newFuture());
+        return deregister(newPromise());
     }
 
     @Override
     public ChannelFuture flush() {
-        return flush(newFuture());
+        return flush(newPromise());
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        return write(message, newFuture());
+        return write(message, newPromise());
     }
 
     @Override
@@ -1176,8 +1176,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelPromise newFuture() {
-        return channel.newFuture();
+    public ChannelPromise newPromise() {
+        return channel.newPromise();
     }
 
     @Override
@@ -1281,7 +1281,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, newFuture());
+        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, newPromise());
     }
 
     @Override

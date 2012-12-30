@@ -196,7 +196,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     public ChannelFuture bind() {
         validate();
         Channel channel = factory().newChannel();
-        return bind(channel.newFuture());
+        return bind(channel.newPromise());
     }
 
     /**

@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.channel.ChannelFlushFutureNotifier.FlushCheckpoint;
+import io.netty.channel.ChannelFlushPromiseNotifier.FlushCheckpoint;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -27,13 +27,13 @@ import java.util.concurrent.TimeUnit;
 import static java.util.concurrent.TimeUnit.*;
 
 /**
- * The default {@link ChannelFuture} implementation.  It is recommended to use {@link Channel#newFuture()} to create
- * a new {@link ChannelFuture} rather than calling the constructor explicitly.
+ * The default {@link ChannelPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to create
+ * a new {@link ChannelPromise} rather than calling the constructor explicitly.
  */
-public class DefaultChannelFuture extends FlushCheckpoint implements ChannelPromise {
+public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPromise {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
+        InternalLoggerFactory.getInstance(DefaultChannelPromise.class);
 
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> LISTENER_STACK_DEPTH = new ThreadLocal<Integer>() {
@@ -63,7 +63,7 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelProm
      * @param channel
      *        the {@link Channel} associated with this future
      */
-    public DefaultChannelFuture(Channel channel) {
+    public DefaultChannelPromise(Channel channel) {
         this.channel = channel;
     }
 
@@ -405,10 +405,10 @@ public class DefaultChannelFuture extends FlushCheckpoint implements ChannelProm
             channel().eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    notifyListener0(DefaultChannelFuture.this, firstListener);
+                    notifyListener0(DefaultChannelPromise.this, firstListener);
                     if (otherListeners != null) {
                         for (ChannelFutureListener l: otherListeners) {
-                            notifyListener0(DefaultChannelFuture.this, l);
+                            notifyListener0(DefaultChannelPromise.this, l);
                         }
                     }
                 }

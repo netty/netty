@@ -116,7 +116,7 @@ public abstract class WebSocketServerHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return handshake(channel, req, channel.newFuture());
+        return handshake(channel, req, channel.newPromise());
     }
 
     /**
@@ -143,7 +143,7 @@ public abstract class WebSocketServerHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return close(channel, frame, channel.newFuture());
+        return close(channel, frame, channel.newPromise());
     }
 
     /**

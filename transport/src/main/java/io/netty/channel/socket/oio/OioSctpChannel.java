@@ -350,7 +350,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
-        return bindAddress(localAddress, newFuture());
+        return bindAddress(localAddress, newPromise());
     }
 
     @Override
@@ -375,7 +375,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     public ChannelFuture unbindAddress(InetAddress localAddress) {
-        return unbindAddress(localAddress, newFuture());
+        return unbindAddress(localAddress, newPromise());
     }
 
     @Override
