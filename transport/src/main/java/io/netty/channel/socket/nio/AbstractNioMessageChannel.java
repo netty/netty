@@ -25,7 +25,7 @@ import java.nio.channels.SelectableChannel;
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
-abstract class AbstractNioMessageChannel extends AbstractNioChannel {
+public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     /**
      * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, Integer, SelectableChannel, int)}

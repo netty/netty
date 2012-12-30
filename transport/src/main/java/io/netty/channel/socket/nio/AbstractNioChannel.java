@@ -154,8 +154,19 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * Special {@link Unsafe} sub-type which allows to access the underlying {@link SelectableChannel}
      */
     public interface NioUnsafe extends Unsafe {
+        /**
+         * Return underlying {@link SelectableChannel}
+         */
         SelectableChannel ch();
+
+        /**
+         * Finish connect
+         */
         void finishConnect();
+
+        /**
+         * Read from underlying {@link SelectableChannel}
+         */
         void read();
     }
 
