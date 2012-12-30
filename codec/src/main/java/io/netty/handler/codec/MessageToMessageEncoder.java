@@ -16,12 +16,12 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 
 /**
  * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
@@ -56,7 +56,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
         for (;;) {
             try {
@@ -89,7 +89,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
             }
         }
 
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**

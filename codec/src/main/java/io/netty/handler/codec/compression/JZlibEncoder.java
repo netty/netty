@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.jzlib.JZlib;
 import io.netty.util.internal.jzlib.ZStream;
 
@@ -243,12 +244,12 @@ public class JZlibEncoder extends ZlibEncoder {
 
     @Override
     public ChannelFuture close() {
-        return close(ctx().channel().newFuture());
+        return close(ctx().channel().newPromise());
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
-        return finishEncode(ctx(), future);
+    public ChannelFuture close(ChannelPromise promise) {
+        return finishEncode(ctx(), promise);
     }
 
     private ChannelHandlerContext ctx() {
@@ -338,12 +339,12 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     public void close(
             final ChannelHandlerContext ctx,
-            final ChannelFuture future) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newFuture());
+            final ChannelPromise promise) throws Exception {
+        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(future);
+                ctx.close(promise);
             }
         });
 
@@ -352,13 +353,13 @@ public class JZlibEncoder extends ZlibEncoder {
             ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(future);
+                    ctx.close(promise);
                 }
             }, 10, TimeUnit.SECONDS); // FIXME: Magic number
         }
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelFuture future) {
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise future) {
         if (!finished.compareAndSet(false, true)) {
             future.setSuccess();
             return future;

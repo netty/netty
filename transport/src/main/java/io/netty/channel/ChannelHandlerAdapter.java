@@ -27,61 +27,61 @@ import java.net.SocketAddress;
 public abstract class ChannelHandlerAdapter extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
     /**
-     * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                     ChannelFuture future) throws Exception {
+                     ChannelPromise future) throws Exception {
         ctx.bind(localAddress, future);
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, ChannelFuture future) throws Exception {
+                        SocketAddress localAddress, ChannelPromise future) throws Exception {
         ctx.connect(remoteAddress, localAddress, future);
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#disconnect(ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#disconnect(ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future)
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         ctx.disconnect(future);
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#close(ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelFuture future)
+    public void close(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         ctx.close(future);
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#close(ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelFuture future)
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         ctx.deregister(future);
     }
@@ -92,7 +92,7 @@ public abstract class ChannelHandlerAdapter extends ChannelStateHandlerAdapter i
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#flush(ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#flush(ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
@@ -101,7 +101,7 @@ public abstract class ChannelHandlerAdapter extends ChannelStateHandlerAdapter i
      * method and provide some proper implementation. Fail to do so, will result in an {@link IllegalStateException}!
      */
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         if (this instanceof ChannelOutboundHandler) {
             throw new IllegalStateException(
@@ -112,13 +112,13 @@ public abstract class ChannelHandlerAdapter extends ChannelStateHandlerAdapter i
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelFuture)} to forward
+     * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
         ctx.sendFile(region, future);
     }
 }

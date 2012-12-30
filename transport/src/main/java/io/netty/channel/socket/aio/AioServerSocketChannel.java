@@ -17,8 +17,8 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.BufType;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -140,8 +140,8 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        future.setFailure(new UnsupportedOperationException());
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

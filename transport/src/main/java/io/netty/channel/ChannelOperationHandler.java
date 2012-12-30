@@ -26,10 +26,10 @@ public interface ChannelOperationHandler extends ChannelHandler {
      *
      * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
      * @param localAddress  the {@link SocketAddress} to which it should bound
-     * @param future        the {@link ChannelFuture} to notify once the operation completes
+     * @param promise       the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception    thrown if an error accour
      */
-    void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelFuture future) throws Exception;
+    void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception;
 
     /**
      * Called once a connect operation is made.
@@ -37,39 +37,39 @@ public interface ChannelOperationHandler extends ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the connect operation is made
      * @param remoteAddress     the {@link SocketAddress} to which it should connect
      * @param localAddress      the {@link SocketAddress} which is used as source on connect
-     * @param future            the {@link ChannelFuture} to notify once the operation completes
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
     void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelFuture future) throws Exception;
+            SocketAddress localAddress, ChannelPromise promise) throws Exception;
 
     /**
      * Called once a disconnect operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
-     * @param future            the {@link ChannelFuture} to notify once the operation completes
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void disconnect(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
      * Called once a close operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
-     * @param future            the {@link ChannelFuture} to notify once the operation completes
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void close(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
-     * @param future            the {@link ChannelFuture} to notify once the operation completes
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.
@@ -80,19 +80,19 @@ public interface ChannelOperationHandler extends ChannelHandler {
      * Called once a flush operation is made and so the outbound data should be written.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
-     * @param future            the {@link ChannelFuture} to notify once the operation completes
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception;
+    void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
      * Called once a sendFile operation is made and so the {@link FileRegion} should be transfered.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
      * @param region            the {@link FileRegion} to transfer
-     * @param future            the {@link ChannelFuture} to notify once the operation completes
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception;
+    void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception;
 
 }

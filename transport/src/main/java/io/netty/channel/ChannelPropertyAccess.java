@@ -34,9 +34,9 @@ interface ChannelPropertyAccess {
     ByteBufAllocator alloc();
 
     /**
-     * Create a new {@link ChannelFuture}
+     * Create a new {@link ChannelPromise}
      */
-    ChannelFuture newFuture();
+    ChannelPromise newPromise();
 
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}

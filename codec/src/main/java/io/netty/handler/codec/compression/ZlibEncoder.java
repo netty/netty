@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToByteEncoder;
 
 /**
@@ -45,6 +46,6 @@ public abstract class ZlibEncoder extends ByteToByteEncoder {
      * The given {@link ChannelFuture} will be notified once the operation
      * completes and will also be returned.
      */
-    public abstract ChannelFuture close(ChannelFuture future);
+    public abstract ChannelFuture close(ChannelPromise promise);
 
 }

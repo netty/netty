@@ -37,5 +37,5 @@ public interface EventLoopGroup extends EventExecutorGroup {
      * Register a {@link Channel} with this {@link EventLoop}. The passed {@link ChannelFuture}
      * will get notified once the registration was complete and also will get returned.
      */
-    ChannelFuture register(Channel channel, ChannelFuture future);
+    ChannelFuture register(Channel channel, ChannelPromise promise);
 }
