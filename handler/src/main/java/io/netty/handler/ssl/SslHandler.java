@@ -300,7 +300,7 @@ public class SslHandler
                     }
 
                     SSLException e = new SSLException("handshake timed out");
-                    if (future.setFailure(e)) {
+                    if (future.tryFailure(e)) {
                         ctx.fireExceptionCaught(e);
                         ctx.close();
                     }
@@ -321,7 +321,7 @@ public class SslHandler
                     handshakeFutures.add(future);
                     flush(ctx, ctx.newPromise());
                 } catch (Exception e) {
-                    if (future.setFailure(e)) {
+                    if (future.tryFailure(e)) {
                         ctx.fireExceptionCaught(e);
                         ctx.close();
                     }
@@ -1015,7 +1015,7 @@ public class SslHandler
         }
 
         void setClosed() {
-            super.setSuccess();
+            super.trySuccess();
         }
 
         @Override
@@ -1029,12 +1029,32 @@ public class SslHandler
         }
 
         @Override
-        public boolean setSuccess() {
+        public boolean trySuccess() {
             return false;
         }
 
         @Override
-        public boolean setFailure(Throwable cause) {
+        public boolean tryFailure(Throwable cause) {
+            return false;
+        }
+
+        @Override
+        public void setSuccess() {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void setFailure(Throwable cause) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void setProgress(long amount, long current, long total) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean tryProgress(long amount, long current, long total) {
             return false;
         }
     }

@@ -24,11 +24,27 @@ public interface ChannelPromise extends ChannelFuture {
      * Marks this future as a success and notifies all
      * listeners.
      *
+     * If it is success or failed already it will throw an {@link IllegalStateException}.
+     */
+    void setSuccess();
+
+    /**
+     * Marks this future as a success and notifies all
+     * listeners.
+     *
      * @return {@code true} if and only if successfully marked this future as
      *         a success. Otherwise {@code false} because this future is
      *         already marked as either a success or a failure.
      */
-    boolean setSuccess();
+    boolean trySuccess();
+
+    /**
+     * Marks this future as a failure and notifies all
+     * listeners.
+     *
+     * If it is success or failed already it will throw an {@link IllegalStateException}.
+     */
+    void setFailure(Throwable cause);
 
     /**
      * Marks this future as a failure and notifies all
@@ -38,7 +54,17 @@ public interface ChannelPromise extends ChannelFuture {
      *         a failure. Otherwise {@code false} because this future is
      *         already marked as either a success or a failure.
      */
-    boolean setFailure(Throwable cause);
+    boolean tryFailure(Throwable cause);
+
+    /**
+     * Notifies the progress of the operation to the listeners that implements
+     * {@link ChannelFutureProgressListener}. Please note that this method will
+     * not do anything and return {@code false} if this future is complete
+     * already.
+     *
+     * If it is success or failed already it will throw an {@link IllegalStateException}.
+     */
+    void setProgress(long amount, long current, long total);
 
     /**
      * Notifies the progress of the operation to the listeners that implements
@@ -48,7 +74,7 @@ public interface ChannelPromise extends ChannelFuture {
      *
      * @return {@code true} if and only if notification was made.
      */
-    boolean setProgress(long amount, long current, long total);
+    boolean tryProgress(long amount, long current, long total);
 
     @Override
     ChannelPromise addListener(ChannelFutureListener listener);

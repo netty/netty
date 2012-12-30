@@ -340,39 +340,65 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     @Override
-    public boolean setSuccess() {
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return false;
-            }
+    public void setSuccess() {
+        if (success0()) {
+            notifyListeners();
+            return;
+        }
+        throw new IllegalStateException();
+    }
 
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
-            }
+    @Override
+    public boolean trySuccess() {
+        if (success0()) {
+            notifyListeners();
+            return true;
+        }
+        return false;
+    }
+
+    private synchronized boolean success0() {
+        // Allow only once.
+        if (done) {
+            return false;
         }
 
-        notifyListeners();
+        done = true;
+        if (waiters > 0) {
+            notifyAll();
+        }
         return true;
     }
 
     @Override
-    public boolean setFailure(Throwable cause) {
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return false;
-            }
+    public void setFailure(Throwable cause) {
+        if (failure0(cause)) {
+            notifyListeners();
+            return;
+        }
+        throw new IllegalStateException();
+    }
 
-            this.cause = cause;
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
-            }
+    @Override
+    public boolean tryFailure(Throwable cause) {
+        if (failure0(cause)) {
+            notifyListeners();
+            return true;
+        }
+        return false;
+    }
+
+    private synchronized boolean failure0(Throwable cause) {
+        // Allow only once.
+        if (done) {
+            return false;
         }
 
-        notifyListeners();
+        this.cause = cause;
+        done = true;
+        if (waiters > 0) {
+            notifyAll();
+        }
         return true;
     }
 
@@ -452,7 +478,32 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     @Override
-    public boolean setProgress(long amount, long current, long total) {
+    public void setProgress(long amount, long current, long total) {
+        ChannelFutureProgressListener[] plisteners;
+        synchronized (this) {
+            // Do not generate progress event after completion.
+            if (done) {
+                throw new IllegalStateException();
+            }
+
+            Collection<ChannelFutureProgressListener> progressListeners =
+                this.progressListeners;
+            if (progressListeners == null || progressListeners.isEmpty()) {
+                // Nothing to notify - no need to create an empty array.
+                return;
+            }
+
+            plisteners = progressListeners.toArray(
+                    new ChannelFutureProgressListener[progressListeners.size()]);
+        }
+
+        for (ChannelFutureProgressListener pl: plisteners) {
+            notifyProgressListener(pl, amount, current, total);
+        }
+    }
+
+    @Override
+    public boolean tryProgress(long amount, long current, long total) {
         ChannelFutureProgressListener[] plisteners;
         synchronized (this) {
             // Do not generate progress event after completion.
@@ -461,7 +512,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             }
 
             Collection<ChannelFutureProgressListener> progressListeners =
-                this.progressListeners;
+                    this.progressListeners;
             if (progressListeners == null || progressListeners.isEmpty()) {
                 // Nothing to notify - no need to create an empty array.
                 return true;

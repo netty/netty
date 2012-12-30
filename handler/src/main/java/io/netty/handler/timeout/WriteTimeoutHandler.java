@@ -124,7 +124,7 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
             final ScheduledFuture<?> sf = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (future.setFailure(WriteTimeoutException.INSTANCE)) {
+                    if (future.tryFailure(WriteTimeoutException.INSTANCE)) {
                         // If succeeded to mark as failure, notify the pipeline, too.
                         try {
                             writeTimedOut(ctx);

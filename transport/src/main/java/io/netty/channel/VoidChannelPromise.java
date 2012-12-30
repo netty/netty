@@ -128,17 +128,29 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
     }
 
     @Override
-    public boolean setProgress(long amount, long current, long total) {
+    public void setProgress(long amount, long current, long total) {
+    }
+
+    @Override
+    public void setFailure(Throwable cause) {
+    }
+
+    @Override
+    public void setSuccess() {
+    }
+
+    @Override
+    public boolean tryProgress(long amount, long current, long total) {
         return false;
     }
 
     @Override
-    public boolean setFailure(Throwable cause) {
+    public boolean tryFailure(Throwable cause) {
         return false;
     }
 
     @Override
-    public boolean setSuccess() {
+    public boolean trySuccess() {
         return false;
     }
 

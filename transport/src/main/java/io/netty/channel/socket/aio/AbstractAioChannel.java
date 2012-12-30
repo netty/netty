@@ -123,7 +123,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
                                 }
                                 ChannelPromise connectFuture = AbstractAioChannel.this.connectFuture;
                                 if (connectFuture != null &&
-                                        connectFuture.setFailure(connectTimeoutException)) {
+                                        connectFuture.tryFailure(connectTimeoutException)) {
                                     pipeline().fireExceptionCaught(connectTimeoutException);
                                     close(voidFuture());
                                 }

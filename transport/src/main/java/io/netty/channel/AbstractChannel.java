@@ -978,12 +978,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public boolean setSuccess() {
+        public void setSuccess() {
             throw new IllegalStateException();
         }
 
         @Override
-        public boolean setFailure(Throwable cause) {
+        public void setFailure(Throwable cause) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public void setProgress(long amount, long current, long total) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean tryProgress(long amount, long current, long total) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean trySuccess() {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean tryFailure(Throwable cause) {
             throw new IllegalStateException();
         }
 
@@ -993,7 +1013,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Exception e) {
                 logger.warn("doPreClose() raised an exception.", e);
             }
-            return super.setSuccess();
+            return super.trySuccess();
         }
     }
 }
