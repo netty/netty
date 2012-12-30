@@ -314,8 +314,8 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     private class DefaultUnsafe extends AbstractUnsafe {
         @Override
         public void connect(SocketAddress remoteAddress,
-                SocketAddress localAddress, ChannelPromise future) {
-            future.setSuccess();
+                SocketAddress localAddress, ChannelPromise promise) {
+            promise.setSuccess();
         }
 
         @Override

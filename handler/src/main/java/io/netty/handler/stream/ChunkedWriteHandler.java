@@ -141,8 +141,8 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        queue.add(future);
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        queue.add(promise);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
         }

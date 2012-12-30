@@ -163,7 +163,7 @@ public class SslHandler
     private final boolean startTls;
     private boolean sentFirstMessage;
 
-    private final Queue<ChannelPromise> handshakeFutures = new ArrayDeque<ChannelPromise>();
+    private final Queue<ChannelPromise> handshakePromises = new ArrayDeque<ChannelPromise>();
     private final SSLEngineInboundCloseFuture sslCloseFuture = new SSLEngineInboundCloseFuture();
 
     private volatile long handshakeTimeoutMillis = 10000;
@@ -287,7 +287,7 @@ public class SslHandler
      * @return a {@link ChannelPromise} which is notified when the handshake
      *         succeeds or fails.
      */
-    public ChannelFuture handshake(final ChannelPromise future) {
+    public ChannelFuture handshake(final ChannelPromise promise) {
         final ChannelHandlerContext ctx = this.ctx;
 
         final ScheduledFuture<?> timeoutFuture;
@@ -295,12 +295,12 @@ public class SslHandler
             timeoutFuture = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (future.isDone()) {
+                    if (promise.isDone()) {
                         return;
                     }
 
                     SSLException e = new SSLException("handshake timed out");
-                    if (future.tryFailure(e)) {
+                    if (promise.tryFailure(e)) {
                         ctx.fireExceptionCaught(e);
                         ctx.close();
                     }
@@ -318,10 +318,10 @@ public class SslHandler
                         timeoutFuture.cancel(false);
                     }
                     engine.beginHandshake();
-                    handshakeFutures.add(future);
+                    handshakePromises.add(promise);
                     flush(ctx, ctx.newPromise());
                 } catch (Exception e) {
-                    if (future.tryFailure(e)) {
+                    if (promise.tryFailure(e)) {
                         ctx.fireExceptionCaught(e);
                         ctx.close();
                     }
@@ -329,7 +329,7 @@ public class SslHandler
             }
         });
 
-        return future;
+        return promise;
     }
 
     /**
@@ -391,18 +391,18 @@ public class SslHandler
 
     @Override
     public void disconnect(final ChannelHandlerContext ctx,
-            final ChannelPromise future) throws Exception {
-        closeOutboundAndChannel(ctx, future, true);
+            final ChannelPromise promise) throws Exception {
+        closeOutboundAndChannel(ctx, promise, true);
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx,
-            final ChannelPromise future) throws Exception {
-        closeOutboundAndChannel(ctx, future, false);
+            final ChannelPromise promise) throws Exception {
+        closeOutboundAndChannel(ctx, promise, false);
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -413,15 +413,15 @@ public class SslHandler
         if (startTls && !sentFirstMessage) {
             sentFirstMessage = true;
             out.writeBytes(in);
-            ctx.flush(future);
+            ctx.flush(promise);
             return;
         }
 
         if (ctx.executor() == ctx.channel().eventLoop()) {
-            flushFutureNotifier.addFlushFuture(future, in.readableBytes());
+            flushFutureNotifier.addFlushFuture(promise, in.readableBytes());
         } else {
             synchronized (flushFutureNotifier) {
-                flushFutureNotifier.addFlushFuture(future, in.readableBytes());
+                flushFutureNotifier.addFlushFuture(promise, in.readableBytes());
             }
         }
 
@@ -437,7 +437,7 @@ public class SslHandler
                     if (in.readable()) {
                         in.clear();
                         SSLException e = new SSLException("SSLEngine already closed");
-                        future.setFailure(e);
+                        promise.setFailure(e);
                         ctx.fireExceptionCaught(e);
                         flush0(ctx, bytesConsumed, e);
                         bytesConsumed = 0;
@@ -873,11 +873,11 @@ public class SslHandler
      */
     private void setHandshakeSuccess() {
         for (;;) {
-            ChannelPromise f = handshakeFutures.poll();
-            if (f == null) {
+            ChannelPromise p = handshakePromises.poll();
+            if (p == null) {
                 break;
             }
-            f.setSuccess();
+            p.setSuccess();
         }
     }
 
@@ -903,23 +903,23 @@ public class SslHandler
         }
 
         for (;;) {
-            ChannelPromise f = handshakeFutures.poll();
-            if (f == null) {
+            ChannelPromise p = handshakePromises.poll();
+            if (p == null) {
                 break;
             }
-            f.setFailure(cause);
+            p.setFailure(cause);
         }
 
         flush0(ctx, 0, cause);
     }
 
     private void closeOutboundAndChannel(
-            final ChannelHandlerContext ctx, final ChannelPromise future, boolean disconnect) throws Exception {
+            final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect) throws Exception {
         if (!ctx.channel().isActive()) {
             if (disconnect) {
-                ctx.disconnect(future);
+                ctx.disconnect(promise);
             } else {
-                ctx.close(future);
+                ctx.close(promise);
             }
             return;
         }
@@ -928,7 +928,7 @@ public class SslHandler
 
         ChannelPromise closeNotifyFuture = ctx.newPromise();
         flush(ctx, closeNotifyFuture);
-        safeClose(ctx, closeNotifyFuture, future);
+        safeClose(ctx, closeNotifyFuture, promise);
     }
 
     @Override
@@ -972,9 +972,9 @@ public class SslHandler
 
     private void safeClose(
             final ChannelHandlerContext ctx, ChannelFuture flushFuture,
-            final ChannelPromise closeFuture) {
+            final ChannelPromise promise) {
         if (!ctx.channel().isActive()) {
-            ctx.close(closeFuture);
+            ctx.close(promise);
             return;
         }
 
@@ -987,7 +987,7 @@ public class SslHandler
                     logger.warn(
                             ctx.channel() + " last write attempt timed out." +
                                             " Force-closing the connection.");
-                    ctx.close(closeFuture);
+                    ctx.close(promise);
                 }
             }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -1003,7 +1003,7 @@ public class SslHandler
                     timeoutFuture.cancel(false);
                 }
                 if (ctx.channel().isActive()) {
-                    ctx.close(closeFuture);
+                    ctx.close(promise);
                 }
             }
         });

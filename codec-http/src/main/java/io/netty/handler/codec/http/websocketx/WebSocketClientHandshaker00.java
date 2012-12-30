@@ -92,7 +92,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, final ChannelPromise handshakeFuture) {
+    public ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
         // Make keys
         int spaces1 = WebSocketUtil.randomNumber(1, 12);
         int spaces2 = WebSocketUtil.randomNumber(1, 12);
@@ -184,14 +184,14 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                         "ws-encoder", new WebSocket00FrameEncoder());
 
                 if (future.isSuccess()) {
-                    handshakeFuture.setSuccess();
+                    promise.setSuccess();
                 } else {
-                    handshakeFuture.setFailure(future.cause());
+                    promise.setFailure(future.cause());
                 }
             }
         });
 
-        return handshakeFuture;
+        return promise;
     }
 
     /**

@@ -138,14 +138,14 @@ public class ByteLoggingHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
         ByteBuf buf = ctx.outboundByteBuffer();
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, formatBuffer("WRITE", buf)));
         }
         ctx.nextOutboundByteBuffer().writeBytes(buf);
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     protected String formatBuffer(String message, ByteBuf buf) {

@@ -135,10 +135,10 @@ public abstract class WebSocketClientHandshaker {
      *
      * @param channel
      *            Channel
-     * @param future
+     * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
-    public abstract ChannelFuture handshake(Channel channel, ChannelPromise future);
+    public abstract ChannelFuture handshake(Channel channel, ChannelPromise promise);
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.

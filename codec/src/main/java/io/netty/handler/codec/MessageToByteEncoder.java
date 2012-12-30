@@ -55,7 +55,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -83,7 +83,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
             }
         }
 
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**

@@ -249,7 +249,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise future) throws Exception {
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -264,12 +264,12 @@ public class OioSocketChannel extends AbstractOioByteChannel
             if (localWritten == -1) {
                 checkEOF(region, written);
                 region.close();
-                future.setSuccess();
+                promise.setSuccess();
                 return;
             }
             written += localWritten;
             if (written >= region.count()) {
-                future.setSuccess();
+                promise.setSuccess();
                 return;
             }
         }

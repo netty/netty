@@ -263,8 +263,8 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        future.addListener(new ChannelFutureListener() {
+    public void flush(final ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 lastWriteTime = System.currentTimeMillis();
@@ -272,45 +272,45 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
             }
         });
 
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise future) throws Exception {
-        ctx.bind(localAddress, future);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise future) throws Exception {
-        ctx.connect(remoteAddress, localAddress);
+                        ChannelPromise promise) throws Exception {
+        ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        ctx.disconnect(future);
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        ctx.close(future);
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        ctx.deregister(future);
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.deregister(promise);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
-        future.addListener(new ChannelFutureListener() {
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 lastWriteTime = System.currentTimeMillis();
                 writerIdleCount = allIdleCount = 0;
             }
         });
-        ctx.sendFile(region);
+        ctx.sendFile(region, promise);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

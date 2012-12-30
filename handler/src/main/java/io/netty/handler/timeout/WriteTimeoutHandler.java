@@ -105,17 +105,17 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelPromise future) throws Exception {
-        scheduleTimeout(ctx, future);
+    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+        scheduleTimeout(ctx, promise);
 
-        super.flush(ctx, future);
+        super.flush(ctx, promise);
     }
 
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
-        scheduleTimeout(ctx, future);
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        scheduleTimeout(ctx, promise);
 
-        super.sendFile(ctx, region, future);
+        super.sendFile(ctx, region, promise);
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {

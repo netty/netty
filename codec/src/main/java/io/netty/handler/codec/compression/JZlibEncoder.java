@@ -248,8 +248,8 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise future) {
-        return finishEncode(ctx(), future);
+    public ChannelFuture close(ChannelPromise promise) {
+        return finishEncode(ctx(), promise);
     }
 
     private ChannelHandlerContext ctx() {
@@ -339,12 +339,12 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     public void close(
             final ChannelHandlerContext ctx,
-            final ChannelPromise future) throws Exception {
+            final ChannelPromise promise) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(future);
+                ctx.close(promise);
             }
         });
 
@@ -353,7 +353,7 @@ public class JZlibEncoder extends ZlibEncoder {
             ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(future);
+                    ctx.close(promise);
                 }
             }, 10, TimeUnit.SECONDS); // FIXME: Magic number
         }

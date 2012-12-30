@@ -83,8 +83,8 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      */
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-            ChannelPromise future) throws Exception {
-        ctx.bind(localAddress, future);
+            ChannelPromise promise) throws Exception {
+        ctx.bind(localAddress, promise);
     }
 
     /**
@@ -95,8 +95,8 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      */
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise future) throws Exception {
-        ctx.connect(remoteAddress, localAddress, future);
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.connect(remoteAddress, localAddress, promise);
     }
 
     /**
@@ -106,9 +106,9 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future)
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.disconnect(future);
+        ctx.disconnect(promise);
     }
 
     /**
@@ -118,9 +118,9 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise future)
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.close(future);
+        ctx.close(promise);
     }
 
     /**
@@ -130,9 +130,9 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise future)
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.deregister(future);
+        ctx.deregister(promise);
     }
 
     /**
@@ -145,14 +145,14 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      * method!
      */
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
         if (this instanceof ChannelOutboundHandler) {
             throw new IllegalStateException(
                     "flush(...) must be overridden by " + getClass().getName() +
                     ", which implements " + ChannelOutboundHandler.class.getSimpleName());
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**
@@ -162,7 +162,7 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
-        ctx.sendFile(region, future);
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        ctx.sendFile(region, promise);
     }
 }

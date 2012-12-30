@@ -98,7 +98,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, final ChannelPromise handshakeFuture) {
+    public ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
         // Get path
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
@@ -162,14 +162,14 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
                         "ws-encoder", new WebSocket07FrameEncoder(true));
 
                 if (future.isSuccess()) {
-                    handshakeFuture.setSuccess();
+                    promise.setSuccess();
                 } else {
-                    handshakeFuture.setFailure(future.cause());
+                    promise.setFailure(future.cause());
                 }
             }
         });
 
-        return handshakeFuture;
+        return promise;
     }
 
     /**

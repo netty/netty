@@ -109,7 +109,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise future) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 7 server handshake", channel.id()));
@@ -144,10 +144,10 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
             }
         }
 
-        channel.write(res, future);
+        channel.write(res, promise);
 
         // Upgrade the connection and send the handshake response.
-        future.addListener(new ChannelFutureListener() {
+        promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
@@ -161,7 +161,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
             }
         });
 
-        return future;
+        return promise;
     }
 
     /**

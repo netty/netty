@@ -354,23 +354,23 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise future) {
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.bindAddress(localAddress);
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    bindAddress(localAddress, future);
+                    bindAddress(localAddress, promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 
     @Override
@@ -379,22 +379,22 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise future) {
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise promise) {
         if (eventLoop().inEventLoop()) {
             try {
                 ch.unbindAddress(localAddress);
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    unbindAddress(localAddress, future);
+                    unbindAddress(localAddress, promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 }

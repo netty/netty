@@ -130,24 +130,24 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
                 javaChannel().socket().shutdownOutput();
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput(future);
+                    shutdownOutput(promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 
     @Override

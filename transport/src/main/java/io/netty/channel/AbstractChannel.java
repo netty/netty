@@ -79,7 +79,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
-    private final VoidChannelPromise voidFuture = new VoidChannelPromise(this);
+    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
     protected final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
@@ -248,33 +248,33 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise future) {
-        return pipeline.bind(localAddress, future);
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.bind(localAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise future) {
-        return pipeline.connect(remoteAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return pipeline.connect(remoteAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) {
-        return pipeline.connect(remoteAddress, localAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelPromise future) {
-        return pipeline.disconnect(future);
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return pipeline.disconnect(promise);
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise future) {
-        return pipeline.close(future);
+    public ChannelFuture close(ChannelPromise promise) {
+        return pipeline.close(promise);
     }
 
     @Override
-    public ChannelFuture deregister(ChannelPromise future) {
-        return pipeline.deregister(future);
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(promise);
     }
 
     @Override
@@ -289,13 +289,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise future) {
-        return pipeline.flush(future);
+    public ChannelFuture flush(ChannelPromise promise) {
+        return pipeline.flush(promise);
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelPromise future) {
-        return pipeline.write(message, future);
+    public ChannelFuture write(Object message, ChannelPromise promise) {
+        return pipeline.write(message, promise);
     }
 
     @Override
@@ -329,8 +329,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise future) {
-        return pipeline.sendFile(region, future);
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
+        return pipeline.sendFile(region, promise);
     }
 
     /**
@@ -422,13 +422,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 if (region == null) {
                                     // no region present means the next flush task was to directly flush
                                     // the outbound buffer
-                                    flushNotifierAndFlush((ChannelPromise) future);
+                                    flushNotifierAndFlush(next.promise);
                                 } else {
                                     // flush the region now
-                                    doFlushFileRegion(region, (ChannelPromise) future);
+                                    doFlushFileRegion(region, next.promise);
                                 }
                             } catch (Throwable cause) {
-                                FlushTask.this.promise.setFailure(cause);
+                                next.promise.setFailure(cause);
                             }
                         } else {
                             // notify the flush futures
@@ -504,7 +504,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final ChannelPromise voidFuture() {
-            return voidFuture;
+            return voidPromise;
         }
 
         @Override
@@ -726,7 +726,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void flush(final ChannelPromise future) {
+        public void flush(final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
 
                 if (flushTaskInProgress != null) {
@@ -740,23 +740,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                         task = t.next;
                     }
-                    task.next = new FlushTask(null, future);
+                    task.next = new FlushTask(null, promise);
 
                     return;
                 }
-                flushNotifierAndFlush(future);
+                flushNotifierAndFlush(promise);
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        flush(future);
+                        flush(promise);
                     }
                 });
             }
         }
 
-        private void flushNotifierAndFlush(ChannelPromise future) {
-            flushNotifier(future);
+        private void flushNotifierAndFlush(ChannelPromise promise) {
+            flushNotifier(promise);
             flush0();
         }
 
@@ -771,12 +771,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return bufSize;
         }
 
-        private ChannelFuture flushNotifier(ChannelPromise future) {
+        private ChannelFuture flushNotifier(ChannelPromise promise) {
             // Append flush future to the notification list.
-            if (future != voidFuture) {
-                flushFutureNotifier.addFlushFuture(future, outboundBufSize());
+            if (promise != voidPromise) {
+                flushFutureNotifier.addFlushFuture(promise, outboundBufSize());
             }
-            return future;
+            return promise;
         }
 
         private void flush0() {
@@ -954,7 +954,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *
      * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
      */
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise future) throws Exception {
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
         throw new UnsupportedOperationException();
     }
 

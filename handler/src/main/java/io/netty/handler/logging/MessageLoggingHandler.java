@@ -88,7 +88,7 @@ public class MessageLoggingHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
         MessageBuf<Object> buf = ctx.outboundMessageBuffer();
         if (logger.isEnabled(internalLevel)) {
@@ -103,7 +103,7 @@ public class MessageLoggingHandler
             }
             out.add(o);
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     protected String formatBuffer(String message, MessageBuf<Object> buf) {

@@ -126,10 +126,10 @@ public abstract class WebSocketServerHandshaker {
      *            Channel
      * @param req
      *            HTTP Request
-     * @param future
+     * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise future);
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise);
 
     /**
      * Performs the closing handshake
@@ -153,10 +153,10 @@ public abstract class WebSocketServerHandshaker {
      *            Channel
      * @param frame
      *            Closing Frame that was received
-     * @param future
-     *            the {@link ChannelFuture} to be notified when the closing handshake is done
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
-    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise future);
+    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise);
 
     /**
      * Selects the first matching supported sub protocol

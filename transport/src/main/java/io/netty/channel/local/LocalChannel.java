@@ -55,7 +55,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile ChannelPromise connectFuture;
+    private volatile ChannelPromise connectPromise;
 
     public LocalChannel() {
         this(null);
@@ -148,7 +148,7 @@ public class LocalChannel extends AbstractChannel {
                     peerEventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
-                            peer.connectFuture.setSuccess();
+                            peer.connectPromise.setSuccess();
                             peer.pipeline().fireChannelActive();
                         }
                     });
@@ -246,24 +246,24 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelPromise future) {
+                SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 if (state == 2) {
                     Exception cause = new AlreadyConnectedException();
-                    future.setFailure(cause);
+                    promise.setFailure(cause);
                     pipeline().fireExceptionCaught(cause);
                     return;
                 }
 
-                if (connectFuture != null) {
+                if (connectPromise != null) {
                     throw new ConnectionPendingException();
                 }
 
-                connectFuture = future;
+                connectPromise = promise;
 
                 if (state != 1) {
                     // Not bound yet and no localAddress specified - get one.
@@ -276,7 +276,7 @@ public class LocalChannel extends AbstractChannel {
                     try {
                         doBind(localAddress);
                     } catch (Throwable t) {
-                        future.setFailure(t);
+                        promise.setFailure(t);
                         pipeline().fireExceptionCaught(t);
                         close(voidFuture());
                         return;
@@ -287,7 +287,7 @@ public class LocalChannel extends AbstractChannel {
                 if (!(boundChannel instanceof LocalServerChannel)) {
                     Exception cause =
                             new ChannelException("connection refused");
-                    future.setFailure(cause);
+                    promise.setFailure(cause);
                     pipeline().fireExceptionCaught(cause);
                     close(voidFuture());
                     return;
@@ -300,7 +300,7 @@ public class LocalChannel extends AbstractChannel {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress0, future);
+                        connect(remoteAddress, localAddress0, promise);
                     }
                 });
             }

@@ -200,14 +200,16 @@ public class OioEventLoopGroup implements EventLoopGroup {
     }
 
     @Override
-    public ChannelFuture register(Channel channel, ChannelPromise future) {
+    public ChannelFuture register(Channel channel, ChannelPromise promise) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
         try {
-            return nextChild().register(channel, future);
+            return nextChild().register(channel, promise);
         } catch (Throwable t) {
-            return channel.newFailedFuture(t);
+            promise.setFailure(t);
+
+            return promise;
         }
     }
 

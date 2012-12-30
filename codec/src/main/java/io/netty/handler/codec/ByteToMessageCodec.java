@@ -66,8 +66,8 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
 
     @Override
     public void flush(
-            ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        encoder.flush(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.flush(ctx, promise);
     }
 
     @Override

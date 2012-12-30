@@ -46,6 +46,6 @@ public abstract class ZlibEncoder extends ByteToByteEncoder {
      * The given {@link ChannelFuture} will be notified once the operation
      * completes and will also be returned.
      */
-    public abstract ChannelFuture close(ChannelPromise future);
+    public abstract ChannelFuture close(ChannelPromise promise);
 
 }

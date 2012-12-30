@@ -46,7 +46,7 @@ import io.netty.channel.ChannelPromise;
 public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapter {
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ByteBuf in = ctx.outboundByteBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -67,7 +67,7 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         }
 
         in.discardSomeReadBytes();
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**

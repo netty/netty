@@ -1030,21 +1030,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise future) {
-        return bind(firstContext(DIR_OUTBOUND), localAddress, future);
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        return bind(firstContext(DIR_OUTBOUND), localAddress, promise);
     }
 
     ChannelFuture bind(
-            final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelPromise future) {
+            final DefaultChannelHandlerContext ctx, final SocketAddress localAddress, final ChannelPromise promise) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        validateFuture(future);
+        validateFuture(promise);
 
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
-                ((ChannelOperationHandler) ctx.handler()).bind(ctx, localAddress, future);
+                ((ChannelOperationHandler) ctx.handler()).bind(ctx, localAddress, promise);
             } catch (Throwable t) {
                 notifyHandlerException(t);
             }
@@ -1052,35 +1052,35 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    bind(ctx, localAddress, future);
+                    bind(ctx, localAddress, promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise future) {
-        return connect(remoteAddress, null, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return connect(remoteAddress, null, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) {
-        return connect(firstContext(DIR_OUTBOUND), remoteAddress, localAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        return connect(firstContext(DIR_OUTBOUND), remoteAddress, localAddress, promise);
     }
 
     ChannelFuture connect(
             final DefaultChannelHandlerContext ctx, final SocketAddress remoteAddress,
-            final SocketAddress localAddress, final ChannelPromise future) {
+            final SocketAddress localAddress, final ChannelPromise promise) {
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
-        validateFuture(future);
+        validateFuture(promise);
 
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
-                ((ChannelOperationHandler) ctx.handler()).connect(ctx, remoteAddress, localAddress, future);
+                ((ChannelOperationHandler) ctx.handler()).connect(ctx, remoteAddress, localAddress, promise);
             } catch (Throwable t) {
                 notifyHandlerException(t);
             }
@@ -1088,31 +1088,31 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    connect(ctx, remoteAddress, localAddress, future);
+                    connect(ctx, remoteAddress, localAddress, promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelPromise future) {
-        return disconnect(firstContext(DIR_OUTBOUND), future);
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return disconnect(firstContext(DIR_OUTBOUND), promise);
     }
 
-    ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
+    ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelPromise promise) {
         // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
         // So far, UDP/IP is the only transport that has such behavior.
         if (!ctx.channel().metadata().hasDisconnect()) {
-            return close(ctx, future);
+            return close(ctx, promise);
         }
 
-        validateFuture(future);
+        validateFuture(promise);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
-                ((ChannelOperationHandler) ctx.handler()).disconnect(ctx, future);
+                ((ChannelOperationHandler) ctx.handler()).disconnect(ctx, promise);
             } catch (Throwable t) {
                 notifyHandlerException(t);
             }
@@ -1120,25 +1120,25 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    disconnect(ctx, future);
+                    disconnect(ctx, promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise future) {
-        return close(firstContext(DIR_OUTBOUND), future);
+    public ChannelFuture close(ChannelPromise promise) {
+        return close(firstContext(DIR_OUTBOUND), promise);
     }
 
-    ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
-        validateFuture(future);
+    ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelPromise promise) {
+        validateFuture(promise);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
-                ((ChannelOperationHandler) ctx.handler()).close(ctx, future);
+                ((ChannelOperationHandler) ctx.handler()).close(ctx, promise);
             } catch (Throwable t) {
                 notifyHandlerException(t);
             }
@@ -1146,25 +1146,25 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    close(ctx, future);
+                    close(ctx, promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
 
     @Override
-    public ChannelFuture deregister(final ChannelPromise future) {
-        return deregister(firstContext(DIR_OUTBOUND), future);
+    public ChannelFuture deregister(final ChannelPromise promise) {
+        return deregister(firstContext(DIR_OUTBOUND), promise);
     }
 
-    ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
-        validateFuture(future);
+    ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelPromise promise) {
+        validateFuture(promise);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
-                ((ChannelOperationHandler) ctx.handler()).deregister(ctx, future);
+                ((ChannelOperationHandler) ctx.handler()).deregister(ctx, promise);
             } catch (Throwable t) {
                 notifyHandlerException(t);
             }
@@ -1172,12 +1172,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    deregister(ctx, future);
+                    deregister(ctx, promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
 
     @Override
@@ -1186,22 +1186,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise future) {
-        return sendFile(firstContext(DIR_OUTBOUND), region, future);
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
+        return sendFile(firstContext(DIR_OUTBOUND), region, promise);
     }
 
     ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, final FileRegion region,
-                           final ChannelPromise future) {
+                           final ChannelPromise promise) {
         if (region == null) {
             throw new NullPointerException("region");
         }
-        validateFuture(future);
+        validateFuture(promise);
 
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             try {
                 ctx.flushBridge();
-                ((ChannelOperationHandler) ctx.handler()).sendFile(ctx, region, future);
+                ((ChannelOperationHandler) ctx.handler()).sendFile(ctx, region, promise);
             } catch (Throwable t) {
                 notifyHandlerException(t);
             }
@@ -1209,44 +1209,44 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    sendFile(ctx, region, future);
+                    sendFile(ctx, region, promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
     @Override
-    public ChannelFuture flush(ChannelPromise future) {
-        return flush(firstContext(DIR_OUTBOUND), future);
+    public ChannelFuture flush(ChannelPromise promise) {
+        return flush(firstContext(DIR_OUTBOUND), promise);
     }
 
-    ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelPromise future) {
-        validateFuture(future);
+    ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelPromise promise) {
+        validateFuture(promise);
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            flush0(ctx, future);
+            flush0(ctx, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    flush(ctx, future);
+                    flush(ctx, promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
 
-    private void flush0(final DefaultChannelHandlerContext ctx, ChannelPromise future) {
+    private void flush0(final DefaultChannelHandlerContext ctx, ChannelPromise promise) {
         if (!channel.isRegistered() && !channel.isActive()) {
-            future.setFailure(new ClosedChannelException());
+            promise.setFailure(new ClosedChannelException());
             return;
         }
 
         try {
             ctx.flushBridge();
-            ((ChannelOperationHandler) ctx.handler()).flush(ctx, future);
+            ((ChannelOperationHandler) ctx.handler()).flush(ctx, promise);
         } catch (Throwable t) {
             notifyHandlerException(t);
         } finally {
@@ -1260,18 +1260,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelPromise future) {
+    public ChannelFuture write(Object message, ChannelPromise promise) {
         if (message instanceof FileRegion) {
-            return sendFile((FileRegion) message, future);
+            return sendFile((FileRegion) message, promise);
         }
-        return write(tail, message, future);
+        return write(tail, message, promise);
     }
 
-    ChannelFuture write(DefaultChannelHandlerContext ctx, final Object message, final ChannelPromise future) {
+    ChannelFuture write(DefaultChannelHandlerContext ctx, final Object message, final ChannelPromise promise) {
         if (message == null) {
             throw new NullPointerException("message");
         }
-        validateFuture(future);
+        validateFuture(promise);
 
         final DefaultChannelHandlerContext initialCtx = ctx;
         EventExecutor executor;
@@ -1309,8 +1309,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         if (executor.inEventLoop()) {
-            write0(ctx, message, future, msgBuf);
-            return future;
+            write0(ctx, message, promise, msgBuf);
+            return promise;
         }
 
         final boolean msgBuf0 = msgBuf;
@@ -1318,16 +1318,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                write0(ctx0, message, future, msgBuf0);
+                write0(ctx0, message, promise, msgBuf0);
             }
         });
 
-        return future;
+        return promise;
     }
 
-    private void write0(DefaultChannelHandlerContext ctx, Object message, ChannelPromise future, boolean msgBuf) {
+    private void write0(DefaultChannelHandlerContext ctx, Object message, ChannelPromise promise, boolean msgBuf) {
         if (!channel.isRegistered() && !channel.isActive()) {
-            future.setFailure(new ClosedChannelException());
+            promise.setFailure(new ClosedChannelException());
             return;
         }
 
@@ -1337,7 +1337,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             ByteBuf buf = (ByteBuf) message;
             ctx.outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
         }
-        flush0(ctx, future);
+        flush0(ctx, promise);
     }
 
     private void validateFuture(ChannelFuture future) {
@@ -1514,37 +1514,37 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void bind(
-                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise future)
+                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
                 throws Exception {
-            unsafe.bind(localAddress, future);
+            unsafe.bind(localAddress, promise);
         }
 
         @Override
         public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
-                ChannelPromise future) throws Exception {
-            unsafe.connect(remoteAddress, localAddress, future);
+                ChannelPromise promise) throws Exception {
+            unsafe.connect(remoteAddress, localAddress, promise);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-            unsafe.disconnect(future);
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.disconnect(promise);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-            unsafe.close(future);
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.close(promise);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-            unsafe.deregister(future);
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.deregister(promise);
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-            unsafe.flush(future);
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.flush(promise);
         }
 
         @Override
@@ -1558,8 +1558,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
-            unsafe.sendFile(region, future);
+        public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+            unsafe.sendFile(region, promise);
         }
     }
 }

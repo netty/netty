@@ -43,7 +43,7 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ByteBuf in = ctx.outboundByteBuffer();
 
         try {
@@ -56,6 +56,6 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
             ctx.fireExceptionCaught(new EncoderException(t));
         }
 
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 }

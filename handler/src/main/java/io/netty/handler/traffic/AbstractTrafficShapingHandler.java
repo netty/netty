@@ -295,14 +295,14 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelPromise future) throws Exception {
+    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         long curtime = System.currentTimeMillis();
         long size = ctx.outboundByteBuffer().readableBytes();
 
         if (trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.flush(future);
+                ctx.flush(promise);
                 return;
             }
             // compute the number of ms to wait before continue with the
@@ -314,13 +314,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.flush(future);
+                        ctx.flush(promise);
                     }
                 }, wait, TimeUnit.MILLISECONDS);
                 return;
             }
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**

@@ -20,33 +20,32 @@ package io.netty.channel;
  */
 public final class ChannelPromiseNotifier implements ChannelFutureListener {
 
-    private final ChannelPromise[] futures;
+    private final ChannelPromise[] promises;
 
-    public ChannelPromiseNotifier(ChannelPromise... futures) {
-        if (futures == null) {
-            throw new NullPointerException("futures");
+    public ChannelPromiseNotifier(ChannelPromise... promises) {
+        if (promises == null) {
+            throw new NullPointerException("promises");
         }
-        this.futures = futures.clone();
+        for (ChannelPromise promise: promises) {
+            if (promise == null) {
+                throw new IllegalArgumentException("promises contains null ChannelPromise");
+            }
+        }
+        this.promises = promises.clone();
     }
 
     @Override
     public void operationComplete(ChannelFuture cf) throws Exception {
         if (cf.isSuccess()) {
-            for (ChannelPromise f: futures) {
-                if (f == null) {
-                    break;
-                }
-                f.setSuccess();
+            for (ChannelPromise p: promises) {
+                p.setSuccess();
             }
             return;
         }
 
         Throwable cause = cf.cause();
-        for (ChannelPromise f: futures) {
-            if (f == null) {
-                break;
-            }
-            f.setFailure(cause);
+        for (ChannelPromise p: promises) {
+            p.setFailure(cause);
         }
     }
 }

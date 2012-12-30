@@ -439,12 +439,12 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        sendGoAwayFrame(ctx, future);
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        sendGoAwayFrame(ctx, promise);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
         for (;;) {
             Object msg = in.poll();
@@ -465,7 +465,7 @@ public class SpdySessionHandler
                 ctx.nextOutboundMessageBuffer().add(msg);
             }
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg)
@@ -906,16 +906,16 @@ public class SpdySessionHandler
 
     private static final class ClosingChannelFutureListener implements ChannelFutureListener {
         private final ChannelHandlerContext ctx;
-        private final ChannelPromise future;
+        private final ChannelPromise promise;
 
-        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise future) {
+        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {
             this.ctx = ctx;
-            this.future = future;
+            this.promise = promise;
         }
 
         @Override
         public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
-            ctx.close(future);
+            ctx.close(promise);
         }
     }
 }

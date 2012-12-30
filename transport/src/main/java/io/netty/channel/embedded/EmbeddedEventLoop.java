@@ -110,9 +110,9 @@ final class EmbeddedEventLoop extends AbstractExecutorService implements EventLo
     }
 
     @Override
-    public ChannelFuture register(Channel channel, ChannelPromise future) {
-        channel.unsafe().register(this, future);
-        return future;
+    public ChannelFuture register(Channel channel, ChannelPromise promise) {
+        channel.unsafe().register(this, promise);
+        return promise;
     }
 
     @Override

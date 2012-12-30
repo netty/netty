@@ -1103,57 +1103,57 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise future) {
-        return pipeline.bind(nextContext(prev, DIR_OUTBOUND), localAddress, future);
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.bind(nextContext(prev, DIR_OUTBOUND), localAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise future) {
-        return connect(remoteAddress, null, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return connect(remoteAddress, null, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) {
-        return pipeline.connect(nextContext(prev, DIR_OUTBOUND), remoteAddress, localAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.connect(nextContext(prev, DIR_OUTBOUND), remoteAddress, localAddress, promise);
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelPromise future) {
-        return pipeline.disconnect(nextContext(prev, DIR_OUTBOUND), future);
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return pipeline.disconnect(nextContext(prev, DIR_OUTBOUND), promise);
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise future) {
-        return pipeline.close(nextContext(prev, DIR_OUTBOUND), future);
+    public ChannelFuture close(ChannelPromise promise) {
+        return pipeline.close(nextContext(prev, DIR_OUTBOUND), promise);
     }
 
     @Override
-    public ChannelFuture deregister(ChannelPromise future) {
-        return pipeline.deregister(nextContext(prev, DIR_OUTBOUND), future);
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(nextContext(prev, DIR_OUTBOUND), promise);
     }
 
     @Override
-    public ChannelFuture flush(final ChannelPromise future) {
+    public ChannelFuture flush(final ChannelPromise promise) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             DefaultChannelHandlerContext prev = nextContext(this.prev, DIR_OUTBOUND);
             prev.fillBridge();
-            pipeline.flush(prev, future);
+            pipeline.flush(prev, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    flush(future);
+                    flush(promise);
                 }
             });
         }
 
-        return future;
+        return promise;
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelPromise future) {
-        return pipeline.write(prev, message, future);
+    public ChannelFuture write(Object message, ChannelPromise promise) {
+        return pipeline.write(prev, message, promise);
     }
 
     void callFreeInboundBuffer() {
@@ -1285,7 +1285,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise future) {
-        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, future);
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
+        return pipeline.sendFile(nextContext(prev, DIR_OUTBOUND), region, promise);
     }
 }

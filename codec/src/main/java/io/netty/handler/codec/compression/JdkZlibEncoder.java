@@ -210,12 +210,12 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise future) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(future);
+                ctx.close(promise);
             }
         });
 
@@ -224,16 +224,16 @@ public class JdkZlibEncoder extends ZlibEncoder {
             ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(future);
+                    ctx.close(promise);
                 }
             }, 10, TimeUnit.SECONDS); // FIXME: Magic number
         }
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise future) {
+    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
         if (!finished.compareAndSet(false, true)) {
-            future.setSuccess();
-            return future;
+            promise.setSuccess();
+            return promise;
         }
 
         ByteBuf footer = Unpooled.buffer();
@@ -259,9 +259,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         ctx.nextOutboundByteBuffer().writeBytes(footer);
-        ctx.flush(future);
+        ctx.flush(promise);
 
-        return future;
+        return promise;
     }
 
     @Override

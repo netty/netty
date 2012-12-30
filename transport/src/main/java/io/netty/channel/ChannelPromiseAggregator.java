@@ -27,22 +27,22 @@ import java.util.Set;
  */
 public final class ChannelPromiseAggregator implements ChannelFutureListener {
 
-    private final ChannelPromise aggregateFuture;
+    private final ChannelPromise aggregatePromise;
 
-    private Set<ChannelPromise> pendingFutures;
+    private Set<ChannelPromise> pendingPromises;
 
-    public ChannelPromiseAggregator(ChannelPromise aggregateFuture) {
-        this.aggregateFuture = aggregateFuture;
+    public ChannelPromiseAggregator(ChannelPromise aggregatePromise) {
+        this.aggregatePromise = aggregatePromise;
     }
 
-    public void addFuture(ChannelPromise future) {
+    public void addFuture(ChannelPromise promise) {
         synchronized (this) {
-            if (pendingFutures == null) {
-                pendingFutures = new HashSet<ChannelPromise>();
+            if (pendingPromises == null) {
+                pendingPromises = new HashSet<ChannelPromise>();
             }
-            pendingFutures.add(future);
+            pendingPromises.add(promise);
         }
-        future.addListener(this);
+        promise.addListener(this);
     }
 
     @Override
@@ -50,18 +50,18 @@ public final class ChannelPromiseAggregator implements ChannelFutureListener {
             throws Exception {
 
         synchronized (this) {
-            if (pendingFutures == null) {
-                aggregateFuture.setSuccess();
+            if (pendingPromises == null) {
+                aggregatePromise.setSuccess();
             } else {
-                pendingFutures.remove(future);
+                pendingPromises.remove(future);
                 if (!future.isSuccess()) {
-                    aggregateFuture.setFailure(future.cause());
-                    for (ChannelPromise pendingFuture: pendingFutures) {
+                    aggregatePromise.setFailure(future.cause());
+                    for (ChannelPromise pendingFuture: pendingPromises) {
                         pendingFuture.setFailure(future.cause());
                     }
                 } else {
-                    if (pendingFutures.isEmpty()) {
-                        aggregateFuture.setSuccess();
+                    if (pendingPromises.isEmpty()) {
+                        aggregatePromise.setSuccess();
                     }
                 }
             }
