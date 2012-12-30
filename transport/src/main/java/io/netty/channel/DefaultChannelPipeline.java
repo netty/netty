@@ -102,14 +102,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // in order to avoid deadlock
 
         newCtx.executeOnEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (DefaultChannelPipeline.this) {
-                        checkDuplicateName(name);
-                        addFirst0(name, nextCtx, newCtx);
-                    }
+            @Override
+            public void run() {
+                synchronized (DefaultChannelPipeline.this) {
+                    checkDuplicateName(name);
+                    addFirst0(name, nextCtx, newCtx);
                 }
-            });
+            }
+        });
 
         return this;
     }
@@ -257,14 +257,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // in order to avoid deadlock
 
         newCtx.executeOnEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (DefaultChannelPipeline.this) {
-                        checkDuplicateName(name);
-                        addAfter0(name, ctx, newCtx);
-                    }
+            @Override
+            public void run() {
+                synchronized (DefaultChannelPipeline.this) {
+                    checkDuplicateName(name);
+                    addAfter0(name, ctx, newCtx);
                 }
-            });
+            }
+        });
 
         return this;
     }
@@ -455,13 +455,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // in order to avoid deadlock
 
         oldTail.executeOnEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (DefaultChannelPipeline.this) {
-                        removeLast0(oldTail);
-                    }
+            @Override
+            public void run() {
+                synchronized (DefaultChannelPipeline.this) {
+                    removeLast0(oldTail);
                 }
-            });
+            }
+        });
 
         return oldTail.handler();
     }
@@ -1031,7 +1031,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-        return bind(firstContext(DIR_OUTBOUND), localAddress, future);
+        return bind(lastContext(FLAG_OPERATION_HANDLER), localAddress, future);
     }
 
     ChannelFuture bind(
@@ -1066,7 +1066,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        return connect(firstContext(DIR_OUTBOUND), remoteAddress, localAddress, future);
+        return connect(lastContext(FLAG_OPERATION_HANDLER), remoteAddress, localAddress, future);
     }
 
     ChannelFuture connect(
@@ -1098,7 +1098,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture disconnect(ChannelFuture future) {
-        return disconnect(firstContext(DIR_OUTBOUND), future);
+        return disconnect(lastContext(FLAG_OPERATION_HANDLER), future);
     }
 
     ChannelFuture disconnect(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1130,7 +1130,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture close(ChannelFuture future) {
-        return close(firstContext(DIR_OUTBOUND), future);
+        return close(lastContext(FLAG_OPERATION_HANDLER), future);
     }
 
     ChannelFuture close(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1156,7 +1156,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture deregister(final ChannelFuture future) {
-        return deregister(firstContext(DIR_OUTBOUND), future);
+        return deregister(lastContext(FLAG_OPERATION_HANDLER), future);
     }
 
     ChannelFuture deregister(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1187,7 +1187,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
-        return sendFile(firstContext(DIR_OUTBOUND), region, future);
+        return sendFile(lastContext(FLAG_OPERATION_HANDLER), region, future);
     }
 
     ChannelFuture sendFile(final DefaultChannelHandlerContext ctx, final FileRegion region,
@@ -1216,9 +1216,37 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         return future;
     }
+
+    @Override
+    public void read() {
+        read(lastContext(FLAG_INBOUND_HANDLER));
+    }
+
+    void read(final DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            read0(ctx);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    read0(ctx);
+                }
+            });
+        }
+    }
+
+    private void read0(DefaultChannelHandlerContext ctx) {
+        try {
+            ((ChannelInboundHandler) ctx.handler()).read(ctx);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
+    }
+
     @Override
     public ChannelFuture flush(ChannelFuture future) {
-        return flush(firstContext(DIR_OUTBOUND), future);
+        return flush(lastContext(FLAG_OPERATION_HANDLER), future);
     }
 
     ChannelFuture flush(final DefaultChannelHandlerContext ctx, final ChannelFuture future) {
@@ -1230,7 +1258,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    flush(ctx, future);
+                    flush0(ctx, future);
                 }
             });
         }
@@ -1356,36 +1384,35 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    DefaultChannelHandlerContext firstContext(int direction) {
-        assert direction == DIR_INBOUND || direction == DIR_OUTBOUND;
-        if (direction == DIR_INBOUND) {
-            return nextContext(head.next, DIR_INBOUND);
-        } else { // DIR_OUTBOUND
-            return nextContext(tail, DIR_OUTBOUND);
-        }
+    DefaultChannelHandlerContext lastContext(int flag) {
+        return prevContext(tail, flag);
     }
 
-    static DefaultChannelHandlerContext nextContext(
-            DefaultChannelHandlerContext ctx, int direction) {
-        assert direction == DIR_INBOUND || direction == DIR_OUTBOUND;
+    static DefaultChannelHandlerContext nextContext(DefaultChannelHandlerContext ctx, int flag) {
         if (ctx == null) {
             return null;
         }
 
         DefaultChannelHandlerContext realCtx = ctx;
-        if (direction == DIR_INBOUND) {
-            while ((realCtx.flags & DIR_INBOUND) == 0) {
-                realCtx = realCtx.next;
-                if (realCtx == null) {
-                    return null;
-                }
+        while ((realCtx.flags & flag) == 0) {
+            realCtx = realCtx.next;
+            if (realCtx == null) {
+                return null;
             }
-        } else { // DIR_OUTBOUND
-            while ((realCtx.flags & DIR_OUTBOUND) == 0) {
-                realCtx = realCtx.prev;
-                if (realCtx == null) {
-                    return null;
-                }
+        }
+        return realCtx;
+    }
+
+    static DefaultChannelHandlerContext prevContext(DefaultChannelHandlerContext ctx, int flag) {
+        if (ctx == null) {
+            return null;
+        }
+
+        DefaultChannelHandlerContext realCtx = ctx;
+        while ((realCtx.flags & flag) == 0) {
+            realCtx = realCtx.prev;
+            if (realCtx == null) {
+                return null;
             }
         }
         return realCtx;

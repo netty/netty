@@ -141,6 +141,13 @@ public interface ChannelOutboundInvoker {
     ChannelFuture deregister(ChannelFuture future);
 
     /**
+     * Reads data from the {@link ChannelPipeline} into the inbound buffer and triggers an
+     * {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext) inboundBufferUpdated} event once
+     * the inbound data is read.
+     */
+    void read();
+
+    /**
      * Flush all pending data which belongs to this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
      *

@@ -172,6 +172,11 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        in.read(ctx);
+    }
+
+    @Override
     public void bind(
             ChannelHandlerContext ctx,
             SocketAddress localAddress, ChannelFuture future) throws Exception {
