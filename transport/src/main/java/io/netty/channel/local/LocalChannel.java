@@ -56,8 +56,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
     private volatile ChannelFuture connectFuture;
-
-    private boolean readInProgress;
+    private volatile boolean readInProgress;
 
     public LocalChannel() {
         this(null);
