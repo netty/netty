@@ -46,6 +46,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
     private final AioServerSocketChannelConfig config;
+    private boolean acceptInProgress;
     private boolean closed;
 
     private static AsynchronousServerSocketChannel newSocket(AsynchronousChannelGroup group) {
@@ -116,7 +117,11 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doBeginRead() {
-        // FIXME: Do nothing if accept operation is already in progress.
+        if (acceptInProgress) {
+            return;
+        }
+
+        acceptInProgress = true;
         javaChannel().accept(this, ACCEPT_HANDLER);
     }
 
@@ -160,6 +165,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
         @Override
         protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
+            channel.acceptInProgress = false;
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, ch));
@@ -169,6 +175,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
         @Override
         protected void failed0(Throwable t, AioServerSocketChannel channel) {
+            channel.acceptInProgress = false;
             boolean asyncClosed = false;
             if (t instanceof AsynchronousCloseException) {
                 asyncClosed = true;
