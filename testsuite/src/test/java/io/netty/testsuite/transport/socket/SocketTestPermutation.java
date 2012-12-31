@@ -29,7 +29,12 @@ import io.netty.channel.socket.nio.NioSctpChannel;
 import io.netty.channel.socket.nio.NioSctpServerChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.oio.*;
+import io.netty.channel.socket.oio.OioDatagramChannel;
+import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.socket.oio.OioSctpChannel;
+import io.netty.channel.socket.oio.OioSctpServerChannel;
+import io.netty.channel.socket.oio.OioServerSocketChannel;
+import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.testsuite.util.TestUtils;
 
 import java.util.ArrayList;

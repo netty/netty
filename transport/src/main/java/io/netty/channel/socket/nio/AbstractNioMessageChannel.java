@@ -71,22 +71,22 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                firedInboundBufferSuspended = true;
-                pipeline.fireInboundBufferSuspended();
+                if (t instanceof IOException) {
+                    closed = true;
+                } else if (!closed) {
+                    firedInboundBufferSuspended = true;
+                    pipeline.fireInboundBufferSuspended();
+                }
 
                 pipeline().fireExceptionCaught(t);
-                if (t instanceof IOException) {
-                    close(voidFuture());
-                }
             } finally {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
                 }
-                if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
-                }
                 if (closed && isOpen()) {
                     close(voidFuture());
+                } else if (!firedInboundBufferSuspended) {
+                    pipeline.fireInboundBufferSuspended();
                 }
             }
         }
