@@ -262,6 +262,11 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    @Override
     public void flush(final ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
         future.addListener(new ChannelFutureListener() {
             @Override
