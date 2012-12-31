@@ -234,6 +234,11 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     }
 
     @Override
+    protected void doBeginRead() throws Exception {
+        // NOOP
+    }
+
+    @Override
     protected AbstractUnsafe newUnsafe() {
         return new DefaultUnsafe();
     }

@@ -69,11 +69,6 @@ public class EmbeddedMessageChannel extends AbstractEmbeddedChannel<Object> {
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
-        // FIXME: Implement me.
-    }
-
-    @Override
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         buf.drainTo(lastOutboundBuffer());
     }
