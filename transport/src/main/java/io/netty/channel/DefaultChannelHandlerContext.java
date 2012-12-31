@@ -223,6 +223,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     };
 
+    final Runnable read0Task = new Runnable() {
+        @Override
+        public void run() {
+            pipeline.read0(DefaultChannelHandlerContext.this);
+        }
+    };
+
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutorGroup group,
@@ -1159,7 +1166,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void read() {
-        pipeline.read();
+        pipeline.read(prevContext(prev, FLAG_OPERATION_HANDLER));
     }
 
     @Override

@@ -298,6 +298,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    @Override
     public void flush(final ChannelHandlerContext ctx, final ChannelFuture future) throws Exception {
         long curtime = System.currentTimeMillis();
         long size = ctx.outboundByteBuffer().readableBytes();

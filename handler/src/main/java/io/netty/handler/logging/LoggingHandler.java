@@ -231,6 +231,11 @@ public class LoggingHandler extends ChannelHandlerAdapter {
     }
 
     @Override
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    @Override
     public void flush(ChannelHandlerContext ctx, ChannelFuture future)
             throws Exception {
         ctx.flush(future);

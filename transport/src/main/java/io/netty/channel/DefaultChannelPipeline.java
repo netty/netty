@@ -1212,7 +1212,24 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public void read() {
-        channel.unsafe().beginRead();
+        read(lastContext(FLAG_OPERATION_HANDLER));
+    }
+
+    void read(final DefaultChannelHandlerContext ctx) {
+        EventExecutor executor = ctx.executor();
+        if (executor.inEventLoop()) {
+            read0(ctx);
+        } else {
+            executor.execute(ctx.read0Task);
+        }
+    }
+
+    void read0(DefaultChannelHandlerContext ctx) {
+        try {
+            ((ChannelOperationHandler) ctx.handler()).read(ctx);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
     }
 
     @Override
@@ -1524,6 +1541,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void deregister(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
             unsafe.deregister(future);
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            unsafe.beginRead();
         }
 
         @Override
