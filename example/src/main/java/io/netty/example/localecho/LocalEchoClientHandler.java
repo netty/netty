@@ -19,11 +19,20 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 public class LocalEchoClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
+    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, String msg) {
         // Print as received
         System.out.println(msg);
+    }
+
+    @Override
+    public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
     }
 
     @Override

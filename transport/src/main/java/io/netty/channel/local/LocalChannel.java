@@ -57,6 +57,8 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalAddress remoteAddress;
     private volatile ChannelFuture connectFuture;
 
+    private boolean readInProgress;
+
     public LocalChannel() {
         this(null);
     }
@@ -209,7 +211,19 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doBeginRead() throws Exception {
-        // FIXME: Implement me.
+        if (readInProgress) {
+            return;
+        }
+
+        ChannelPipeline pipeline = pipeline();
+        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
+        if (buf.isEmpty()) {
+            readInProgress = true;
+            return;
+        }
+
+        pipeline.fireInboundBufferUpdated();
+        pipeline.fireInboundBufferSuspended();
     }
 
     @Override
@@ -227,7 +241,7 @@ public class LocalChannel extends AbstractChannel {
 
         if (peerLoop == eventLoop()) {
             buf.drainTo(peerPipeline.inboundMessageBuffer());
-            peerPipeline.fireInboundBufferUpdated();
+            finishPeerRead(peer, peerPipeline);
         } else {
             final Object[] msgs = buf.toArray();
             buf.clear();
@@ -236,9 +250,17 @@ public class LocalChannel extends AbstractChannel {
                 public void run() {
                     MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
                     Collections.addAll(buf, msgs);
-                    peerPipeline.fireInboundBufferUpdated();
+                    finishPeerRead(peer, peerPipeline);
                 }
             });
+        }
+    }
+
+    private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
+        if (peer.readInProgress) {
+            peer.readInProgress = false;
+            peerPipeline.fireInboundBufferUpdated();
+            peerPipeline.fireInboundBufferSuspended();
         }
     }
 

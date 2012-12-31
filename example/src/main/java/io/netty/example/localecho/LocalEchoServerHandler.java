@@ -19,6 +19,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 public class LocalEchoServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
+    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, String msg) {
@@ -30,5 +34,10 @@ public class LocalEchoServerHandler extends ChannelInboundMessageHandlerAdapter<
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
+    }
+
+    @Override
+    public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
     }
 }

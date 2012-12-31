@@ -140,6 +140,7 @@ public class LocalTransportThreadModelTest2 {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
             for (int i = 0; i < messageCountPerRun; i ++) {
                 lastWriteFuture = ctx.channel().write(name + ' ' + i);
             }
@@ -148,6 +149,11 @@ public class LocalTransportThreadModelTest2 {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             count.incrementAndGet();
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
     }
 }
