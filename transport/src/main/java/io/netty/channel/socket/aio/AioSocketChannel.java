@@ -325,6 +325,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         inDoBeginRead = true;
         try {
             for (;;) {
+                if (inputShutdown) {
+                    break;
+                }
+
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
                 if (!byteBuf.readable()) {
                     byteBuf.discardReadBytes();
@@ -468,15 +472,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                firedInboundBufferSuspended = true;
-                pipeline.fireInboundBufferSuspended();
+                if (!closed && channel.isOpen()) {
+                    firedInboundBufferSuspended = true;
+                    pipeline.fireInboundBufferSuspended();
+                }
+
                 pipeline.fireExceptionCaught(t);
             } finally {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
-                }
-                if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
                 }
 
                 // Double check because fireInboundBufferUpdated() might have triggered the closure by a user handler.
@@ -489,6 +493,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             channel.unsafe().close(channel.unsafe().voidFuture());
                         }
                     }
+                } else  if (!firedInboundBufferSuspended) {
+                    pipeline.fireInboundBufferSuspended();
                 }
             }
         }
