@@ -220,6 +220,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     private class Acceptor
             extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
 
+        // TODO: Provide a way to control the accept traffic.
+
         @Override
         public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
