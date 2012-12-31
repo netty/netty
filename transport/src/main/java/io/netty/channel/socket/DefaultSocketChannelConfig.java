@@ -15,8 +15,6 @@
  */
 package io.netty.channel.socket;
 
-import static io.netty.channel.ChannelOption.*;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
@@ -25,6 +23,8 @@ import io.netty.channel.DefaultChannelConfig;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Map;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
@@ -279,5 +279,10 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (SocketChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public SocketChannelConfig setAutoRead(boolean autoRead) {
+        return (SocketChannelConfig) super.setAutoRead(autoRead);
     }
 }

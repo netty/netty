@@ -145,7 +145,6 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
-            ctx.read();
         }
 
         @Override
@@ -158,11 +157,6 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
             }
 
             counter ++;
-        }
-
-        @Override
-        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
         }
 
         @Override

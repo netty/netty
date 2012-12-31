@@ -40,11 +40,6 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                ctx.read();
-            }
-
-            @Override
             public void messageReceived(
                     ChannelHandlerContext ctx,
                     DatagramPacket msg) throws Exception {

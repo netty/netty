@@ -220,16 +220,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     private class Acceptor
             extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
 
-        // TODO: Provide a way to control the accept traffic.
-
         @Override
         public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
         }
 
         @Override
@@ -265,11 +258,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }
             }
-        }
-
-        @Override
-        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
         }
     }
 

@@ -53,11 +53,6 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
     private final StringBuilder buf = new StringBuilder();
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ctx.read();
-    }
-
-    @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) msg;
@@ -194,11 +189,6 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
-    }
-
-    @Override
-    public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
-        ctx.read();
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {

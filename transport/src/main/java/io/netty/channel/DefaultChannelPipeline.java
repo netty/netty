@@ -943,6 +943,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public void fireChannelActive() {
         firedChannelActive = true;
         head.fireChannelActive();
+
+        if (channel.config().isAutoRead()) {
+            channel.read();
+        }
+
         if (fireInboundBufferUpdatedOnActivation) {
             fireInboundBufferUpdatedOnActivation = false;
             head.fireInboundBufferUpdated();
@@ -980,6 +985,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public void fireInboundBufferSuspended() {
         head.fireInboundBufferSuspended();
+        if (channel.config().isAutoRead()) {
+            channel.read();
+        }
     }
 
     @Override

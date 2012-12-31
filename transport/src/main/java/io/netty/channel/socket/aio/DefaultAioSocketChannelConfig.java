@@ -336,4 +336,9 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     public AioSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (AioSocketChannelConfig) super.setAllocator(allocator);
     }
+
+    @Override
+    public AioSocketChannelConfig setAutoRead(boolean autoRead) {
+        return (AioSocketChannelConfig) super.setAutoRead(autoRead);
+    }
 }

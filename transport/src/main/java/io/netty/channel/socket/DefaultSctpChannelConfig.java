@@ -172,4 +172,9 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     public SctpChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (SctpChannelConfig) super.setAllocator(allocator);
     }
+
+    @Override
+    public SctpChannelConfig setAutoRead(boolean autoRead) {
+        return (SctpChannelConfig) super.setAutoRead(autoRead);
+    }
 }

@@ -233,18 +233,8 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
-        }
-
-        @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.write(msg);
-        }
-
-        @Override
-        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
         }
 
         @Override
@@ -265,11 +255,6 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
-        }
-
-        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
@@ -280,11 +265,6 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             }
 
             counter += actual.length;
-        }
-
-        @Override
-        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
-            ctx.read();
         }
 
         @Override
