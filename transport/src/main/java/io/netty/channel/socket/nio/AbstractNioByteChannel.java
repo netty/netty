@@ -238,36 +238,4 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
-    // 0 - not expanded because the buffer is writable
-    // 1 - expanded because the buffer was not writable
-    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
-    private static int expandReadBuffer(ByteBuf byteBuf) {
-        final int writerIndex = byteBuf.writerIndex();
-        final int capacity = byteBuf.capacity();
-        if (capacity != writerIndex) {
-            return 0;
-        }
-
-        final int maxCapacity = byteBuf.maxCapacity();
-        if (capacity == maxCapacity) {
-            if (byteBuf.readerIndex() != 0) {
-                byteBuf.discardReadBytes();
-                return 0;
-            }
-            return 2;
-        }
-
-        // FIXME: Magic number
-        final int increment = 4096;
-
-        if (writerIndex + increment > maxCapacity) {
-            // Expand to maximum capacity.
-            byteBuf.capacity(maxCapacity);
-        } else {
-            // Expand by the increment.
-            byteBuf.ensureWritableBytes(increment);
-        }
-
-        return 1;
-    }
 }
