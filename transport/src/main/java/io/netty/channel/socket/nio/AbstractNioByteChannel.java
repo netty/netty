@@ -17,11 +17,11 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -100,19 +100,16 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     pipeline.fireInboundBufferUpdated();
                 }
 
-                firedInboundBufferSuspended = true;
-                pipeline.fireInboundBufferSuspended();
-
-                pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
-                    close(voidFuture());
+                    closed = true;
+                } else if (!closed) {
+                    firedInboundBufferSuspended = true;
+                    pipeline.fireInboundBufferSuspended();
                 }
+                pipeline().fireExceptionCaught(t);
             } finally {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
-                }
-                if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
                 }
 
                 if (closed) {
@@ -124,6 +121,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             close(voidFuture());
                         }
                     }
+                } else if (!firedInboundBufferSuspended) {
+                    pipeline.fireInboundBufferSuspended();
                 }
             }
         }

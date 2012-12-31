@@ -493,7 +493,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             channel.unsafe().close(channel.unsafe().voidFuture());
                         }
                     }
-                } else  if (!firedInboundBufferSuspended) {
+                } else if (!firedInboundBufferSuspended) {
                     pipeline.fireInboundBufferSuspended();
                 }
             }
