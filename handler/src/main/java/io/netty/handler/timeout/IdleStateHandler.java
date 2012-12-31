@@ -282,7 +282,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
                         ChannelFuture future) throws Exception {
-        ctx.connect(remoteAddress, localAddress);
+        ctx.connect(remoteAddress, localAddress, future);
     }
 
     @Override
@@ -309,7 +309,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
                 writerIdleCount = allIdleCount = 0;
             }
         });
-        ctx.sendFile(region);
+        ctx.sendFile(region, future);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
