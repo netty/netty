@@ -31,9 +31,4 @@ public interface ChannelInboundHandler extends ChannelStateHandler {
      * deallocate its inbound buffer.
      */
     void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception;
-
-    /**
-     * Reads the inbound data from the given {@link ChannelHandlerContext}.
-     */
-    void read(ChannelHandlerContext ctx) throws Exception;
 }

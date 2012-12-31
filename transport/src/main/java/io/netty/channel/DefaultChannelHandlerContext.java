@@ -154,6 +154,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
     };
+    private final Runnable fireInboundBufferSuspendedTask = new Runnable() {
+        @Override
+        public void run() {
+            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            try {
+                ((ChannelStateHandler) ctx.handler).inboundBufferSuspended(ctx);
+            } catch (Throwable t) {
+                pipeline.notifyHandlerException(t);
+            }
+        }
+    };
     private final Runnable freeInboundBufferTask = new Runnable() {
         @Override
         public void run() {
@@ -1064,6 +1075,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
+    public void fireInboundBufferSuspended() {
+        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        if (next != null) {
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop() && prev != null) {
+                next.fireInboundBufferSuspendedTask.run();
+            } else {
+                executor.execute(next.fireInboundBufferSuspendedTask);
+            }
+        }
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress) {
         return bind(localAddress, newFuture());
     }
@@ -1135,7 +1159,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void read() {
-        pipeline.read(prevContext(prev, FLAG_INBOUND_HANDLER));
+        pipeline.read();
     }
 
     @Override

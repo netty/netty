@@ -147,10 +147,15 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (this instanceof ChannelInboundHandler) {
-            ChannelInboundHandler h = (ChannelInboundHandler) this;
-            h.read(ctx);
-        } else {
-            ctx.fireInboundBufferUpdated();
+            throw new IllegalStateException(
+                    "inboundBufferUpdated(...) must be overridden by " + getClass().getName() +
+                    ", which implements " + ChannelInboundHandler.class.getSimpleName());
         }
+        ctx.fireInboundBufferUpdated();
+    }
+
+    @Override
+    public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireInboundBufferSuspended();
     }
 }

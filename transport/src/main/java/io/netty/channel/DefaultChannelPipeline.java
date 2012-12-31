@@ -978,6 +978,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public void fireInboundBufferSuspended() {
+        head.fireInboundBufferSuspended();
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress) {
         return bind(localAddress, channel.newFuture());
     }
@@ -1207,34 +1212,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public void read() {
-        read(lastContext(FLAG_INBOUND_HANDLER));
-    }
-
-    void read(final DefaultChannelHandlerContext ctx) {
-        if (ctx == null) {
-            // Reached at the head of the pipeline.
-            channel.unsafe().beginRead();
-        } else {
-            EventExecutor executor = ctx.executor();
-            if (executor.inEventLoop()) {
-                read0(ctx);
-            } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        read0(ctx);
-                    }
-                });
-            }
-        }
-    }
-
-    private void read0(DefaultChannelHandlerContext ctx) {
-        try {
-            ((ChannelInboundHandler) ctx.handler()).read(ctx);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
-        }
+        channel.unsafe().beginRead();
     }
 
     @Override
