@@ -78,8 +78,6 @@ class OioEventLoop extends SingleThreadEventLoop {
                     }
                 }
 
-                ch.unsafe().read();
-
                 // Handle deregistration
                 if (!ch.isRegistered()) {
                     runAllTasks();

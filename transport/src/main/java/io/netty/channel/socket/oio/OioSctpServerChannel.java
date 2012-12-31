@@ -185,10 +185,6 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
             return -1;
         }
 
-        if (readSuspended) {
-            return 0;
-        }
-
         SctpChannel s = null;
         try {
             final int selectedKeys = selector.select(SO_TIMEOUT);

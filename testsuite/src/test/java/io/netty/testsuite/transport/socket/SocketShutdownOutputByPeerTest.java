@@ -15,14 +15,14 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.SocketChannel;
+import org.junit.Test;
 
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
@@ -30,7 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
 
@@ -117,6 +117,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ch = (SocketChannel) ctx.channel();
+            ctx.read();
         }
 
         @Override
@@ -127,6 +128,11 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             queue.offer(in.readByte());
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
 
         @Override

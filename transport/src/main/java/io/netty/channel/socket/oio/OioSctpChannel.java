@@ -148,7 +148,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
-        if (readSuspended || !readSelector.isOpen()) {
+        if (!readSelector.isOpen()) {
             return 0;
         }
 
@@ -174,10 +174,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 buf.add(new SctpMessage(messageInfo, Unpooled.wrappedBuffer(data)));
 
                 readMessages ++;
-
-                if (readSuspended) {
-                    return readMessages;
-                }
             }
         } finally {
             reableKeys.clear();

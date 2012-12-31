@@ -174,6 +174,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
+            ctx.read();
         }
 
         @Override
@@ -193,6 +194,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             counter += actual.length;
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
 
         @Override

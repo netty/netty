@@ -32,8 +32,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
 
@@ -113,6 +112,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
+            ctx.read();
         }
 
         @Override
@@ -127,6 +127,11 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
             counter += actual.length;
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
 
         @Override

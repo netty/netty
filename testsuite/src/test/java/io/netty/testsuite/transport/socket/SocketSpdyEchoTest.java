@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -30,13 +29,14 @@ import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
 import io.netty.handler.codec.spdy.SpdyFrameEncoder;
 import io.netty.util.NetUtil;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketSpdyEchoTest extends AbstractSocketTest {
 
@@ -233,8 +233,18 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
+        }
+
+        @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.write(msg);
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
 
         @Override
@@ -255,6 +265,11 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
+        }
+
+        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
@@ -265,6 +280,11 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             }
 
             counter += actual.length;
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
 
         @Override

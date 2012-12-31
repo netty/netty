@@ -102,6 +102,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
+        }
+
+        @Override
         public void messageReceived(
                 ChannelHandlerContext ctx,
                 DatagramPacket msg) throws Exception {
