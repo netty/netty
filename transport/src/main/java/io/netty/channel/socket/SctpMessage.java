@@ -18,16 +18,14 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 
 /**
  * Representation of SCTP Data Chunk
  */
-public final class SctpMessage {
+public final class SctpMessage extends DefaultMessage {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
-    private final ByteBuf payloadBuffer;
     private final MessageInfo msgInfo;
 
     /**
@@ -37,9 +35,9 @@ public final class SctpMessage {
      * @param payloadBuffer channel buffer
      */
     public SctpMessage(int protocolIdentifier, int streamIdentifier, ByteBuf payloadBuffer) {
+        super(payloadBuffer);
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
-        this.payloadBuffer = payloadBuffer;
         msgInfo = null;
     }
 
@@ -49,16 +47,14 @@ public final class SctpMessage {
      * @param payloadBuffer channel buffer
      */
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
+        super(payloadBuffer);
+
         if (msgInfo == null) {
             throw new NullPointerException("msgInfo");
-        }
-        if (payloadBuffer == null) {
-            throw new NullPointerException("payloadBuffer");
         }
         this.msgInfo = msgInfo;
         streamIdentifier = msgInfo.streamNumber();
         protocolIdentifier = msgInfo.payloadProtocolID();
-        this.payloadBuffer = payloadBuffer;
     }
 
     /**
@@ -73,17 +69,6 @@ public final class SctpMessage {
      */
     public int protocolIdentifier() {
         return protocolIdentifier;
-    }
-
-    /**
-     * Return a view of the readable bytes of the payload.
-     */
-    public ByteBuf payloadBuffer() {
-        if (payloadBuffer.readable()) {
-            return payloadBuffer.slice();
-        } else {
-            return Unpooled.EMPTY_BUFFER;
-        }
     }
 
     /**
@@ -126,7 +111,7 @@ public final class SctpMessage {
             return false;
         }
 
-        if (!payloadBuffer.equals(sctpFrame.payloadBuffer)) {
+        if (!data().equals(sctpFrame.data())) {
             return false;
         }
 
@@ -137,7 +122,7 @@ public final class SctpMessage {
     public int hashCode() {
         int result = streamIdentifier;
         result = 31 * result + protocolIdentifier;
-        result = 31 * result + payloadBuffer.hashCode();
+        result = 31 * result + data().hashCode();
         return result;
     }
 
@@ -145,6 +130,6 @@ public final class SctpMessage {
     public String toString() {
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                ", payloadBuffer=" + ByteBufUtil.hexDump(payloadBuffer()) + '}';
+                ", payloadBuffer=" + ByteBufUtil.hexDump(data()) + '}';
     }
 }

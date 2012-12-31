@@ -22,9 +22,8 @@ import java.net.InetSocketAddress;
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public final class DatagramPacket {
+public final class DatagramPacket extends DefaultMessage {
 
-    private final ByteBuf data;
     private final InetSocketAddress remoteAddress;
 
     /**
@@ -35,22 +34,12 @@ public final class DatagramPacket {
      *                          packet will be send
      */
     public DatagramPacket(ByteBuf data, InetSocketAddress remoteAddress) {
-        if (data == null) {
-            throw new NullPointerException("data");
-        }
+        super(data);
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
 
-        this.data = data;
         this.remoteAddress = remoteAddress;
-    }
-
-    /**
-     * Return the data which is container. May return an empty {@link ByteBuf}
-     */
-    public ByteBuf data() {
-        return data;
     }
 
     /**
@@ -62,6 +51,6 @@ public final class DatagramPacket {
 
     @Override
     public String toString() {
-        return "datagram(" + data.readableBytes() + "B, " + remoteAddress + ')';
+        return "datagram(" + data().readableBytes() + "B, " + remoteAddress + ')';
     }
 }
