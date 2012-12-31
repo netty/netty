@@ -422,13 +422,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 if (region == null) {
                                     // no region present means the next flush task was to directly flush
                                     // the outbound buffer
-                                    flushNotifierAndFlush(future);
+                                    flushNotifierAndFlush(next.future);
                                 } else {
                                     // flush the region now
-                                    doFlushFileRegion(region, future);
+                                    doFlushFileRegion(region, next.future);
                                 }
                             } catch (Throwable cause) {
-                                future.setFailure(cause);
+                                next.future.setFailure(cause);
                             }
                         } else {
                             // notify the flush futures
