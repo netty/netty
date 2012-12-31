@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.marshalling;
 
-import java.io.IOException;
-
 import org.jboss.marshalling.ByteInput;
+
+import java.io.IOException;
 
 /**
  * {@link ByteInput} implementation which wraps another {@link ByteInput} and throws a {@link TooBigObjectException}
@@ -42,7 +42,7 @@ class LimitingByteInput implements ByteInput {
 
     @Override
     public void close() throws IOException {
-        // Nothing todo
+        // Nothing to do
     }
 
     @Override

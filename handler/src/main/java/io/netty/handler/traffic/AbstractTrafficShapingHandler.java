@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 import java.util.concurrent.TimeUnit;
@@ -45,8 +46,6 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapter
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
-
-    // FIXME: Port to the new event model.
 
     /**
      * Default delay between two checks: 1s
@@ -78,6 +77,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      */
     protected long checkInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
+    private static final AttributeKey<Boolean> READ_SUSPENDED = new AttributeKey<Boolean>("readSuspended");
     private static final AttributeKey<Runnable> REOPEN_TASK = new AttributeKey<Runnable>("reopenTask");
     private static final AttributeKey<Runnable> BUFFER_UPDATE_TASK = new AttributeKey<Runnable>("bufferUpdateTask");
 
@@ -189,7 +189,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     /**
      * Class to implement setReadable at fix time
      */
-     private static final class ReopenReadTimerTask implements Runnable {
+    private static final class ReopenReadTimerTask implements Runnable {
         final ChannelHandlerContext ctx;
         ReopenReadTimerTask(ChannelHandlerContext ctx) {
             this.ctx = ctx;
@@ -197,9 +197,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
         @Override
         public void run() {
-            if (ctx.channel().isActive()) {
-                //ctx.readable(true);
-            }
+            ctx.attr(READ_SUSPENDED).set(false);
+            ctx.read();
         }
     }
 
@@ -260,9 +259,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
-                /*
-                if (ctx.isReadable()) {
-                    ctx.readable(false);
+                if (!ctx.attr(READ_SUSPENDED).get()) {
+                    ctx.attr(READ_SUSPENDED).set(true);
 
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
@@ -291,7 +289,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                     ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
                     return;
                 }
-                */
             }
         }
         ctx.fireInboundBufferUpdated();
@@ -299,7 +296,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        ctx.read();
+        if (!ctx.attr(READ_SUSPENDED).get()) {
+            ctx.read();
+        }
     }
 
     @Override
