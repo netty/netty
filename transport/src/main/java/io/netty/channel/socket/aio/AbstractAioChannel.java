@@ -99,7 +99,7 @@ abstract class AbstractAioChannel extends AbstractChannel {
         return new DefaultAioUnsafe();
     }
 
-    private final class DefaultAioUnsafe extends AbstractUnsafe {
+    protected final class DefaultAioUnsafe extends AbstractUnsafe {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
