@@ -15,20 +15,13 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelOption;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 public class ServerSocketSuspendTest extends AbstractServerSocketTest {
@@ -42,6 +35,8 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         run();
     }
 
+    // FIXME: Port to the new event model.
+    /*
     public void testSuspendAndResumeAccept(ServerBootstrap sb) throws Throwable {
         AcceptedChannelCounter counter = new AcceptedChannelCounter(NUM_CHANNELS);
 
@@ -90,6 +85,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
             }
         }
     }
+    */
 
     @ChannelHandler.Sharable
     private static final class AcceptedChannelCounter extends ChannelInboundByteHandlerAdapter {

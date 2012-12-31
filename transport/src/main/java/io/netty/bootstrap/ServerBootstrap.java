@@ -225,8 +225,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             return Unpooled.messageBuffer();
         }
 
-        @SuppressWarnings("unchecked")
         @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
         public void inboundBufferUpdated(ChannelHandlerContext ctx) {
             MessageBuf<Channel> in = ctx.inboundMessageBuffer();
             for (;;) {
@@ -258,6 +263,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }
             }
+        }
+
+        @Override
+        public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+            ctx.read();
         }
     }
 

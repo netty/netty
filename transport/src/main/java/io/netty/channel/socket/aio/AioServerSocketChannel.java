@@ -31,7 +31,6 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * {@link ServerSocketChannel} implementation which uses NIO2.
@@ -48,15 +47,6 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     private final AioServerSocketChannelConfig config;
     private boolean closed;
-    private final AtomicBoolean readSuspended = new AtomicBoolean();
-
-    private final Runnable acceptTask = new Runnable() {
-
-        @Override
-        public void run() {
-            doAccept();
-        }
-    };
 
     private static AsynchronousServerSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
@@ -122,13 +112,11 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     protected void doBind(SocketAddress localAddress) throws Exception {
         AsynchronousServerSocketChannel ch = javaChannel();
         ch.bind(localAddress, config.getBacklog());
-        doAccept();
     }
 
-    private void doAccept() {
-        if (readSuspended.get()) {
-            return;
-        }
+    @Override
+    protected void doBeginRead() {
+        // FIXME: Do nothing if accept operation is already in progress.
         javaChannel().accept(this, ACCEPT_HANDLER);
     }
 
@@ -172,13 +160,11 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
         @Override
         protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
-            // register again this handler to accept new connections
-            channel.doAccept();
-
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
+            channel.pipeline().fireInboundBufferSuspended();
         }
 
         @Override

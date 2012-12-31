@@ -15,10 +15,6 @@
  */
 package io.netty.example.http.snoop;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -44,12 +40,22 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+
 public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private HttpRequest request;
     private boolean readingChunks;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
+    }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -188,6 +194,11 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
+    }
+
+    @Override
+    public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {

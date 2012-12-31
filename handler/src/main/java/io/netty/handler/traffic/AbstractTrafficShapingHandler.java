@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 import java.util.concurrent.TimeUnit;
@@ -46,6 +45,8 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapter
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
+
+    // FIXME: Port to the new event model.
 
     /**
      * Default delay between two checks: 1s
@@ -197,7 +198,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
         @Override
         public void run() {
             if (ctx.channel().isActive()) {
-                ctx.readable(true);
+                //ctx.readable(true);
             }
         }
     }
@@ -259,6 +260,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
+                /*
                 if (ctx.isReadable()) {
                     ctx.readable(false);
 
@@ -289,6 +291,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
                     ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
                     return;
                 }
+                */
             }
         }
         ctx.fireInboundBufferUpdated();

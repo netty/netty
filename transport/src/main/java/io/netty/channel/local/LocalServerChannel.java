@@ -127,6 +127,11 @@ public class LocalServerChannel extends AbstractServerChannel {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
+    @Override
+    protected void doBeginRead() throws Exception {
+        // FIXME: Implement me.
+    }
+
     LocalChannel serve(final LocalChannel peer) {
         LocalChannel child = new LocalChannel(this, peer);
         serve0(child);

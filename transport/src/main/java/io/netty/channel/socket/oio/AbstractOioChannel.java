@@ -105,4 +105,9 @@ abstract class AbstractOioChannel extends AbstractChannel {
      */
     protected abstract void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+
+    @Override
+    protected void doBeginRead() throws Exception {
+        // FIXME: Implement me.
+    }
 }

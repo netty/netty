@@ -18,10 +18,10 @@ package io.netty.channel.socket.nio;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -55,11 +55,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
+            final SelectionKey key = selectionKey();
+            key.interestOps(key.interestOps() & ~readInterestOp);
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
             boolean closed = false;
             boolean read = false;
+            boolean firedInboundBufferSuspended = false;
             try {
                 expandReadBuffer(byteBuf);
                 loop: for (;;) {
@@ -96,6 +99,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     read = false;
                     pipeline.fireInboundBufferUpdated();
                 }
+
+                firedInboundBufferSuspended = true;
+                pipeline.fireInboundBufferSuspended();
+
                 pipeline().fireExceptionCaught(t);
                 if (t instanceof IOException) {
                     close(voidFuture());
@@ -104,11 +111,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
                 }
+                if (!firedInboundBufferSuspended) {
+                    pipeline.fireInboundBufferSuspended();
+                }
+
                 if (closed) {
                     setInputShutdown();
                     if (isOpen()) {
                         if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                            suspendReadTask.run();
                             pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
                             close(voidFuture());
