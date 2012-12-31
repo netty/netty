@@ -1052,15 +1052,5 @@ public class SslHandler
         public void setFailure(Throwable cause) {
             throw new IllegalStateException();
         }
-
-        @Override
-        public void setProgress(long amount, long current, long total) {
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public boolean tryProgress(long amount, long current, long total) {
-            return false;
-        }
     }
 }
