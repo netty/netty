@@ -90,4 +90,7 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
 
     @Override
     ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    ServerSocketChannelConfig setAutoRead(boolean autoRead);
 }
