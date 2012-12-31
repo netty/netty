@@ -1019,16 +1019,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void setProgress(long amount, long current, long total) {
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public boolean tryProgress(long amount, long current, long total) {
-            throw new IllegalStateException();
-        }
-
-        @Override
         public boolean trySuccess() {
             throw new IllegalStateException();
         }
