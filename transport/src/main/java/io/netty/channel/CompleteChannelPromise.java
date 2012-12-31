@@ -23,16 +23,6 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public void setProgress(long amount, long current, long total) {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public boolean tryProgress(long amount, long current, long total) {
-        return false;
-    }
-
-    @Override
     public void setFailure(Throwable cause) {
         throw new IllegalStateException();
     }
