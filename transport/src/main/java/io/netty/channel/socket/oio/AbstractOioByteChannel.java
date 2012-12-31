@@ -58,12 +58,14 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
         boolean read = false;
         boolean firedInboundBufferSuspeneded = false;
         try {
-            for (;;) {
+            expandReadBuffer(byteBuf);
+            loop: for (;;) {
                 int localReadAmount = doReadBytes(byteBuf);
                 if (localReadAmount > 0) {
                     read = true;
                 } else if (localReadAmount < 0) {
                     closed = true;
+                    break;
                 }
 
                 final int available = available();
@@ -71,29 +73,24 @@ abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     break;
                 }
 
-                if (byteBuf.writable()) {
-                    continue;
-                }
-
-                final int capacity = byteBuf.capacity();
-                final int maxCapacity = byteBuf.maxCapacity();
-                if (capacity == maxCapacity) {
-                    if (read) {
-                        read = false;
-                        pipeline.fireInboundBufferUpdated();
-                        if (!byteBuf.writable()) {
-                            throw new IllegalStateException(
-                                    "an inbound handler whose buffer is full must consume at " +
-                                    "least one byte.");
+                switch (expandReadBuffer(byteBuf)) {
+                    case 0:
+                        // Read all - stop reading.
+                        break loop;
+                    case 1:
+                        // Keep reading until everything is read.
+                        break;
+                    case 2:
+                        // Let the inbound handler drain the buffer and continue reading.
+                        if (read) {
+                            read = false;
+                            pipeline.fireInboundBufferUpdated();
+                            if (!byteBuf.writable()) {
+                                throw new IllegalStateException(
+                                        "an inbound handler whose buffer is full must consume at " +
+                                                "least one byte.");
+                            }
                         }
-                    }
-                } else {
-                    final int writerIndex = byteBuf.writerIndex();
-                    if (writerIndex + available > maxCapacity) {
-                        byteBuf.capacity(maxCapacity);
-                    } else {
-                        byteBuf.ensureWritableBytes(available);
-                    }
                 }
             }
         } catch (Throwable t) {
