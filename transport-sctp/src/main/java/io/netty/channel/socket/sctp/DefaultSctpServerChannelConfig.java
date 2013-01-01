@@ -13,7 +13,7 @@
 * License for the specific language governing permissions and limitations
 * under the License.
 */
-package io.netty.channel.socket;
+package io.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.SctpServerChannel;
 import io.netty.buffer.ByteBufAllocator;
@@ -39,7 +39,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
      * Creates a new instance.
      */
     public DefaultSctpServerChannelConfig(
-            io.netty.channel.socket.SctpServerChannel channel, SctpServerChannel javaChannel) {
+            io.netty.channel.socket.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
         super(channel);
         if (javaChannel == null) {
             throw new NullPointerException("javaChannel");

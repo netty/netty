@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.SctpMessage;
+import io.netty.channel.socket.sctp.SctpMessage;
 import io.netty.handler.codec.EncoderException;
 
 /**

@@ -26,7 +26,7 @@ import java.io.IOException;
 /**
  * Abstract base class for OIO which reads and writes bytes from/to a Socket
  */
-abstract class AbstractOioByteChannel extends AbstractOioChannel {
+public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     private volatile boolean inputShutdown;
 
