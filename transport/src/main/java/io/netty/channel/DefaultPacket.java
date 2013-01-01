@@ -24,6 +24,7 @@ import io.netty.buffer.ByteBufUtil;
  */
 public class DefaultPacket implements Packet {
     private final ByteBuf data;
+    private boolean freed;
 
     public DefaultPacket(ByteBuf data) {
         if (data == null) {
@@ -34,14 +35,29 @@ public class DefaultPacket implements Packet {
 
     @Override
     public ByteBuf data() {
+        if (freed) {
+            throw new IllegalStateException("Packet was freed already");
+        }
         return data;
     }
 
     @Override
     public void free() {
-        if (!data.isFreed()) {
-            data.free();
+        if (!freed) {
+            freed = true;
+            if (!data.isFreed()) {
+                try {
+                    data.free();
+                } catch (UnsupportedOperationException e) {
+                    // free not supported
+                }
+            }
         }
+    }
+
+    @Override
+    public boolean isFreed() {
+        return freed;
     }
 
     @Override

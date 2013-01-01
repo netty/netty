@@ -42,6 +42,11 @@ public interface Packet {
     void free();
 
     /**
+     * Return {@code true} if the {@link Packet} was freed already.
+     */
+    boolean isFreed();
+
+    /**
      * Create a copy of this {@link Packet} which can be used even after {@link #free()}
      * is called.
      */
