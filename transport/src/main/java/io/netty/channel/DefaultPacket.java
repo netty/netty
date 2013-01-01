@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 
 /**
  * Default implementation of a {@link Packet} that holds it's data in a {@link ByteBuf}.
@@ -25,12 +24,13 @@ import io.netty.buffer.ByteBufUtil;
 public class DefaultPacket implements Packet {
     private final ByteBuf data;
     private boolean freed;
-
+    private final int size;
     public DefaultPacket(ByteBuf data) {
         if (data == null) {
             throw new NullPointerException("data");
         }
         this.data = data;
+        size = data.readableBytes();
     }
 
     @Override
@@ -67,6 +67,6 @@ public class DefaultPacket implements Packet {
 
     @Override
     public String toString() {
-        return "packet(" + ByteBufUtil.hexDump(data()) + ')';
+        return "packet(" + size + "B)";
     }
 }
