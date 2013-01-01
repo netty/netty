@@ -183,17 +183,23 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         int packetSize = config().getReceivePacketSize();
-        byte[] data = new byte[packetSize];
-        tmpPacket.setData(data);
+        // TODO: Use alloc().heapBuffer(..) but there seems to be a memory-leak, need to investigate
+        ByteBuf buffer = Unpooled.buffer(packetSize);
+        boolean free = true;
+
         try {
+            int writerIndex =  buffer.writerIndex();
+            tmpPacket.setData(buffer.array(), writerIndex + buffer.arrayOffset(), packetSize);
+
             socket.receive(tmpPacket);
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
             if (remoteAddr == null) {
                 remoteAddr = remoteAddress();
             }
-            buf.add(new DatagramPacket(Unpooled.wrappedBuffer(
-                    data, tmpPacket.getOffset(), tmpPacket.getLength()), remoteAddr));
-
+            DatagramPacket packet = new DatagramPacket(buffer.writerIndex(writerIndex + tmpPacket.getLength())
+                    .readerIndex(writerIndex), remoteAddr);
+            buf.add(packet);
+            free = false;
             return 1;
         } catch (SocketTimeoutException e) {
             // Expected
@@ -203,27 +209,46 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 throw e;
             }
             return -1;
+        } catch (Throwable cause) {
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new ChannelException(cause);
+        } finally {
+            if (free) {
+                buffer.free();
+            }
         }
     }
 
     @Override
     protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
-        ByteBuf data = p.data();
-        int length = data.readableBytes();
-        InetSocketAddress remote = p.remoteAddress();
-        if (remote != null) {
-            tmpPacket.setSocketAddress(remote);
-        }
-        if (data.hasArray()) {
-            tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
-        } else {
-            byte[] tmp = new byte[length];
-            data.getBytes(data.readerIndex(), tmp);
-            tmpPacket.setData(tmp);
-        }
 
-        socket.send(tmpPacket);
+        try {
+            ByteBuf data = p.data();
+            int length = data.readableBytes();
+            InetSocketAddress remote = p.remoteAddress();
+            if (remote != null) {
+                tmpPacket.setSocketAddress(remote);
+            }
+            if (data.hasArray()) {
+                tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
+            } else {
+                byte[] tmp = new byte[length];
+                data.getBytes(data.readerIndex(), tmp);
+                tmpPacket.setData(tmp);
+            }
+            socket.send(tmpPacket);
+        } finally {
+            p.free();
+        }
     }
 
     @Override

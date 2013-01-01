@@ -18,7 +18,6 @@ package io.netty.channel.socket.nio;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -192,15 +191,34 @@ public final class NioDatagramChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        ByteBuffer data = ByteBuffer.allocate(config().getReceivePacketSize());
-        InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
-        if (remoteAddress == null) {
-            return 0;
-        }
+        ByteBuf buffer = alloc().directBuffer(config().getReceivePacketSize());
+        boolean free = true;
+        try {
+            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
 
-        data.flip();
-        buf.add(new DatagramPacket(Unpooled.wrappedBuffer(data), remoteAddress));
-        return 1;
+            InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
+            if (remoteAddress == null) {
+                return 0;
+            }
+            buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.remaining()), remoteAddress));
+            free = false;
+            return 1;
+        } catch (Throwable cause) {
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new ChannelException(cause);
+        }  finally {
+            if (free) {
+                buffer.free();
+            }
+        }
     }
 
     @Override
@@ -237,6 +255,10 @@ public final class NioDatagramChannel
 
         // Wrote a packet.
         buf.remove();
+
+        // packet was written free up buffer
+        packet.free();
+
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {

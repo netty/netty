@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,12 +15,18 @@
  */
 package io.netty.buffer;
 
-/**
- * A buffer to operate on
- */
-public interface Buf extends Freeable {
+public interface Freeable {
+
     /**
-     * The BufType which will be handled by the Buf implementation
+     * Returns {@code true} if and only if this resource has been deallocated by {@link #free()}.
      */
-    BufType type();
+    boolean isFreed();
+
+    /**
+     * Deallocates the resources.
+     *
+     * The result of accessing a freed resource is unspecified and can even cause JVM crash.
+     *
+     */
+    void free();
 }
