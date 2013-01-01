@@ -108,7 +108,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         }
 
         this.socket = socket;
-        config = new DefaultServerSocketChannelConfig(socket);
+        config = new DefaultServerSocketChannelConfig(this, socket);
     }
 
     @Override

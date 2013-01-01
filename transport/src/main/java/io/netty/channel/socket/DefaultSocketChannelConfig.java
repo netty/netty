@@ -32,17 +32,18 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    private final Socket socket;
+    private final Socket javaSocket;
     private volatile boolean allowHalfClosure;
 
     /**
      * Creates a new instance.
      */
-    public DefaultSocketChannelConfig(Socket socket) {
-        if (socket == null) {
-            throw new NullPointerException("socket");
+    public DefaultSocketChannelConfig(SocketChannel channel, Socket javaSocket) {
+        super(channel);
+        if (javaSocket == null) {
+            throw new NullPointerException("javaSocket");
         }
-        this.socket = socket;
+        this.javaSocket = javaSocket;
     }
 
     @Override
@@ -114,7 +115,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getReceiveBufferSize() {
         try {
-            return socket.getReceiveBufferSize();
+            return javaSocket.getReceiveBufferSize();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -123,7 +124,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getSendBufferSize() {
         try {
-            return socket.getSendBufferSize();
+            return javaSocket.getSendBufferSize();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -132,7 +133,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getSoLinger() {
         try {
-            return socket.getSoLinger();
+            return javaSocket.getSoLinger();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -141,7 +142,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getTrafficClass() {
         try {
-            return socket.getTrafficClass();
+            return javaSocket.getTrafficClass();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -150,7 +151,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isKeepAlive() {
         try {
-            return socket.getKeepAlive();
+            return javaSocket.getKeepAlive();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -159,7 +160,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isReuseAddress() {
         try {
-            return socket.getReuseAddress();
+            return javaSocket.getReuseAddress();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -168,7 +169,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isTcpNoDelay() {
         try {
-            return socket.getTcpNoDelay();
+            return javaSocket.getTcpNoDelay();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -177,7 +178,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
-            socket.setKeepAlive(keepAlive);
+            javaSocket.setKeepAlive(keepAlive);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -187,14 +188,14 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setPerformancePreferences(
             int connectionTime, int latency, int bandwidth) {
-        socket.setPerformancePreferences(connectionTime, latency, bandwidth);
+        javaSocket.setPerformancePreferences(connectionTime, latency, bandwidth);
         return this;
     }
 
     @Override
     public SocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            socket.setReceiveBufferSize(receiveBufferSize);
+            javaSocket.setReceiveBufferSize(receiveBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -204,7 +205,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            socket.setReuseAddress(reuseAddress);
+            javaSocket.setReuseAddress(reuseAddress);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -214,7 +215,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
-            socket.setSendBufferSize(sendBufferSize);
+            javaSocket.setSendBufferSize(sendBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -225,9 +226,9 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     public SocketChannelConfig setSoLinger(int soLinger) {
         try {
             if (soLinger < 0) {
-                socket.setSoLinger(false, 0);
+                javaSocket.setSoLinger(false, 0);
             } else {
-                socket.setSoLinger(true, soLinger);
+                javaSocket.setSoLinger(true, soLinger);
             }
         } catch (SocketException e) {
             throw new ChannelException(e);
@@ -238,7 +239,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
-            socket.setTcpNoDelay(tcpNoDelay);
+            javaSocket.setTcpNoDelay(tcpNoDelay);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -248,7 +249,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setTrafficClass(int trafficClass) {
         try {
-            socket.setTrafficClass(trafficClass);
+            javaSocket.setTrafficClass(trafficClass);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }

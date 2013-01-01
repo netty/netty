@@ -32,7 +32,7 @@ import java.net.SocketAddress;
  */
 public class LocalServerChannel extends AbstractServerChannel {
 
-    private final ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {

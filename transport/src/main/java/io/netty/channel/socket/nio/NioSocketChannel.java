@@ -90,7 +90,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new DefaultSocketChannelConfig(socket.socket());
+        config = new DefaultSocketChannelConfig(this, socket.socket());
     }
 
     @Override

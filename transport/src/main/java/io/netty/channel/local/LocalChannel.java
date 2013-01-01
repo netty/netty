@@ -43,7 +43,7 @@ public class LocalChannel extends AbstractChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
-    private final ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {

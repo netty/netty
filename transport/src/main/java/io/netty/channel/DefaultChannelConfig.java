@@ -33,10 +33,19 @@ public class DefaultChannelConfig implements ChannelConfig {
     private static final ByteBufAllocator DEFAULT_ALLOCATOR = PooledByteBufAllocator.DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    protected final Channel channel;
+
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
+
+    public DefaultChannelConfig(Channel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        this.channel = channel;
+    }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
@@ -171,7 +180,11 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setAutoRead(boolean autoRead) {
+        boolean oldAutoRead = this.autoRead;
         this.autoRead = autoRead;
+        if (autoRead && !oldAutoRead) {
+            channel.read();
+        }
         return this;
     }
 }

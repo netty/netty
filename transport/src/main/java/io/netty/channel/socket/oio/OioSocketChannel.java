@@ -84,7 +84,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     public OioSocketChannel(Channel parent, Integer id, Socket socket) {
         super(parent, id);
         this.socket = socket;
-        config = new DefaultSocketChannelConfig(socket);
+        config = new DefaultSocketChannelConfig(this, socket);
 
         boolean success = false;
         try {

@@ -97,7 +97,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
             sch.configureBlocking(false);
             selector = Selector.open();
             sch.register(selector, SelectionKey.OP_ACCEPT);
-            config = new DefaultSctpServerChannelConfig(sch);
+            config = new DefaultSctpServerChannelConfig(this, sch);
             success = true;
         } catch (Exception e) {
             throw new ChannelException("failed to initialize a sctp server channel", e);

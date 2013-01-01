@@ -111,7 +111,7 @@ public final class NioDatagramChannel
      */
     public NioDatagramChannel(Integer id, DatagramChannel socket) {
         super(null, id, socket, SelectionKey.OP_READ);
-        config = new NioDatagramChannelConfig(socket);
+        config = new NioDatagramChannelConfig(this, socket);
     }
 
     @Override

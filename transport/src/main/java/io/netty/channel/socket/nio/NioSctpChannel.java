@@ -97,7 +97,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         super(parent, id, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
-            config = new DefaultSctpChannelConfig(sctpChannel);
+            config = new DefaultSctpChannelConfig(this, sctpChannel);
             notificationHandler = new SctpNotificationHandler(this);
         } catch (IOException e) {
             try {
