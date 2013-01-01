@@ -75,9 +75,14 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
             if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                m.setHeader(
-                        HttpHeaders.Names.CONTENT_ENCODING,
-                        getTargetContentEncoding(contentEncoding));
+                String targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
+                    // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
+                    // as per: http://tools.ietf.org/html/rfc2616#section-14.11
+                    m.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                } else {
+                    m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                }
 
                 if (m.getTransferEncoding().isSingle()) {
                     ByteBuf content = m.getContent();
