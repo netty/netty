@@ -16,7 +16,7 @@
 
 package io.netty.handler.codec.sctp;
 
-import io.netty.channel.socket.SctpMessage;
+import io.netty.channel.socket.sctp.SctpMessage;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 

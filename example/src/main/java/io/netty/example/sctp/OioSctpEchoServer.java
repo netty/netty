@@ -19,9 +19,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.SctpChannel;
+import io.netty.channel.socket.sctp.SctpChannel;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
-import io.netty.channel.socket.oio.OioSctpServerChannel;
+import io.netty.channel.socket.sctp.oio.OioSctpServerChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 

@@ -24,7 +24,7 @@ import java.io.IOException;
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
  */
-abstract class AbstractOioMessageChannel extends AbstractOioChannel {
+public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     /**
      * @see AbstractOioChannel#AbstractOioChannel(Channel, Integer)
