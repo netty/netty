@@ -319,7 +319,7 @@ public class SslHandler
                     }
                     engine.beginHandshake();
                     handshakePromises.add(promise);
-                    flush(ctx, ctx.newPromise());
+                    flush0(ctx, ctx.newPromise(), true);
                 } catch (Exception e) {
                     if (promise.tryFailure(e)) {
                         ctx.fireExceptionCaught(e);
@@ -408,6 +408,10 @@ public class SslHandler
 
     @Override
     public void flush(final ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        flush0(ctx, promise, false);
+    }
+
+    private void flush0(ChannelHandlerContext ctx, ChannelPromise promise, boolean internal) throws Exception {
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -415,7 +419,7 @@ public class SslHandler
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
-        if (startTls && !sentFirstMessage) {
+        if (!internal && startTls && !sentFirstMessage) {
             sentFirstMessage = true;
             out.writeBytes(in);
             ctx.flush(promise);
@@ -824,7 +828,7 @@ public class SslHandler
             }
 
             if (wrapLater) {
-                flush(ctx, ctx.newPromise());
+                flush0(ctx, ctx.newPromise(), true);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -932,7 +936,7 @@ public class SslHandler
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise();
-        flush(ctx, closeNotifyFuture);
+        flush0(ctx, closeNotifyFuture, true);
         safeClose(ctx, closeNotifyFuture, promise);
     }
 
