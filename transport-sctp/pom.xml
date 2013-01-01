@@ -23,10 +23,10 @@
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-transport</artifactId>
+  <artifactId>netty-transport-sctp</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Transport</name>
+  <name>Netty/SCTP Transport</name>
 
   <dependencies>
     <dependency>
@@ -34,7 +34,35 @@
       <artifactId>netty-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
+      <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec</artifactId>
+          <version>${project.version}</version>
+      </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+    
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <!-- dont want to include com.sun in here -->
+            <exclude>com/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  
+  </build>
   
 </project>
 

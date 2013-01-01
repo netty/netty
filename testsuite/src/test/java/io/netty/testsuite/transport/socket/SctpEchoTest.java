@@ -23,13 +23,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SctpChannel;
+import io.netty.channel.socket.sctp.SctpChannel;
 import io.netty.handler.codec.sctp.SctpInboundByteStreamHandler;
 import io.netty.handler.codec.sctp.SctpMessageCompletionHandler;
 import io.netty.handler.codec.sctp.SctpOutboundByteStreamHandler;
 import io.netty.testsuite.util.TestUtils;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;

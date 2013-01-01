@@ -79,6 +79,7 @@
     <module>codec-http</module>
     <module>codec-socks</module>
     <module>transport</module>
+    <module>transport-sctp</module>
     <module>handler</module>
     <module>metrics-yammer</module>
     <module>example</module>
