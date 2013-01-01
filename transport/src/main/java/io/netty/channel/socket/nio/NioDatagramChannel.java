@@ -18,7 +18,6 @@ package io.netty.channel.socket.nio;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -194,14 +193,14 @@ public final class NioDatagramChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        ByteBuffer data = ByteBuffer.allocate(config().getReceivePacketSize());
+        ByteBuf buffer = alloc().buffer(config().getReceivePacketSize());
+        ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+
         InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
         if (remoteAddress == null) {
             return 0;
         }
-
-        data.flip();
-        buf.add(new DatagramPacket(Unpooled.wrappedBuffer(data), remoteAddress));
+        buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.remaining()), remoteAddress));
         return 1;
     }
 

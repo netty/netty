@@ -22,7 +22,6 @@ import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -247,14 +246,15 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
-        ByteBuffer data = ByteBuffer.allocate(config().getReceiveBufferSize());
+        ByteBuf buffer = alloc().buffer(config().getReceiveBufferSize());
+        ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
         MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
         if (messageInfo == null) {
             return 0;
         }
 
         data.flip();
-        buf.add(new SctpMessage(messageInfo, Unpooled.wrappedBuffer(data)));
+        buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
         return 1;
     }
 

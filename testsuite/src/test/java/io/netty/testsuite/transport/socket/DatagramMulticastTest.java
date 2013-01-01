@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundPacketHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -95,14 +96,14 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
     }
 
-    private static final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+    private static final class MulticastTestHandler extends ChannelInboundPacketHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(
+        public void packetReceived(
                 ChannelHandlerContext ctx,
                 DatagramPacket msg) throws Exception {
             if (done) {
