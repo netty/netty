@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.Packet;
 
 /**
  * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
@@ -42,6 +43,10 @@ import io.netty.channel.ChannelPromise;
  *         }
  *     }
  * </pre>
+ *
+ * <strong>Important!</strong>
+ * If you want to encode a {@link Packet} you may better be off to use {@link PacketToMessageEncoder},
+ * which will free up resources that where acquired by the {@link Packet} automaticly.
  */
 public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
 

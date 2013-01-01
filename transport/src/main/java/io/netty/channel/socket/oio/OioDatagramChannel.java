@@ -222,9 +222,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             data.getBytes(data.readerIndex(), tmp);
             tmpPacket.setData(tmp);
         }
-        if (!data.isFreed()) {
-            data.free();
-        }
+        p.free();
+
         socket.send(tmpPacket);
     }
 

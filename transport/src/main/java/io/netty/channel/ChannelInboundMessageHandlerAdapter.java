@@ -38,6 +38,10 @@ import io.netty.buffer.Unpooled;
  *     }
  * </pre>
  *
+ * <strong>Important!</strong>
+ * If you want to decode a {@link Packet} you may better be off to use {@link ChannelInboundPacketHandler},
+ * which will free up resources that where acquired by the {@link Packet} automaticly.
+ *
  * @param <I>   The type of the messages to handle
  */
 public abstract class ChannelInboundMessageHandlerAdapter<I>

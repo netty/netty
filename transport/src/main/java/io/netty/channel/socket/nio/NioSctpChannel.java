@@ -261,7 +261,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         SctpMessage packet = (SctpMessage) buf.peek();
-        ByteBuf data = packet.payloadBuffer();
+        ByteBuf data = packet.data();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {
@@ -293,6 +293,9 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             }
             return 0;
         }
+
+        // packet was written free up buffer
+        packet.free();
 
         // Wrote a packet.
         buf.remove();

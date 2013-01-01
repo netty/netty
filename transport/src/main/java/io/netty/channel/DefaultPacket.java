@@ -13,18 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket;
+package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Message;
+import io.netty.buffer.ByteBufUtil;
 
-
-public class DefaultMessage implements Message {
+/**
+ * Default implementation of a {@link Packet} that holds it's data in a {@link ByteBuf}.
+ *
+ */
+public class DefaultPacket implements Packet {
     private final ByteBuf data;
 
-    public DefaultMessage(ByteBuf data) {
-        if(data == null) {
+    public DefaultPacket(ByteBuf data) {
+        if (data == null) {
             throw new NullPointerException("data");
         }
         this.data = data;
@@ -32,20 +34,23 @@ public class DefaultMessage implements Message {
 
     @Override
     public ByteBuf data() {
-        if (data.isFreed()) {
-            throw new IllegalStateException();
-        }
-        if (data.readable()) {
-            return data.slice();
-        } else {
-            return Unpooled.EMPTY_BUFFER;
-        }
+        return data;
     }
 
     @Override
     public void free() {
-        if (!data().isFreed()) {
-            data().free();
+        if (!data.isFreed()) {
+            data.free();
         }
+    }
+
+    @Override
+    public Packet copy() {
+        return new DefaultPacket(data().copy());
+    }
+
+    @Override
+    public String toString() {
+        return "packet(" + ByteBufUtil.hexDump(data()) + ')';
     }
 }

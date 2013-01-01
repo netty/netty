@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.Packet;
 
 /**
  * {@link ChannelInboundMessageHandler} which decodes from one message to an other message
@@ -43,6 +44,12 @@ import io.netty.channel.ChannelPipeline;
  *         }
  *     }
  * </pre>
+ *
+ *
+ * <strong>Important!</strong>
+ * If you want to decode a {@link Packet} you may better be off to use {@link PacketToMessageDecoder},
+ * which will free up resources that where acquired by the {@link Packet} automaticly.
+ *
  */
 public abstract class MessageToMessageDecoder<I, O>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {

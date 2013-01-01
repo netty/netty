@@ -18,7 +18,7 @@ package io.netty.handler.codec.sctp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundPacketHandler;
 import io.netty.channel.socket.SctpMessage;
 import io.netty.handler.codec.CodecException;
 
@@ -26,7 +26,7 @@ import io.netty.handler.codec.CodecException;
  * A ChannelHandler which receives {@link SctpMessage}s which belong to a application protocol form a specific
  * SCTP Stream  and decode it as {@link ByteBuf}.
  */
-public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAdapter<SctpMessage> {
+public class SctpInboundByteStreamHandler extends ChannelInboundPacketHandler<SctpMessage> {
     private final int protocolIdentifier;
     private final int streamIdentifier;
 
@@ -35,8 +35,17 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
      * @param protocolIdentifier supported application protocol.
      */
     public SctpInboundByteStreamHandler(int protocolIdentifier, int streamIdentifier) {
+        super(SctpMessage.class);
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
+    }
+
+    @Override
+    public boolean isSupported(Object msg) throws Exception {
+        if (super.isSupported(msg)) {
+            return isDecodable((SctpMessage) msg);
+        }
+        return false;
     }
 
     protected boolean isDecodable(SctpMessage msg) {
@@ -44,19 +53,13 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
-        if (!isDecodable(msg)) {
-            ctx.nextInboundMessageBuffer().add(msg);
-            ctx.fireInboundBufferUpdated();
-            return;
-        }
-
+    protected void packetReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
 
-        ctx.nextInboundByteBuffer().writeBytes(msg.payloadBuffer());
+        ctx.nextInboundByteBuffer().writeBytes(msg.data());
         ctx.fireInboundBufferUpdated();
     }
 }

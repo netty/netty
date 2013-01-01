@@ -16,13 +16,14 @@
 package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.DefaultPacket;
 
 import java.net.InetSocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public final class DatagramPacket extends DefaultMessage {
+public final class DatagramPacket extends DefaultPacket {
 
     private final InetSocketAddress remoteAddress;
 
@@ -47,6 +48,11 @@ public final class DatagramPacket extends DefaultMessage {
      */
     public InetSocketAddress remoteAddress() {
         return remoteAddress;
+    }
+
+    @Override
+    public DatagramPacket copy() {
+        return new DatagramPacket(data().copy(), remoteAddress());
     }
 
     @Override

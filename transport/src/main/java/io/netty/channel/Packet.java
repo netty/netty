@@ -18,22 +18,32 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 
 /**
- * A message which is send or receive. The contract for a {@link Message} is the
+ * A packet which is send or receive. The contract for a {@link Packet} is the
  * following:
  *
- * Once a {@link Message} reach the end of the {@link ChannelPipeline} the
- * {@link #free()} method is called.
+ * When send a {@link Packet} the {@link Packet} will be freed by calling {@link #free()}
+ * in the actual transport implementation. When receive a {@link Packet} the {@link #free()}
+ * must be called once is is processed. There are special {@link ChannelHandler} which take care of
+ * this like:
+ *  - {@link ChannelInboundPacketHandler}
+ *
  */
-public interface Message {
+public interface Packet {
 
     /**
-     * Return the data which is held by this {@link Message}.
+     * Return the data which is held by this {@link Packet}.
      *
      */
     ByteBuf data();
 
     /**
-     * Free all resources which are held by this {@link Message}.
+     * Free all resources which are held by this {@link Packet}.
      */
     void free();
+
+    /**
+     * Create a copy of this {@link Packet} which can be used even after {@link #free()}
+     * is called.
+     */
+    Packet copy();
 }

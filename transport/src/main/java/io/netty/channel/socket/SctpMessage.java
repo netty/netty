@@ -18,11 +18,12 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.DefaultPacket;
 
 /**
  * Representation of SCTP Data Chunk
  */
-public final class SctpMessage extends DefaultMessage {
+public final class SctpMessage extends DefaultPacket {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
@@ -124,6 +125,15 @@ public final class SctpMessage extends DefaultMessage {
         result = 31 * result + protocolIdentifier;
         result = 31 * result + data().hashCode();
         return result;
+    }
+
+    @Override
+    public SctpMessage copy() {
+        if (msgInfo == null) {
+            return new SctpMessage(protocolIdentifier, streamIdentifier, data().copy());
+        } else {
+            return new SctpMessage(msgInfo, data().copy());
+        }
     }
 
     @Override

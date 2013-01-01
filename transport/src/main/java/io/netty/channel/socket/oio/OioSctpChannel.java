@@ -196,7 +196,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 if (packet == null) {
                     return;
                 }
-                ByteBuf data = packet.payloadBuffer();
+                ByteBuf data = packet.data();
                 int dataLen = data.readableBytes();
                 ByteBuffer nioData;
 
@@ -211,6 +211,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
                 mi.payloadProtocolID(packet.protocolIdentifier());
                 mi.streamNumber(packet.streamIdentifier());
+
+                packet.free();
 
                 ch.send(nioData, mi);
             }
