@@ -53,7 +53,7 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
 
-        final ByteBuf byteBuf = msg.payloadBuffer();
+        final ByteBuf byteBuf = msg.data();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();
         final boolean isComplete = msg.isComplete();
@@ -89,5 +89,10 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     private void handleAssembledMessage(ChannelHandlerContext ctx, SctpMessage assembledMsg) {
         ctx.nextInboundMessageBuffer().add(assembledMsg);
         assembled = true;
+    }
+
+    @Override
+    protected void freeInboundMessage(SctpMessage msg) throws Exception {
+        // It is an aggregator so not free it yet
     }
 }

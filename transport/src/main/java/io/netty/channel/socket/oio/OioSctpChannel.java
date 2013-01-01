@@ -22,7 +22,6 @@ import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -165,16 +164,36 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
             for (SelectionKey ignored : reableKeys) {
-                ByteBuffer data = ByteBuffer.allocate(config().getReceiveBufferSize());
-                MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
-                if (messageInfo == null) {
-                    return readMessages;
+                ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
+                boolean free = true;
+
+                try {
+                    ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+                    MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+                    if (messageInfo == null) {
+                        return readMessages;
+                    }
+
+                    data.flip();
+                    buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+                    free = false;
+                    readMessages ++;
+                } catch (Throwable cause) {
+                    if (cause instanceof Error) {
+                        throw (Error) cause;
+                    }
+                    if (cause instanceof RuntimeException) {
+                        throw (RuntimeException) cause;
+                    }
+                    if (cause instanceof Exception) {
+                        throw (Exception) cause;
+                    }
+                    throw new ChannelException(cause);
+                }  finally {
+                    if (free) {
+                        buffer.free();
+                    }
                 }
-
-                data.flip();
-                buf.add(new SctpMessage(messageInfo, Unpooled.wrappedBuffer(data)));
-
-                readMessages ++;
             }
         } finally {
             reableKeys.clear();
@@ -196,23 +215,27 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 if (packet == null) {
                     return;
                 }
-                ByteBuf data = packet.payloadBuffer();
-                int dataLen = data.readableBytes();
-                ByteBuffer nioData;
+                try {
+                    ByteBuf data = packet.data();
+                    int dataLen = data.readableBytes();
+                    ByteBuffer nioData;
 
-                if (data.nioBufferCount() != -1) {
-                    nioData = data.nioBuffer();
-                } else {
-                    nioData = ByteBuffer.allocate(dataLen);
-                    data.getBytes(data.readerIndex(), nioData);
-                    nioData.flip();
+                    if (data.nioBufferCount() != -1) {
+                        nioData = data.nioBuffer();
+                    } else {
+                        nioData = ByteBuffer.allocate(dataLen);
+                        data.getBytes(data.readerIndex(), nioData);
+                        nioData.flip();
+                    }
+
+                    final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
+                    mi.payloadProtocolID(packet.protocolIdentifier());
+                    mi.streamNumber(packet.streamIdentifier());
+
+                    ch.send(nioData, mi);
+                } finally {
+                    packet.free();
                 }
-
-                final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
-                mi.payloadProtocolID(packet.protocolIdentifier());
-                mi.streamNumber(packet.streamIdentifier());
-
-                ch.send(nioData, mi);
             }
             writableKeys.clear();
         }

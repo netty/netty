@@ -58,7 +58,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         return Unpooled.messageBuffer();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (!beginMessageReceived(ctx)) {
@@ -86,7 +85,14 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                         unsupportedFound = false;
                         ctx.fireInboundBufferUpdated();
                     }
-                    messageReceived(ctx, (I) msg);
+
+                    @SuppressWarnings("unchecked")
+                    I imsg = (I) msg;
+                    try {
+                        messageReceived(ctx, imsg);
+                    } finally {
+                        freeInboundMessage(imsg);
+                    }
                 } catch (Throwable t) {
                     exceptionCaught(ctx, t);
                 }
@@ -143,5 +149,14 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     @SuppressWarnings("unused")
     protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         // NOOP
+    }
+
+    /**
+     * Is called after a message was processed via {@link #messageReceived(ChannelHandlerContext, Object)} to free
+     * up any resources that is held by the inbound message. You may want to override this if your implementation
+     * just pass-through the input message or need it for later usage.
+     */
+    protected void freeInboundMessage(I msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
     }
 }

@@ -16,6 +16,8 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
 
 /**
@@ -163,6 +165,15 @@ public final class ChannelHandlerUtil {
                     new NoSuchBufferException(e.getMessage() + " (msg: " + msg + ')');
             newE.setStackTrace(e.getStackTrace());
             throw newE;
+        }
+    }
+
+    /**
+     * Try to free up resources that are held by the message.
+     */
+    public static void freeMessage(Object msg) throws Exception {
+        if (msg instanceof Freeable) {
+            ((Freeable) msg).free();
         }
     }
 

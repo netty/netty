@@ -35,8 +35,17 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
      * @param protocolIdentifier supported application protocol.
      */
     public SctpInboundByteStreamHandler(int protocolIdentifier, int streamIdentifier) {
+        super(SctpMessage.class);
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
+    }
+
+    @Override
+    public boolean isSupported(Object msg) throws Exception {
+        if (super.isSupported(msg)) {
+            return isDecodable((SctpMessage) msg);
+        }
+        return false;
     }
 
     protected boolean isDecodable(SctpMessage msg) {
@@ -45,18 +54,12 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
-        if (!isDecodable(msg)) {
-            ctx.nextInboundMessageBuffer().add(msg);
-            ctx.fireInboundBufferUpdated();
-            return;
-        }
-
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
 
-        ctx.nextInboundByteBuffer().writeBytes(msg.payloadBuffer());
+        ctx.nextInboundByteBuffer().writeBytes(msg.data());
         ctx.fireInboundBufferUpdated();
     }
 }
