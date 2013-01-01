@@ -105,7 +105,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
 
         this.socket = socket;
-        config = new DefaultDatagramChannelConfig(socket);
+        config = new DefaultDatagramChannelConfig(this, socket);
     }
 
     @Override

@@ -64,7 +64,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
      */
     public AioServerSocketChannel() {
         super(null, null, null);
-        config = new AioServerSocketChannelConfig();
+        config = new AioServerSocketChannelConfig(this);
     }
 
     /**
@@ -74,7 +74,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
      */
     public AioServerSocketChannel(AsynchronousServerSocketChannel channel) {
         super(null, null, channel);
-        config = new AioServerSocketChannelConfig(channel);
+        config = new AioServerSocketChannelConfig(this, channel);
     }
 
     @Override

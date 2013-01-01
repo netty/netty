@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
@@ -98,11 +97,11 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         SET_OPTION = setOption;
     }
 
-    private final DatagramChannel channel;
+    private final DatagramChannel javaChannel;
 
-    NioDatagramChannelConfig(DatagramChannel channel) {
-        super(channel.socket());
-        this.channel = channel;
+    NioDatagramChannelConfig(NioDatagramChannel channel, DatagramChannel javaChannel) {
+        super(channel, javaChannel.socket());
+        this.javaChannel = javaChannel;
     }
 
     @Override
@@ -167,7 +166,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             throw new UnsupportedOperationException();
         } else {
             try {
-                return GET_OPTION.invoke(channel, option);
+                return GET_OPTION.invoke(javaChannel, option);
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
@@ -179,7 +178,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             throw new UnsupportedOperationException();
         } else {
             try {
-                SET_OPTION.invoke(channel, option, value);
+                SET_OPTION.invoke(javaChannel, option, value);
             } catch (Exception e) {
                 throw new ChannelException(e);
             }

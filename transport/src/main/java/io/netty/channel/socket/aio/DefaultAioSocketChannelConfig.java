@@ -36,7 +36,7 @@ import static io.netty.channel.ChannelOption.*;
 final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
                                         implements AioSocketChannelConfig {
 
-    private final AtomicReference<NetworkChannel> channel = new AtomicReference<NetworkChannel>();
+    private final AtomicReference<NetworkChannel> javaChannel = new AtomicReference<NetworkChannel>();
     private volatile boolean allowHalfClosure;
     private volatile long readTimeoutInMillis;
     private volatile long writeTimeoutInMillis;
@@ -55,14 +55,16 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
      * You should call {@link #assign(NetworkChannel)} to assign a {@link NetworkChannel} to it and
      * have the configuration set on it.
      */
-    DefaultAioSocketChannelConfig() {
+    DefaultAioSocketChannelConfig(AioSocketChannel channel) {
+        super(channel);
     }
 
     /**
      * Creates a new instance with the given {@link NetworkChannel} assigned to it.
      */
-    DefaultAioSocketChannelConfig(NetworkChannel channel) {
-        this.channel.set(channel);
+    DefaultAioSocketChannelConfig(AioSocketChannel channel, NetworkChannel javaChannel) {
+        super(channel);
+        this.javaChannel.set(javaChannel);
     }
 
     @Override
@@ -226,7 +228,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private Object getOption(SocketOption option, Object defaultValue) {
-        if (channel.get() == null) {
+        if (javaChannel.get() == null) {
             Object value = options.get(option);
             if (value == null) {
                 return defaultValue;
@@ -236,7 +238,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
         }
 
         try {
-            return channel.get().getOption(option);
+            return javaChannel.get().getOption(option);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -244,12 +246,12 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void setOption(SocketOption option, Object defaultValue) {
-        if (channel.get() == null) {
+        if (javaChannel.get() == null) {
             options.put(option, defaultValue);
             return;
         }
         try {
-            channel.get().setOption(option, defaultValue);
+            javaChannel.get().setOption(option, defaultValue);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -297,11 +299,11 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     /**
      * Assing the given {@link NetworkChannel} to this instance
      */
-    void assign(NetworkChannel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
+    void assign(NetworkChannel javaChannel) {
+        if (javaChannel == null) {
+            throw new NullPointerException("javaChannel");
         }
-        if (this.channel.compareAndSet(null, channel)) {
+        if (this.javaChannel.compareAndSet(null, javaChannel)) {
             propagateOptions();
         }
     }
@@ -312,7 +314,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
             Object value = options.remove(option);
             if (value != null) {
                 try {
-                    channel.get().setOption(option, value);
+                    javaChannel.get().setOption(option, value);
                 } catch (IOException e) {
                     throw new ChannelException(e);
                 }

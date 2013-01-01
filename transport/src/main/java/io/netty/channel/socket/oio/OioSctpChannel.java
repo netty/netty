@@ -116,7 +116,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             ch.register(writeSelector, SelectionKey.OP_WRITE);
             ch.register(connectSelector, SelectionKey.OP_CONNECT);
 
-            config = new DefaultSctpChannelConfig(ch);
+            config = new DefaultSctpChannelConfig(this, ch);
             notificationHandler = new SctpNotificationHandler(this);
             success = true;
         } catch (Exception e) {

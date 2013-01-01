@@ -48,7 +48,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEmbeddedChannel.class);
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
-    private final ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig(this);
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
     private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer();

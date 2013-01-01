@@ -60,7 +60,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
      */
     public NioSctpServerChannel() {
         super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
-        config = new DefaultSctpServerChannelConfig(javaChannel());
+        config = new DefaultSctpServerChannelConfig(this, javaChannel());
     }
 
     @Override

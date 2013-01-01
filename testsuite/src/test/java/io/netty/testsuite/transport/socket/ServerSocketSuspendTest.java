@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.Socket;
@@ -38,7 +37,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
     private static final long TIMEOUT = 3000000000L;
 
     @Test
-    @Ignore("Need to investigate why it fails on osx")
+    //@Ignore("Need to investigate why it fails on osx")
     public void testSuspendAndResumeAccept() throws Throwable {
         run();
     }
@@ -63,7 +62,6 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
             }
 
             sc.config().setAutoRead(true);
-            sc.read();
 
             counter.latch.await();
 
