@@ -90,4 +90,9 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
         ctx.nextInboundMessageBuffer().add(assembledMsg);
         assembled = true;
     }
+
+    @Override
+    protected void freeInboundMessage(SctpMessage msg) throws Exception {
+        // It is an aggregator so not free it yet
+    }
 }

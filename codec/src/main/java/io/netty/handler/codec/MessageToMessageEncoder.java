@@ -22,7 +22,6 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.Packet;
 
 /**
  * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
@@ -44,9 +43,6 @@ import io.netty.channel.Packet;
  *     }
  * </pre>
  *
- * <strong>Important!</strong>
- * If you want to encode a {@link Packet} you may better be off to use {@link PacketToMessageEncoder},
- * which will free up resources that where acquired by the {@link Packet} automaticly.
  */
 public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
 
@@ -77,14 +73,18 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                O omsg = encode(ctx, imsg);
-                if (omsg == null) {
-                    // encode() might be waiting for more inbound messages to generate
-                    // an aggregated message - keep polling.
-                    continue;
-                }
+                try {
+                    O omsg = encode(ctx, imsg);
+                    if (omsg == null) {
+                        // encode() might be waiting for more inbound messages to generate
+                        // an aggregated message - keep polling.
+                        continue;
+                    }
 
-                ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
+                    ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
+                } finally {
+                    freeInboundMessage(imsg);
+                }
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
@@ -117,4 +117,15 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      * @throws Exception    is thrown if an error accour
      */
     protected abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
+
+    /**
+     * Is called after a message was processed via {@link #encode(ChannelHandlerContext, Object)} to free
+     * up any resources that is held by the inbound message. You may want to override this if your implementation
+     * just pass-through the input message or need it for later usage.
+     *
+     * @throws Exception    thrown when an error accour
+     */
+    protected void freeInboundMessage(I msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }

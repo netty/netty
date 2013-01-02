@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.Packet;
 
 /**
  * {@link ChannelInboundMessageHandler} which decodes from one message to an other message
@@ -44,11 +43,6 @@ import io.netty.channel.Packet;
  *         }
  *     }
  * </pre>
- *
- *
- * <strong>Important!</strong>
- * If you want to decode a {@link Packet} you may better be off to use {@link PacketToMessageDecoder},
- * which will free up resources that where acquired by the {@link Packet} automaticly.
  *
  */
 public abstract class MessageToMessageDecoder<I, O>
@@ -88,15 +82,19 @@ public abstract class MessageToMessageDecoder<I, O>
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                O omsg = decode(ctx, imsg);
-                if (omsg == null) {
-                    // Decoder consumed a message but returned null.
-                    // Probably it needs more messages because it's an aggregator.
-                    continue;
-                }
+                try {
+                    O omsg = decode(ctx, imsg);
+                    if (omsg == null) {
+                        // Decoder consumed a message but returned null.
+                        // Probably it needs more messages because it's an aggregator.
+                        continue;
+                    }
 
-                if (ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, true)) {
-                    notify = true;
+                    if (ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, true)) {
+                        notify = true;
+                    }
+                } finally {
+                    freeInboundMessage(imsg);
                 }
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
@@ -129,4 +127,15 @@ public abstract class MessageToMessageDecoder<I, O>
      * @throws Exception    is thrown if an error accour
      */
     protected abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;
+
+    /**
+     * Is called after a message was processed via {@link #decode(ChannelHandlerContext, Object)} to free
+     * up any resources that is held by the inbound message. You may want to override this if your implementation
+     * just pass-through the input message or need it for later usage.
+     *
+     * @throws Exception    thrown when an error accour
+     */
+    protected void freeInboundMessage(I msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }

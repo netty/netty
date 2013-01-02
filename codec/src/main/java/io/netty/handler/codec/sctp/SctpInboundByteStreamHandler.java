@@ -18,7 +18,7 @@ package io.netty.handler.codec.sctp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundPacketHandler;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.socket.SctpMessage;
 import io.netty.handler.codec.CodecException;
 
@@ -26,7 +26,7 @@ import io.netty.handler.codec.CodecException;
  * A ChannelHandler which receives {@link SctpMessage}s which belong to a application protocol form a specific
  * SCTP Stream  and decode it as {@link ByteBuf}.
  */
-public class SctpInboundByteStreamHandler extends ChannelInboundPacketHandler<SctpMessage> {
+public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAdapter<SctpMessage> {
     private final int protocolIdentifier;
     private final int streamIdentifier;
 
@@ -53,7 +53,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundPacketHandler<Sc
     }
 
     @Override
-    protected void packetReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));

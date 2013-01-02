@@ -38,10 +38,6 @@ import io.netty.buffer.Unpooled;
  *     }
  * </pre>
  *
- * <strong>Important!</strong>
- * If you want to decode a {@link Packet} you may better be off to use {@link ChannelInboundPacketHandler},
- * which will free up resources that where acquired by the {@link Packet} automaticly.
- *
  * @param <I>   The type of the messages to handle
  */
 public abstract class ChannelInboundMessageHandlerAdapter<I>
@@ -62,7 +58,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         return Unpooled.messageBuffer();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (!beginMessageReceived(ctx)) {
@@ -90,7 +85,14 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                         unsupportedFound = false;
                         ctx.fireInboundBufferUpdated();
                     }
-                    messageReceived(ctx, (I) msg);
+
+                    @SuppressWarnings("unchecked")
+                    I imsg = (I) msg;
+                    try {
+                        messageReceived(ctx, imsg);
+                    } finally {
+                        freeInboundMessage(imsg);
+                    }
                 } catch (Throwable t) {
                     exceptionCaught(ctx, t);
                 }
@@ -147,5 +149,16 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     @SuppressWarnings("unused")
     protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         // NOOP
+    }
+
+    /**
+     * Is called after a message was processed via {@link #messageReceived(ChannelHandlerContext, Object)} to free
+     * up any resources that is held by the inbound message. You may want to override this if your implementation
+     * just pass-through the input message or need it for later usage.
+     *
+     * @throws Exception    thrown when an error accour
+     */
+    protected void freeInboundMessage(I msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
     }
 }
