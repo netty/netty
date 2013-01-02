@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 
@@ -166,6 +167,9 @@ public final class ChannelHandlerUtil {
         }
     }
 
+    /**
+     * Try to free up resources that are held by the message.
+     */
     public static void freeMessage(Object msg) throws Exception {
         if (msg instanceof Message) {
             Message p = (Message) msg;
@@ -173,6 +177,7 @@ public final class ChannelHandlerUtil {
                 p.free();
             }
         }
+        // TODO: Also handle Buf ?
     }
 
     private ChannelHandlerUtil() {

@@ -18,6 +18,7 @@ package io.netty.channel.socket.oio;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -182,7 +183,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         int packetSize = config().getReceivePacketSize();
-        ByteBuf buffer = alloc().heapBuffer(packetSize);
+        // TODO: Use alloc().heapBuffer(..) but there seems to be a memory-leak, need to investigate
+        ByteBuf buffer = Unpooled.buffer(packetSize);
         int writerIndex =  buffer.writerIndex();
         tmpPacket.setData(buffer.array(), writerIndex + buffer.arrayOffset(), packetSize);
 
