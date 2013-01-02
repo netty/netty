@@ -18,37 +18,37 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 
 /**
- * A packet which is send or receive. The contract for a {@link Packet} is the
+ * A packet which is send or receive. The contract for a {@link Message} is the
  * following:
  *
- * When send a {@link Packet} the {@link Packet} will be freed by calling {@link #free()}
- * in the actual transport implementation. When receive a {@link Packet} the {@link #free()}
+ * When send a {@link Message} the {@link Message} will be freed by calling {@link #free()}
+ * in the actual transport implementation. When receive a {@link Message} the {@link #free()}
  * must be called once is is processed. There are special {@link ChannelHandler} which take care of
  * this like:
  *  - {@link ChannelInboundPacketHandler}
  *
  */
-public interface Packet {
+public interface Message {
 
     /**
-     * Return the data which is held by this {@link Packet}.
+     * Return the data which is held by this {@link Message}.
      *
      */
     ByteBuf data();
 
     /**
-     * Free all resources which are held by this {@link Packet}.
+     * Free all resources which are held by this {@link Message}.
      */
     void free();
 
     /**
-     * Return {@code true} if the {@link Packet} was freed already.
+     * Return {@code true} if the {@link Message} was freed already.
      */
     boolean isFreed();
 
     /**
-     * Create a copy of this {@link Packet} which can be used even after {@link #free()}
+     * Create a copy of this {@link Message} which can be used even after {@link #free()}
      * is called.
      */
-    Packet copy();
+    Message copy();
 }

@@ -167,8 +167,8 @@ public final class ChannelHandlerUtil {
     }
 
     public static void freeMessage(Object msg) throws Exception {
-        if (msg instanceof Packet) {
-            Packet p = (Packet) msg;
+        if (msg instanceof Message) {
+            Message p = (Message) msg;
             if (!p.isFreed()) {
                 p.free();
             }

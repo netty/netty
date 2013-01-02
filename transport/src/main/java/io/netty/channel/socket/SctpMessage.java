@@ -18,12 +18,12 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.DefaultPacket;
+import io.netty.channel.DefaultMessage;
 
 /**
  * Representation of SCTP Data Chunk
  */
-public final class SctpMessage extends DefaultPacket {
+public final class SctpMessage extends DefaultMessage {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
@@ -138,8 +138,13 @@ public final class SctpMessage extends DefaultPacket {
 
     @Override
     public String toString() {
+        if (isFreed()) {
+            return "SctpFrame{" +
+                    "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
+                    ", payloadBuffer=()}";
+        }
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                ", payloadBuffer=" + ByteBufUtil.hexDump(data()) + '}';
+                ", data=" + ByteBufUtil.hexDump(data()) + '}';
     }
 }

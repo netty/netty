@@ -16,14 +16,15 @@
 package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.DefaultPacket;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.DefaultMessage;
 
 import java.net.InetSocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public final class DatagramPacket extends DefaultPacket {
+public final class DatagramPacket extends DefaultMessage {
 
     private final InetSocketAddress remoteAddress;
 
@@ -57,6 +58,11 @@ public final class DatagramPacket extends DefaultPacket {
 
     @Override
     public String toString() {
-        return "datagram(" + data().readableBytes() + "B, " + remoteAddress + ')';
+        if (isFreed()) {
+            return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
+                    ", data=()}";
+        }
+        return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
+                ", data=" + ByteBufUtil.hexDump(data()) + '}';
     }
 }

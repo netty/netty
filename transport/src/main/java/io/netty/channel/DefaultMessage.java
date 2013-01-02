@@ -16,21 +16,20 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 /**
- * Default implementation of a {@link Packet} that holds it's data in a {@link ByteBuf}.
+ * Default implementation of a {@link Message} that holds it's data in a {@link ByteBuf}.
  *
  */
-public class DefaultPacket implements Packet {
+public class DefaultMessage implements Message {
     private final ByteBuf data;
     private boolean freed;
-    private final int size;
-    public DefaultPacket(ByteBuf data) {
+    public DefaultMessage(ByteBuf data) {
         if (data == null) {
             throw new NullPointerException("data");
         }
         this.data = data;
-        size = data.readableBytes();
     }
 
     @Override
@@ -61,12 +60,15 @@ public class DefaultPacket implements Packet {
     }
 
     @Override
-    public Packet copy() {
-        return new DefaultPacket(data().copy());
+    public Message copy() {
+        return new DefaultMessage(data().copy());
     }
 
     @Override
     public String toString() {
-        return "packet(" + size + "B)";
+        if (isFreed()) {
+            return "Message{data=()}";
+        }
+        return "Message{data=" + ByteBufUtil.hexDump(data()) + '}';
     }
 }
