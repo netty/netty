@@ -22,7 +22,6 @@ import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -244,21 +243,41 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
-        ByteBuffer data = ByteBuffer.allocate(config().getReceiveBufferSize());
-        MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
-        if (messageInfo == null) {
-            return 0;
-        }
+        ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
+        boolean free = true;
+        try {
+            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            if (messageInfo == null) {
+                return 0;
+            }
 
-        data.flip();
-        buf.add(new SctpMessage(messageInfo, Unpooled.wrappedBuffer(data)));
-        return 1;
+            data.flip();
+            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+            free = false;
+            return 1;
+        } catch (Throwable cause) {
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new ChannelException(cause);
+        }  finally {
+            if (free) {
+                buffer.free();
+            }
+        }
     }
 
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         SctpMessage packet = (SctpMessage) buf.peek();
-        ByteBuf data = packet.payloadBuffer();
+        ByteBuf data = packet.data();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {
@@ -293,6 +312,10 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
         // Wrote a packet.
         buf.remove();
+
+        // packet was written free up buffer
+        packet.free();
+
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {

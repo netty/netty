@@ -42,6 +42,7 @@ import io.netty.channel.ChannelPromise;
  *         }
  *     }
  * </pre>
+ *
  */
 public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
 
@@ -72,14 +73,23 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                O omsg = encode(ctx, imsg);
-                if (omsg == null) {
-                    // encode() might be waiting for more inbound messages to generate
-                    // an aggregated message - keep polling.
-                    continue;
+                boolean free = true;
+                try {
+                    O omsg = encode(ctx, imsg);
+                    if (omsg == null) {
+                        // encode() might be waiting for more inbound messages to generate
+                        // an aggregated message - keep polling.
+                        continue;
+                    }
+                    if (omsg == imsg) {
+                        free = false;
+                    }
+                    ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
+                } finally {
+                    if (free) {
+                        freeInboundMessage(imsg);
+                    }
                 }
-
-                ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
                     ctx.fireExceptionCaught(t);
@@ -112,4 +122,13 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      * @throws Exception    is thrown if an error accour
      */
     protected abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
+
+    /**
+     * Is called after a message was processed via {@link #encode(ChannelHandlerContext, Object)} to free
+     * up any resources that is held by the inbound message. You may want to override this if your implementation
+     * just pass-through the input message or need it for later usage.
+     */
+    protected void freeInboundMessage(I msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }
