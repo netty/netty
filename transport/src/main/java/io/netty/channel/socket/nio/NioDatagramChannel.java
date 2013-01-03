@@ -193,7 +193,7 @@ public final class NioDatagramChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        ByteBuf buffer = alloc().buffer(config().getReceivePacketSize());
+        ByteBuf buffer = alloc().directBuffer(config().getReceivePacketSize());
         ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
 
         InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);

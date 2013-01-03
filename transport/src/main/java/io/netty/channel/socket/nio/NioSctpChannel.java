@@ -246,7 +246,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
-        ByteBuf buffer = alloc().buffer(config().getReceiveBufferSize());
+        ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
         ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
         MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
         if (messageInfo == null) {
