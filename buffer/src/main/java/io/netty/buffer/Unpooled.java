@@ -15,9 +15,14 @@
  */
 package io.netty.buffer;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.nio.ReadOnlyBufferException;
+import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,7 +97,193 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = ALLOC.heapBuffer(0, 0);
+    public static final ByteBuf EMPTY_BUFFER = new AbstractByteBuf(0) {
+        @Override
+        public int capacity() {
+            return 0;
+        }
+
+        @Override
+        public ByteBuf capacity(int newCapacity) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBufAllocator alloc() {
+            return ALLOC;
+        }
+
+        @Override
+        public ByteOrder order() {
+            return BIG_ENDIAN;
+        }
+
+        @Override
+        public ByteBuf unwrap() {
+            return null;
+        }
+
+        @Override
+        public boolean isDirect() {
+            return false;
+        }
+
+        @Override
+        public byte getByte(int index) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public short getShort(int index) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public int getUnsignedMedium(int index) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public int getInt(int index) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public long getLong(int index) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public ByteBuf getBytes(int index, ByteBuffer dst) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public ByteBuf getBytes(int index, OutputStream out, int length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public int getBytes(int index, GatheringByteChannel out, int length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public ByteBuf setByte(int index, int value) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setShort(int index, int value) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setMedium(int index, int value) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setInt(int index, int value) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setLong(int index, long value) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf setBytes(int index, ByteBuffer src) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public int setBytes(int index, InputStream in, int length) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public int setBytes(int index, ScatteringByteChannel in, int length) {
+            throw new ReadOnlyBufferException();
+        }
+
+        @Override
+        public ByteBuf copy(int index, int length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        @Override
+        public int nioBufferCount() {
+            return 0;
+        }
+
+        @Override
+        public ByteBuffer nioBuffer(int index, int length) {
+            return ByteBuffer.allocate(0);
+        }
+
+        @Override
+        public ByteBuffer[] nioBuffers(int index, int length) {
+            return new ByteBuffer[0];
+        }
+
+        @Override
+        public boolean hasArray() {
+            return true;
+        }
+
+        @Override
+        public byte[] array() {
+            return new byte[0];
+        }
+
+        @Override
+        public int arrayOffset() {
+            return 0;
+        }
+
+        @Override
+        public ByteBuf suspendIntermediaryDeallocations() {
+            return this;
+        }
+
+        @Override
+        public ByteBuf resumeIntermediaryDeallocations() {
+            return this;
+        }
+
+        @Override
+        public void free() {
+            // do nothing
+            // TODO: Maybe throw an UnsupportedOperationException
+        }
+
+        @Override
+        public boolean isFreed() {
+            return false;
+        }
+    };
 
     public static <T> MessageBuf<T> messageBuffer() {
         return new DefaultMessageBuf<T>();
