@@ -137,8 +137,6 @@ public abstract class MessageToMessageDecoder<I, O>
      * Is called after a message was processed via {@link #decode(ChannelHandlerContext, Object)} to free
      * up any resources that is held by the inbound message. You may want to override this if your implementation
      * just pass-through the input message or need it for later usage.
-     *
-     * @throws Exception    thrown when an error accour
      */
     protected void freeInboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);

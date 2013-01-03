@@ -185,10 +185,12 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         int packetSize = config().getReceivePacketSize();
         // TODO: Use alloc().heapBuffer(..) but there seems to be a memory-leak, need to investigate
         ByteBuf buffer = Unpooled.buffer(packetSize);
-        int writerIndex =  buffer.writerIndex();
-        tmpPacket.setData(buffer.array(), writerIndex + buffer.arrayOffset(), packetSize);
+        boolean free = true;
 
         try {
+            int writerIndex =  buffer.writerIndex();
+            tmpPacket.setData(buffer.array(), writerIndex + buffer.arrayOffset(), packetSize);
+
             socket.receive(tmpPacket);
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
             if (remoteAddr == null) {
@@ -197,22 +199,17 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             DatagramPacket packet = new DatagramPacket(buffer.writerIndex(writerIndex + tmpPacket.getLength())
                     .readerIndex(writerIndex), remoteAddr);
             buf.add(packet);
-
+            free = false;
             return 1;
         } catch (SocketTimeoutException e) {
-            buffer.free();
-
             // Expected
             return 0;
         } catch (SocketException e) {
-            buffer.free();
-
             if (!e.getMessage().toLowerCase(Locale.US).contains("socket closed")) {
                 throw e;
             }
             return -1;
         } catch (Throwable cause) {
-            buffer.free();
             if (cause instanceof Error) {
                 throw (Error) cause;
             }
@@ -223,15 +220,16 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 throw (Exception) cause;
             }
             throw new ChannelException(cause);
+        } finally {
+            if (free) {
+                buffer.free();
+            }
         }
     }
 
     @Override
     protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
-        if (p == null) {
-            return;
-        }
 
         try {
             ByteBuf data = p.data();

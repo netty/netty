@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,38 +21,33 @@ package io.netty.buffer;
  */
 public class DefaultByteBufHolder implements ByteBufHolder {
     private final ByteBuf data;
-    private boolean freed;
     public DefaultByteBufHolder(ByteBuf data) {
         if (data == null) {
             throw new NullPointerException("data");
         }
         if (data.unwrap() != null && !(data instanceof SwappedByteBuf)) {
-            throw new IllegalArgumentException("Only not-derived ByteBuf instance are supported");
+            throw new IllegalArgumentException("Only not-derived ByteBuf instance are supported, you used: "
+                    + data.getClass().getSimpleName());
         }
         this.data = data;
     }
 
     @Override
     public ByteBuf data() {
-        if (freed) {
-            throw new IllegalBufferAccessException("Packet was freed already");
+        if (data.isFreed()) {
+            throw new IllegalBufferAccessException();
         }
         return data;
     }
 
     @Override
     public void free() {
-        if (!freed) {
-            freed = true;
-            if (!data.isFreed()) {
-                data.free();
-            }
-        }
+        data.free();
     }
 
     @Override
     public boolean isFreed() {
-        return freed;
+        return data.isFreed();
     }
 
     @Override
