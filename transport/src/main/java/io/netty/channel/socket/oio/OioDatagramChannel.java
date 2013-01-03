@@ -213,22 +213,28 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         DatagramPacket p = (DatagramPacket) buf.poll();
-        ByteBuf data = p.data();
-        int length = data.readableBytes();
-        InetSocketAddress remote = p.remoteAddress();
-        if (remote != null) {
-            tmpPacket.setSocketAddress(remote);
+        if (p == null) {
+            return;
         }
-        if (data.hasArray()) {
-            tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
-        } else {
-            byte[] tmp = new byte[length];
-            data.getBytes(data.readerIndex(), tmp);
-            tmpPacket.setData(tmp);
-        }
-        p.free();
 
-        socket.send(tmpPacket);
+        try {
+            ByteBuf data = p.data();
+            int length = data.readableBytes();
+            InetSocketAddress remote = p.remoteAddress();
+            if (remote != null) {
+                tmpPacket.setSocketAddress(remote);
+            }
+            if (data.hasArray()) {
+                tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
+            } else {
+                byte[] tmp = new byte[length];
+                data.getBytes(data.readerIndex(), tmp);
+                tmpPacket.setData(tmp);
+            }
+            socket.send(tmpPacket);
+        } finally {
+            p.free();
+        }
     }
 
     @Override

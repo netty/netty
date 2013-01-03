@@ -196,25 +196,27 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 if (packet == null) {
                     return;
                 }
-                ByteBuf data = packet.data();
-                int dataLen = data.readableBytes();
-                ByteBuffer nioData;
+                try {
+                    ByteBuf data = packet.data();
+                    int dataLen = data.readableBytes();
+                    ByteBuffer nioData;
 
-                if (data.nioBufferCount() != -1) {
-                    nioData = data.nioBuffer();
-                } else {
-                    nioData = ByteBuffer.allocate(dataLen);
-                    data.getBytes(data.readerIndex(), nioData);
-                    nioData.flip();
+                    if (data.nioBufferCount() != -1) {
+                        nioData = data.nioBuffer();
+                    } else {
+                        nioData = ByteBuffer.allocate(dataLen);
+                        data.getBytes(data.readerIndex(), nioData);
+                        nioData.flip();
+                    }
+
+                    final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
+                    mi.payloadProtocolID(packet.protocolIdentifier());
+                    mi.streamNumber(packet.streamIdentifier());
+
+                    ch.send(nioData, mi);
+                } finally {
+                    packet.free();
                 }
-
-                final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
-                mi.payloadProtocolID(packet.protocolIdentifier());
-                mi.streamNumber(packet.streamIdentifier());
-
-                packet.free();
-
-                ch.send(nioData, mi);
             }
             writableKeys.clear();
         }

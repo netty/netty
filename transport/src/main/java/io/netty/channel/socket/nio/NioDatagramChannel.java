@@ -236,11 +236,11 @@ public final class NioDatagramChannel
             return 0;
         }
 
-        // packet was written free up buffer
-        packet.free();
-
         // Wrote a packet.
         buf.remove();
+
+        // packet was written free up buffer
+        packet.free();
 
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.

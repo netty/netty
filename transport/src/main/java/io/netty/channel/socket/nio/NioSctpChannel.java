@@ -294,11 +294,12 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             return 0;
         }
 
+        // Wrote a packet.
+        buf.remove();
+
         // packet was written free up buffer
         packet.free();
 
-        // Wrote a packet.
-        buf.remove();
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {
