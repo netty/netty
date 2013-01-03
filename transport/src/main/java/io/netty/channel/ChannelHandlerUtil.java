@@ -173,7 +173,12 @@ public final class ChannelHandlerUtil {
      */
     public static void freeMessage(Object msg) throws Exception {
         if (msg instanceof Freeable) {
-            ((Freeable) msg).free();
+            try {
+                ((Freeable) msg).free();
+            } catch (UnsupportedOperationException e) {
+                // This can happen for derived buffers
+                // TODO: Think about this
+            }
         }
     }
 
