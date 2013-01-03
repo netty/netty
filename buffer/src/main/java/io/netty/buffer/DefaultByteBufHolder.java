@@ -26,6 +26,9 @@ public class DefaultByteBufHolder implements ByteBufHolder {
         if (data == null) {
             throw new NullPointerException("data");
         }
+        if (data.unwrap() != null && !(data instanceof SwappedByteBuf)) {
+            throw new IllegalArgumentException("Only not-derived ByteBuf instance are supported");
+        }
         this.data = data;
     }
 
@@ -42,11 +45,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
         if (!freed) {
             freed = true;
             if (!data.isFreed()) {
-                try {
-                    data.free();
-                } catch (UnsupportedOperationException e) {
-                    // free not supported
-                }
+                data.free();
             }
         }
     }

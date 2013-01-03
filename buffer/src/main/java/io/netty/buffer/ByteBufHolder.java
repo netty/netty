@@ -37,4 +37,16 @@ public interface ByteBufHolder extends Freeable {
      * is called.
      */
     ByteBufHolder copy();
+
+    /**
+     * Free of the resources that are hold by this instance. This includes the {@link ByteBuf}.
+     */
+    @Override
+    void free();
+
+    /**
+     * Returns {@code true} if and only if this instances was freed.
+     */
+    @Override
+    boolean isFreed();
 }
