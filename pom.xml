@@ -358,6 +358,8 @@
             -XX:+UseStringCache
             -XX:+OptimizeStringConcat
             -XX:+HeapDumpOnOutOfMemoryError
+            -Xmx2048m
+            -Xms1024m
           </argLine>
         </configuration>
       </plugin>
