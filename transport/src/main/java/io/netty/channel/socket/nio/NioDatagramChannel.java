@@ -194,14 +194,33 @@ public final class NioDatagramChannel
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
         ByteBuf buffer = alloc().directBuffer(config().getReceivePacketSize());
-        ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+        boolean free = true;
+        try {
+            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
 
-        InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
-        if (remoteAddress == null) {
-            return 0;
+            InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
+            if (remoteAddress == null) {
+                return 0;
+            }
+            buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.remaining()), remoteAddress));
+            free = false;
+            return 1;
+        } catch (Throwable cause) {
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new ChannelException(cause);
+        }  finally {
+            if (free) {
+                buffer.free();
+            }
         }
-        buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.remaining()), remoteAddress));
-        return 1;
     }
 
     @Override

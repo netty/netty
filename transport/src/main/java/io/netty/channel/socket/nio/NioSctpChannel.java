@@ -247,15 +247,34 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
         ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
-        ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
-        MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
-        if (messageInfo == null) {
-            return 0;
-        }
+        boolean free = true;
+        try {
+            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            if (messageInfo == null) {
+                return 0;
+            }
 
-        data.flip();
-        buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
-        return 1;
+            data.flip();
+            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+            free = false;
+            return 1;
+        } catch (Throwable cause) {
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new ChannelException(cause);
+        }  finally {
+            if (free) {
+                buffer.free();
+            }
+        }
     }
 
     @Override

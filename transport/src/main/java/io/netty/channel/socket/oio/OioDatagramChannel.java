@@ -200,13 +200,29 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
             return 1;
         } catch (SocketTimeoutException e) {
+            buffer.free();
+
             // Expected
             return 0;
         } catch (SocketException e) {
+            buffer.free();
+
             if (!e.getMessage().toLowerCase(Locale.US).contains("socket closed")) {
                 throw e;
             }
             return -1;
+        } catch (Throwable cause) {
+            buffer.free();
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new ChannelException(cause);
         }
     }
 
