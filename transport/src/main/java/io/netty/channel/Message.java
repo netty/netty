@@ -25,7 +25,7 @@ import io.netty.buffer.ByteBuf;
  * in the actual transport implementation. When receive a {@link Message} the {@link #free()}
  * must be called once is is processed. There are special {@link ChannelHandler} which take care of
  * this like:
- *  - {@link ChannelInboundPacketHandler}
+ *  <li>{@link ChannelInboundPacketHandler}</li>
  *
  */
 public interface Message {
