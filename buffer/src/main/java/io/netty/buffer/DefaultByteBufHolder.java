@@ -13,20 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.IllegalBufferAccessException;
+package io.netty.buffer;
 
 /**
- * Default implementation of a {@link Message} that holds it's data in a {@link ByteBuf}.
+ * Default implementation of a {@link ByteBufHolder} that holds it's data in a {@link ByteBuf}.
  *
  */
-public class DefaultMessage implements Message {
+public class DefaultByteBufHolder implements ByteBufHolder {
     private final ByteBuf data;
     private boolean freed;
-    public DefaultMessage(ByteBuf data) {
+    public DefaultByteBufHolder(ByteBuf data) {
         if (data == null) {
             throw new NullPointerException("data");
         }
@@ -61,8 +57,8 @@ public class DefaultMessage implements Message {
     }
 
     @Override
-    public Message copy() {
-        return new DefaultMessage(data().copy());
+    public ByteBufHolder copy() {
+        return new DefaultByteBufHolder(data().copy());
     }
 
     @Override

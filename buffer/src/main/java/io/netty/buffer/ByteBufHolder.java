@@ -16,11 +16,25 @@
 package io.netty.buffer;
 
 /**
- * A buffer to operate on
+ * A packet which is send or receive. The contract for a {@link ByteBufHolder} is the
+ * following:
+ *
+ * When send a {@link ByteBufHolder} the {@link ByteBufHolder} will be freed by calling {@link #free()}
+ * in the actual transport implementation. When receive a {@link ByteBufHolder} the {@link #free()}
+ * must be called once is is processed.
+ *
  */
-public interface Buf extends Freeable {
+public interface ByteBufHolder extends Freeable {
+
     /**
-     * The BufType which will be handled by the Buf implementation
+     * Return the data which is held by this {@link ByteBufHolder}.
+     *
      */
-    BufType type();
+    ByteBuf data();
+
+    /**
+     * Create a copy of this {@link ByteBufHolder} which can be used even after {@link #free()}
+     * is called.
+     */
+    ByteBufHolder copy();
 }

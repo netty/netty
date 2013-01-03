@@ -18,12 +18,12 @@ package io.netty.channel.socket;
 import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.DefaultMessage;
+import io.netty.buffer.DefaultByteBufHolder;
 
 /**
  * Representation of SCTP Data Chunk
  */
-public final class SctpMessage extends DefaultMessage {
+public final class SctpMessage extends DefaultByteBufHolder {
     private final int streamIdentifier;
     private final int protocolIdentifier;
 
