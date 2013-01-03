@@ -141,7 +141,7 @@ public final class SctpMessage extends DefaultMessage {
         if (isFreed()) {
             return "SctpFrame{" +
                     "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                    ", payloadBuffer=()}";
+                    ", data=(FREED)}";
         }
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +

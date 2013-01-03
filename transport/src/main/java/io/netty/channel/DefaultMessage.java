@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.IllegalBufferAccessException;
 
 /**
  * Default implementation of a {@link Message} that holds it's data in a {@link ByteBuf}.
@@ -35,7 +36,7 @@ public class DefaultMessage implements Message {
     @Override
     public ByteBuf data() {
         if (freed) {
-            throw new IllegalStateException("Packet was freed already");
+            throw new IllegalBufferAccessException("Packet was freed already");
         }
         return data;
     }
@@ -67,7 +68,7 @@ public class DefaultMessage implements Message {
     @Override
     public String toString() {
         if (isFreed()) {
-            return "Message{data=()}";
+            return "Message{data=(FREED)}";
         }
         return "Message{data=" + ByteBufUtil.hexDump(data()) + '}';
     }

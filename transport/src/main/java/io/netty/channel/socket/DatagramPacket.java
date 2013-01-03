@@ -60,7 +60,7 @@ public final class DatagramPacket extends DefaultMessage {
     public String toString() {
         if (isFreed()) {
             return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
-                    ", data=()}";
+                    ", data=(FREED)}";
         }
         return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
                 ", data=" + ByteBufUtil.hexDump(data()) + '}';
