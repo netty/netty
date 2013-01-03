@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.socket.SctpMessage;
+import io.netty.channel.socket.sctp.SctpMessage;
 
 import java.util.HashMap;
 import java.util.Map;

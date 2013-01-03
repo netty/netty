@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.nio;
+package io.netty.channel.socket.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
@@ -21,8 +21,9 @@ import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.socket.DefaultSctpServerChannelConfig;
-import io.netty.channel.socket.SctpServerChannelConfig;
+import io.netty.channel.socket.nio.AbstractNioMessageChannel;
+import io.netty.channel.socket.sctp.DefaultSctpServerChannelConfig;
+import io.netty.channel.socket.sctp.SctpServerChannelConfig;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -34,14 +35,14 @@ import java.util.Iterator;
 import java.util.Set;
 
 /**
- * {@link io.netty.channel.socket.SctpServerChannel} implementation which use non-blocking mode to accept new
+ * {@link io.netty.channel.socket.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
  * connections and create the {@link NioSctpChannel} for them.
  *
  * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
-        implements io.netty.channel.socket.SctpServerChannel {
+        implements io.netty.channel.socket.sctp.SctpServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
     private static SctpServerChannel newSocket() {

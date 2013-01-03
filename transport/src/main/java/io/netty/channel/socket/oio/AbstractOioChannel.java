@@ -26,9 +26,9 @@ import java.net.SocketAddress;
 /**
  * Abstract base class for {@link Channel} implementations that use Old-Blocking-IO
  */
-abstract class AbstractOioChannel extends AbstractChannel {
+public abstract class AbstractOioChannel extends AbstractChannel {
 
-    static final int SO_TIMEOUT = 1000;
+    protected static final int SO_TIMEOUT = 1000;
 
     private boolean readInProgress;
 
