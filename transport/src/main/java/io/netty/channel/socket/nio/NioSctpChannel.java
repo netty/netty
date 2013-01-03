@@ -211,9 +211,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         boolean success = false;
         try {
             boolean connected = javaChannel().connect(remoteAddress);
-            if (connected) {
-                selectionKey().interestOps(SelectionKey.OP_READ);
-            } else {
+            if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
             }
             success = true;
@@ -230,7 +228,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         if (!javaChannel().finishConnect()) {
             throw new Error();
         }
-        selectionKey().interestOps(SelectionKey.OP_READ);
     }
 
     @Override
