@@ -180,7 +180,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         ByteBuf frames = createFrames(version);
 
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
-        final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames);
+        final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy());
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
