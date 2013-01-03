@@ -82,6 +82,7 @@ public abstract class MessageToMessageDecoder<I, O>
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
+                boolean free = true;
                 try {
                     O omsg = decode(ctx, imsg);
                     if (omsg == null) {
@@ -89,12 +90,16 @@ public abstract class MessageToMessageDecoder<I, O>
                         // Probably it needs more messages because it's an aggregator.
                         continue;
                     }
-
+                    if (omsg == imsg) {
+                        free = false;
+                    }
                     if (ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, true)) {
                         notify = true;
                     }
                 } finally {
-                    freeInboundMessage(imsg);
+                    if (free) {
+                        freeInboundMessage(imsg);
+                    }
                 }
             } catch (Throwable t) {
                 if (t instanceof CodecException) {

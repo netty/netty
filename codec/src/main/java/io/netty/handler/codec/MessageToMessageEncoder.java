@@ -73,6 +73,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
+                boolean free = true;
                 try {
                     O omsg = encode(ctx, imsg);
                     if (omsg == null) {
@@ -80,10 +81,14 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                         // an aggregated message - keep polling.
                         continue;
                     }
-
+                    if (omsg == imsg) {
+                        free = false;
+                    }
                     ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
                 } finally {
-                    freeInboundMessage(imsg);
+                    if (free) {
+                        freeInboundMessage(imsg);
+                    }
                 }
             } catch (Throwable t) {
                 if (t instanceof CodecException) {
