@@ -172,10 +172,7 @@ public final class ChannelHandlerUtil {
      */
     public static void freeMessage(Object msg) throws Exception {
         if (msg instanceof Message) {
-            Message p = (Message) msg;
-            if (!p.isFreed()) {
-                p.free();
-            }
+            ((Message) msg).free();
         }
         // TODO: Also handle Buf ?
     }
