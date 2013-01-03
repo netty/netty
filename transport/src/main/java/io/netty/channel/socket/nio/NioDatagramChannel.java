@@ -153,7 +153,6 @@ public final class NioDatagramChannel
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().socket().bind(localAddress);
-        selectionKey().interestOps(SelectionKey.OP_READ);
     }
 
     @Override
@@ -166,7 +165,6 @@ public final class NioDatagramChannel
         boolean success = false;
         try {
             javaChannel().connect(remoteAddress);
-            selectionKey().interestOps(selectionKey().interestOps() | SelectionKey.OP_READ);
             success = true;
             return true;
         } finally {
