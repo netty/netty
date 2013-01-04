@@ -84,7 +84,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             }
 
             try {
-                Thread.sleep(10);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 // Ignore.
             }
