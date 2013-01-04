@@ -69,6 +69,11 @@ public interface ChannelOutboundInvoker {
     /**
      * Flush all pending data which belongs to this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
+     *
+     * Be aware that the flush could be only partial successful. In such cases the {@link ChannelFuture} will be
+     * failed with an {@link PartialFlushException}. So if you are interested to know if it was partial successful you
+     * need to check if the returned {@link ChannelFuture#cause()} returns an instance of
+     * {@link PartialFlushException}.
      */
     ChannelFuture flush();
 
@@ -76,7 +81,13 @@ public interface ChannelOutboundInvoker {
      * Write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
      *
-     * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}
+     * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
+     *
+     * Be aware that the write could be only partial successful as the message may need to get encoded before write it
+     * to the remote peer. In such cases the {@link ChannelFuture} will be
+     * failed with an {@link PartialFlushException}. So if you are interested to know if it was partial successful you
+     * need to check if the returned {@link ChannelFuture#cause()} returns an instance of
+     * {@link PartialFlushException}.
      */
     ChannelFuture write(Object message);
 
@@ -153,6 +164,11 @@ public interface ChannelOutboundInvoker {
      * Flush all pending data which belongs to this ChannelOutboundInvoker and notify the {@link ChannelPromise}
      * once the operation completes, either because the operation was successful or because of an error.
      *
+     * Be aware that the flush could be only partial successful. In such cases the {@link ChannelFuture} will be
+     * failed with an {@link PartialFlushException}. So if you are interested to know if it was partial successful you
+     * need to check if the returned {@link ChannelFuture#cause()} returns an instance of
+     * {@link PartialFlushException}.
+     *
      * The given {@link ChannelPromise} will be notified.
      */
     ChannelFuture flush(ChannelPromise promise);
@@ -163,6 +179,12 @@ public interface ChannelOutboundInvoker {
      *
      * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}
      * The given {@link ChannelPromise} will be notified and also returned.
+     *
+     * Be aware that the write could be only partial successful as the message may need to get encoded before write it
+     * to the remote peer. In such cases the {@link ChannelFuture} will be
+     * failed with an {@link PartialFlushException}. So if you are interested to know if it was partial successful you
+     * need to check if the returned {@link ChannelFuture#cause()} returns an instance of
+     * {@link PartialFlushException}.
      */
     ChannelFuture write(Object message, ChannelPromise promise);
 
