@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.PartialFlushException;
 
 /**
  * {@link ChannelOutboundByteHandlerAdapter} which encodes bytes in a stream-like fashion from one {@link ByteBuf} to an
@@ -49,23 +50,31 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
     public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ByteBuf in = ctx.outboundByteBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
+        boolean encoded = false;
 
         while (in.readable()) {
             int oldInSize = in.readableBytes();
             try {
                 encode(ctx, in, out);
+                encoded = true;
             } catch (Throwable t) {
+                Throwable cause;
                 if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
+                    cause = t;
                 } else {
-                    ctx.fireExceptionCaught(new EncoderException(t));
+                    cause = new EncoderException(t);
                 }
+                if (encoded) {
+                    cause = new PartialFlushException("Unable to encoded all bytes", cause);
+                }
+                in.discardSomeReadBytes();
+                promise.setFailure(cause);
+                return;
             }
             if (oldInSize == in.readableBytes()) {
                 break;
             }
         }
-
         in.discardSomeReadBytes();
         ctx.flush(promise);
     }
