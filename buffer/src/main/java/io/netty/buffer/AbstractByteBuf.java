@@ -195,8 +195,19 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     protected void adjustMarkers(int decrement) {
-        markedReaderIndex = Math.max(markedReaderIndex - decrement, 0);
-        markedWriterIndex = Math.max(markedWriterIndex - decrement, 0);
+        int markedReaderIndex = this.markedReaderIndex;
+        if (markedReaderIndex <= decrement) {
+            this.markedReaderIndex = 0;
+            int markedWriterIndex = this.markedWriterIndex;
+            if (markedWriterIndex <= decrement) {
+                this.markedWriterIndex = 0;
+            } else {
+                this.markedWriterIndex = markedWriterIndex - decrement;
+            }
+        } else {
+            this.markedReaderIndex = markedReaderIndex - decrement;
+            markedWriterIndex -= decrement;
+        }
     }
 
     @Override
