@@ -21,9 +21,6 @@ import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.PartialFlushException;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * {@link ChannelOutboundByteHandlerAdapter} which encodes bytes in a stream-like fashion from one {@link ByteBuf} to an
  * other.
@@ -53,37 +50,32 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
     public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ByteBuf in = ctx.outboundByteBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
-        boolean partialFlush = partialFlush();
-        List<Throwable> causes = null;
+        boolean encoded = false;
 
         while (in.readable()) {
             int oldInSize = in.readableBytes();
             try {
                 encode(ctx, in, out);
+                encoded = true;
             } catch (Throwable t) {
-                if (causes == null) {
-                    causes = new ArrayList<Throwable>();
-                }
+                Throwable cause;
                 if (t instanceof CodecException) {
-                    causes.add(t);
+                    cause = t;
                 } else {
-                    causes.add(new EncoderException(t));
+                    cause = new EncoderException(t);
                 }
-                if (!partialFlush) {
-                    break;
+                if (encoded) {
+                    cause = new PartialFlushException("Unable to encoded all bytes", cause);
                 }
+                in.discardSomeReadBytes();
+                promise.setFailure(cause);
+                return;
             }
             if (oldInSize == in.readableBytes()) {
                 break;
             }
         }
         in.discardSomeReadBytes();
-
-        if (causes != null) {
-            promise.setFailure(new PartialFlushException("Unable to encoded all messages",
-                    causes.toArray(new Throwable[causes.size()])));
-            return;
-        }
         ctx.flush(promise);
     }
 
@@ -97,15 +89,4 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
      * @throws Exception    is thrown if an error accour
      */
     protected abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
-
-    /**
-     * Return {@code true} if this encoder allows partial flushs, which means it will continue to try to encode and
-     * flush all messages of the inbound {@link ByteBuf} even if a exception was raised during it. Otherwise it will
-     * stop on the first exception.
-     *
-     * Default is {@code true}, but sub-classes may override this method to change the behaviour.
-     */
-    protected boolean partialFlush() {
-        return true;
-    }
 }

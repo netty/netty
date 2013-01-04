@@ -24,9 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.PartialFlushException;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
  *
@@ -63,8 +60,8 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
-        boolean partialFlush = partialFlush();
-        List<Throwable> causes = null;
+        boolean encoded = false;
+
         for (;;) {
             try {
                 Object msg = in.poll();
@@ -90,6 +87,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     if (omsg == imsg) {
                         free = false;
                     }
+                    encoded = true;
                     ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
                 } finally {
                     if (free) {
@@ -97,23 +95,18 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     }
                 }
             } catch (Throwable t) {
-                if (causes == null) {
-                    causes = new ArrayList<Throwable>();
-                }
+                Throwable cause;
                 if (t instanceof CodecException) {
-                    causes.add(t);
+                    cause = t;
                 } else {
-                    causes.add(new EncoderException(t));
+                    cause = new EncoderException(t);
                 }
-                if (!partialFlush) {
-                    break;
+                if (encoded) {
+                    cause = new PartialFlushException("Unable to encoded all messages", cause);
                 }
+                promise.setFailure(cause);
+                return;
             }
-        }
-        if (causes != null) {
-            promise.setFailure(new PartialFlushException("Unable to encoded all messages",
-                    causes.toArray(new Throwable[causes.size()])));
-            return;
         }
         ctx.flush(promise);
     }
@@ -146,16 +139,5 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      */
     protected void freeInboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
-    }
-
-    /**
-     * Return {@code true} if this encoder allows partial flushs, which means it will continue to try to encode and
-     * flush all messages of the inbound {@link MessageBuf} even if a exception was raised during it. Otherwise it will
-     * stop on the first exception.
-     *
-     * Default is {@code true}, but sub-classes may override this method to change the behaviour.
-     */
-    protected boolean partialFlush() {
-        return true;
     }
 }
