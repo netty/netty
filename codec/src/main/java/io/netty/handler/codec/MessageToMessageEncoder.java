@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.PartialFlushException;
 
 /**
  * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
@@ -59,6 +60,8 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
+        boolean encoded = false;
+
         for (;;) {
             try {
                 Object msg = in.poll();
@@ -84,6 +87,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     if (omsg == imsg) {
                         free = false;
                     }
+                    encoded = true;
                     ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
                 } finally {
                     if (free) {
@@ -91,14 +95,19 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     }
                 }
             } catch (Throwable t) {
+                Throwable cause;
                 if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
+                    cause = t;
                 } else {
-                    ctx.fireExceptionCaught(new EncoderException(t));
+                    cause = new EncoderException(t);
                 }
+                if (encoded) {
+                    cause = new PartialFlushException("Unable to encoded all messages", cause);
+                }
+                promise.setFailure(cause);
+                return;
             }
         }
-
         ctx.flush(promise);
     }
 
