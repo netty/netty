@@ -181,7 +181,6 @@ public class JdkZlibEncoder extends ZlibEncoder {
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (finished.get()) {
             out.writeBytes(in);
-            in.discardReadBytes();
             return;
         }
 

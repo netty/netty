@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -370,23 +369,33 @@ public class SslHandler
     }
 
     @Override
-    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
-    }
-
-    @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.alloc().buffer();
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().discardSomeReadBytes();
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().free();
+    }
+
+    @Override
+    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ctx.alloc().buffer();
+    }
+
+    @Override
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundByteBuffer().free();
     }
 
     @Override
@@ -414,8 +423,6 @@ public class SslHandler
     private void flush0(ChannelHandlerContext ctx, ChannelPromise promise, boolean internal) throws Exception {
         final ByteBuf in = ctx.outboundByteBuffer();
         final ByteBuf out = ctx.nextOutboundByteBuffer();
-
-        out.discardSomeReadBytes();
 
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -487,7 +494,6 @@ public class SslHandler
             setHandshakeFailure(e);
             throw e;
         } finally {
-            in.discardSomeReadBytes();
             flush0(ctx, bytesConsumed);
         }
     }
@@ -783,7 +789,6 @@ public class SslHandler
         assert packetLength > 0;
 
         final ByteBuf out = ctx.nextInboundByteBuffer();
-        out.discardReadBytes();
 
         boolean wrapLater = false;
         int bytesProduced = 0;
@@ -835,7 +840,6 @@ public class SslHandler
             throw e;
         } finally {
             if (bytesProduced > 0) {
-                in.discardReadBytes();
                 ctx.fireInboundBufferUpdated();
             }
         }

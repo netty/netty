@@ -123,16 +123,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            ChannelStateHandler handler = (ChannelStateHandler) ctx.handler;
             flushBridge();
             try {
-                ((ChannelStateHandler) ctx.handler).inboundBufferUpdated(ctx);
+                handler.inboundBufferUpdated(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             } finally {
-                ByteBuf buf = inByteBuf;
-                if (buf != null) {
-                    if (!buf.readable()) {
-                        buf.discardReadBytes();
+                if (handler instanceof ChannelInboundByteHandler) {
+                    try {
+                        ((ChannelInboundByteHandler) handler).discardInboundReadBytes(ctx);
+                    } catch (Throwable t) {
+                        pipeline.notifyHandlerException(t);
                     }
                 }
             }
@@ -159,7 +161,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             try {
-                ((ChannelStateHandler) ctx.handler).inboundBufferSuspended(ctx);
+                ((ChannelStateHandler) ctx.handler).channelReadSuspended(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
@@ -174,11 +176,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 try {
                     if (ctx.hasInboundByteBuffer()) {
                         if (ctx.inByteBuf != null) {
-                            h.freeInboundBuffer(ctx, ctx.inByteBuf);
+                            h.freeInboundBuffer(ctx);
                         }
                     } else {
                         if (ctx.inMsgBuf != null) {
-                            h.freeInboundBuffer(ctx, ctx.inMsgBuf);
+                            h.freeInboundBuffer(ctx);
                         }
                     }
                 } catch (Throwable t) {
@@ -204,11 +206,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 try {
                     if (ctx.hasOutboundByteBuffer()) {
                         if (ctx.outByteBuf != null) {
-                            h.freeOutboundBuffer(ctx, ctx.outByteBuf);
+                            h.freeOutboundBuffer(ctx);
                         }
                     } else {
                         if (ctx.outMsgBuf != null) {
-                            h.freeOutboundBuffer(ctx, ctx.outMsgBuf);
+                            h.freeOutboundBuffer(ctx);
                         }
                     }
                 } catch (Throwable t) {

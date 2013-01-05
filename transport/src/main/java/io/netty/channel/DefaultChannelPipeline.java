@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
@@ -67,9 +66,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         this.channel = channel;
 
-        HeadHandler headHandler = new HeadHandler();
         tailCtx = new DefaultChannelHandlerContext(
                 this, null, null, null, generateName(TAIL_HANDLER), TAIL_HANDLER);
+
+        HeadHandler headHandler;
+        switch (channel.metadata().bufferType()) {
+        case BYTE:
+            headHandler = new ByteHeadHandler();
+            break;
+        case MESSAGE:
+            headHandler = new MessageHeadHandler();
+            break;
+        default:
+            throw new Error("unknown buffer type: " + channel.metadata().bufferType());
+        }
+
         head = new DefaultChannelHandlerContext(
                 this, null, null, tailCtx, generateName(headHandler), headHandler);
         tailCtx.prev = head;
@@ -1300,16 +1311,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             return;
         }
 
+        ChannelOperationHandler handler = (ChannelOperationHandler) ctx.handler();
         try {
             ctx.flushBridge();
-            ((ChannelOperationHandler) ctx.handler()).flush(ctx, promise);
+            handler.flush(ctx, promise);
         } catch (Throwable t) {
             notifyHandlerException(t);
         } finally {
-            if (ctx.hasOutboundByteBuffer()) {
-                ByteBuf buf = ctx.outboundByteBuffer();
-                if (!buf.readable()) {
-                    buf.discardReadBytes();
+            if (handler instanceof ChannelOutboundByteHandler) {
+                try {
+                    ((ChannelOutboundByteHandler) handler).discardOutboundReadBytes(ctx);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
                 }
             }
         }
@@ -1529,53 +1542,36 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private final class HeadHandler implements ChannelOutboundHandler {
+    private abstract class HeadHandler implements ChannelOutboundHandler {
         @Override
-        public Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            switch (channel.metadata().bufferType()) {
-            case BYTE:
-                return ctx.alloc().ioBuffer();
-            case MESSAGE:
-                return Unpooled.messageBuffer();
-            default:
-                throw new Error();
-            }
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
-            buf.free();
-        }
-
-        @Override
-        public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        public final void beforeAdd(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        public final void afterAdd(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        public final void beforeRemove(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        public final void afterRemove(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public void bind(
+        public final void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
                 throws Exception {
             unsafe.bind(localAddress, promise);
         }
 
         @Override
-        public void connect(
+        public final void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
                 ChannelPromise promise) throws Exception {
@@ -1583,43 +1579,75 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public final void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.disconnect(promise);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public final void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.close(promise);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public final void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.deregister(promise);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
+        public final void read(ChannelHandlerContext ctx) {
             unsafe.beginRead();
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.flush(promise);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             ctx.fireExceptionCaught(cause);
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             ctx.fireUserEventTriggered(evt);
         }
 
         @Override
-        public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        public final void sendFile(
+                ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
             unsafe.sendFile(region, promise);
+        }
+    }
+
+    private final class ByteHeadHandler extends HeadHandler implements ChannelOutboundByteHandler {
+        @Override
+        public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return ctx.alloc().ioBuffer();
+        }
+
+        @Override
+        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+            if (ctx.hasOutboundByteBuffer()) {
+                ctx.outboundByteBuffer().discardSomeReadBytes();
+            }
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
+            ctx.outboundByteBuffer().free();
+        }
+    }
+
+    private final class MessageHeadHandler extends HeadHandler implements ChannelOutboundMessageHandler<Object> {
+        @Override
+        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return Unpooled.messageBuffer();
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
+            ctx.outboundMessageBuffer().free();
         }
     }
 }

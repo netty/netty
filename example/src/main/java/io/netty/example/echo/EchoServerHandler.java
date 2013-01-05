@@ -35,7 +35,6 @@ public class EchoServerHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
         ByteBuf out = ctx.nextOutboundByteBuffer();
-        out.discardReadBytes();
         out.writeBytes(in);
         ctx.flush();
     }

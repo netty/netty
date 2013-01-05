@@ -157,7 +157,7 @@ public interface ChannelOutboundInvoker {
      * Reads data from the {@link Channel} into the first inbound buffer, triggers an
      * {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext) inboundBufferUpdated} event if data was
      * read, and triggers an
-     * {@link ChannelStateHandler#inboundBufferSuspended(ChannelHandlerContext) inboundBufferSuspended} event so the
+     * {@link ChannelStateHandler#channelReadSuspended(ChannelHandlerContext) inboundBufferSuspended} event so the
      * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
      */
     void read();

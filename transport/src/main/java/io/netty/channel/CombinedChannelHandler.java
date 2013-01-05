@@ -46,8 +46,7 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
      * Otherwise it will trigger a {@link IllegalStateException} later.
      *
      */
-    protected void init(
-            ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
+    protected void init(ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         if (inboundHandler == null) {
             throw new NullPointerException("inboundHandler");
         }
@@ -74,25 +73,23 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     }
 
     @Override
-    public Buf newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
+    public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return in.newInboundBuffer(ctx);
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        in.freeInboundBuffer(ctx, buf);
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        in.freeInboundBuffer(ctx);
     }
 
     @Override
-    public Buf newOutboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
+    public Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        out.freeOutboundBuffer(ctx, buf);
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        out.freeOutboundBuffer(ctx);
     }
 
     @Override
@@ -169,6 +166,9 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         in.inboundBufferUpdated(ctx);
+        if (in instanceof ChannelInboundByteHandler) {
+            ((ChannelInboundByteHandler) in).discardInboundReadBytes(ctx);
+        }
     }
 
     @Override
@@ -213,6 +213,9 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     public void flush(
             ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         out.flush(ctx, promise);
+        if (out instanceof ChannelOutboundByteHandler) {
+            ((ChannelOutboundByteHandler) out).discardOutboundReadBytes(ctx);
+        }
     }
 
     @Override
