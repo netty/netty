@@ -847,10 +847,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (t instanceof IOException) {
                         close(voidFuture());
                     }
-                } finally {
-                    if (!isActive()) {
-                        close(unsafe().voidFuture());
-                    }
                 }
             } else {
                 if (!flushNowPending) {
@@ -877,10 +873,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
-                        final int writtenBytes = oldSize - out.readableBytes();
-                        if (writtenBytes > 0) {
-                            flushFutureNotifier.increaseWriteCounter(writtenBytes);
-                        }
+                        flushFutureNotifier.increaseWriteCounter(oldSize - out.readableBytes());
                     }
                 } else {
                     MessageBuf<Object> out = ctx.outboundMessageBuffer();
