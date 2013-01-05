@@ -15,7 +15,6 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -223,7 +222,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // do nothing
     }
 
@@ -233,7 +237,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // do nothing
     }
 

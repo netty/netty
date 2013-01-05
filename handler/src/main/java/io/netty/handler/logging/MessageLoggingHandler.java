@@ -15,7 +15,6 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -48,10 +47,6 @@ public class MessageLoggingHandler
     public MessageLoggingHandler(String name) {
         super(name);
     }
-    @Override
-    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
-    }
 
     @Override
     public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -59,12 +54,17 @@ public class MessageLoggingHandler
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // Nothing to free
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // Nothing to free
     }
 

@@ -66,7 +66,6 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
             }
         }
 
-        in.discardSomeReadBytes();
         ctx.flush(promise);
     }
 

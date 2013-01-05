@@ -68,9 +68,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         ByteBuf out = outboundChannel.outboundByteBuffer();
-        out.discardReadBytes();
         out.writeBytes(in);
-        in.clear();
         if (outboundChannel.isActive()) {
             outboundChannel.flush();
         }

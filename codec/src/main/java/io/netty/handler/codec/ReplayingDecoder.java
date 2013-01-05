@@ -349,6 +349,15 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ByteBuf in = ctx.inboundByteBuffer();
+        final int oldReaderIndex = in.readerIndex();
+        super.discardInboundReadBytes(ctx);
+        final int newReaderIndex = in.readerIndex();
+        checkpoint -= oldReaderIndex - newReaderIndex;
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         replayable.terminate();
         ByteBuf in = cumulation;
@@ -358,7 +367,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
         try {
             if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
-                fireInboundBufferUpdated(ctx, in);
+                ctx.fireInboundBufferUpdated();
             }
         } catch (Signal replay) {
             // Ignore
@@ -427,7 +436,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
             } catch (Throwable t) {
                 if (decoded) {
                     decoded = false;
-                    fireInboundBufferUpdated(ctx, in);
+                    ctx.fireInboundBufferUpdated();
                 }
 
                 if (t instanceof CodecException) {
@@ -439,15 +448,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
         }
 
         if (decoded) {
-            fireInboundBufferUpdated(ctx, in);
+            ctx.fireInboundBufferUpdated();
         }
-    }
-
-    private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
-        final int oldReaderIndex = in.readerIndex();
-        in.discardSomeReadBytes();
-        final int newReaderIndex = in.readerIndex();
-        checkpoint -= oldReaderIndex - newReaderIndex;
-        ctx.fireInboundBufferUpdated();
     }
 }

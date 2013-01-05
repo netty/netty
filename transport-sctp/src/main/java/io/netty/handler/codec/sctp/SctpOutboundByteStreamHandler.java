@@ -51,7 +51,6 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
             ByteBuf payload = Unpooled.buffer(in.readableBytes());
             payload.writeBytes(in);
             out.add(new SctpMessage(streamIdentifier, protocolIdentifier, payload));
-            in.discardReadBytes();
         } catch (Throwable t) {
             ctx.fireExceptionCaught(new EncoderException(t));
         }

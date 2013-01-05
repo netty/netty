@@ -67,6 +67,16 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // No need to discard anything because this handler will be replaced with something else very quickly.
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().free();
+    }
+
+    @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (initPipeline(ctx)) {
             ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());

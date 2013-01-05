@@ -42,9 +42,7 @@ public final class RelayHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         ByteBuf out = relayChannel.outboundByteBuffer();
-        out.discardReadBytes();
         out.writeBytes(in);
-        in.clear();
         if (relayChannel.isActive()) {
             relayChannel.flush();
         }
