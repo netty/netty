@@ -96,6 +96,16 @@ public abstract class ByteToByteCodec
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        decoder.discardInboundReadBytes(ctx);
+    }
+
+    @Override
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        encoder.discardOutboundReadBytes(ctx);
+    }
+
+    @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         decoder.freeInboundBuffer(ctx);
     }
