@@ -27,8 +27,14 @@ public interface ChannelOutboundHandler extends ChannelOperationHandler {
     Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 
     /**
+     * Discards the read bytes of the outbound buffer and optionally trims its unused portion to reduce memory
+     * consumption.
+     */
+    void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception;
+
+    /**
      * Invoked when this handler is not allowed to send any outbound message anymore and thus it's safe to
      * deallocate its outbound buffer.
      */
-    void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception;
+    void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }

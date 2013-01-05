@@ -26,4 +26,14 @@ public abstract class ChannelOutboundByteHandlerAdapter
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.alloc().buffer();
     }
+
+    @Override
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundByteBuffer().free();
+    }
 }

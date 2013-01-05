@@ -108,8 +108,6 @@ public abstract class ByteToMessageDecoder<O>
                     break;
                 }
             } catch (Throwable t) {
-                in.discardSomeReadBytes();
-
                 if (decoded) {
                     decoded = false;
                     ctx.fireInboundBufferUpdated();
@@ -122,8 +120,6 @@ public abstract class ByteToMessageDecoder<O>
                 }
             }
         }
-
-        in.discardSomeReadBytes();
 
         if (decoded) {
             ctx.fireInboundBufferUpdated();

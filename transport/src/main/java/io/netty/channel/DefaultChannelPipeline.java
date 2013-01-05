@@ -1268,16 +1268,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             return;
         }
 
+        ChannelOperationHandler handler = (ChannelOperationHandler) ctx.handler();
         try {
             ctx.flushBridge();
-            ((ChannelOperationHandler) ctx.handler()).flush(ctx, promise);
+            handler.flush(ctx, promise);
         } catch (Throwable t) {
             notifyHandlerException(t);
         } finally {
-            if (ctx.hasOutboundByteBuffer()) {
-                ByteBuf buf = ctx.outboundByteBuffer();
-                if (!buf.readable()) {
-                    buf.discardReadBytes();
+            if (handler instanceof ChannelOutboundHandler) {
+                try {
+                    ((ChannelOutboundHandler) handler).discardOutboundReadBytes(ctx);
+                } catch (Throwable t) {
+                    notifyHandlerException(t);
                 }
             }
         }
@@ -1497,8 +1499,19 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
-            buf.free();
+        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+            if (ctx.hasOutboundByteBuffer()) {
+                ctx.outboundByteBuffer().discardSomeReadBytes();
+            }
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
+            if (ctx.hasOutboundByteBuffer()) {
+                ctx.outboundByteBuffer().free();
+            } else {
+                ctx.outboundMessageBuffer().free();
+            }
         }
 
         @Override

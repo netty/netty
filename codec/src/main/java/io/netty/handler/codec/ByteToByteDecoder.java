@@ -96,7 +96,6 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
             }
         }
 
-        in.discardSomeReadBytes();
         if (out.readableBytes() > oldOutSize) {
             ctx.fireInboundBufferUpdated();
         }

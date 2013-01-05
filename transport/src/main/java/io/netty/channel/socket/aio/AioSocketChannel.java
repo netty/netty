@@ -306,10 +306,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
-                if (!byteBuf.readable()) {
-                    byteBuf.discardReadBytes();
-                }
-
                 expandReadBuffer(byteBuf);
 
                 readInProgress = true;
@@ -382,8 +378,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             if (buf.readable()) {
                 channel.unsafe().flushNow();
-            } else {
-                buf.discardReadBytes();
             }
         }
 
@@ -398,14 +392,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
             if (cause instanceof InterruptedByTimeoutException) {
                 channel.unsafe().close(channel.unsafe().voidFuture());
-                return;
-            }
-
-            if (!channel.inDoFlushByteBuffer) {
-                ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-                if (!buf.readable()) {
-                    buf.discardReadBytes();
-                }
             }
         }
     }

@@ -77,9 +77,6 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel<ByteBuf> {
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        if (!lastOutboundBuffer().readable()) {
-            lastOutboundBuffer().discardReadBytes();
-        }
         lastOutboundBuffer().writeBytes(buf);
     }
 }

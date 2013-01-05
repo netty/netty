@@ -30,4 +30,14 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
     }
+
+    @Override
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundMessageBuffer().free();
+    }
 }

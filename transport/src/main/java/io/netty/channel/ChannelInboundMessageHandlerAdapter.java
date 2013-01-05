@@ -59,6 +59,14 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception { }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundMessageBuffer().free();
+    }
+
+    @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         if (!beginMessageReceived(ctx)) {
             return;

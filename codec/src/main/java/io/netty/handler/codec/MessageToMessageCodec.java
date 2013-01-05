@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -99,8 +98,13 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundMessageBuffer().free();
     }
 
     @Override
@@ -115,8 +119,13 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundMessageBuffer().free();
     }
 
     @Override

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -98,8 +97,13 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        // Nothing to free
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        queue.free();
     }
 
     private boolean isWritable() {

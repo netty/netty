@@ -87,7 +87,6 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
-                ctx.nextOutboundByteBuffer().discardReadBytes();
                 generateTraffic();
             }
         }

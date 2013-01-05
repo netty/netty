@@ -350,10 +350,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         final int maxCapacity = byteBuf.maxCapacity();
         if (capacity == maxCapacity) {
-            if (byteBuf.readerIndex() != 0) {
-                byteBuf.discardReadBytes();
-                return 0;
-            }
             return 2;
         }
 
@@ -881,13 +877,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
-                        final int newSize = out.readableBytes();
-                        final int writtenBytes = oldSize - newSize;
+                        final int writtenBytes = oldSize - out.readableBytes();
                         if (writtenBytes > 0) {
                             flushFutureNotifier.increaseWriteCounter(writtenBytes);
-                            if (newSize == 0) {
-                                out.discardReadBytes();
-                            }
                         }
                     }
                 } else {

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -106,10 +105,6 @@ public class ByteLoggingHandler
     public ByteLoggingHandler(String name) {
         super(name);
     }
-    @Override
-    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
-    }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -117,13 +112,28 @@ public class ByteLoggingHandler
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().discardSomeReadBytes();
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().free();
+    }
+
+    @Override
+    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return ctx.alloc().buffer();
+    }
+
+    @Override
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundByteBuffer().free();
     }
 
     @Override

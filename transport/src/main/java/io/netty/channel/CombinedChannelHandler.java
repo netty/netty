@@ -80,19 +80,28 @@ public class CombinedChannelHandler extends ChannelStateHandlerAdapter implement
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        in.freeInboundBuffer(ctx, buf);
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        in.discardInboundReadBytes(ctx);
     }
 
     @Override
-    public Buf newOutboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        in.freeInboundBuffer(ctx);
+    }
+
+    @Override
+    public Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        out.freeOutboundBuffer(ctx, buf);
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        out.discardOutboundReadBytes(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        out.freeOutboundBuffer(ctx);
     }
 
     @Override
