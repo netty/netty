@@ -25,7 +25,7 @@ public enum ZlibWrapper {
      */
     ZLIB,
     /**
-     * The GZIP wrapper as specified in <a href="http://tools.ietf.org/html/rfc1950">RFC 1952</a>.
+     * The GZIP wrapper as specified in <a href="http://tools.ietf.org/html/rfc1952">RFC 1952</a>.
      */
     GZIP,
     /**
