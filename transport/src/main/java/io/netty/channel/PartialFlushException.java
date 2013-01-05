@@ -16,11 +16,11 @@
 package io.netty.channel;
 
 /**
- * Special {@link Exception} which will be used by {@link ChannelOutboundInvoker#flush(ChannelPromise)},
+ * Special {@link RuntimeException} which will be used by {@link ChannelOutboundInvoker#flush(ChannelPromise)},
  * {@link ChannelOutboundInvoker#flush()}, {@link ChannelOutboundInvoker#write(Object)} and
  * {@link ChannelOutboundInvoker#write(Object, ChannelPromise)} if the operation was only partial successful.
  */
-public class PartialFlushException extends Exception {
+public class PartialFlushException extends RuntimeException {
     private static final long serialVersionUID = 990261865971015004L;
 
     public PartialFlushException(String msg, Throwable cause) {
