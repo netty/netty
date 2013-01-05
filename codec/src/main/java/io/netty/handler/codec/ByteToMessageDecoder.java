@@ -56,6 +56,11 @@ public abstract class ByteToMessageDecoder<O>
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         callDecode(ctx);
     }

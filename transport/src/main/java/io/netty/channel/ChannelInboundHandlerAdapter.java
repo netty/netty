@@ -27,13 +27,6 @@ import io.netty.buffer.Buf;
 public abstract class ChannelInboundHandlerAdapter
         extends ChannelStateHandlerAdapter implements ChannelInboundHandler {
 
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.hasInboundByteBuffer()) {
-            ctx.inboundByteBuffer().discardSomeReadBytes();
-        }
-    }
-
     /**
      * Calls {@link Buf#free()} to free the buffer, sub-classes may override this.
      *

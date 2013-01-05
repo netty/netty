@@ -130,9 +130,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             } finally {
-                if (handler instanceof ChannelInboundHandler) {
+                if (handler instanceof ChannelInboundByteHandler) {
                     try {
-                        ((ChannelInboundHandler) handler).discardInboundReadBytes(ctx);
+                        ((ChannelInboundByteHandler) handler).discardInboundReadBytes(ctx);
                     } catch (Throwable t) {
                         pipeline.notifyHandlerException(t);
                     }

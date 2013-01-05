@@ -24,4 +24,13 @@ import io.netty.buffer.ByteBuf;
 public interface ChannelInboundByteHandler extends ChannelInboundHandler {
     @Override
     ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Discards the read bytes of the inbound buffer and optionally trims its unused portion to reduce memory
+     * consumption. The most common implementation of this method will look like the following:
+     * <pre>
+     *     ctx.inboundByteBuffer().discardSomeReadBytes();
+     * </pre>
+     */
+    void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception;
 }

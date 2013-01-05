@@ -54,11 +54,6 @@ public class MessageLoggingHandler
     }
 
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // Nothing to free
     }
@@ -66,11 +61,6 @@ public class MessageLoggingHandler
     @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
-    }
-
-    @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
     }
 
     @Override

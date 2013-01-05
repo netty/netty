@@ -97,11 +97,6 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         queue.free();
     }

@@ -32,11 +32,6 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     }
 
     @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         ctx.outboundMessageBuffer().free();
     }

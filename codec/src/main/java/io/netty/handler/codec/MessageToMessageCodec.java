@@ -98,11 +98,6 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         ctx.inboundMessageBuffer().free();
     }
@@ -116,11 +111,6 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     @Override
     public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
     }
 
     @Override

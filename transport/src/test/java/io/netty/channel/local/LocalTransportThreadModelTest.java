@@ -343,11 +343,6 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             // Nothing to free
         }
@@ -355,11 +350,6 @@ public class LocalTransportThreadModelTest {
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override
@@ -412,11 +402,6 @@ public class LocalTransportThreadModelTest {
         @Override
         public MessageBuf<Integer> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override
@@ -545,11 +530,6 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx) {
             // Nothing to free
         }
@@ -636,11 +616,6 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             // Nothing to free
         }
@@ -648,11 +623,6 @@ public class LocalTransportThreadModelTest {
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override
@@ -736,11 +706,6 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             // Nothing to free
         }
@@ -748,11 +713,6 @@ public class LocalTransportThreadModelTest {
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
         }
 
         @Override

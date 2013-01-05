@@ -91,11 +91,6 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         ctx.inboundByteBuffer().free();
     }
@@ -103,11 +98,6 @@ public class SpdySessionHandler
     @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
-    }
-
-    @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
     }
 
     @Override

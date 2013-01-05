@@ -27,12 +27,6 @@ public interface ChannelInboundHandler extends ChannelStateHandler {
     Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Discards the read bytes of the inbound buffer and optionally trims its unused portion to reduce memory
-     * consumption.
-     */
-    void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception;
-
-    /**
      * Invoked when this handler is not going to receive any inbound message anymore and thus it's safe to
      * deallocate its inbound buffer.
      */
