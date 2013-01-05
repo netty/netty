@@ -85,7 +85,7 @@ public interface ChannelInboundInvoker {
     void fireInboundBufferUpdated();
 
     /**
-     * Triggers an {@link ChannelStateHandler#inboundBufferSuspended(ChannelHandlerContext) inboundBufferSuspended}
+     * Triggers an {@link ChannelStateHandler#channelReadSuspended(ChannelHandlerContext) inboundBufferSuspended}
      * event to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
      */
     void fireInboundBufferSuspended();

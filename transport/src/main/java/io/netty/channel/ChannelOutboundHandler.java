@@ -30,5 +30,5 @@ public interface ChannelOutboundHandler extends ChannelOperationHandler {
      * Invoked when this handler is not allowed to send any outbound message anymore and thus it's safe to
      * deallocate its outbound buffer.
      */
-    void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception;
+    void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }

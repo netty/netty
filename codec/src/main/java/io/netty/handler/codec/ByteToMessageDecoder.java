@@ -56,6 +56,11 @@ public abstract class ByteToMessageDecoder<O>
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         callDecode(ctx);
     }
@@ -108,8 +113,6 @@ public abstract class ByteToMessageDecoder<O>
                     break;
                 }
             } catch (Throwable t) {
-                in.discardSomeReadBytes();
-
                 if (decoded) {
                     decoded = false;
                     ctx.fireInboundBufferUpdated();
@@ -122,8 +125,6 @@ public abstract class ByteToMessageDecoder<O>
                 }
             }
         }
-
-        in.discardSomeReadBytes();
 
         if (decoded) {
             ctx.fireInboundBufferUpdated();

@@ -155,7 +155,7 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
     }
 
     @Override
-    public void inboundBufferSuspended(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
         ctx.fireInboundBufferSuspended();
     }
 }
