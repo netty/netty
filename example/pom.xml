@@ -17,6 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
+    
     <parent>
         <groupId>io.netty</groupId>
         <artifactId>netty-parent</artifactId>
@@ -54,7 +55,6 @@
             <artifactId>netty-codec-socks</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
@@ -64,6 +64,17 @@
             <artifactId>netty-metrics-yammer</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- see https://github.com/netty/netty/issues/874 -->
+        <dependency>
+            <groupId>com.yammer.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-transport-udt</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
+    
 </project>
-
