@@ -80,6 +80,7 @@
     <module>codec-socks</module>
     <module>transport</module>
     <module>transport-sctp</module>
+    <module>transport-udt</module>
     <module>handler</module>
     <module>metrics-yammer</module>
     <module>example</module>
@@ -220,9 +221,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>1.6.6</version>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.0.9</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
