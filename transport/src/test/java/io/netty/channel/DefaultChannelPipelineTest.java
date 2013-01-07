@@ -15,13 +15,89 @@
  */
 package io.netty.channel;
 
+
+import io.netty.buffer.Freeable;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalEventLoopGroup;
 import org.junit.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
+    @Test
+    public void testFreeCalled() throws InterruptedException{
+        final CountDownLatch free = new CountDownLatch(1);
+
+        Freeable holder = new Freeable() {
+            @Override
+            public void free() {
+                free.countDown();
+            }
+
+            @Override
+            public boolean isFreed() {
+                return free.getCount() == 0;
+            }
+        };
+        LocalChannel channel = new LocalChannel();
+        LocalEventLoopGroup group = new LocalEventLoopGroup();
+        group.register(channel).awaitUninterruptibly();
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+
+        StringInboundHandler handler = new StringInboundHandler();
+        pipeline.addLast(handler);
+        pipeline.fireChannelActive();
+        pipeline.inboundMessageBuffer().add(holder);
+        pipeline.fireInboundBufferUpdated();
+
+        assertTrue(free.await(10, TimeUnit.SECONDS));
+        assertTrue(handler.called);
+    }
+
+    private static final class StringInboundHandler extends ChannelInboundMessageHandlerAdapter<String> {
+        boolean called;
+
+        public StringInboundHandler() {
+            super(String.class);
+        }
+
+        @Override
+        public boolean isSupported(Object msg) throws Exception {
+            called = true;
+            return super.isSupported(msg);
+        }
+
+        @Override
+        protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+            fail();
+        }
+    }
+
+
+    @Test
+    public void testRemoveChannelHandler() {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+
+        ChannelHandler handler1 = newHandler();
+        ChannelHandler handler2 = newHandler();
+        ChannelHandler handler3 = newHandler();
+
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler2);
+        pipeline.addLast("handler3", handler3);
+        assertSame(pipeline.get("handler1"), handler1);
+        assertSame(pipeline.get("handler2"), handler2);
+        assertSame(pipeline.get("handler3"), handler3);
+
+        pipeline.remove(handler1);
+        pipeline.remove(handler2);
+        pipeline.remove(handler3);
+    }
+
     @Test
     public void testReplaceChannelHandler() {
         DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
@@ -107,8 +183,11 @@ public class DefaultChannelPipelineTest {
         while (ctx != null) {
             int i = toInt(ctx.name());
             int j = next(ctx);
-
-            assertTrue(i < j);
+            if (j != -1) {
+                assertTrue(i < j);
+            } else {
+                assertNull(ctx.next.next);
+            }
             ctx = ctx.next;
         }
 
@@ -125,7 +204,11 @@ public class DefaultChannelPipelineTest {
     }
 
     private static int toInt(String name) {
-        return Integer.parseInt(name);
+        try {
+            return Integer.parseInt(name);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     private static void verifyContextNumber(DefaultChannelPipeline pipeline, int expectedNumber) {
