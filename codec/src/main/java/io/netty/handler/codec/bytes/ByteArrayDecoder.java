@@ -46,14 +46,14 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * }
  * </pre>
  */
-public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf, byte[]> {
+public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     public ByteArrayDecoder() {
         super(ByteBuf.class);
     }
 
     @Override
-    protected byte[] decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         byte[] array;
         if (msg.hasArray()) {
             if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {

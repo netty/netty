@@ -31,13 +31,13 @@ import io.netty.channel.ChannelPipeline;
  *
  * <pre>
  *     public class StringToIntegerDecoder extends
- *             {@link MessageToMessageDecoder}&lt;{@link String},{@link Integer}&gt; {
+ *             {@link MessageToMessageDecoder}&lt;{@link String}&gt; {
  *         public StringToIntegerDecoder() {
  *             super(String.class);
  *         }
  *
  *         {@code @Override}
- *         public {@link Integer} decode({@link ChannelHandlerContext} ctx, {@link String} message)
+ *         public {@link Object} decode({@link ChannelHandlerContext} ctx, {@link String} message)
  *                 throws {@link Exception} {
  *             return message.length());
  *         }
@@ -45,7 +45,7 @@ import io.netty.channel.ChannelPipeline;
  * </pre>
  *
  */
-public abstract class MessageToMessageDecoder<I, O>
+public abstract class MessageToMessageDecoder<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
@@ -84,7 +84,7 @@ public abstract class MessageToMessageDecoder<I, O>
                 I imsg = (I) msg;
                 boolean free = true;
                 try {
-                    O omsg = decode(ctx, imsg);
+                    Object omsg = decode(ctx, imsg);
                     if (omsg == null) {
                         // Decoder consumed a message but returned null.
                         // Probably it needs more messages because it's an aggregator.
@@ -131,7 +131,7 @@ public abstract class MessageToMessageDecoder<I, O>
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract O decode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract Object decode(ChannelHandlerContext ctx, I msg) throws Exception;
 
     /**
      * Is called after a message was processed via {@link #decode(ChannelHandlerContext, Object)} to free

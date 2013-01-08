@@ -98,7 +98,7 @@ import java.util.List;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMessageDecoder.State> {
+public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;

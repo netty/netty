@@ -20,7 +20,7 @@ import io.netty.channel.socket.sctp.SctpMessage;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
-public abstract class SctpMessageToMessageDecoder<O> extends MessageToMessageDecoder<SctpMessage, O> {
+public abstract class SctpMessageToMessageDecoder extends MessageToMessageDecoder<SctpMessage> {
 
     @Override
     public boolean isDecodable(Object msg) throws Exception {

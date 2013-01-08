@@ -23,7 +23,7 @@ import io.netty.handler.codec.ReplayingDecoder;
  * Decodes {@link ByteBuf}s into {@link SocksAuthResponse}.
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
-public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksResponse, SocksAuthResponseDecoder.State> {
+public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponseDecoder.State> {
     private static final String name = "SOCKS_AUTH_RESPONSE_DECODER";
 
     public static String getName() {
@@ -39,7 +39,7 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksResponse, So
     }
 
     @Override
-    public SocksResponse decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
+    public Object decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.SubnegotiationVersion.fromByte(byteBuf.readByte());

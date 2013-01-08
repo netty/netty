@@ -40,7 +40,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
  * converts {@link ByteBuf}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
 
     private EmbeddedByteChannel decoder;
 

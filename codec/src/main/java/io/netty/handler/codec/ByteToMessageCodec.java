@@ -24,24 +24,23 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 
-public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
-        extends ChannelHandlerAdapter
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<OUTBOUND_IN> {
+public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<I> {
 
-    private final MessageToByteEncoder<OUTBOUND_IN> encoder =
-            new MessageToByteEncoder<OUTBOUND_IN>() {
+    private final MessageToByteEncoder<I> encoder =
+            new MessageToByteEncoder<I>() {
         @Override
         public void encode(
                 ChannelHandlerContext ctx,
-                OUTBOUND_IN msg, ByteBuf out) throws Exception {
+                Object msg, ByteBuf out) throws Exception {
             ByteToMessageCodec.this.encode(ctx, msg, out);
         }
     };
 
-    private final ByteToMessageDecoder<INBOUND_OUT> decoder =
-            new ByteToMessageDecoder<INBOUND_OUT>() {
+    private final ByteToMessageDecoder decoder =
+            new ByteToMessageDecoder() {
         @Override
-        public INBOUND_OUT decode(
+        public Object decode(
                 ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             return ByteToMessageCodec.this.decode(ctx, in);
         }
@@ -59,7 +58,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
     }
 
     @Override
-    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(
+    public MessageBuf<I> newOutboundBuffer(
             ChannelHandlerContext ctx) throws Exception {
         return encoder.newOutboundBuffer(ctx);
     }
@@ -82,8 +81,8 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
 
     protected abstract void encode(
             ChannelHandlerContext ctx,
-            OUTBOUND_IN msg, ByteBuf out) throws Exception;
+            Object msg, ByteBuf out) throws Exception;
 
-    protected abstract INBOUND_OUT decode(
+    protected abstract Object decode(
             ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

@@ -61,7 +61,7 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLite> {
+public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
@@ -84,7 +84,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLit
     }
 
     @Override
-    protected MessageLite decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         if (msg.hasArray()) {
             final int offset = msg.readerIndex();
             if (extensionRegistry == null) {

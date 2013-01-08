@@ -25,7 +25,7 @@ import io.netty.handler.codec.TooLongFrameException;
 /**
  * Decodes {@link ByteBuf}s into SPDY Data and Control Frames.
  */
-public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
+public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
     private final int spdyVersion;
     private final int maxChunkSize;

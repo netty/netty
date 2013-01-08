@@ -56,14 +56,14 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufEncoder extends MessageToMessageEncoder<Object, ByteBuf> {
+public class ProtobufEncoder extends MessageToMessageEncoder<Object> {
 
     public ProtobufEncoder() {
         super(MessageLite.class, MessageLite.Builder.class);
     }
 
     @Override
-    protected ByteBuf encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());
         }
