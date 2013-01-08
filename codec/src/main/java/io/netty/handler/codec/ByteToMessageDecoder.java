@@ -30,16 +30,16 @@ import io.netty.channel.ChannelPipeline;
  * the input {@link ByteBuf} and create a new {@link ByteBuf}.
  *
  * <pre>
- *     public class SquareDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
+ *     public class SquareDecoder extends {@link ByteToMessageDecoder} {
  *         {@code @Override}
- *         public {@link ByteBuf} decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in)
+ *         public {@link Object} decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in)
  *                 throws {@link Exception} {
  *             return in.readBytes(in.readableBytes());
  *         }
  *     }
  * </pre>
  */
-public abstract class ByteToMessageDecoder<O>
+public abstract class ByteToMessageDecoder
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
     private ChannelHandlerContext ctx;
@@ -94,7 +94,7 @@ public abstract class ByteToMessageDecoder<O>
         while (in.readable()) {
             try {
                 int oldInputLength = in.readableBytes();
-                O o = decode(ctx, in);
+                Object o = decode(ctx, in);
                 if (o == null) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
@@ -167,7 +167,7 @@ public abstract class ByteToMessageDecoder<O>
      *                      there was not enough data left in the {@link ByteBuf} to decode.
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract O decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+    protected abstract Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 
     /**
      * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
@@ -176,7 +176,7 @@ public abstract class ByteToMessageDecoder<O>
      * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf)} but sub-classes may
      * override this for some special cleanup operation.
      */
-    protected O decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         return decode(ctx, in);
     }
 }

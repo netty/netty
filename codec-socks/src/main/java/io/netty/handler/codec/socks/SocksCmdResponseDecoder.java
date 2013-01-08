@@ -24,7 +24,7 @@ import io.netty.util.CharsetUtil;
  * Decodes {@link ByteBuf}s into {@link SocksCmdResponse}.
  * Before returning SocksResponse decoder removes itself from pipeline.
  */
-public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, SocksCmdResponseDecoder.State> {
+public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDecoder.State> {
     private static final String name = "SOCKS_CMD_RESPONSE_DECODER";
 
     public static String getName() {
@@ -45,7 +45,7 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksResponse, Soc
     }
 
     @Override
-    public SocksResponse decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
 
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {

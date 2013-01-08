@@ -48,7 +48,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * }
  * </pre>
  */
-public class ByteArrayEncoder extends MessageToMessageEncoder<byte[], ByteBuf> {
+public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
 
     public ByteArrayEncoder() {
         super(byte[].class);

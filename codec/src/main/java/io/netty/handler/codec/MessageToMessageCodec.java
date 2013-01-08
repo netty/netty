@@ -48,20 +48,20 @@ import io.netty.channel.ChannelPromise;
  *     }
  * </pre>
  */
-public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
+public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         extends ChannelHandlerAdapter
         implements ChannelInboundMessageHandler<INBOUND_IN>,
                    ChannelOutboundMessageHandler<OUTBOUND_IN> {
 
-    private final MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT> encoder =
-            new MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT>() {
+    private final MessageToMessageEncoder<OUTBOUND_IN> encoder =
+            new MessageToMessageEncoder<OUTBOUND_IN>() {
         @Override
         public boolean isEncodable(Object msg) throws Exception {
             return MessageToMessageCodec.this.isEncodable(msg);
         }
 
         @Override
-        public OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
+        public Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.encode(ctx, msg);
         }
 
@@ -71,15 +71,15 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         }
     };
 
-    private final MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT> decoder =
-            new MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT>() {
+    private final MessageToMessageDecoder<INBOUND_IN> decoder =
+            new MessageToMessageDecoder<INBOUND_IN>() {
         @Override
         public boolean isDecodable(Object msg) throws Exception {
             return MessageToMessageCodec.this.isDecodable(msg);
         }
 
         @Override
-        public INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
+        public Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.decode(ctx, msg);
         }
 
@@ -151,8 +151,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         return ChannelHandlerUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
     }
 
-    protected abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
-    protected abstract INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+    protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
+    protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
 
     protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);

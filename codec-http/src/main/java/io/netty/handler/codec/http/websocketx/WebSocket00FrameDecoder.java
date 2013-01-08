@@ -29,7 +29,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
-public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Void> {
+public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
 
     static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
@@ -52,7 +52,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<WebSocketFrame, Vo
     }
 
     @Override
-    public WebSocketFrame decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());

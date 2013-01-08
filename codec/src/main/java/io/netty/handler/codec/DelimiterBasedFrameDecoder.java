@@ -54,7 +54,7 @@ import io.netty.channel.ChannelHandlerContext;
  * </pre>
  * @apiviz.uses io.netty.handler.codec.Delimiters - - useful
  */
-public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
+public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
 
     private final ByteBuf[] delimiters;
     private final int maxFrameLength;

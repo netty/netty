@@ -52,7 +52,7 @@ import java.nio.charset.Charset;
  * @apiviz.landmark
  */
 @Sharable
-public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
+public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     // TODO Use CharsetDecoder instead.
     private final Charset charset;
@@ -77,7 +77,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
     }
 
     @Override
-    protected String decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         return msg.toString(charset);
     }
 }

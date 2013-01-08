@@ -47,7 +47,7 @@ public class ReplayingDecoderTest {
         assertNull(ch.readInbound());
     }
 
-    private static final class LineDecoder extends ReplayingDecoder<ByteBuf, Void> {
+    private static final class LineDecoder extends ReplayingDecoder<Void> {
 
         LineDecoder() {
         }

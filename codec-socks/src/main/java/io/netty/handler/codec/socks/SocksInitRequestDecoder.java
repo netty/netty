@@ -26,7 +26,7 @@ import java.util.List;
  * Decodes {@link ByteBuf}s into {@link SocksInitRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
-public class SocksInitRequestDecoder extends ReplayingDecoder<SocksRequest, SocksInitRequestDecoder.State> {
+public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDecoder.State> {
     private static final String name = "SOCKS_INIT_REQUEST_DECODER";
 
     public static String getName() {
@@ -43,7 +43,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
     }
 
     @Override
-    public SocksRequest decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
