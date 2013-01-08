@@ -135,10 +135,9 @@ public class VirtualExecutorService extends AbstractExecutorService {
     public boolean awaitTermination(long timeout, TimeUnit unit)
             throws InterruptedException {
         synchronized (startStopLock) {
-            while (!isTerminated()) {
+            if (!isTerminated()) {
                 startStopLock.wait(TimeUnit.MILLISECONDS.convert(timeout, unit));
             }
-
             return isTerminated();
         }
     }
