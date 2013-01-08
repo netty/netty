@@ -46,7 +46,7 @@ import java.util.Queue;
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
  * converts them into {@link ByteBuf}s.
  */
-public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpMessage, Object, Object> {
+public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, Object> {
 
     private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
     private EmbeddedByteChannel encoder;
@@ -61,7 +61,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    protected HttpMessage decode(ChannelHandlerContext ctx, HttpMessage msg)
+    protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
             throws Exception {
         String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {

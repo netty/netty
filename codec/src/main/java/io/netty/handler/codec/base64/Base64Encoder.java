@@ -40,7 +40,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Encoder extends MessageToMessageEncoder<ByteBuf, ByteBuf> {
+public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
 
     private final boolean breakLines;
     private final Base64Dialect dialect;
@@ -65,7 +65,7 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf, ByteBuf> {
     }
 
     @Override
-    protected ByteBuf encode(ChannelHandlerContext ctx,
+    protected Object encode(ChannelHandlerContext ctx,
             ByteBuf msg) throws Exception {
         return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
     }

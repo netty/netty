@@ -47,7 +47,7 @@ import java.util.Map.Entry;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, HttpMessage> {
+public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
     private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
@@ -110,7 +110,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject, Htt
     }
 
     @Override
-    protected HttpMessage decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {

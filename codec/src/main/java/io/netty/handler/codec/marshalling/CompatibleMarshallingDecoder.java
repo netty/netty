@@ -30,7 +30,7 @@ import java.io.ObjectStreamConstants;
  *
  * If you can you should use {@link MarshallingDecoder}.
  */
-public class CompatibleMarshallingDecoder extends ReplayingDecoder<Object, Void> {
+public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     protected final UnmarshallerProvider provider;
     protected final int maxObjectSize;
     private boolean discardingTooLongFrame;

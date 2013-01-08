@@ -24,36 +24,35 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 
-public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
-        extends ChannelHandlerAdapter
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<OUTBOUND_IN> {
+public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<I> {
 
     private final Class<?>[] encodableMessageTypes;
-    private final MessageToByteEncoder<OUTBOUND_IN> encoder;
-    private final ByteToMessageDecoder<INBOUND_OUT> decoder;
+    private final MessageToByteEncoder<I> encoder;
+    private final ByteToMessageDecoder decoder;
 
     protected ByteToMessageCodec(Class<?>... encodableMessageTypes) {
         this.encodableMessageTypes = encodableMessageTypes;
-        encoder = new MessageToByteEncoder<OUTBOUND_IN>() {
+        encoder = new MessageToByteEncoder<I>() {
             @Override
             public boolean isEncodable(Object msg) throws Exception {
                 return ByteToMessageCodec.this.isEncodable(msg);
             }
 
             @Override
-            protected void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, ByteBuf out) throws Exception {
+            protected void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception {
                 ByteToMessageCodec.this.encode(ctx, msg, out);
             }
         };
 
-        decoder = new ByteToMessageDecoder<INBOUND_OUT>() {
+        decoder = new ByteToMessageDecoder() {
             @Override
-            public INBOUND_OUT decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                 return ByteToMessageCodec.this.decode(ctx, in);
             }
 
             @Override
-            protected INBOUND_OUT decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                 return ByteToMessageCodec.this.decodeLast(ctx, in);
             }
         };
@@ -80,7 +79,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
     }
 
     @Override
-    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+    public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return encoder.newOutboundBuffer(ctx);
     }
 
@@ -103,9 +102,9 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         return ChannelHandlerUtil.acceptMessage(encodableMessageTypes, msg);
     }
 
-    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, ByteBuf out) throws Exception;
-    protected abstract INBOUND_OUT decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
-    protected INBOUND_OUT decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+    protected abstract Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+    protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         return decode(ctx, in);
     }
 }

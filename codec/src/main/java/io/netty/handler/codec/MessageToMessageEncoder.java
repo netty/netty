@@ -31,13 +31,13 @@ import io.netty.channel.PartialFlushException;
  *
  * <pre>
  *     public class IntegerToStringEncoder extends
- *             {@link MessageToMessageEncoder}&lt;{@link Integer},{@link String}&gt; {
+ *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
  *         public StringToIntegerDecoder() {
  *             super(String.class);
  *         }
  *
  *         {@code @Override}
- *         public {@link String} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
+ *         public {@link Object} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
  *                 throws {@link Exception} {
  *             return message.toString();
  *         }
@@ -45,7 +45,7 @@ import io.netty.channel.PartialFlushException;
  * </pre>
  *
  */
-public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
+public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
@@ -78,7 +78,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                 I imsg = (I) msg;
                 boolean free = true;
                 try {
-                    O omsg = encode(ctx, imsg);
+                    Object omsg = encode(ctx, imsg);
                     if (omsg == null) {
                         // encode() might be waiting for more inbound messages to generate
                         // an aggregated message - keep polling.
@@ -130,7 +130,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract Object encode(ChannelHandlerContext ctx, I msg) throws Exception;
 
     /**
      * Is called after a message was processed via {@link #encode(ChannelHandlerContext, Object)} to free
