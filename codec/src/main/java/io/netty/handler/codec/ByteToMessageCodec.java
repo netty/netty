@@ -50,7 +50,6 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
             @Override
             public INBOUND_OUT decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                 return ByteToMessageCodec.this.decode(ctx, in);
-
             }
 
             @Override
