@@ -80,7 +80,7 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         encoder.freeOutboundBuffer(ctx);
     }
 
-    protected boolean isEncodable(Object msg) throws Exception {
+    public boolean isEncodable(Object msg) throws Exception {
         return encoder.isEncodable(msg);
     }
 
