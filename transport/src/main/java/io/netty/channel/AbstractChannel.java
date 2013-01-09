@@ -851,10 +851,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (t instanceof IOException) {
                         close(voidFuture());
                     }
-                } finally {
-                    if (!isActive()) {
-                        close(unsafe().voidFuture());
-                    }
                 }
             } else {
                 if (!flushNowPending) {
