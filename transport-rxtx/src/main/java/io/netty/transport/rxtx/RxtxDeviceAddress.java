@@ -28,6 +28,7 @@ public class RxtxDeviceAddress extends SocketAddress {
     private final String deviceAddress;
 
     /**
+     * Creates a RxtxDeviceAddress representing the address of the serial port.
      *
      * @param deviceAddress the address of the device (e.g. COM1, /dev/ttyUSB0, ...)
      */
@@ -35,6 +36,9 @@ public class RxtxDeviceAddress extends SocketAddress {
         this.deviceAddress = deviceAddress;
     }
 
+    /**
+     * @return The serial port address of the device (e.g. COM1, /dev/ttyUSB0, ...)
+     */
     public String getDeviceAddress() {
         return deviceAddress;
     }

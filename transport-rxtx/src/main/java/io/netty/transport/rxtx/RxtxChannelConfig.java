@@ -30,9 +30,17 @@ import gnu.io.SerialPort;
 public class RxtxChannelConfig extends DefaultChannelConfig {
 
     public enum Stopbits {
-
+        /**
+         * 1 stop bit will be sent at the end of every character
+         */
         STOPBITS_1(SerialPort.STOPBITS_1),
+        /**
+         * 2 stop bits will be sent at the end of every character
+         */
         STOPBITS_2(SerialPort.STOPBITS_2),
+        /**
+         * 1.5 stop bits will be sent at the end of every character
+         */
         STOPBITS_1_5(SerialPort.STOPBITS_1_5);
 
         private final int value;
@@ -56,10 +64,21 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
     }
 
     public enum Databits {
-
+        /**
+         * 5 data bits will be used for each character (ie. Baudot code)
+         */
         DATABITS_5(SerialPort.DATABITS_5),
+        /**
+         * 6 data bits will be used for each character
+         */
         DATABITS_6(SerialPort.DATABITS_6),
+        /**
+         * 7 data bits will be used for each character (ie. ASCII)
+         */
         DATABITS_7(SerialPort.DATABITS_7),
+        /**
+         * 8 data bits will be used for each character (ie. binary data)
+         */
         DATABITS_8(SerialPort.DATABITS_8);
 
         private final int value;
@@ -83,11 +102,27 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
     }
 
     public enum Paritybit {
-
+        /**
+         * No parity bit will be sent with each data character at all
+         */
         NONE(SerialPort.PARITY_NONE),
+        /**
+         * An odd parity bit will be sent with each data character, ie. will be set
+         * to 1 if the data character contains an even number of bits set to 1.
+         */
         ODD(SerialPort.PARITY_ODD),
+        /**
+         * An even parity bit will be sent with each data character, ie. will be set
+         * to 1 if the data character contains an odd number of bits set to 1.
+         */
         EVEN(SerialPort.PARITY_EVEN),
+        /**
+         * A mark parity bit (ie. always 1) will be sent with each data character
+         */
         MARK(SerialPort.PARITY_MARK),
+        /**
+         * A space parity bit (ie. always 0) will be sent with each data character
+         */
         SPACE(SerialPort.PARITY_SPACE);
 
         private final int value;
@@ -180,50 +215,104 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
         return true;
     }
 
+    /**
+     * Sets the baud rate (ie. bits per second) for communication with the serial device.
+     * The baud rate will include bits for framing (in the form of stop bits and parity),
+     * such that the effective data rate will be lower than this value.
+     * 
+     * @param baudrate The baud rate (in bits per second)
+     */
     public void setBaudrate(final int baudrate) {
         this.baudrate = baudrate;
     }
 
+    /**
+     * Sets the number of stop bits to include at the end of every character to aid the
+     * serial device in synchronising with the data.
+     * 
+     * @param stopbits The number of stop bits to use
+     */
     public void setStopbits(final Stopbits stopbits) {
         this.stopbits = stopbits;
     }
 
+    /**
+     * Sets the number of data bits to use to make up each character sent to the serial
+     * device.
+     * 
+     * @param databits The number of data bits to use
+     */
     public void setDatabits(final Databits databits) {
         this.databits = databits;
     }
 
+    /**
+     * Sets the type of parity bit to be used when communicating with the serial device.
+     * 
+     * @param paritybit The type of parity bit to be used
+     */
     public void setParitybit(final Paritybit paritybit) {
         this.paritybit = paritybit;
     }
 
+    /**
+     * @return The configured baud rate, defaulting to 115200 if unset
+     */
     public int getBaudrate() {
         return baudrate;
     }
 
+    /**
+     * @return The configured stop bits, defaulting to {@link Stopbits#STOPBITS_1} if unset
+     */
     public Stopbits getStopbits() {
         return stopbits;
     }
 
+    /**
+     * @return The configured data bits, defaulting to {@link Databits#DATABITS_8} if unset
+     */
     public Databits getDatabits() {
         return databits;
     }
 
+    /**
+     * @return The configured parity bit, defaulting to {@link Paritybit#NONE} if unset
+     */
     public Paritybit getParitybit() {
         return paritybit;
     }
 
+    /**
+     * @return true if the serial device should support the Data Terminal Ready signal
+     */
     public boolean isDtr() {
         return dtr;
     }
 
+    /**
+     * Sets whether the serial device supports the Data Terminal Ready signal, used for
+     * flow control
+     * 
+     * @param dtr true if DTR is supported, false otherwise
+     */
     public void setDtr(final boolean dtr) {
         this.dtr = dtr;
     }
 
+    /**
+     * @return true if the serial device should support the Ready to Send signal
+     */
     public boolean isRts() {
         return rts;
     }
 
+    /**
+     * Sets whether the serial device supports the Request To Send signal, used for flow
+     * control
+     * 
+     * @param rts true if RTS is supported, false otherwise
+     */
     public void setRts(final boolean rts) {
         this.rts = rts;
     }
