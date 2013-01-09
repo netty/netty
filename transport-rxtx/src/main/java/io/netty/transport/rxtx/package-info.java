@@ -17,4 +17,4 @@
 /**
  * A serial and parallel port communication transport based on <a href="http://rxtx.qbang.org/">RXTX</a>.
  */
-package io.netty.channel.rxtx;
+package io.netty.transport.rxtx;
