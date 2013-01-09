@@ -27,24 +27,25 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         extends ChannelHandlerAdapter
         implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<OUTBOUND_IN> {
 
-    private final MessageToByteEncoder<OUTBOUND_IN> encoder =
-            new MessageToByteEncoder<OUTBOUND_IN>() {
-        @Override
-        public void encode(
-                ChannelHandlerContext ctx,
-                OUTBOUND_IN msg, ByteBuf out) throws Exception {
-            ByteToMessageCodec.this.encode(ctx, msg, out);
-        }
-    };
+    private final MessageToByteEncoder<OUTBOUND_IN> encoder;
+    private final ByteToMessageDecoder<INBOUND_OUT> decoder;
 
-    private final ByteToMessageDecoder<INBOUND_OUT> decoder =
-            new ByteToMessageDecoder<INBOUND_OUT>() {
-        @Override
-        public INBOUND_OUT decode(
-                ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            return ByteToMessageCodec.this.decode(ctx, in);
-        }
-    };
+    protected ByteToMessageCodec(Class<?>... encodableMessageTypes) {
+        encoder = new MessageToByteEncoder<OUTBOUND_IN>(encodableMessageTypes) {
+            @Override
+            protected void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, ByteBuf out) throws Exception {
+                ByteToMessageCodec.this.encode(ctx, msg, out);
+            }
+        };
+
+        decoder = new ByteToMessageDecoder<INBOUND_OUT>() {
+            @Override
+            public INBOUND_OUT decode(
+                    ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+                return ByteToMessageCodec.this.decode(ctx, in);
+            }
+        };
+    }
 
     @Override
     public ByteBuf newInboundBuffer(
@@ -79,10 +80,10 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
         encoder.freeOutboundBuffer(ctx);
     }
 
-    protected abstract void encode(
-            ChannelHandlerContext ctx,
-            OUTBOUND_IN msg, ByteBuf out) throws Exception;
+    protected boolean isEncodable(Object msg) throws Exception {
+        return encoder.isEncodable(msg);
+    }
 
-    protected abstract INBOUND_OUT decode(
-            ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, ByteBuf out) throws Exception;
+    protected abstract INBOUND_OUT decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }
