@@ -162,9 +162,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             return readMessages;
         }
 
-        Set<SelectionKey> reableKeys = readSelector.selectedKeys();
+        Set<SelectionKey> readableKeys = readSelector.selectedKeys();
         try {
-            for (SelectionKey ignored : reableKeys) {
+            for (SelectionKey ignored : readableKeys) {
                 ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
                 boolean free = true;
 
@@ -197,7 +197,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 }
             }
         } finally {
-            reableKeys.clear();
+            readableKeys.clear();
         }
 
         return readMessages;
