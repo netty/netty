@@ -57,11 +57,6 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
             protected INBOUND_OUT decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                 return ByteToMessageCodec.this.decodeLast(ctx, in);
             }
-
-            @Override
-            public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-                ByteToMessageCodec.this.discardInboundReadBytes(ctx);
-            }
         };
     }
 
@@ -76,18 +71,8 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        decoder.inboundBufferUpdated(ctx);
-    }
-
-    @Override
-    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        encoder.flush(ctx, promise);
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        decoder.discardInboundReadBytes(ctx);
     }
 
     @Override
@@ -96,8 +81,23 @@ public abstract class ByteToMessageCodec<INBOUND_OUT, OUTBOUND_IN>
     }
 
     @Override
+    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return encoder.newOutboundBuffer(ctx);
+    }
+
+    @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         encoder.freeOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        decoder.inboundBufferUpdated(ctx);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.flush(ctx, promise);
     }
 
     public boolean isEncodable(Object msg) throws Exception {
