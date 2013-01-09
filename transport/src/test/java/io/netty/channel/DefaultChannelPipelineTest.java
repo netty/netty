@@ -214,7 +214,7 @@ public class DefaultChannelPipelineTest {
     private static void verifyContextNumber(DefaultChannelPipeline pipeline, int expectedNumber) {
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
         int handlerNumber = 0;
-        while (ctx != null) {
+        while (ctx != pipeline.tail) {
             handlerNumber++;
             ctx = ctx.next;
         }
