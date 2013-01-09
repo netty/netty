@@ -58,9 +58,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         executor.shutdown();
     }
 
-    @Test//(timeout = 30000)
+    @Test(timeout = 30000)
     public void testStartTls() throws Throwable {
-        for (;;) { run(); }
+        run();
     }
 
     public void testStartTls(ServerBootstrap sb, Bootstrap cb) throws Throwable {
