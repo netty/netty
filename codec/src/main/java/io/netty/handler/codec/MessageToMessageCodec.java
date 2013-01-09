@@ -109,13 +109,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundMessageBuffer().free();
-    }
-
-    @Override
-    public void inboundBufferUpdated(
-            ChannelHandlerContext ctx) throws Exception {
-        decoder.inboundBufferUpdated(ctx);
+        decoder.freeInboundBuffer(ctx);
     }
 
     @Override
@@ -125,7 +119,13 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundMessageBuffer().free();
+        encoder.freeOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void inboundBufferUpdated(
+            ChannelHandlerContext ctx) throws Exception {
+        decoder.inboundBufferUpdated(ctx);
     }
 
     @Override
