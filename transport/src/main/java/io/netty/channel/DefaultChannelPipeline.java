@@ -740,7 +740,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         buf.append('{');
         DefaultChannelHandlerContext ctx = head.next;
         for (;;) {
-            if (ctx == null) {
+            if (ctx == tail) {
                 break;
             }
 
@@ -1390,7 +1390,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private DefaultChannelHandlerContext getContextOrDie(String name) {
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) context(name);
-        if (ctx == null || ctx == head) {
+        if (ctx == null) {
             throw new NoSuchElementException(name);
         } else {
             return ctx;
@@ -1399,7 +1399,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private DefaultChannelHandlerContext getContextOrDie(ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) context(handler);
-        if (ctx == null || ctx == head) {
+        if (ctx == null) {
             throw new NoSuchElementException(handler.getClass().getName());
         } else {
             return ctx;
@@ -1408,7 +1408,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private DefaultChannelHandlerContext getContextOrDie(Class<? extends ChannelHandler> handlerType) {
         DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) context(handlerType);
-        if (ctx == null || ctx == head) {
+        if (ctx == null) {
             throw new NoSuchElementException(handlerType.getName());
         } else {
             return ctx;
