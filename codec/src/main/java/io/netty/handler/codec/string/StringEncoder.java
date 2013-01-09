@@ -48,7 +48,7 @@ import java.nio.charset.Charset;
  * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends MessageToMessageEncoder<CharSequence, ByteBuf> {
+public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -73,7 +73,7 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence, ByteBuf
     }
 
     @Override
-    protected ByteBuf encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
         return Unpooled.copiedBuffer(msg, charset);
     }
 }

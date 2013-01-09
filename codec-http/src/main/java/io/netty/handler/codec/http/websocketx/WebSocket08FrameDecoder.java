@@ -67,7 +67,7 @@ import io.netty.logging.InternalLoggerFactory;
  * Decodes a web socket frame from wire protocol version 8 format. This code was forked from <a
  * href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  */
-public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, WebSocket08FrameDecoder.State> {
+public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDecoder.State> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameDecoder.class);
 
@@ -118,7 +118,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocketFrame, We
     }
 
     @Override
-    public WebSocketFrame decode(
+    public Object decode(
             ChannelHandlerContext ctx, ByteBuf in) throws Exception {
 
         // Discard all data received if closing handshake was received before.

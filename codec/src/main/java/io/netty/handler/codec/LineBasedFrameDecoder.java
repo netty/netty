@@ -24,7 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
  * Both {@code "\n"} and {@code "\r\n"} are handled.
  * For a more general delimiter-based decoder, see {@link DelimiterBasedFrameDecoder}.
  */
-public class LineBasedFrameDecoder extends ByteToMessageDecoder<ByteBuf> {
+public class LineBasedFrameDecoder extends ByteToMessageDecoder {
 
     /** Maximum length of a frame we're willing to decode.  */
     private final int maxLength;
@@ -67,8 +67,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected ByteBuf decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         final int eol = findEndOfLine(buffer);
         if (eol != -1) {
             final ByteBuf frame;
