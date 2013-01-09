@@ -79,6 +79,7 @@
     <module>codec-http</module>
     <module>codec-socks</module>
     <module>transport</module>
+    <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
     <module>handler</module>
@@ -87,6 +88,7 @@
     <module>testsuite</module>
     <module>all</module>
     <module>tarball</module>
+    <module>netty-transport-rxtx</module>
   </modules>
 
   <dependencyManagement>
@@ -104,6 +106,12 @@
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.4.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.rxtx</groupId>
+        <artifactId>rxtx</artifactId>
+        <version>2.1.7</version>
       </dependency>
 
       <dependency>
