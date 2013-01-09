@@ -64,6 +64,11 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         public OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.encode(ctx, msg);
         }
+
+        @Override
+        protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
+            MessageToMessageCodec.this.freeOutboundMessage(msg);
+        }
     };
 
     private final MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT> decoder =
@@ -76,6 +81,11 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         @Override
         public INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.decode(ctx, msg);
+        }
+
+        @Override
+        protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
+            MessageToMessageCodec.this.freeInboundMessage(msg);
         }
     };
 
@@ -143,4 +153,12 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
 
     protected abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
     protected abstract INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+
+    protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
+
+    protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }
