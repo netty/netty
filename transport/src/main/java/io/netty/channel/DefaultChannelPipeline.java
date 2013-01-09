@@ -128,12 +128,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void addFirst0(String name, DefaultChannelHandlerContext newCtx) {
-        callBeforeAdd(newCtx);
-
         DefaultChannelHandlerContext nextCtx = head.next;
-        head.next = newCtx;
         newCtx.prev = head;
         newCtx.next = nextCtx;
+
+        callBeforeAdd(newCtx);
+
+        head.next = newCtx;
         nextCtx.prev = newCtx;
 
         name2ctx.put(name, newCtx);
@@ -178,12 +179,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void addLast0(
             final String name, DefaultChannelHandlerContext newCtx) {
-        callBeforeAdd(newCtx);
-
         DefaultChannelHandlerContext prev = tail.prev;
-        prev.next = newCtx;
         newCtx.prev = prev;
         newCtx.next = tail;
+
+        callBeforeAdd(newCtx);
+
+        prev.next = newCtx;
         tail.prev = newCtx;
 
         name2ctx.put(name, newCtx);
@@ -205,7 +207,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, ctx.prev, ctx, name, handler);
+            newCtx = new DefaultChannelHandlerContext(this, group, null, null, name, handler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 addBefore0(name, ctx, newCtx);
@@ -230,6 +232,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void addBefore0(final String name, DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
+
+        newCtx.prev = ctx.prev;
+        newCtx.next = ctx;
+
         callBeforeAdd(newCtx);
 
         ctx.prev.next = newCtx;
@@ -280,10 +286,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     private void addAfter0(final String name, DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
         checkDuplicateName(name);
 
-        callBeforeAdd(newCtx);
-
         newCtx.prev = ctx;
         newCtx.next = ctx.next;
+
+        callBeforeAdd(newCtx);
+
         ctx.next.prev = newCtx;
         ctx.next = newCtx;
 
@@ -489,12 +496,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
+        newCtx.prev = prev;
+        newCtx.next = next;
 
         callBeforeRemove(ctx);
         callBeforeAdd(newCtx);
 
-        newCtx.prev = prev;
-        newCtx.next = next;
         prev.next = newCtx;
         next.prev = newCtx;
 
